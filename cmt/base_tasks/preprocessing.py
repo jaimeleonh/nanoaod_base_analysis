@@ -80,8 +80,9 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         module_params = None
         if self.modules_file:
             import yaml
+            from cmt.utils.yaml_utils import ordered_load
             with open(os.path.expandvars("$CMT_BASE/cmt/config/{}.yaml".format(self.modules_file))) as f:
-                module_params = yaml.load(f, Loader=yaml.FullLoader)
+                module_params = ordered_load(f, yaml.SafeLoader)
         else:
             return []
         
@@ -91,14 +92,15 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         modules = []
         for name in module_params.keys():
             parameter_str = ""
-            for param, value in module_params[name]["parameters"].items():
-                if isinstance(value, str): 
-                    if "self" in value:
-                        value = eval(value)
-                if isinstance(value, str):
-                    parameter_str += param + " = '{}', ".format(value)
-                else:
-                    parameter_str += param + " = {}, ".format(value)
+            if "parameters" in module_params[name]:
+                for param, value in module_params[name]["parameters"].items():
+                    if isinstance(value, str):
+                        if "self" in value:
+                            value = eval(value)
+                    if isinstance(value, str):
+                        parameter_str += param + " = '{}', ".format(value)
+                    else:
+                        parameter_str += param + " = {}, ".format(value)
             mod = module_params[name]["path"]
             mod = __import__(mod, fromlist=[name])
             nargs, kwargs = eval('_args(%s)' % parameter_str)
@@ -110,13 +112,9 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
     def run(self):
         from analysis_tools.utils import join_root_selection as jrs
         from shutil import move
-        # from PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun2 import (
-            # createJMECorrector
-        # )
         from PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor import PostProcessor
 
         # prepare inputs and outputs
-        # inp = self.input()["data"]
         inp = self.input()["data"].path
         outp = self.output().path
 
@@ -125,7 +123,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         dataset_selection = self.dataset.get_aux("selection")
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
-        selection = "Jet_pt > 1000" # hard-coded to reduce the number of events on purpose
+        selection = "Jet_pt > 500" # hard-coded to reduce the number of events on purpose
         modules = self.get_modules()
         p = PostProcessor(".", [inp],
                       cut=selection,
