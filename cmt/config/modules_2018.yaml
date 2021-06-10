@@ -1,10 +1,32 @@
+# createJMECorrector:
+    # path: PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun2
+    # parameters:
+        # isMC: self.dataset.isMC
+        # dataYear: self.config.year
+        # runPeriod: self.dataset.runPeriod
+        # jesUncert: All
+        # jetType: AK4PFchs
+        # noGroom: False
+        # splitJER: True
+HHLepton:
+    path: cmt.modules.HHLepton
+    parameters:
+        isMC: self.dataset.isMC
+        year: self.config.year
+        runPeriod: self.dataset.runPeriod
+
 createJMECorrector:
     path: PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun2
     parameters:
         isMC: self.dataset.isMC
         dataYear: self.config.year
         runPeriod: self.dataset.runPeriod
-        jesUncert: All
+        jesUncert: Total
         jetType: AK4PFchs
         noGroom: False
         splitJER: True
+
+HHJets:
+    path: cmt.modules.HHJets
+    parameters:
+        year: self.config.year
