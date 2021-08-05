@@ -162,6 +162,13 @@ action() {
           scram b
         fi
 
+        export SVFIT_PATH=""
+        if [ ! -d "$SVFIT_PATH" ]; then
+          git clone https://github.com/LLRCMS/ClassicSVfit.git TauAnalysis/ClassicSVfit -b bbtautau_LegacyRun2
+          git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
+          scram b
+        fi
+
         #export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
         #if [ ! -d "$COMBINE_PATH" ]; then
         #    git clone https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git $COMBINE_PATH
