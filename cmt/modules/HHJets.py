@@ -46,9 +46,22 @@ class HHJetsProducer(Module):
     def analyze(self, event):
         """process event, return True (go to next module) or False (fail, go to next event)"""
         jets = Collection(event, "Jet")
-        dau1 = Object(event, "dau1")
-        dau2 = Object(event, "dau2")
+        muons = Collection(event, "Muon")
+        electrons = Collection(event, "Electron")
+        taus = Collection(event, "Tau")
         met = Object(event, "MET_T1Smear")
+        
+        if event.pairType == 0:
+            dau1 = muons[event.dau1_index]
+            dau2 = taus[event.dau2_index]
+        elif event.pairType == 1:
+            dau1 = electrons[event.dau1_index]
+            dau2 = taus[event.dau2_index]
+        elif event.pairType == 2:
+            dau1 = taus[event.dau1_index]
+            dau2 = taus[event.dau2_index]
+        else:
+            raise ValueError("pairType %s is not implemented" % event.pairType)
 
         bjets = []
         for ijet, jet in enumerate(jets):

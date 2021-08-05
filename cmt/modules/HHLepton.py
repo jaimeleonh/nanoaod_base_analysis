@@ -85,32 +85,38 @@ class HHLeptonProducer(Module):
         self.out = wrappedOutputTree
 
         self.out.branch('pairType', 'I')
+        self.out.branch('dau1_index', 'I')
+        self.out.branch('dau2_index', 'I')
     
-        self.out.branch('dau1_pt', 'F')
-        self.out.branch('dau1_eta', 'F')
-        self.out.branch('dau1_phi', 'F')
-        self.out.branch('dau1_mass', 'F')
-        self.out.branch('dau1_dxy', 'F')
-        self.out.branch('dau1_dz', 'F')
-        self.out.branch('dau1_q', 'I')
-        self.out.branch('dau1_iso', 'F')
-        self.out.branch('dau1_idDecayModeNewDMs', 'b')
-        self.out.branch('dau1_idDeepTau2017v2p1VSe', 'I')
-        self.out.branch('dau1_idDeepTau2017v2p1VSmu', 'I')
-        self.out.branch('dau1_idDeepTau2017v2p1VSjet', 'I')
+        # self.out.branch('dau1_pt', 'F')
+        # self.out.branch('dau1_pt_test', 'F')
+        # self.out.branch('dau1_eta', 'F')
+        # self.out.branch('dau1_phi', 'F')
+        # self.out.branch('dau1_mass', 'F')
+        # self.out.branch('dau1_dxy', 'F')
+        # self.out.branch('dau1_dz', 'F')
+        # self.out.branch('dau1_q', 'I')
+        # self.out.branch('dau1_iso', 'F')
+        # self.out.branch('dau1_decayMode', 'I')
+        # self.out.branch('dau1_idDecayModeNewDMs', 'b')
+        # self.out.branch('dau1_idDeepTau2017v2p1VSe', 'I')
+        # self.out.branch('dau1_idDeepTau2017v2p1VSmu', 'I')
+        # self.out.branch('dau1_idDeepTau2017v2p1VSjet', 'I')
 
-        self.out.branch('dau2_pt', 'F')
-        self.out.branch('dau2_eta', 'F')
-        self.out.branch('dau2_phi', 'F')
-        self.out.branch('dau2_mass', 'F')
-        self.out.branch('dau2_dxy', 'F')
-        self.out.branch('dau2_dz', 'F')
-        self.out.branch('dau2_q', 'I')
-        self.out.branch('dau2_iso', 'F')
-        self.out.branch('dau2_idDecayModeNewDMs', 'b')
-        self.out.branch('dau2_idDeepTau2017v2p1VSe', 'I')
-        self.out.branch('dau2_idDeepTau2017v2p1VSmu', 'I')
-        self.out.branch('dau2_idDeepTau2017v2p1VSjet', 'I')
+        # self.out.branch('dau2_pt', 'F')
+        # self.out.branch('dau2_pt_test', 'F')
+        # self.out.branch('dau2_eta', 'F')
+        # self.out.branch('dau2_phi', 'F')
+        # self.out.branch('dau2_mass', 'F')
+        # self.out.branch('dau2_dxy', 'F')
+        # self.out.branch('dau2_dz', 'F')
+        # self.out.branch('dau2_q', 'I')
+        # self.out.branch('dau2_iso', 'F')
+        # self.out.branch('dau2_decayMode', 'I')
+        # self.out.branch('dau2_idDecayModeNewDMs', 'b')
+        # self.out.branch('dau2_idDeepTau2017v2p1VSe', 'I')
+        # self.out.branch('dau2_idDeepTau2017v2p1VSmu', 'I')
+        # self.out.branch('dau2_idDeepTau2017v2p1VSjet', 'I')
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         pass
@@ -123,33 +129,34 @@ class HHLeptonProducer(Module):
 
         # muon-tau channels
         goodmuons = []
-        for muon in muons:
+        for imuon, muon in enumerate(muons):
             if (abs(muon.eta) > 2.1 or muon.jetRelIso > 0.15 or abs(muon.dxy) > 0.045
                     or abs(muon.dz) > 0.2 or not muon.tightId):
                 continue
-            goodmuons.append(muon)
+            goodmuons.append((imuon, muon))
         if goodmuons:
             goodtaus = []
-            for tau in taus:
+            for itau, tau in enumerate(taus):
                 if tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7:
                     continue
                 if tau.decayMode not in [0, 1, 10, 11]:
                     continue
-                goodtaus.append(tau)
+                goodtaus.append((itau, tau))
             
             muontaupairs = []
-            for muon in goodmuons:
-                for tau in goodtaus:
+            for (imuon, muon) in goodmuons:
+                for (itau, tau) in goodtaus:
                     if tau.DeltaR(muon) < 0.5: continue
                     if not self.trigger_checker.check_mutau(event,
                             muon.pt, muon.eta, tau.pt, tau.eta, th1=1, th2=5):
                         continue
                     muontaupair = LeptonTauPair(muon, muon.pfRelIso04_all, tau, tau.rawDeepTau2017v2p1VSjet)
                     if muontaupair.check_charge():
-                        muontaupairs.append(muontaupair)
+                        muontaupairs.append((imuon, itau, muontaupair))
 
             if len(muontaupairs) != 0:
-                muon, tau = max(muontaupairs).pair
+                muontaupairs.sort(key=lambda x: x[2], reverse=True)
+                muon, tau = muontaupairs[0][2].pair
 
                 fail_lepton_veto, _ = lepton_veto(electrons, muons, taus, muon)
                 if fail_lepton_veto:
@@ -157,54 +164,60 @@ class HHLeptonProducer(Module):
 
                 self.out.fillBranch("pairType", 0)
 
-                self.out.fillBranch("dau1_pt", muon.pt)
-                self.out.fillBranch("dau1_eta", muon.eta)
-                self.out.fillBranch("dau1_phi", muon.phi)
-                self.out.fillBranch("dau1_mass", muon.mass)
-                self.out.fillBranch("dau1_dxy", muon.dxy)
-                self.out.fillBranch("dau1_dz", muon.dz)
-                self.out.fillBranch("dau1_q", muon.charge)
-                self.out.fillBranch("dau1_iso", muon.pfRelIso04_all)
-                self.out.fillBranch("dau1_idDecayModeNewDMs", 0)
-                self.out.fillBranch("dau1_idDeepTau2017v2p1VSe", -1)
-                self.out.fillBranch("dau1_idDeepTau2017v2p1VSmu", -1)
-                self.out.fillBranch("dau1_idDeepTau2017v2p1VSjet", -1)
+                self.out.fillBranch("dau1_index", muontaupairs[0][0])
+                # self.out.fillBranch("dau1_pt_test", muons[muontaupairs[0][0]].pt)
+                # self.out.fillBranch("dau1_pt", muon.pt)
+                # self.out.fillBranch("dau1_eta", muon.eta)
+                # self.out.fillBranch("dau1_phi", muon.phi)
+                # self.out.fillBranch("dau1_mass", muon.mass)
+                # self.out.fillBranch("dau1_dxy", muon.dxy)
+                # self.out.fillBranch("dau1_dz", muon.dz)
+                # self.out.fillBranch("dau1_q", muon.charge)
+                # self.out.fillBranch("dau1_iso", muon.pfRelIso04_all)
+                # self.out.fillBranch("dau1_decayMode", -1)
+                # self.out.fillBranch("dau1_idDecayModeNewDMs", 0)
+                # self.out.fillBranch("dau1_idDeepTau2017v2p1VSe", -1)
+                # self.out.fillBranch("dau1_idDeepTau2017v2p1VSmu", -1)
+                # self.out.fillBranch("dau1_idDeepTau2017v2p1VSjet", -1)
 
-                self.out.fillBranch("dau2_pt", tau.pt)
-                self.out.fillBranch("dau2_eta", tau.eta)
-                self.out.fillBranch("dau2_phi", tau.phi)
-                self.out.fillBranch("dau2_mass", tau.mass)
-                self.out.fillBranch("dau2_dxy", tau.dxy)
-                self.out.fillBranch("dau2_dz", tau.dz)
-                self.out.fillBranch("dau2_q", tau.charge)
-                self.out.fillBranch("dau2_iso", tau.rawIso)
-                self.out.fillBranch("dau2_idDecayModeNewDMs", tau.idDecayModeNewDMs)
-                self.out.fillBranch("dau2_idDeepTau2017v2p1VSe", tau.idDeepTau2017v2p1VSe)
-                self.out.fillBranch("dau2_idDeepTau2017v2p1VSmu", tau.idDeepTau2017v2p1VSmu)
-                self.out.fillBranch("dau2_idDeepTau2017v2p1VSjet", tau.idDeepTau2017v2p1VSjet)
+                self.out.fillBranch("dau2_index", muontaupairs[0][1])
+                # self.out.fillBranch("dau2_pt_test", taus[muontaupairs[0][1]].pt)
+                # self.out.fillBranch("dau2_pt", tau.pt)
+                # self.out.fillBranch("dau2_eta", tau.eta)
+                # self.out.fillBranch("dau2_phi", tau.phi)
+                # self.out.fillBranch("dau2_mass", tau.mass)
+                # self.out.fillBranch("dau2_dxy", tau.dxy)
+                # self.out.fillBranch("dau2_dz", tau.dz)
+                # self.out.fillBranch("dau2_q", tau.charge)
+                # self.out.fillBranch("dau2_iso", tau.rawIso)
+                # self.out.fillBranch("dau2_decayMode", tau.decayMode)
+                # self.out.fillBranch("dau2_idDecayModeNewDMs", tau.idDecayModeNewDMs)
+                # self.out.fillBranch("dau2_idDeepTau2017v2p1VSe", tau.idDeepTau2017v2p1VSe)
+                # self.out.fillBranch("dau2_idDeepTau2017v2p1VSmu", tau.idDeepTau2017v2p1VSmu)
+                # self.out.fillBranch("dau2_idDeepTau2017v2p1VSjet", tau.idDeepTau2017v2p1VSjet)
                 return True
 
         # electron-tau channels
         goodelectrons = []
-        for electron in electrons:
+        for ielectron, electron in enumerate(electrons):
             if (not (electron.mvaFall17V2Iso_WP80 or electron.mvaFall17V2noIso_WP80)
                     or abs(electron.dxy) > 0.045 or abs(electron.dz) > 0.2):
                 continue
-            goodelectrons.append(electron)
+            goodelectrons.append((ielectron, electron))
         if goodelectrons:
             goodtaus = []
-            for tau in taus:
+            for itau, tau in enumerate(taus):
                 if tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7:
                     continue
                 if tau.dz > 0.2:
                     continue
                 if tau.decayMode not in [0, 1, 10, 11]:
                     continue
-                goodtaus.append(tau)
+                goodtaus.append((itau, tau))
 
             electrontaupairs = []
-            for electron in goodelectrons:
-                for tau in goodtaus:
+            for (ielectron, electron) in goodelectrons:
+                for (itau, tau) in goodtaus:
                     if tau.DeltaR(electron) < 0.5: continue
                     if not self.trigger_checker.check_etau(event,
                             electron.pt, electron.eta, tau.pt, tau.eta, th1=1, th2=5):
@@ -212,10 +225,11 @@ class HHLeptonProducer(Module):
                     electrontaupair = LeptonTauPair(electron, electron.pfRelIso03_all, tau,
                         tau.rawDeepTau2017v2p1VSjet)
                     if electrontaupair.check_charge():
-                        electrontaupairs.append(electrontaupair)
+                        electrontaupairs.append((ielectron, itau, electrontaupair))
 
             if len(electrontaupairs) != 0:
-                electron, tau = max(electrontaupairs).pair
+                electrontaupairs.sort(key=lambda x: x[2], reverse=True)
+                electron, tau = electrontaupairs[0][2].pair
 
                 fail_lepton_veto, _ = lepton_veto(electrons, muons, taus, electron)
                 if fail_lepton_veto:
@@ -223,65 +237,72 @@ class HHLeptonProducer(Module):
 
                 self.out.fillBranch("pairType", 1)
 
-                self.out.fillBranch("dau1_pt", electron.pt)
-                self.out.fillBranch("dau1_eta", electron.eta)
-                self.out.fillBranch("dau1_phi", electron.phi)
-                self.out.fillBranch("dau1_mass", electron.mass)
-                self.out.fillBranch("dau1_dxy", electron.dxy)
-                self.out.fillBranch("dau1_dz", electron.dz)
-                self.out.fillBranch("dau1_q", electron.charge)
-                self.out.fillBranch("dau1_iso", electron.pfRelIso03_all)
-                self.out.fillBranch("dau1_idDecayModeNewDMs", 0)
-                self.out.fillBranch("dau1_idDeepTau2017v2p1VSe", -1)
-                self.out.fillBranch("dau1_idDeepTau2017v2p1VSmu", -1)
-                self.out.fillBranch("dau1_idDeepTau2017v2p1VSjet", -1)
+                self.out.fillBranch("dau1_index", electrontaupairs[0][0])
+                # self.out.fillBranch("dau1_pt_test", electrons[electrontaupairs[0][0]].pt)
+                # self.out.fillBranch("dau1_pt", electron.pt)
+                # self.out.fillBranch("dau1_eta", electron.eta)
+                # self.out.fillBranch("dau1_phi", electron.phi)
+                # self.out.fillBranch("dau1_mass", electron.mass)
+                # self.out.fillBranch("dau1_dxy", electron.dxy)
+                # self.out.fillBranch("dau1_dz", electron.dz)
+                # self.out.fillBranch("dau1_q", electron.charge)
+                # self.out.fillBranch("dau1_iso", electron.pfRelIso03_all)
+                # self.out.fillBranch("dau1_decayMode", -1)
+                # self.out.fillBranch("dau1_idDecayModeNewDMs", 0)
+                # self.out.fillBranch("dau1_idDeepTau2017v2p1VSe", -1)
+                # self.out.fillBranch("dau1_idDeepTau2017v2p1VSmu", -1)
+                # self.out.fillBranch("dau1_idDeepTau2017v2p1VSjet", -1)
 
-                self.out.fillBranch("dau2_pt", tau.pt)
-                self.out.fillBranch("dau2_eta", tau.eta)
-                self.out.fillBranch("dau2_phi", tau.phi)
-                self.out.fillBranch("dau2_mass", tau.mass)
-                self.out.fillBranch("dau2_dxy", tau.dxy)
-                self.out.fillBranch("dau2_dz", tau.dz)
-                self.out.fillBranch("dau2_q", tau.charge)
-                self.out.fillBranch("dau2_iso", tau.rawIso)
-                self.out.fillBranch("dau2_idDecayModeNewDMs", tau.idDecayModeNewDMs)
-                self.out.fillBranch("dau2_idDeepTau2017v2p1VSe", tau.idDeepTau2017v2p1VSe)
-                self.out.fillBranch("dau2_idDeepTau2017v2p1VSmu", tau.idDeepTau2017v2p1VSmu)
-                self.out.fillBranch("dau2_idDeepTau2017v2p1VSjet", tau.idDeepTau2017v2p1VSjet)
+                self.out.fillBranch("dau2_index", electrontaupairs[0][1])
+                # self.out.fillBranch("dau2_pt_test", taus[electrontaupairs[0][1]].pt)
+                # self.out.fillBranch("dau2_pt", tau.pt)
+                # self.out.fillBranch("dau2_eta", tau.eta)
+                # self.out.fillBranch("dau2_phi", tau.phi)
+                # self.out.fillBranch("dau2_mass", tau.mass)
+                # self.out.fillBranch("dau2_dxy", tau.dxy)
+                # self.out.fillBranch("dau2_dz", tau.dz)
+                # self.out.fillBranch("dau2_q", tau.charge)
+                # self.out.fillBranch("dau2_iso", tau.rawIso)
+                # self.out.fillBranch("dau2_decayMode", tau.decayMode)
+                # self.out.fillBranch("dau2_idDecayModeNewDMs", tau.idDecayModeNewDMs)
+                # self.out.fillBranch("dau2_idDeepTau2017v2p1VSe", tau.idDeepTau2017v2p1VSe)
+                # self.out.fillBranch("dau2_idDeepTau2017v2p1VSmu", tau.idDeepTau2017v2p1VSmu)
+                # self.out.fillBranch("dau2_idDeepTau2017v2p1VSjet", tau.idDeepTau2017v2p1VSjet)
 
                 return True
 
         goodtaus = []
-        for tau in taus:
+        for itau, tau in enumerate(taus):
             if tau.idDeepTau2017v2p1VSmu < 1 or tau.idDeepTau2017v2p1VSe < 3:
                 continue
             if tau.dz > 0.2:
                 continue
             if tau.decayMode not in [0, 1, 10, 11]:
                 continue
-            goodtaus.append(tau)
+            goodtaus.append((itau, tau))
         
         tautaupairs = []
         for i in range(len(goodtaus) - 1):
             for j in range(i + 1, len(goodtaus)):
-                firsttau = goodtaus[i]
-                secondtau = goodtaus[j]
+                tau1_index = goodtaus[i][0]
+                tau1 = goodtaus[i][1]
+                tau2_index = goodtaus[j][0]
+                tau2 = goodtaus[j][1]
             if not (
                     self.trigger_checker.check_tautau(event,
-                        firsttau.pt, firsttau.eta, secondtau.pt, secondtau.eta,
-                        abs_th1=40, abs_th2=40)
+                        tau1.pt, tau1.eta, tau2.pt, tau2.eta, abs_th1=40, abs_th2=40)
                     or self.trigger_checker.check_vbftautau(event,
-                        firsttau.pt, firsttau.eta, secondtau.pt, secondtau.eta,
-                        abs_th1=25, abs_th2=25)
+                        tau1.pt, tau1.eta, tau2.pt, tau2.eta, abs_th1=25, abs_th2=25)
                     ):
                 continue
-            tautaupair = LeptonTauPair(firsttau, firsttau.rawDeepTau2017v2p1VSjet,
-                secondtau, secondtau.rawDeepTau2017v2p1VSjet)
+            tautaupair = LeptonTauPair(tau1, tau1.rawDeepTau2017v2p1VSjet,
+                tau2, tau2.rawDeepTau2017v2p1VSjet)
             if tautaupair.check_charge():
-                tautaupairs.append(tautaupair)
+                tautaupairs.append((tau1_index, tau2_index, tautaupair))
 
         if len(tautaupairs) != 0:
-            tau1, tau2 = max(tautaupairs).pair
+            tautaupairs.sort(key=lambda x: x[2], reverse=True)
+            tau1, tau2 = tautaupairs[0][2].pair
 
             fail_lepton_veto, _ = lepton_veto(electrons, muons, taus)
             if fail_lepton_veto:
@@ -289,31 +310,37 @@ class HHLeptonProducer(Module):
 
             self.out.fillBranch("pairType", 2)
 
-            self.out.fillBranch("dau1_pt", tau1.pt)
-            self.out.fillBranch("dau1_eta", tau1.eta)
-            self.out.fillBranch("dau1_phi", tau1.phi)
-            self.out.fillBranch("dau1_mass", tau1.mass)
-            self.out.fillBranch("dau1_dxy", tau1.dxy)
-            self.out.fillBranch("dau1_dz", tau1.dz)
-            self.out.fillBranch("dau1_q", tau1.charge)
-            self.out.fillBranch("dau1_iso", tau1.rawIso)
-            self.out.fillBranch("dau1_idDecayModeNewDMs", tau1.idDecayModeNewDMs)
-            self.out.fillBranch("dau1_idDeepTau2017v2p1VSe", tau1.idDeepTau2017v2p1VSe)
-            self.out.fillBranch("dau1_idDeepTau2017v2p1VSmu", tau1.idDeepTau2017v2p1VSmu)
-            self.out.fillBranch("dau1_idDeepTau2017v2p1VSjet", tau1.idDeepTau2017v2p1VSjet)  
+            self.out.fillBranch("dau1_index", tautaupairs[0][0])
+            # self.out.fillBranch("dau1_pt_test", taus[tautaupairs[0][0]].pt)
+            # self.out.fillBranch("dau1_pt", tau1.pt)
+            # self.out.fillBranch("dau1_eta", tau1.eta)
+            # self.out.fillBranch("dau1_phi", tau1.phi)
+            # self.out.fillBranch("dau1_mass", tau1.mass)
+            # self.out.fillBranch("dau1_dxy", tau1.dxy)
+            # self.out.fillBranch("dau1_dz", tau1.dz)
+            # self.out.fillBranch("dau1_q", tau1.charge)
+            # self.out.fillBranch("dau1_iso", tau1.rawIso)
+            # self.out.fillBranch("dau1_decayMode", tau1.decayMode)
+            # self.out.fillBranch("dau1_idDecayModeNewDMs", tau1.idDecayModeNewDMs)
+            # self.out.fillBranch("dau1_idDeepTau2017v2p1VSe", tau1.idDeepTau2017v2p1VSe)
+            # self.out.fillBranch("dau1_idDeepTau2017v2p1VSmu", tau1.idDeepTau2017v2p1VSmu)
+            # self.out.fillBranch("dau1_idDeepTau2017v2p1VSjet", tau1.idDeepTau2017v2p1VSjet)  
 
-            self.out.fillBranch("dau2_pt", tau2.pt)
-            self.out.fillBranch("dau2_eta", tau2.eta)
-            self.out.fillBranch("dau2_phi", tau2.phi)
-            self.out.fillBranch("dau2_mass", tau2.mass)
-            self.out.fillBranch("dau2_dxy", tau2.dxy)
-            self.out.fillBranch("dau2_dz", tau2.dz)
-            self.out.fillBranch("dau2_q", tau2.charge)
-            self.out.fillBranch("dau2_iso", tau2.rawIso)
-            self.out.fillBranch("dau2_idDecayModeNewDMs", tau2.idDecayModeNewDMs)
-            self.out.fillBranch("dau2_idDeepTau2017v2p1VSe", tau2.idDeepTau2017v2p1VSe)
-            self.out.fillBranch("dau2_idDeepTau2017v2p1VSmu", tau2.idDeepTau2017v2p1VSmu)
-            self.out.fillBranch("dau2_idDeepTau2017v2p1VSjet", tau2.idDeepTau2017v2p1VSjet)
+            self.out.fillBranch("dau2_index", tautaupairs[0][1])
+            # self.out.fillBranch("dau2_pt_test", taus[tautaupairs[0][1]].pt)
+            # self.out.fillBranch("dau2_pt", tau2.pt)
+            # self.out.fillBranch("dau2_eta", tau2.eta)
+            # self.out.fillBranch("dau2_phi", tau2.phi)
+            # self.out.fillBranch("dau2_mass", tau2.mass)
+            # self.out.fillBranch("dau2_dxy", tau2.dxy)
+            # self.out.fillBranch("dau2_dz", tau2.dz)
+            # self.out.fillBranch("dau2_q", tau2.charge)
+            # self.out.fillBranch("dau2_iso", tau2.rawIso)
+            # self.out.fillBranch("dau2_decayMode", tau2.decayMode)
+            # self.out.fillBranch("dau2_idDecayModeNewDMs", tau2.idDecayModeNewDMs)
+            # self.out.fillBranch("dau2_idDeepTau2017v2p1VSe", tau2.idDeepTau2017v2p1VSe)
+            # self.out.fillBranch("dau2_idDeepTau2017v2p1VSmu", tau2.idDeepTau2017v2p1VSmu)
+            # self.out.fillBranch("dau2_idDeepTau2017v2p1VSjet", tau2.idDeepTau2017v2p1VSjet)
 
             return True
         return False

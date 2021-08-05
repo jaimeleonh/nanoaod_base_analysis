@@ -30,3 +30,6 @@ HHJets:
     path: cmt.modules.HHJets
     parameters:
         year: self.config.year
+
+SVFit:
+    path: cmt.modules.SVFit
