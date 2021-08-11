@@ -8,14 +8,21 @@
         # jetType: AK4PFchs
         # noGroom: False
         # splitJER: True
-HHLepton:
+
+1:
+    name: Counter
+    path: cmt.modules.counter
+
+2:
+    name: HHLepton
     path: cmt.modules.HHLepton
     parameters:
         isMC: self.dataset.isMC
         year: self.config.year
         runPeriod: self.dataset.runPeriod
 
-createJMECorrector:
+3:
+    name: createJMECorrector
     path: PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun2
     parameters:
         isMC: self.dataset.isMC
@@ -26,10 +33,21 @@ createJMECorrector:
         noGroom: False
         splitJER: True
 
-HHJets:
+4:
+    name: HHJets
     path: cmt.modules.HHJets
     parameters:
         year: self.config.year
+        isMC: self.dataset.isMC
 
-SVFit:
+5:
+    name: SVFit
     path: cmt.modules.SVFit
+    parameters:
+        isMC: self.dataset.isMC
+
+6:  
+    name: HH
+    path: cmt.modules.HH
+    parameters:
+        isMC: self.dataset.isMC

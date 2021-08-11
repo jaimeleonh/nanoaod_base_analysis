@@ -1,12 +1,13 @@
 from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
-from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 from analysis_tools.utils import import_root
 from cmt.modules.tau_utils import LeptonTauPair, TriggerChecker, lepton_veto
+from cmt.modules.baseModules import JetLepMetModule
 
 ROOT = import_root()
 
-class HHLeptonProducer(Module):
-    def __init__(self, isMC, year, runPeriod):
+class HHLeptonProducer(JetLepMetModule):
+    def __init__(self, isMC, year, runPeriod, *args, **kwargs):
+        super(HHLeptonProducer, self).__init__(*args, **kwargs)
         self.isMC = isMC
         self.year = year
         self.runPeriod = runPeriod
@@ -139,6 +140,8 @@ class HHLeptonProducer(Module):
             for itau, tau in enumerate(taus):
                 if tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7:
                     continue
+                if tau.dz > 0.2:
+                    continue
                 if tau.decayMode not in [0, 1, 10, 11]:
                     continue
                 goodtaus.append((itau, tau))
@@ -148,9 +151,12 @@ class HHLeptonProducer(Module):
                 for (itau, tau) in goodtaus:
                     if tau.DeltaR(muon) < 0.5: continue
                     if not self.trigger_checker.check_mutau(event,
-                            muon.pt, muon.eta, tau.pt, tau.eta, th1=1, th2=5):
+                            eval("muon.pt%s" % self.muon_syst), muon.eta,
+                            eval("tau.pt%s" % self.tau_syst), tau.eta, th1=1, th2=5):
                         continue
-                    muontaupair = LeptonTauPair(muon, muon.pfRelIso04_all, tau, tau.rawDeepTau2017v2p1VSjet)
+                    muontaupair = LeptonTauPair(
+                        muon, eval("muon.pt%s" % self.muon_syst), muon.pfRelIso04_all,
+                        tau, eval("tau.pt%s" % self.tau_syst), tau.rawDeepTau2017v2p1VSjet)
                     if muontaupair.check_charge():
                         muontaupairs.append((imuon, itau, muontaupair))
 
@@ -220,10 +226,12 @@ class HHLeptonProducer(Module):
                 for (itau, tau) in goodtaus:
                     if tau.DeltaR(electron) < 0.5: continue
                     if not self.trigger_checker.check_etau(event,
-                            electron.pt, electron.eta, tau.pt, tau.eta, th1=1, th2=5):
+                            eval("electron.pt%s" % self.electron_syst), electron.eta,
+                            eval("tau.pt%s" % self.tau_syst), tau.eta, th1=1, th2=5):
                         continue
-                    electrontaupair = LeptonTauPair(electron, electron.pfRelIso03_all, tau,
-                        tau.rawDeepTau2017v2p1VSjet)
+                    electrontaupair = LeptonTauPair(
+                        electron, eval("electron.pt%s" % self.electron_syst), electron.pfRelIso03_all,
+                        tau, eval("tau.pt%s" % self.tau_syst), tau.rawDeepTau2017v2p1VSjet)
                     if electrontaupair.check_charge():
                         electrontaupairs.append((ielectron, itau, electrontaupair))
 
@@ -280,7 +288,7 @@ class HHLeptonProducer(Module):
             if tau.decayMode not in [0, 1, 10, 11]:
                 continue
             goodtaus.append((itau, tau))
-        
+
         tautaupairs = []
         for i in range(len(goodtaus) - 1):
             for j in range(i + 1, len(goodtaus)):
@@ -290,13 +298,16 @@ class HHLeptonProducer(Module):
                 tau2 = goodtaus[j][1]
             if not (
                     self.trigger_checker.check_tautau(event,
-                        tau1.pt, tau1.eta, tau2.pt, tau2.eta, abs_th1=40, abs_th2=40)
+                        eval("tau1.pt%s" % self.tau_syst), tau1.eta,
+                        eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=40, abs_th2=40)
                     or self.trigger_checker.check_vbftautau(event,
-                        tau1.pt, tau1.eta, tau2.pt, tau2.eta, abs_th1=25, abs_th2=25)
+                        eval("tau1.pt%s" % self.tau_syst), tau1.eta,
+                        eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=25, abs_th2=25)
                     ):
                 continue
-            tautaupair = LeptonTauPair(tau1, tau1.rawDeepTau2017v2p1VSjet,
-                tau2, tau2.rawDeepTau2017v2p1VSjet)
+            tautaupair = LeptonTauPair(
+                tau1, eval("tau1.pt%s" % self.tau_syst), tau1.rawDeepTau2017v2p1VSjet,
+                tau2, eval("tau2.pt%s" % self.tau_syst), tau2.rawDeepTau2017v2p1VSjet)
             if tautaupair.check_charge():
                 tautaupairs.append((tau1_index, tau2_index, tautaupair))
 

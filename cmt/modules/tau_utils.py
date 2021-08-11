@@ -1,13 +1,14 @@
 import re
 
+
 # extracted from https://github.com/cms-tau-pog/TauFW/blob/master/PicoProducer/python/analysis/utils.py
 class LeptonPair:
     """Container class to pair and order tau decay candidates."""
-    def __init__(self, obj1, iso1, obj2, iso2):
+    def __init__(self, obj1, iso1, pt1, obj2, iso2, pt2):
         self.obj1 = obj1
         self.obj2 = obj2
-        self.pt1  = obj1.pt
-        self.pt2  = obj2.pt
+        self.pt1  = pt1
+        self.pt2  = pt2
         self.iso1 = iso1
         self.iso2 = iso2
         self.pair = [obj1, obj2]

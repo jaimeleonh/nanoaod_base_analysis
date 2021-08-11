@@ -16,13 +16,15 @@ import os
 import law
 import luigi
 
+from analysis_tools.utils import join_root_selection as jrs
+from analysis_tools.utils import import_root
+
 from cmt.base_tasks.base import ( 
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData, ConfigTaskWithCategory
 )
 
 
 class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
-
     category_names = law.CSVParameter(default=("baseline_even",), description="names of categories "
         "to run, default: (baseline_even,)")
 
@@ -90,10 +92,12 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
             return _nargs, _kwargs
         
         modules = []
-        for name in module_params.keys():
+        for tag in module_params.keys():
             parameter_str = ""
-            if "parameters" in module_params[name]:
-                for param, value in module_params[name]["parameters"].items():
+            assert "name" in module_params[tag] and "path" in module_params[tag]
+            name = module_params[tag]["name"]
+            if "parameters" in module_params[tag]:
+                for param, value in module_params[tag]["parameters"].items():
                     if isinstance(value, str):
                         if "self" in value:
                             value = eval(value)
@@ -101,7 +105,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
                         parameter_str += param + " = '{}', ".format(value)
                     else:
                         parameter_str += param + " = {}, ".format(value)
-            mod = module_params[name]["path"]
+            mod = module_params[tag]["path"]
             mod = __import__(mod, fromlist=[name])
             nargs, kwargs = eval('_args(%s)' % parameter_str)
             modules.append(getattr(mod, name)(**kwargs)())      
@@ -110,7 +114,6 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
-        from analysis_tools.utils import join_root_selection as jrs
         from shutil import move
         from PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor import PostProcessor
 
@@ -123,7 +126,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         dataset_selection = self.dataset.get_aux("selection")
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
-        selection = "Jet_pt > 500" # hard-coded to reduce the number of events on purpose
+        selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
         modules = self.get_modules()
         p = PostProcessor(".", [inp],
                       cut=selection,
@@ -137,3 +140,54 @@ class PreprocessWrapper(DatasetCategoryWrapperTask):
 
     def atomic_requires(self, dataset, category):
         return Preprocess.req(self, dataset_name=dataset.name, category_name=category.name)
+
+
+class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
+    base_category_name = luigi.Parameter(default="base", description="the name of the "
+        "base category with the initial selection, default: base")
+    # regions not supported
+    region_name = None
+
+    default_store = "$CMT_STORE_EOS_CATEGORIZATION"
+    default_wlcg_fs = "wlcg_fs_categorization"
+
+    tree_name = "Events"
+
+    def create_branch_map(self):
+        return len(self.dataset.get_files())
+
+    def workflow_requires(self):
+        return {"data": Preprocess.vreq(self, category_name=self.base_category_name)}
+
+    def requires(self):
+        return {"data": Preprocess.vreq(self, category_name=self.base_category_name,
+            branch=self.branch)}
+
+    def output(self):
+        return self.local_target("{}".format(self.input()["data"].path.split("/")[-1]))
+        # return self.local_target("{}".format(self.input()["data"].split("/")[-1]))
+
+    @law.decorator.notify
+    @law.decorator.localize(input=False)
+    def run(self):
+        ROOT = import_root()
+
+        # prepare inputs and outputs
+        inp = self.input()["data"].path
+        outp = self.output().path
+
+        # build the full selection
+        selection = self.category.selection
+        dataset_selection = self.dataset.get_aux("selection")
+        if dataset_selection and dataset_selection != "1":
+            selection = jrs(dataset_selection, selection, op="and")
+
+        df = ROOT.RDataFrame(self.tree_name, inp)
+        filtered_df = df.Filter(selection)
+        filtered_df.Snapshot(self.tree_name, outp)
+
+
+class CategorizationWrapper(DatasetCategoryWrapperTask):
+
+    def atomic_requires(self, dataset, category):
+        return Categorization.req(self, dataset_name=dataset.name, category_name=category.name)
