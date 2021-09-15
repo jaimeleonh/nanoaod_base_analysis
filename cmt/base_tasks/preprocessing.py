@@ -17,7 +17,7 @@ import law
 import luigi
 
 from analysis_tools.utils import join_root_selection as jrs
-from analysis_tools.utils import import_root
+from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import ( 
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData, ConfigTaskWithCategory
@@ -57,7 +57,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
 
     modules = luigi.DictParameter(default=None)
     modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
-        default=None)
+        default="")
 
     # regions not supported
     region_name = None
@@ -126,7 +126,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         dataset_selection = self.dataset.get_aux("selection")
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
-        selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
+        # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
         modules = self.get_modules()
         p = PostProcessor(".", [inp],
                       cut=selection,
@@ -164,8 +164,11 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
             branch=self.branch)}
 
     def output(self):
-        return self.local_target("{}".format(self.input()["data"].path.split("/")[-1]))
-        # return self.local_target("{}".format(self.input()["data"].split("/")[-1]))
+        return {
+            "root": self.local_target("{}".format(self.input()["data"].path.split("/")[-1])),
+            "json": self.local_target(
+                "{}".format(self.input()["data"].path.split("/")[-1]).replace(".root", ".json")),
+        }
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -174,7 +177,7 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
 
         # prepare inputs and outputs
         inp = self.input()["data"].path
-        outp = self.output().path
+        outp = self.output()
 
         # build the full selection
         selection = self.category.selection
@@ -184,7 +187,15 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
 
         df = ROOT.RDataFrame(self.tree_name, inp)
         filtered_df = df.Filter(selection)
-        filtered_df.Snapshot(self.tree_name, outp)
+        filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path))
+
+        stats = {}
+        input_file = ROOT.TFile.Open(inp)
+        stats["nevents"] = input_file.Get("histos/initial_count").GetBinContent(1)
+        input_file.Close()
+        import json
+        with open(create_file_dir(outp["json"].path), "w+") as f:
+            json.dump(stats, f, indent=4)
 
 
 class CategorizationWrapper(DatasetCategoryWrapperTask):

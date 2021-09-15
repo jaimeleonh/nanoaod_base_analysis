@@ -17,15 +17,21 @@
     name: HHLepton
     path: cmt.modules.HHLepton
     parameters:
-        isMC: self.dataset.isMC
+        isMC: self.dataset.process.isMC
         year: self.config.year
         runPeriod: self.dataset.runPeriod
+
+2_var:
+    name: HHLeptonVariable
+    path: cmt.modules.HHLepton
+    parameters:
+        isMC: self.dataset.process.isMC
 
 3:
     name: createJMECorrector
     path: PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun2
     parameters:
-        isMC: self.dataset.isMC
+        isMC: self.dataset.process.isMC
         dataYear: self.config.year
         runPeriod: self.dataset.runPeriod
         jesUncert: Total
@@ -38,16 +44,16 @@
     path: cmt.modules.HHJets
     parameters:
         year: self.config.year
-        isMC: self.dataset.isMC
+        isMC: self.dataset.process.isMC
 
 5:
     name: SVFit
     path: cmt.modules.SVFit
     parameters:
-        isMC: self.dataset.isMC
+        isMC: self.dataset.process.isMC
 
 6:  
     name: HH
     path: cmt.modules.HH
     parameters:
-        isMC: self.dataset.isMC
+        isMC: self.dataset.process.isMC

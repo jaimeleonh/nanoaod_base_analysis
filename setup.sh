@@ -162,7 +162,7 @@ action() {
           scram b
         fi
 
-        export SVFIT_PATH=""
+        export SVFIT_PATH="TauAnalysis"
         if [ ! -d "$SVFIT_PATH" ]; then
           git clone https://github.com/LLRCMS/ClassicSVfit.git TauAnalysis/ClassicSVfit -b bbtautau_LegacyRun2
           git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
@@ -200,7 +200,7 @@ action() {
             cmt_pip_install flake8
             cmt_pip_install luigi==2.8.13
             cmt_pip_install git+https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools.git
-            #cmt_pip_install --no-deps git+https://github.com/jaimeleonh/analysis_tools.git
+            cmt_pip_install git+https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools.git
             cmt_pip_install --no-deps git+https://github.com/riga/law
             cmt_pip_install --no-deps gast==0.2.2  # https://github.com/tensorflow/autograph/issues/1
         fi
