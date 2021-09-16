@@ -58,12 +58,22 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
     modules = luigi.DictParameter(default=None)
     modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
         default="")
+    keep_and_drop_file = luigi.Parameter(description="filename with output branches to "
+        "keep and drop", default="$CMT_BASE/cmt/files/keep_and_drop_branches.txt")
 
     # regions not supported
     region_name = None
 
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
+
+    def __init__(self, *args, **kwargs):
+        super(Preprocess, self).__init__(*args, **kwargs)
+        if not self.keep_and_drop_file:
+            self.keep_and_drop_file = None
+        else:
+            if "$" in self.keep_and_drop_file:
+                self.keep_and_drop_file = os.path.expandvars(self.keep_and_drop_file)
 
     def create_branch_map(self):
         return len(self.dataset.get_files())
@@ -126,12 +136,13 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         dataset_selection = self.dataset.get_aux("selection")
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
-        # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
+        # selection = "Jet_pt > 1000" # hard-coded to reduce the number of events for testing
         modules = self.get_modules()
         p = PostProcessor(".", [inp],
                       cut=selection,
                       modules=modules,
-                      postfix="")
+                      postfix="",
+                      outputbranchsel=self.keep_and_drop_file)
         p.run()
         move("./{}".format(inp.split("/")[-1]), outp)
 
