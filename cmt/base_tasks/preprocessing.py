@@ -136,7 +136,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         dataset_selection = self.dataset.get_aux("selection")
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
-        # selection = "Jet_pt > 1000" # hard-coded to reduce the number of events for testing
+        #selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
         modules = self.get_modules()
         p = PostProcessor(".", [inp],
                       cut=selection,

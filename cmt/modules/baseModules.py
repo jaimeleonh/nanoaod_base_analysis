@@ -73,7 +73,7 @@ class JetLepMetModule(SystModule):
         return bjet1, bjet2, bjet1_tlv, bjet2_tlv
 
     def get_vbfjets(self, event, jets):
-        if event.VBFjet1_JetIdx != -1:
+        if event.VBFjet1_JetIdx != -1 and event.VBFjet2_JetIdx != -1:
             vbfjet1 = jets[event.VBFjet1_JetIdx]
             vbfjet2 = jets[event.VBFjet2_JetIdx]
             
@@ -82,7 +82,7 @@ class JetLepMetModule(SystModule):
             vbfjet2_tlv = ROOT.TLorentzVector()
             vbfjet1_tlv.SetPtEtaPhiM(eval("vbfjet1.pt%s" % self.jet_syst), vbfjet1.eta,
                 vbfjet1.phi, eval("vbfjet1.mass%s" % self.jet_syst))
-            vbfjet2_tlv.SetPtEtaPhiM(eval("bjet2.pt%s" % self.jet_syst), bjet2.eta,
+            vbfjet2_tlv.SetPtEtaPhiM(eval("vbfjet2.pt%s" % self.jet_syst), vbfjet2.eta,
                 vbfjet2.phi, eval("vbfjet2.mass%s" % self.jet_syst))
         else:
             return None, None, None, None

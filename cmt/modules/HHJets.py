@@ -62,6 +62,8 @@ class HHJetsProducer(JetLepMetModule):
         for ijet, jet in enumerate(jets):
             if eval("jet.pt%s" % self.jet_syst) < 20 or abs(jet.eta) > 2.4:
                 continue
+            if jet.puId < 4 and eval("jet.pt%s" % self.jet_syst) <= 50:  
+                continue
             jet_tlv = ROOT.TLorentzVector()
             jet_tlv.SetPtEtaPhiM(
                 eval("jet.pt%s" % self.jet_syst),
@@ -166,8 +168,12 @@ class HHJetsProducer(JetLepMetModule):
         self.out.fillBranch("bjet2_JetIdx", bjet2[0])
 
         if vbf_jet_pairs:
-            self.out.fillBranch("VBFjet1_JetIdx", vbf_pair.obj1_index)
-            self.out.fillBranch("VBFjet2_JetIdx", vbf_pair.obj2_index)
+            if vbf_pair.obj1.pt > vbf_pair.obj1.pt:
+                self.out.fillBranch("VBFjet1_JetIdx", vbf_pair.obj1_index)
+                self.out.fillBranch("VBFjet2_JetIdx", vbf_pair.obj2_index)
+            else:
+                self.out.fillBranch("VBFjet1_JetIdx", vbf_pair.obj2_index)
+                self.out.fillBranch("VBFjet2_JetIdx", vbf_pair.obj1_index)
         else:
             self.out.fillBranch("VBFjet1_JetIdx", -1)
             self.out.fillBranch("VBFjet2_JetIdx", -1)
@@ -196,9 +202,11 @@ class HHJetsProducer(JetLepMetModule):
                 subj1.phi, eval("subj1.mass%s" % self.jet_syst))
             subj2_tlv.SetPtEtaPhiM(eval("subj2.pt%s" % self.jet_syst), subj2.eta,
                 subj2.phi, eval("subj2.mass%s" % self.jet_syst))
-            if ((abs(bjet1_tlv.DeltaR(subj1_tlv)) > 0.4 or abs(bjet2_tlv.DeltaR(subj2_tlv)) > 0.4) 
-                    and
-                    (abs(bjet1_tlv.DeltaR(subj2_tlv)) > 0.4 or abs(bjet2_tlv.DeltaR(subj1_tlv)) > 0.4)):
+            if ((abs(bjet1_tlv.DeltaR(subj1_tlv)) > 0.4
+                    or abs(bjet2_tlv.DeltaR(subj2_tlv)) > 0.4)
+                and
+                (abs(bjet1_tlv.DeltaR(subj2_tlv)) > 0.4
+                    or abs(bjet2_tlv.DeltaR(subj1_tlv)) > 0.4)):
                 continue
             is_boosted = True
         self.out.fillBranch("isBoosted", is_boosted)

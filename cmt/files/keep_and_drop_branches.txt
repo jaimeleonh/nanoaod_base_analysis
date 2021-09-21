@@ -1,7 +1,7 @@
 drop Photon*
 drop HLT*
 drop L1*
-drop Flag*
+#drop Flag*
 drop HTXS*
-drop LHE*
+#drop LHE*
 drop TrigObj*

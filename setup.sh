@@ -168,6 +168,22 @@ action() {
           git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
           scram b
         fi
+        
+        export HTT_PATH="HTT-utilities"
+        if [ ! -d "$HTT_PATH" ]; then
+          git clone https://github.com/CMS-HTT/LeptonEff-interface.git HTT-utilities
+          cd HTT-utilities/LepEffInterface/
+          rm -rf data
+          git clone https://github.com/CMS-HTT/LeptonEfficiencies.git data
+          cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
+          mkdir TauAnalysisTools
+          git clone -b run2_SFs https://github.com/cms-tau-pog/TauTriggerSFs TauAnalysisTools/TauTriggerSFs
+          cd TauAnalysisTools/TauTriggerSFs/data
+          wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root
+          wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root
+          cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
+          scram b
+        fi
 
         #export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
         #if [ ! -d "$COMBINE_PATH" ]; then

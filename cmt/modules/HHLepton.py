@@ -88,6 +88,7 @@ class HHLeptonProducer(JetLepMetModule):
         self.out.branch('pairType', 'I')
         self.out.branch('dau1_index', 'I')
         self.out.branch('dau2_index', 'I')
+        self.out.branch('isVBFtrigger', 'I')
 
         self.out.branch('dau1_eta', 'F')
         self.out.branch('dau1_phi', 'F')
@@ -163,6 +164,7 @@ class HHLeptonProducer(JetLepMetModule):
                     return False
 
                 self.out.fillBranch("pairType", 0)
+                self.out.fillBranch("isVBFtrigger", 0)
 
                 self.out.fillBranch("dau1_index", muontaupairs[0][0])
                 self.out.fillBranch("dau1_eta", muon.eta)
@@ -232,6 +234,7 @@ class HHLeptonProducer(JetLepMetModule):
                     return False
 
                 self.out.fillBranch("pairType", 1)
+                self.out.fillBranch("isVBFtrigger", 0)
 
                 self.out.fillBranch("dau1_index", electrontaupairs[0][0])
                 self.out.fillBranch("dau1_eta", electron.eta)
@@ -278,15 +281,20 @@ class HHLeptonProducer(JetLepMetModule):
                 tau1 = goodtaus[i][1]
                 tau2_index = goodtaus[j][0]
                 tau2 = goodtaus[j][1]
-            if not (
-                    self.trigger_checker.check_tautau(event,
-                        eval("tau1.pt%s" % self.tau_syst), tau1.eta,
-                        eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=40, abs_th2=40)
-                    or self.trigger_checker.check_vbftautau(event,
-                        eval("tau1.pt%s" % self.tau_syst), tau1.eta,
-                        eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=25, abs_th2=25)
-                    ):
+            
+            pass_ditau = self.trigger_checker.check_tautau(event,
+                eval("tau1.pt%s" % self.tau_syst), tau1.eta,
+                eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=40, abs_th2=40)
+            # passing vbf trigger ONLY
+            pass_vbf = not pass_ditau and self.trigger_checker.check_vbftautau(event,
+                eval("tau1.pt%s" % self.tau_syst), tau1.eta,
+                eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=25, abs_th2=25)
+            
+            if not (pass_ditau or pass_vbf):
                 continue
+
+            pass_vbf = int(pass_vbf)
+
             tautaupair = LeptonTauPair(
                 tau1, eval("tau1.pt%s" % self.tau_syst), tau1.rawDeepTau2017v2p1VSjet,
                 tau2, eval("tau2.pt%s" % self.tau_syst), tau2.rawDeepTau2017v2p1VSjet)
@@ -302,6 +310,7 @@ class HHLeptonProducer(JetLepMetModule):
                 return False
 
             self.out.fillBranch("pairType", 2)
+            self.out.fillBranch("isVBFtrigger", pass_vbf)
 
             self.out.fillBranch("dau1_index", tautaupairs[0][0])
             self.out.fillBranch("dau1_eta", tau1.eta)

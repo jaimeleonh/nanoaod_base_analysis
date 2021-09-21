@@ -68,7 +68,7 @@ class HHDNNProducer(JetLepMetModule):
 
         dau1, dau2, dau1_tlv, dau2_tlv = self.get_daus(event, muons, electrons, taus) #FIXME FROM HERE
         bjet1, bjet2, bjet1_tlv, bjet2_tlv = self.get_bjets(event, jets)
-        vbfjet1, vbfjet2, vbfjet1_tlv, vbfjet2_tlv = self.get_bjets(event, jets)
+        vbfjet1, vbfjet2, vbfjet1_tlv, vbfjet2_tlv = self.get_vbfjets(event, jets)
         if not vbfjet1:  # dummy tlv
             vbfjet1_tlv.SetPtEtaPhiM(1, 1, 1, 1)
             vbfjet2_tlv.SetPtEtaPhiM(1, 1, 1, 1)

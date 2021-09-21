@@ -14,6 +14,30 @@
     path: cmt.modules.counter
 
 2:
+    name: MetFilter
+    path: cmt.modules.METfilters
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+
+3_w1:
+    name: puWeight
+    path: cmt.modules.weight
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+
+3_w2:
+    name: prefiringWeight
+    path: cmt.modules.weight
+
+tau_sf:
+    name: tauCorrections
+    path: cmt.modules.weight
+    parameters:
+        year: self.config.year
+
+hhlep:
     name: HHLepton
     path: cmt.modules.HHLepton
     parameters:
@@ -21,13 +45,13 @@
         year: self.config.year
         runPeriod: self.dataset.runPeriod
 
-2_var:
+hhlep_var:
     name: HHLeptonVariable
     path: cmt.modules.HHLepton
     parameters:
         isMC: self.dataset.process.isMC
 
-3:
+jet_syst:
     name: createJMECorrector
     path: PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun2
     parameters:
@@ -39,20 +63,27 @@
         noGroom: False
         splitJER: True
 
-4:
+hhjets:
     name: HHJets
     path: cmt.modules.HHJets
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
 
-5:
+trigSF:
+    name: Htt_trigSF
+    path: cmt.modules.Htt_trigSF
+    parameters:
+        year: self.config.year
+        isMC: self.dataset.process.isMC
+
+svfit:
     name: SVFit
     path: cmt.modules.SVFit
     parameters:
         isMC: self.dataset.process.isMC
 
-6:  
+hh:  
     name: HH
     path: cmt.modules.HH
     parameters:
