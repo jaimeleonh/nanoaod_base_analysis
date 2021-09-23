@@ -76,7 +76,8 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
                 self.keep_and_drop_file = os.path.expandvars(self.keep_and_drop_file)
 
     def create_branch_map(self):
-        return len(self.dataset.get_files())
+        return len(self.dataset.get_files(
+            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
 
     def workflow_requires(self):
         return {"data": InputData.req(self)}
@@ -87,7 +88,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
     def output(self):
         return self.local_target("{}".format(self.input()["data"].path.split("/")[-1]))
         # return self.local_target("{}".format(self.input()["data"].split("/")[-1]))
-    
+   
     def get_modules(self):
         module_params = None
         if self.modules_file:
@@ -165,7 +166,8 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
     tree_name = "Events"
 
     def create_branch_map(self):
-        return len(self.dataset.get_files())
+        return len(self.dataset.get_files(
+            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
 
     def workflow_requires(self):
         return {"data": Preprocess.vreq(self, category_name=self.base_category_name)}
@@ -197,7 +199,7 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
             selection = jrs(dataset_selection, selection, op="and")
 
         df = ROOT.RDataFrame(self.tree_name, inp)
-        filtered_df = df.Filter(selection)
+        filtered_df = df.Define("selection", selection).Filter("selection")
         filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path))
 
         stats = {}

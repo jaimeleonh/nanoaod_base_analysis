@@ -6,6 +6,7 @@ Plotting tasks.
 
 __all__ = []
 
+import os
 from copy import deepcopy as copy
 import json
 import math
@@ -95,7 +96,8 @@ class BasePlotTask(ConfigTaskWithCategory):
 class PrePlot(BasePlotTask, DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
 
     def create_branch_map(self):
-        return len(self.dataset.get_files())
+        return len(self.dataset.get_files(
+            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
 
     def workflow_requires(self):
         return {"data": Categorization.vreq(self)}
@@ -104,9 +106,14 @@ class PrePlot(BasePlotTask, DatasetTaskWithCategory, law.LocalWorkflow, HTCondor
         return {"data": Categorization.vreq(self, branch=self.branch)}
 
     def output(self):
-        return self.local_target("data_{}_{}.root".format(self.get_output_postfix(), self.branch))
+        return self.local_target("data_{}_{}.root".format(
+            self.get_output_postfix(), self.branch))
 
-    def get_weight(self, **kwargs):
+    def get_weight(self, category, **kwargs):
+        if self.config.processes.get(self.dataset.process.name).isData:
+            return "1"
+        if category in self.config.weights.channels:
+            return join_root_selection(self.config.weights.channels[category], op="and")
         return self.config.weights.default
 
     @law.decorator.notify
@@ -119,6 +126,9 @@ class PrePlot(BasePlotTask, DatasetTaskWithCategory, law.LocalWorkflow, HTCondor
         outp = self.output().path
 
         df = ROOT.RDataFrame(self.tree_name, inp)
+        tf = ROOT.TFile.Open(inp)
+        tree = tf.Get(self.tree_name)
+        nentries = tree.GetEntries()
         histos = []
         for feature in self.features:
             binning_args, y_axis_adendum = self.get_binning(feature)
@@ -136,17 +146,20 @@ class PrePlot(BasePlotTask, DatasetTaskWithCategory, law.LocalWorkflow, HTCondor
                     feature_expression = feature.expression + tag
                 feature_name = feature.name + tag
                 hist_base = ROOT.TH1D(feature_name, title, *binning_args)
-                hmodel = ROOT.RDF.TH1DModel(hist_base)
-                histos.append(
-                    df.Define("user_weight", self.get_weight()).Define(
-                        "var", feature_expression).Histo1D(hmodel, "var", "user_weight")
-                )
+                if nentries > 0:
+                    hmodel = ROOT.RDF.TH1DModel(hist_base)
+                    histos.append(
+                        df.Define("user_weight", self.get_weight(self.category.name)).Define(
+                            "var", feature_expression).Histo1D(hmodel, "var", "user_weight")
+                    )
+                else:  # no entries available, append empty histogram
+                    histos.append(hist_base)
 
         out = ROOT.TFile.Open(create_file_dir(outp), "RECREATE")
         for histo in histos:
-            hist = histo.Clone()
-            hist.Sumw2()
-            hist.Write()
+            histo = histo.Clone()
+            histo.Sumw2()
+            histo.Write()
         out.Close()
 
 
@@ -288,7 +301,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         # create root tchains for inputs
         inputs = self.input()
 
-        lumi = self.config.lumi
+        lumi = self.config.lumi_fb
         
         def setup_signal_hist(hist, color):
             hist.hist_type = "signal"
@@ -346,7 +359,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         with open(elem["json"].path) as f:
                             stats = json.load(f)
                             nevents += stats["nevents"]
-                    dataset_histo.Scale(dataset.xs * lumi / (1000 * nevents))
+                    dataset_histo.Scale(dataset.xs * lumi / (nevents))
                     process_histo.Add(dataset_histo)
                 if process.isSignal:
                     setup_signal_hist(process_histo, ROOT.TColor.GetColor(*process.color)) # FIXME include custom colors
@@ -420,29 +433,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if self.save_pdf:
                 outputs.append(self.output()["pdf"].targets[feature.name].path)
             if self.save_root:
-                outputs.append(self.output()["root"].targets[feature.name].path)
+                outputs.append(self.output()["root"].targets[feature.name].path)  # FIXME
             for output in outputs:
                 c.SaveAs(create_file_dir(output))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    

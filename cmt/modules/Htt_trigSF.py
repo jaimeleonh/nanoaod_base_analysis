@@ -2,7 +2,7 @@ import os
 from copy import deepcopy as copy
 
 from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
-from analysis_tools.utils import import_root
+from analysis_tools.utils import import_root, getContentHisto3D
 from cmt.modules.tau_utils import LeptonTauPair, TriggerChecker, lepton_veto
 from cmt.modules.baseModules import JetLepMetModule
 
