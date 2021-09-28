@@ -9,9 +9,9 @@
         # noGroom: False
         # splitJER: True
 
-1:
-    name: Counter
-    path: cmt.modules.counter
+# 1:
+    # name: Counter
+    # path: cmt.modules.counter
 
 2:
     name: MetFilter
@@ -19,6 +19,12 @@
     parameters:
         isMC: self.dataset.process.isMC
         year: self.config.year
+
+2_counter:
+    name: Counter
+    path: cmt.modules.counter
+    parameters:
+        histo_name: MetFilter
 
 3_w1:
     name: puWeight
@@ -30,11 +36,14 @@
 3_w2:
     name: prefiringWeight
     path: cmt.modules.weight
+    parameters:
+        isMC: self.dataset.process.isMC
 
 tau_sf:
     name: tauCorrections
     path: cmt.modules.weight
     parameters:
+        isMC: self.dataset.process.isMC
         year: self.config.year
 
 hhlep:
@@ -44,6 +53,12 @@ hhlep:
         isMC: self.dataset.process.isMC
         year: self.config.year
         runPeriod: self.dataset.runPeriod
+
+hhlep_counter:
+    name: Counter
+    path: cmt.modules.counter
+    parameters:
+        histo_name: HHLepton
 
 hhlep_var:
     name: HHLeptonVariable
@@ -69,6 +84,12 @@ hhjets:
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
+
+hhjets_counter:
+    name: Counter
+    path: cmt.modules.counter
+    parameters:
+        histo_name: HHJets
 
 trigSF:
     name: Htt_trigSF

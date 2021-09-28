@@ -31,6 +31,8 @@ from cmt.base_tasks.base import (
 from cmt.base_tasks.preprocessing import Categorization
 
 class BasePlotTask(ConfigTaskWithCategory):
+    base_category_name = luigi.Parameter(default="base", description="the name of the "
+        "base category with the initial selection, default: base")
     feature_names = law.CSVParameter(default=(), description="names of features to plot, uses all "
         "features when empty, default: ()")
     feature_tags = law.CSVParameter(default=(), description="list of tags for filtering features "
@@ -245,10 +247,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 self.datasets_to_run, self.expand_category())
         )
         reqs["stats"] = OrderedDict(
-            (dataset.name, Categorization.vreq(self,
-                dataset_name=dataset.name, category_name=self.get_data_category(category).name))
-            for dataset, category in itertools.product(
-                self.datasets_to_run, [self.expand_category()[0]])
+            (dataset.name, Preprocess.vreq(self,
+                dataset_name=dataset.name, category_name=self.base_category_name))
+            for dataset in self.datasets_to_run
         )
 
         return reqs

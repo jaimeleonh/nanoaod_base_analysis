@@ -99,11 +99,17 @@ class HHProducer(JetLepMetModule):
             kinFit.fit()
             HHKinFit_mass = kinFit.getMH()
             HHKinFit_chi2 = kinFit.getChi2()
-        except (ROOT.HHKinFit2.HHInvMConstraintException()
-                or ROOT.HHKinFit2.HHEnergyRangeException()
-                or ROOT.HHKinFit2.HHEnergyConstraintException()):
-            HHKinMass = -999.
-            HHKinChi2 = -999.
+        # except Exception:
+        except ROOT.HHKinFit2.HHInvMConstraintException as e:
+            HHKinFit_mass = -999.
+            HHKinFit_chi2 = -999.
+        except ROOT.HHKinFit2.HHEnergyRangeException as e:
+            HHKinFit_mass = -999.
+            HHKinFit_chi2 = -999.
+        except ROOT.HHKinFit2.HHEnergyConstraintException as e:
+            HHKinFit_mass = -999.
+            HHKinFit_chi2 = -999.
+            
         
         self.out.fillBranch("Hbb_pt%s" % self.systs, hbb_tlv.Pt())
         self.out.fillBranch("Hbb_eta%s" % self.systs, hbb_tlv.Eta())

@@ -25,17 +25,16 @@ class MetFilterProducer(Module):
         flags += (1 if event.Flag_EcalDeadCellTriggerPrimitiveFilter else 0)
         flags += (1 if event.Flag_BadPFMuonFilter else 0)
         flags += (1 if event.Flag_eeBadScFilter and not self.isMC else 0)
-        flags += (1 if event.Flag_ecalBadCalibFilterV2 and self.year != 2016 else 0)
+        if hasattr(event, "Flag_ecalBadCalibFilterV2") and self.year != 2016:
+            flags += (1 if event.Flag_ecalBadCalibFilterV2 else 0)
+        else:
+            flags += 1
 
-        # all True -> only 2017 and 2018 data
+        # all True -> Data
         if flags == 8:  
             return True
-        # all True but one -> MC from 2017 or 2018 or data from 2016
-        elif flags == 7 and ((self.isMC and self.year != 2016)
-                or (not self.isMC and self.year == 2016)):
-            return True
-        # all True but two -> MC from 2016
-        elif flags == 6 and self.isMC and self.year == 2016:
+        # all True but one -> MC 
+        elif flags == 7 and self.isMC:
             return True
 
         return False

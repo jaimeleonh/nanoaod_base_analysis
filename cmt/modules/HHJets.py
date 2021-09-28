@@ -51,6 +51,7 @@ class HHJetsProducer(JetLepMetModule):
         """process event, return True (go to next module) or False (fail, go to next event)"""
         jets = Collection(event, "Jet")
         fatjets = Collection(event, "FatJet")
+        subjets = Collection(event, "SubJet")
         muons = Collection(event, "Muon")
         electrons = Collection(event, "Electron")
         taus = Collection(event, "Tau")
@@ -194,14 +195,16 @@ class HHJetsProducer(JetLepMetModule):
                 continue
             if fatjet.subJetIdx1 == -1 or fatjet.subJetIdx2 == -1:
                 continue
-            subj1 = jets[fatjet.subJetIdx1]
-            subj2 = jets[fatjet.subJetIdx2]
+            subj1 = subjets[fatjet.subJetIdx1]
+            subj2 = subjets[fatjet.subJetIdx2]
             subj1_tlv = ROOT.TLorentzVector()
             subj2_tlv = ROOT.TLorentzVector()
-            subj1_tlv.SetPtEtaPhiM(eval("subj1.pt%s" % self.jet_syst), subj1.eta,
-                subj1.phi, eval("subj1.mass%s" % self.jet_syst))
-            subj2_tlv.SetPtEtaPhiM(eval("subj2.pt%s" % self.jet_syst), subj2.eta,
-                subj2.phi, eval("subj2.mass%s" % self.jet_syst))
+            # subj1_tlv.SetPtEtaPhiM(eval("subj1.pt%s" % self.jet_syst), subj1.eta,
+                # subj1.phi, eval("subj1.mass%s" % self.jet_syst))
+            # subj2_tlv.SetPtEtaPhiM(eval("subj2.pt%s" % self.jet_syst), subj2.eta,
+                # subj2.phi, eval("subj2.mass%s" % self.jet_syst))
+            subj1_tlv.SetPtEtaPhiM(subj1.pt, subj1.eta, subj1.phi, subj1.mass)
+            subj2_tlv.SetPtEtaPhiM(subj2.pt, subj2.eta, subj2.phi, subj2.mass)
             if ((abs(bjet1_tlv.DeltaR(subj1_tlv)) > 0.4
                     or abs(bjet2_tlv.DeltaR(subj2_tlv)) > 0.4)
                 and

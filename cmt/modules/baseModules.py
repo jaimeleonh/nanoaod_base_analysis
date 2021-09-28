@@ -6,6 +6,16 @@ from analysis_tools.utils import import_root
 
 ROOT = import_root()
 
+
+class DummyModule(Module):
+    def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
+        pass
+    def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
+        pass
+    def analyze(self, event):
+        return True
+    
+
 class SystModule(Module):
     def __init__(self, isMC=True, systs=None, *args, **kwargs):
         self.isMC = isMC

@@ -64,6 +64,8 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
     # regions not supported
     region_name = None
 
+    tree_name = "Events"
+
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
@@ -83,12 +85,13 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         return {"data": InputData.req(self)}
 
     def requires(self):
-        return {"data": InputData.req(self, file_index=self.branch)}
+        return InputData.req(self, file_index=self.branch)
 
     def output(self):
-        return self.local_target("{}".format(self.input()["data"].path.split("/")[-1]))
-        # return self.local_target("{}".format(self.input()["data"].split("/")[-1]))
-   
+        return {"data": self.local_target("data_%s.root" % self.branch),
+            "stats": self.local_target("data_%s.json" % self.branch)}
+        # return self.local_target("{}".format(self.input()["data"].path.split("/")[-1]))
+
     def get_modules(self):
         module_params = None
         if self.modules_file:
@@ -98,10 +101,10 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
                 module_params = ordered_load(f, yaml.SafeLoader)
         else:
             return []
-        
+
         def _args(*_nargs, **_kwargs):
             return _nargs, _kwargs
-        
+
         modules = []
         for tag in module_params.keys():
             parameter_str = ""
@@ -127,10 +130,24 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
     def run(self):
         from shutil import move
         from PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor import PostProcessor
+        from analysis_tools.utils import import_root
+        import json
+
+        ROOT = import_root()
 
         # prepare inputs and outputs
-        inp = self.input()["data"].path
-        outp = self.output().path
+        # inp = self.input()["data"].path
+        inp = self.input().path
+        outp = self.output()
+        
+        # count events
+        f = ROOT.TFile.Open(inp)
+        tree = f.Get(self.tree_name)
+        d = {}
+        d["nevents"] = tree.GetEntries()
+        
+        with open(outp["stats"].path, "w+") as f:
+            json.dump(d, f, indent = 4)
 
         # build the full selection
         selection = self.category.selection
@@ -138,6 +155,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
         #selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
+        selection = "nTau >= 1"
         modules = self.get_modules()
         p = PostProcessor(".", [inp],
                       cut=selection,
@@ -145,7 +163,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
                       postfix="",
                       outputbranchsel=self.keep_and_drop_file)
         p.run()
-        move("./{}".format(inp.split("/")[-1]), outp)
+        move("./{}".format(inp.split("/")[-1]), outp["data"].path)
 
 
 class PreprocessWrapper(DatasetCategoryWrapperTask):
@@ -178,9 +196,10 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
 
     def output(self):
         return {
-            "root": self.local_target("{}".format(self.input()["data"].path.split("/")[-1])),
-            "json": self.local_target(
-                "{}".format(self.input()["data"].path.split("/")[-1]).replace(".root", ".json")),
+            # "root": self.local_target("{}".format(self.input()["data"].path.split("/")[-1])),
+            # "json": self.local_target(
+                # "{}".format(self.input()["data"].path.split("/")[-1]).replace(".root", ".json")),
+            "root": self.local_target("data_%s.root" % self.branch)
         }
 
     @law.decorator.notify
@@ -201,14 +220,6 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
         df = ROOT.RDataFrame(self.tree_name, inp)
         filtered_df = df.Define("selection", selection).Filter("selection")
         filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path))
-
-        stats = {}
-        input_file = ROOT.TFile.Open(inp)
-        stats["nevents"] = input_file.Get("histos/initial_count").GetBinContent(1)
-        input_file.Close()
-        import json
-        with open(create_file_dir(outp["json"].path), "w+") as f:
-            json.dump(stats, f, indent=4)
 
 
 class CategorizationWrapper(DatasetCategoryWrapperTask):
