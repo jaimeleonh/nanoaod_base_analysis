@@ -191,16 +191,14 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
         return {"data": Preprocess.vreq(self, category_name=self.base_category_name)}
 
     def requires(self):
-        return {"data": Preprocess.vreq(self, category_name=self.base_category_name,
-            branch=self.branch)}
+        return Preprocess.vreq(self, category_name=self.base_category_name,
+            branch=self.branch)
 
     def output(self):
-        return {
+        return self.local_target("data_%s.root" % self.branch)
             # "root": self.local_target("{}".format(self.input()["data"].path.split("/")[-1])),
             # "json": self.local_target(
                 # "{}".format(self.input()["data"].path.split("/")[-1]).replace(".root", ".json")),
-            "root": self.local_target("data_%s.root" % self.branch)
-        }
 
     @law.decorator.notify
     @law.decorator.localize(input=False)

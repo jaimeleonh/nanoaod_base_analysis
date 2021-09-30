@@ -36,16 +36,23 @@ class Config():
     def add_processes(self):
         processes = [
             Process("ggf_sm", Label("GGFSM"), color=(0, 0, 0), isSignal=True),
-            Process("dy", Label("DY"), color=(0, 0, 0)),
-            Process("tt", Label("t#bar{t}"), color=(0, 0, 0)),
-            Process("tt_dl", Label("t#bar{t} DL"), color=(0, 0, 0), parent_process="tt"),
-            Process("tt_sl", Label("t#bar{t} SL"), color=(0, 0, 0), parent_process="tt"),
-            Process("data_tau", Label(latex="DATA\\_TAU"), color=(255, 255, 255), isData=True)
+            Process("dy", Label("DY"), color=(255, 102, 102)),
+            Process("tt", Label("t#bar{t}"), color=(255, 153, 0)),
+            Process("tt_dl", Label("t#bar{t} DL"), color=(205, 0, 9), parent_process="tt"),
+            Process("tt_sl", Label("t#bar{t} SL"), color=(255, 153, 0), parent_process="tt"),
+            Process("tt_fh", Label("t#bar{t} FH"), color=(131, 38, 10), parent_process="tt"),
+            Process("data", Label(latex="DATA"), color=(0, 0, 0), isData=True),
+            Process("data_tau", Label(latex="DATA\\_TAU"), color=(0, 0, 0), parent_process="data", isData=True),
+            Process("data_e", Label(latex="DATA\\_E"), color=(0, 0, 0), parent_process="data", isData=True),
+            Process("data_mu", Label(latex="DATA\\_MU"), color=(0, 0, 0), parent_process="data", isData=True)
         ]
 
         process_group_names = {
             "default": [
                 "ggf_sm",
+            ],
+            "data_tau": [
+                "data_tau",
             ]
         }
         return ObjectCollection(processes), process_group_names

@@ -16,19 +16,16 @@ from collections import OrderedDict
 import law
 import luigi
 
+from analysis_tools import ObjectCollection
 from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
-
-from plotting_tools.root import (
-    get_labels, Canvas
-)
-
+from plotting_tools.root import get_labels, Canvas
 from cmt.base_tasks.base import ( 
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, ConfigTaskWithCategory
 )
 
-from cmt.base_tasks.preprocessing import Categorization
+from cmt.base_tasks.preprocessing import Preprocess, Categorization
 
 class BasePlotTask(ConfigTaskWithCategory):
     base_category_name = luigi.Parameter(default="base", description="the name of the "
@@ -105,7 +102,7 @@ class PrePlot(BasePlotTask, DatasetTaskWithCategory, law.LocalWorkflow, HTCondor
         return {"data": Categorization.vreq(self)}
 
     def requires(self):
-        return {"data": Categorization.vreq(self, branch=self.branch)}
+        return Categorization.vreq(self, branch=self.branch)
 
     def output(self):
         return self.local_target("data_{}_{}.root".format(
@@ -124,7 +121,7 @@ class PrePlot(BasePlotTask, DatasetTaskWithCategory, law.LocalWorkflow, HTCondor
         ROOT = import_root()
 
         # prepare inputs and outputs
-        inp = self.input()["data"]["root"].path
+        inp = self.input().path
         outp = self.output().path
 
         df = ROOT.RDataFrame(self.tree_name, inp)
@@ -215,24 +212,27 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         self.datasets_to_run = []
 
         def get_processes(dataset=None, process=None):
-            processes = []
+            processes = ObjectCollection()
             if dataset and not process:
                 process = self.config.processes.get(dataset.process.name)
             processes.append(process)
             if process.parent_process:
-                processes += get_processes(process=process)
+                processes += get_processes(process=self.config.processes.get(
+                    dataset.process.parent_process))
             return processes
         
         for dataset in self.datasets:
             processes = get_processes(dataset=dataset)
-            for x in processes:
-                if x.name not in self.config.process_group_names[self.process_group_name]:
-                    processes.remove(x)
-            if len(processes) > 1:
+            filtered_processes = ObjectCollection()
+            for process in processes:
+                if process.name in self.config.process_group_names[self.process_group_name]:
+                    filtered_processes.append(process)
+            # print dataset.name, [process.name for process in processes]
+            if len(filtered_processes) > 1:
                 raise Exception("%s process group name includes not orthogonal processes %s"
-                    % (self.process_group_name, ", ".join(processes)))
-            if len(processes) == 1:
-                process = processes[0]
+                    % (self.process_group_name, ", ".join(filtered_processes.names)))
+            elif len(filtered_processes) == 1:
+                process = filtered_processes[0]
                 if process not in self.processes_datasets:
                     self.processes_datasets[process] = []
                 self.processes_datasets[process].append(dataset)
