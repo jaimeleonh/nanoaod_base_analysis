@@ -11,18 +11,23 @@ ROOT = import_root()
 class HHProducer(JetLepMetModule):
     def __init__(self, *args, **kwargs):
         super(HHProducer, self).__init__(*args, **kwargs)
-        base = "{}/{}/src/HHKinFit2/HHKinFit2Scenarios".format(
+        base = "{}/{}/src/Tools/Tools".format(
             os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
 
-        ROOT.gSystem.Load("libHHKinFit2HHKinFit2Scenarios.so")
-        ROOT.gROOT.ProcessLine(".L {}/interface/HHKinFitMasterHeavyHiggs.h".format(base))
+        ROOT.gSystem.Load("libToolsTools.so")
+        ROOT.gROOT.ProcessLine(".L {}/interface/HHKinFitInterface.h".format(base))
+        # base = "{}/{}/src/HHKinFit2/HHKinFit2Scenarios".format(
+            # os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
+
+        # ROOT.gSystem.Load("libHHKinFit2HHKinFit2Scenarios.so")
+        # ROOT.gROOT.ProcessLine(".L {}/interface/HHKinFitMasterHeavyHiggs.h".format(base))
         
-        base = "{}/{}/src/HHKinFit2/HHKinFit2Core".format(
-            os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
-        ROOT.gSystem.Load("libHHKinFit2HHKinFit2Core.so")
-        ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHInvMConstraintException.h".format(base))
-        ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHEnergyRangeException.h".format(base))
-        ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHEnergyConstraintException.h".format(base))
+        # base = "{}/{}/src/HHKinFit2/HHKinFit2Core".format(
+            # os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
+        # ROOT.gSystem.Load("libHHKinFit2HHKinFit2Core.so")
+        # ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHInvMConstraintException.h".format(base))
+        # ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHEnergyRangeException.h".format(base))
+        # ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHEnergyConstraintException.h".format(base))
 
         pass
     
@@ -93,22 +98,27 @@ class HHProducer(JetLepMetModule):
 
         # HH Kin. Fit
         # constructor https://github.com/bvormwald/HHKinFit2/blob/CMSSWversion/HHKinFit2Scenarios/src/HHKinFitMasterHeavyHiggs.cpp#L27
-        kinFit = ROOT.HHKinFit2.HHKinFitMasterHeavyHiggs(bjet1_tlv, bjet2_tlv, dau1_tlv, dau2_tlv, met_tv, cov)
+        # kinFit = ROOT.HHKinFit2.HHKinFitMasterHeavyHiggs(bjet1_tlv, bjet2_tlv, dau1_tlv, dau2_tlv, met_tv, cov)
+        kinFit = ROOT.HHKinFitInterface(bjet1_tlv, bjet2_tlv, dau1_tlv, dau2_tlv, met_tv, cov)
         kinFit.addHypo(125, 125);
-        try:
-            kinFit.fit()
-            HHKinFit_mass = kinFit.getMH()
-            HHKinFit_chi2 = kinFit.getChi2()
-        # except Exception:
-        except ROOT.HHKinFit2.HHInvMConstraintException as e:
-            HHKinFit_mass = -999.
-            HHKinFit_chi2 = -999.
-        except ROOT.HHKinFit2.HHEnergyRangeException as e:
-            HHKinFit_mass = -999.
-            HHKinFit_chi2 = -999.
-        except ROOT.HHKinFit2.HHEnergyConstraintException as e:
-            HHKinFit_mass = -999.
-            HHKinFit_chi2 = -999.
+        results = kinFit.fit()
+        HHKinFit_mass = results[0]
+        HHKinFit_chi2 = results[1]
+
+        # try:
+            # kinFit.fit()
+            # HHKinFit_mass = kinFit.getMH()
+            # HHKinFit_chi2 = kinFit.getChi2()
+        # # except Exception:
+        # except ROOT.HHKinFit2.HHInvMConstraintException as e:
+            # HHKinFit_mass = -999.
+            # HHKinFit_chi2 = -999.
+        # except ROOT.HHKinFit2.HHEnergyRangeException as e:
+            # HHKinFit_mass = -999.
+            # HHKinFit_chi2 = -999.
+        # except ROOT.HHKinFit2.HHEnergyConstraintException as e:
+            # HHKinFit_mass = -999.
+            # HHKinFit_chi2 = -999.
             
         
         self.out.fillBranch("Hbb_pt%s" % self.systs, hbb_tlv.Pt())
