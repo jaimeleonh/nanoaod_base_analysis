@@ -11,24 +11,12 @@ ROOT = import_root()
 class HHProducer(JetLepMetModule):
     def __init__(self, *args, **kwargs):
         super(HHProducer, self).__init__(*args, **kwargs)
+        if "/libToolsTools.so" not in ROOT.gSystem.GetLibraries():
+            ROOT.gSystem.Load("libToolsTools.so")
+
         base = "{}/{}/src/Tools/Tools".format(
-            os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
-
-        ROOT.gSystem.Load("libToolsTools.so")
+                os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
         ROOT.gROOT.ProcessLine(".L {}/interface/HHKinFitInterface.h".format(base))
-        # base = "{}/{}/src/HHKinFit2/HHKinFit2Scenarios".format(
-            # os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
-
-        # ROOT.gSystem.Load("libHHKinFit2HHKinFit2Scenarios.so")
-        # ROOT.gROOT.ProcessLine(".L {}/interface/HHKinFitMasterHeavyHiggs.h".format(base))
-        
-        # base = "{}/{}/src/HHKinFit2/HHKinFit2Core".format(
-            # os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
-        # ROOT.gSystem.Load("libHHKinFit2HHKinFit2Core.so")
-        # ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHInvMConstraintException.h".format(base))
-        # ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHEnergyRangeException.h".format(base))
-        # ROOT.gROOT.ProcessLine(".L {}/interface/exceptions/HHEnergyConstraintException.h".format(base))
-
         pass
     
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):

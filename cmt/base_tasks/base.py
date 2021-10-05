@@ -21,6 +21,8 @@ from law.util import merge_dicts
 from law.contrib.htcondor.job import HTCondorJobFileFactory
 from cmt.condor_tools.htcondor import HTCondorWorkflowExt
 
+from abc import abstractmethod
+
 law.contrib.load("cms", "git", "htcondor", "root", "tasks", "telegram", "tensorflow", "wlcg")
 
 
@@ -192,9 +194,10 @@ class DatasetTaskWithCategory(ConfigTaskWithCategory, DatasetTask):
     def __init__(self, *args, **kwargs):
         super(DatasetTaskWithCategory, self).__init__(*args, **kwargs)
 
-        # if self.dataset.merging:
-            # self.n_files_after_merging = self.dataset.merging.get(self.category.name, 1)
-
+        if self.dataset.get_aux("merging", None):
+            self.n_files_after_merging = self.dataset.get_aux("merging").get(self.category.name, 1)
+        else:
+            self.n_files_after_merging = 1
 
 class DatasetWrapperTask(ConfigTask):
 
@@ -285,6 +288,12 @@ class HTCondorWorkflow(HTCondorWorkflowExt):
 
     def htcondor_use_local_scheduler(self):
         return not self.htcondor_central_scheduler
+
+
+class SplittedTask():
+    @abstractmethod
+    def get_splitted_branches(self):
+        return
 
 
 class InputData(DatasetTask, law.ExternalTask):

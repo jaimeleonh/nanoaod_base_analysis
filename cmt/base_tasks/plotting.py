@@ -25,7 +25,7 @@ from cmt.base_tasks.base import (
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, ConfigTaskWithCategory
 )
 
-from cmt.base_tasks.preprocessing import Preprocess, Categorization
+from cmt.base_tasks.preprocessing import Preprocess, MergeCategorization, MergeCategorizationStats
 
 class BasePlotTask(ConfigTaskWithCategory):
     base_category_name = luigi.Parameter(default="base", description="the name of the "
@@ -92,17 +92,16 @@ class BasePlotTask(ConfigTaskWithCategory):
         return postfix
 
 
-class PrePlot(BasePlotTask, DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
+class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondorWorkflow):
 
     def create_branch_map(self):
-        return len(self.dataset.get_files(
-            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
+        return self.n_files_after_merging
 
     def workflow_requires(self):
-        return {"data": Categorization.vreq(self)}
+        return {"data": MergeCategorization.vreq(self)}
 
     def requires(self):
-        return Categorization.vreq(self, branch=self.branch)
+        return MergeCategorization.vreq(self, branch=self.branch)
 
     def output(self):
         return self.local_target("data_{}_{}.root".format(
@@ -121,7 +120,7 @@ class PrePlot(BasePlotTask, DatasetTaskWithCategory, law.LocalWorkflow, HTCondor
         ROOT = import_root()
 
         # prepare inputs and outputs
-        inp = self.input().path
+        inp = self.input().targets[self.branch].path
         outp = self.output().path
 
         df = ROOT.RDataFrame(self.tree_name, inp)
@@ -247,7 +246,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 self.datasets_to_run, self.expand_category())
         )
         reqs["stats"] = OrderedDict(
-            (dataset.name, Preprocess.vreq(self,
+            (dataset.name, MergeCategorizationStats.vreq(self,
                 dataset_name=dataset.name, category_name=self.base_category_name))
             for dataset in self.datasets_to_run
         )
@@ -302,7 +301,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         # create root tchains for inputs
         inputs = self.input()
 
-        lumi = self.config.lumi_fb
+        lumi = self.config.lumi_pb
         
         def setup_signal_hist(hist, color):
             hist.hist_type = "signal"
@@ -315,7 +314,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 hist.SetLineColor(ROOT.kBlack)
                 hist.SetLineWidth(1)
                 hist.SetFillColor(color)
-                hist.hmc_legend_style = "f"
+                hist.legend_style = "f"
             else:
                 hist.SetLineColor(color)
                 hist.legend_style = "l"
@@ -355,12 +354,12 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                             histo = copy(rootfile.Get(feature_name))
                             dataset_histo.Add(histo)
                     nevents = 0
-                    inp = inputs["stats"][dataset.name].collection.targets.values()
-                    for elem in inp:
-                        with open(elem["json"].path) as f:
-                            stats = json.load(f)
-                            nevents += stats["nevents"]
-                    dataset_histo.Scale(dataset.xs * lumi / (nevents))
+                    inp = inputs["stats"][dataset.name]
+                    with open(inp.path) as f:
+                        stats = json.load(f)
+                        nevents += stats["nevents"]
+                    if nevents != 0:
+                        dataset_histo.Scale(dataset.xs * lumi / (nevents))
                     process_histo.Add(dataset_histo)
                 if process.isSignal:
                     setup_signal_hist(process_histo, ROOT.TColor.GetColor(*process.color)) # FIXME include custom colors

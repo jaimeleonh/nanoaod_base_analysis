@@ -20,7 +20,8 @@ from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData, ConfigTaskWithCategory
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData,
+    ConfigTaskWithCategory, SplittedTask
 )
 
 
@@ -53,11 +54,13 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
         )
 
 
-class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
+class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
 
     modules = luigi.DictParameter(default=None)
     modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
         default="")
+    max_events = luigi.IntParameter(description="maximum number of input events per file, "
+        " -1 for all events", default=50000)
     keep_and_drop_file = luigi.Parameter(description="filename with output branches to "
         "keep and drop", default="$CMT_BASE/cmt/files/keep_and_drop_branches.txt")
 
@@ -76,16 +79,69 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         else:
             if "$" in self.keep_and_drop_file:
                 self.keep_and_drop_file = os.path.expandvars(self.keep_and_drop_file)
+        
+        if not hasattr(self, "splitted_branches") and self.is_workflow():
+            self.splitted_branches = self.build_splitted_branches()
+        elif not hasattr(self, "splitted_branches"):
+            self.splitted_branches = self.get_splitted_branches
+
+    def build_splitted_branches(self):
+        import json
+        if not os.path.exists(
+                os.path.expandvars("$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
+                    self.config.name, self.max_events, self.dataset.name))):
+            ROOT = import_root()
+            files = self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name))
+            branches = []
+            for ifil, fil in enumerate(files):
+                f = ROOT.TFile.Open(fil)
+                tree = f.Get(self.tree_name)
+                nevents = tree.GetEntries()
+                f.Close()
+
+                initial_event = 0
+                isplit = 0
+                while initial_event < nevents:
+                    max_events = min(initial_event + self.max_events, int(nevents))
+                    branches.append({
+                        "filenumber": ifil,
+                        "split": isplit,
+                        "initial_event": initial_event,
+                        "max_events": max_events,
+                    })
+                    initial_event += self.max_events
+                    isplit += 1
+            with open(create_file_dir(os.path.expandvars(
+                    "$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
+                    self.config.name, self.max_events, self.dataset.name))), "w+") as f:
+                json.dump(branches, f, indent=4)
+        else:
+             with open(create_file_dir(os.path.expandvars(
+                    "$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
+                    self.config.name, self.max_events, self.dataset.name)))) as f:
+                branches = json.load(f)
+        return branches
+
+    @law.workflow_property
+    def get_splitted_branches(self):
+        return self.splitted_branches
 
     def create_branch_map(self):
-        return len(self.dataset.get_files(
-            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
+        if self.max_events != -1:
+            return len(self.splitted_branches)
+        else:
+            return len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
 
     def workflow_requires(self):
         return {"data": InputData.req(self)}
 
     def requires(self):
-        return InputData.req(self, file_index=self.branch)
+        if self.max_events == -1:
+            return InputData.req(self, file_index=self.branch)
+        else:
+            return InputData.req(self, file_index=self.splitted_branches[self.branch]["filenumber"])
 
     def output(self):
         return {"data": self.local_target("data_%s.root" % self.branch),
@@ -139,13 +195,17 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         # inp = self.input()["data"].path
         inp = self.input().path
         outp = self.output()
-        
-        # count events
-        f = ROOT.TFile.Open(inp)
-        tree = f.Get(self.tree_name)
+
         d = {}
-        d["nevents"] = tree.GetEntries()
-        
+        # count events
+        if self.max_events == -1:
+            f = ROOT.TFile.Open(inp)
+            tree = f.Get(self.tree_name)
+            d["nevents"] = tree.GetEntries()
+        else:
+            d["nevents"] = (self.splitted_branches[self.branch]["max_events"]
+                - self.splitted_branches[self.branch]["initial_event"])
+
         with open(outp["stats"].path, "w+") as f:
             json.dump(d, f, indent = 4)
 
@@ -157,13 +217,27 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
         #selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
         selection = "nTau >= 1"
         modules = self.get_modules()
+
+        if self.max_events == -1:
+            maxEntries = None
+            firstEntry = 0
+            postfix = ""
+            output_file = inp.split("/")[-1]
+        else:
+            maxEntries = self.max_events
+            firstEntry = self.splitted_branches[self.branch]["initial_event"]
+            postfix = "_%s" % self.splitted_branches[self.branch]["split"]
+            output_file = ("%s." % postfix).join(inp.split("/")[-1].split("."))
+
         p = PostProcessor(".", [inp],
                       cut=selection,
                       modules=modules,
-                      postfix="",
-                      outputbranchsel=self.keep_and_drop_file)
+                      postfix=postfix,
+                      outputbranchsel=self.keep_and_drop_file,
+                      maxEntries=maxEntries,
+                      firstEntry=firstEntry)
         p.run()
-        move("./{}".format(inp.split("/")[-1]), outp["data"].path)
+        move(output_file, outp["data"].path)
 
 
 class PreprocessWrapper(DatasetCategoryWrapperTask):
@@ -172,7 +246,8 @@ class PreprocessWrapper(DatasetCategoryWrapperTask):
         return Preprocess.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
-class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
+# class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
+class Categorization(Preprocess):
     base_category_name = luigi.Parameter(default="base", description="the name of the "
         "base category with the initial selection, default: base")
     # regions not supported
@@ -183,9 +258,9 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
 
     tree_name = "Events"
 
-    def create_branch_map(self):
-        return len(self.dataset.get_files(
-            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
+    # def create_branch_map(self):
+        # return len(self.dataset.get_files(
+            # os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
 
     def workflow_requires(self):
         return {"data": Preprocess.vreq(self, category_name=self.base_category_name)}
@@ -195,7 +270,10 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
             branch=self.branch)
 
     def output(self):
-        return self.local_target("data_%s.root" % self.branch)
+        return {
+            "data": self.local_target("data_%s.root" % self.branch),
+            "stats": self.local_target("data_%s.json" % self.branch)
+        }
             # "root": self.local_target("{}".format(self.input()["data"].path.split("/")[-1])),
             # "json": self.local_target(
                 # "{}".format(self.input()["data"].path.split("/")[-1]).replace(".root", ".json")),
@@ -203,6 +281,7 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
+        from shutil import copy
         ROOT = import_root()
 
         # prepare inputs and outputs
@@ -217,10 +296,107 @@ class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflo
 
         df = ROOT.RDataFrame(self.tree_name, inp)
         filtered_df = df.Define("selection", selection).Filter("selection")
-        filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path))
+        filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path))
+        copy(self.input()["stats"].path, outp["stats"].path)
 
 
 class CategorizationWrapper(DatasetCategoryWrapperTask):
 
     def atomic_requires(self, dataset, category):
         return Categorization.req(self, dataset_name=dataset.name, category_name=category.name)
+
+
+class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
+
+    # regions not supported
+    region_name = None
+    tree_name = "Events"
+    merge_factor = 10
+
+    default_store = "$CMT_STORE_EOS_CATEGORIZATION"
+    default_wlcg_fs = "wlcg_fs_categorization"
+
+    def merge_workflow_requires(self):
+        return Categorization.req(self, _prefer_cli=["workflow"])
+
+    def merge_requires(self, start_leaf, end_leaf):
+        # the requirement is a workflow, so start_leaf and end_leaf correspond to branches
+        return Categorization.req(self, branch=-1, workflow="local", start_branch=start_leaf,
+            end_branch=end_leaf)
+
+    def trace_merge_inputs(self, inputs):
+        return [inp["data"] for inp in inputs["collection"].targets.values()]
+
+    def merge_output(self):
+        return law.SiblingFileCollection([
+            self.local_target("data_{}.root".format(i))
+            for i in range(self.n_files_after_merging)
+        ])
+
+    def merge(self, inputs, output):
+        ROOT = import_root()
+        with output.localize("w") as tmp_out:
+            good_inputs = []
+            for inp in inputs:
+                tf = ROOT.TFile.Open(inp.path)
+                tree = tf.Get(self.tree_name)
+                if tree.GetEntries() > 0:
+                    good_inputs.append(inp)
+            if good_inputs:
+                law.root.hadd_task(self, good_inputs, tmp_out, local=True)
+            else:
+                raise Exception("No good files were found")
+
+
+class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
+
+    def atomic_requires(self, dataset, category):
+        return MergeCategorization.req(self, dataset_name=dataset.name, category_name=category.name)
+
+
+class MergeCategorizationStats(DatasetTaskWithCategory, law.tasks.ForestMerge):
+
+    # regions not supported
+    region_name = None
+
+    merge_factor = 16
+
+    default_store = "$CMT_STORE_EOS_CATEGORIZATION"
+    default_wlcg_fs = "wlcg_fs_categorization"
+
+    def merge_workflow_requires(self):
+        return Preprocess.req(self, _prefer_cli=["workflow"])
+
+    def merge_requires(self, start_leaf, end_leaf):
+        return Preprocess.req(self, branch=-1, workflow="local", start_branch=start_leaf,
+            end_branch=end_leaf)
+
+    def trace_merge_inputs(self, inputs):
+        return [inp["stats"] for inp in inputs["collection"].targets.values()]
+
+    def merge_output(self):
+        return self.local_target("stats.json")
+
+    def merge(self, inputs, output):
+        # output content
+        stats = dict(nevents=0)
+
+        # merge
+        for inp in inputs:
+            try:
+                _stats = inp.load(formatter="json")
+            except:
+                print("error leading input target {}".format(inp))
+                raise
+
+            # add evt_den
+            stats["nevents"] += _stats["nevents"]
+
+        output.parent.touch()
+        output.dump(stats, indent=4, formatter="json")
+
+
+class MergeCategorizationStatsWrapper(DatasetCategoryWrapperTask):
+
+    def atomic_requires(self, dataset, category):
+        return MergeCategorizationStats.req(self, dataset_name=dataset.name, category_name=category.name)

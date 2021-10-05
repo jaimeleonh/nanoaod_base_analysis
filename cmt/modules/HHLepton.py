@@ -68,7 +68,7 @@ class HHLeptonProducer(JetLepMetModule):
                 "HLT_DoubleMediumChargedIsoPFTau40_Trk1_TightID_eta2p1_Reg",
                 "HLT_DoubleTightChargedIsoPFTau40_Trk1_eta2p1_Reg"]
                     if (e.run < 317509 and not self.isMC)
-                    else ["HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_CrossL1"])
+                    else ["HLT_DoubleMediumChargedIsoPFTauHPS35_Trk1_eta2p1_Reg"])
             self.trigger_checker.vbf_triggers = lambda e: (
                 ["HLT_VBF_DoubleLooseChargedIsoPFTau20_Trk1_eta2p1"]
                     if (e.run < 317509 and not self.isMC)
@@ -115,6 +115,16 @@ class HHLeptonProducer(JetLepMetModule):
         self.out.branch('dau2_idDeepTau2017v2p1VSjet', 'I')
         
         self.histo = ROOT.TH1D("InsideHHLepton", "", 21, -1, 20)
+        bins = [
+            "all", "goodmuon events", "muon-tau pairs", "deltaR > 0.5",
+            "pass muon trigger", "pass lepton veto",
+            "goodele events", "ele-tau pairs", "deltaR > 0.5",
+            "pass ele trigger", "pass lepton veto",
+            "goodtau events", "tau-tau pairs",
+            "pass tau trigger", "pass lepton veto",
+            ]
+        for ibin, binname in enumerate(bins):
+            self.histo.GetXaxis().SetBinLabel(ibin + 1, binname)
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         prevdir = ROOT.gDirectory
@@ -216,6 +226,7 @@ class HHLeptonProducer(JetLepMetModule):
                 continue
             goodelectrons.append((ielectron, electron))
         if goodelectrons:
+            self.histo.Fill(5)
             goodtaus = []
             for itau, tau in enumerate(taus):
                 if tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7:
@@ -229,11 +240,14 @@ class HHLeptonProducer(JetLepMetModule):
             electrontaupairs = []
             for (ielectron, electron) in goodelectrons:
                 for (itau, tau) in goodtaus:
+                    self.histo.Fill(6)
                     if tau.DeltaR(electron) < 0.5: continue
+                    self.histo.Fill(7)
                     if not self.trigger_checker.check_etau(event,
                             eval("electron.pt%s" % self.electron_syst), electron.eta,
                             eval("tau.pt%s" % self.tau_syst), tau.eta, th1=1, th2=5):
                         continue
+                    self.histo.Fill(8)
                     electrontaupair = LeptonTauPair(
                         electron, eval("electron.pt%s" % self.electron_syst), electron.pfRelIso03_all,
                         tau, eval("tau.pt%s" % self.tau_syst), tau.rawDeepTau2017v2p1VSjet)
@@ -247,7 +261,7 @@ class HHLeptonProducer(JetLepMetModule):
                 fail_lepton_veto, _ = lepton_veto(electrons, muons, taus, electron)
                 if fail_lepton_veto:
                     return False
-
+                self.histo.Fill(9)
                 self.out.fillBranch("pairType", 1)
                 self.out.fillBranch("isVBFtrigger", 0)
 
@@ -289,9 +303,12 @@ class HHLeptonProducer(JetLepMetModule):
                 continue
             goodtaus.append((itau, tau))
 
+        if goodtaus:
+            self.histo.Fill(10)
         tautaupairs = []
         for i in range(len(goodtaus) - 1):
             for j in range(i + 1, len(goodtaus)):
+                self.histo.Fill(11)
                 tau1_index = goodtaus[i][0]
                 tau1 = goodtaus[i][1]
                 tau2_index = goodtaus[j][0]
@@ -304,10 +321,10 @@ class HHLeptonProducer(JetLepMetModule):
             pass_vbf = not pass_ditau and self.trigger_checker.check_vbftautau(event,
                 eval("tau1.pt%s" % self.tau_syst), tau1.eta,
                 eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=25, abs_th2=25)
-            
+
             if not (pass_ditau or pass_vbf):
                 continue
-
+            self.histo.Fill(12)
             pass_vbf = int(pass_vbf)
 
             tautaupair = LeptonTauPair(
@@ -323,6 +340,7 @@ class HHLeptonProducer(JetLepMetModule):
             fail_lepton_veto, _ = lepton_veto(electrons, muons, taus)
             if fail_lepton_veto:
                 return False
+            self.histo.Fill(13)
 
             self.out.fillBranch("pairType", 2)
             self.out.fillBranch("isVBFtrigger", pass_vbf)

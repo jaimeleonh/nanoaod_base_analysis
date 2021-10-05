@@ -12,19 +12,23 @@ ROOT = import_root()
 class HHJetsProducer(JetLepMetModule):
     def __init__(self, *args, **kwargs):
         super(HHJetsProducer, self).__init__(self, *args, **kwargs)
+        
+        # print ROOT.gSystem.GetLibraries()
+        if "/libToolsTools.so" not in ROOT.gSystem.GetLibraries():
+            ROOT.gSystem.Load("libToolsTools.so")
+
         ROOT.gROOT.ProcessLine(".include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/"
             "external/eigen/d812f411c3f9-bcolbf/include/eigen3")
         ROOT.gROOT.ProcessLine(".include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/"
             "external/tensorflow/2.1.0-bcolbf/include")
-        
-        base_hhbtag = "{}/{}/src/HHTools/HHbtag".format(
-            os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
         base = "{}/{}/src/Tools/Tools".format(
             os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
 
-        ROOT.gSystem.Load("libToolsTools.so")
         ROOT.gROOT.ProcessLine(".L {}/interface/HHbtagInterface.h".format(base))
+        
         self.year = kwargs.pop("year")
+        base_hhbtag = "{}/{}/src/HHTools/HHbtag".format(
+            os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
         models = [base_hhbtag + "/models/HHbtag_v1_par_%i" % i for i in range(2)]
 
         self.HHbtagger = ROOT.HHbtagInterface(models[0], models[1], self.year)

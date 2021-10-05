@@ -13,7 +13,7 @@ class Htt_trigSFProducer(JetLepMetModule):
         super(Htt_trigSFProducer, self).__init__(*args, **kwargs)
         self.isMC = isMC
         self.year = year
-        
+
         if year == 2016:
             self.mutau_pt_th1 = 23.
             self.mutau_pt_th2 = 25.
@@ -24,17 +24,18 @@ class Htt_trigSFProducer(JetLepMetModule):
             self.etau_pt_th2 = 35.
 
         base = "{}/{}/src/HTT-utilities/LepEffInterface".format(
-            os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
-
-        ROOT.gSystem.Load("libHTT-utilitiesLepEffInterface.so")
-        ROOT.gROOT.ProcessLine(".L {}/interface/ScaleFactor.h".format(base))
-
+                os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
         base_tau = "{}/{}/src/TauAnalysisTools/TauTriggerSFs".format(
-            os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
+                os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
 
-        ROOT.gSystem.Load("libTauAnalysisToolsTauTriggerSFs.so")
-        ROOT.gROOT.ProcessLine(".L {}/interface/SFProvider.h".format(base_tau))
-        # ROOT.gROOT.ProcessLine(".L /afs/cern.ch/work/j/jleonhol/private/nanoaod_base_analysis/data/cmssw/CMSSW_11_1_0_pre4/src/TauAnalysisTools/TauTriggerSFs/interface/SFProvider.h")
+        if "/libHTT-utilitiesLepEffInterface.so" not in ROOT.gSystem.GetLibraries():
+            ROOT.gSystem.Load("libHTT-utilitiesLepEffInterface.so")
+            ROOT.gROOT.ProcessLine(".L {}/interface/ScaleFactor.h".format(base))
+
+        if "/libTauAnalysisToolsTauTriggerSFs.so" not in ROOT.gSystem.GetLibraries():
+            ROOT.gSystem.Load("libTauAnalysisToolsTauTriggerSFs.so")
+            ROOT.gROOT.ProcessLine(".L {}/interface/SFProvider.h".format(base_tau))
+
         if self.isMC:
             self.eTrgSF = ROOT.ScaleFactor()
             self.eTauTrgSF = ROOT.ScaleFactor()

@@ -12,10 +12,11 @@ ROOT = import_root()
 class SVFitProducer(JetLepMetModule):
     def __init__(self, *args, **kwargs):
         super(SVFitProducer, self).__init__(*args, **kwargs)
+        if "/libToolsTools.so" not in ROOT.gSystem.GetLibraries():
+            ROOT.gSystem.Load("libToolsTools.so")
+
         base = "{}/{}/src/Tools/Tools".format(
             os.getenv("CMT_CMSSW_BASE"), os.getenv("CMT_CMSSW_VERSION"))
-
-        ROOT.gSystem.Load("libToolsTools.so")
         ROOT.gROOT.ProcessLine(".L {}/interface/SVfitinterface.h".format(base))
     
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):

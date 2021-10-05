@@ -1,6 +1,8 @@
 from analysis_tools import ObjectCollection, Category, Process, Dataset, Feature
 from analysis_tools.utils import DotDict
+from analysis_tools.utils import join_root_selection as jrs
 from plotting_tools import Label
+from collections import OrderedDict
 
 class Config():
     def __init__(self, name, year, ecm, lumi_fb=None, lumi_pb=None, **kwargs):
@@ -17,6 +19,8 @@ class Config():
 
         self.x = kwargs
 
+        self.channels = self.add_channels()
+        self.regions = self.add_regions()
         self.categories = self.add_categories()
         self.processes, self.process_group_names = self.add_processes()
         self.datasets = self.add_datasets()
@@ -24,12 +28,68 @@ class Config():
         self.versions = self.add_versions()
         self.weights = self.add_weights()
 
+    def join_selection_channels(self, selection):
+        return jrs([jrs(jrs(selection[ch.name], op="and"), ch.selection, op="and")
+            for ch in self.channels], op="or")
+
+    def add_regions(self):
+        selection = OrderedDict()
+        region_names = ["Signal region", "OS inv. iso", "SS iso", "SS inv. iso"]
+        selection["os_iso"] = {
+            "mutau": ["isOS == 1", "dau1_iso < 0.15", "dau2_idDeepTau2017v2p1VSjet >= 5"],
+            "etau": ["isOS == 1", "dau1_iso == 1", "dau2_idDeepTau2017v2p1VSjet >= 5"],
+            "tautau": ["isOS == 1", "dau1_idDeepTau2017v2p1VSjet >= 5",
+                "dau2_idDeepTau2017v2p1VSjet >= 5"],
+        }
+        selection["os_inviso"] = {
+            "mutau": ["isOS == 1", "dau1_iso < 0.15", "dau2_idDeepTau2017v2p1VSjet >= 1",
+                "dau2_idDeepTau2017v2p1VSjet < 5"],
+            "etau": ["isOS == 1", "dau1_iso == 1", "dau2_idDeepTau2017v2p1VSjet >= 1",
+                "dau2_idDeepTau2017v2p1VSjet < 5"],
+            "tautau": ["isOS == 1", "dau1_idDeepTau2017v2p1VSjet >= 5",
+                "dau2_idDeepTau2017v2p1VSjet >= 1", "dau2_idDeepTau2017v2p1VSjet < 5"],
+        }
+        selection["ss_iso"] = {
+            "mutau": ["isOS == 0", "dau1_iso < 0.15", "dau2_idDeepTau2017v2p1VSjet >= 5"],
+            "etau": ["isOS == 0", "dau1_iso == 1", "dau2_idDeepTau2017v2p1VSjet >= 5"],
+            "tautau": ["isOS == 0", "dau1_idDeepTau2017v2p1VSjet >= 5",
+                "dau2_idDeepTau2017v2p1VSjet >= 5"],
+        }
+        selection["ss_inviso"] = {
+            "mutau": ["isOS == 0", "dau1_iso < 0.15", "dau2_idDeepTau2017v2p1VSjet >= 1",
+                "dau2_idDeepTau2017v2p1VSjet < 5"],
+            "etau": ["isOS == 0", "dau1_iso == 1", "dau2_idDeepTau2017v2p1VSjet >= 1",
+                "dau2_idDeepTau2017v2p1VSjet < 5"],
+            "tautau": ["isOS == 0", "dau1_idDeepTau2017v2p1VSjet >= 5",
+                "dau2_idDeepTau2017v2p1VSjet >= 1", "dau2_idDeepTau2017v2p1VSjet < 5"],
+        }
+        regions = []
+        for ikey, key in enumerate(selection):
+            regions.append(Category(key, label=Label(region_names[ikey]),
+                selection=self.join_selection_channels(selection[key])))
+            for channel in self.channels:
+                regions.append(Category("_".join([channel.name, key]),
+                    label=Label(", ".join([channel.label.root, region_names[ikey]])),
+                    selection=jrs(channel.selection,
+                        jrs(selection[key][channel.name], op="and"), op="and")))
+        return ObjectCollection(regions)
+
+    def add_channels(self):
+        channels = [
+            Category("mutau", Label("#tau_{#mu}#tau_{h}"), selection="pairType == 0"),
+            Category("etau", Label("#tau_{e}#tau_{h}"), selection="pairType == 1"),
+            Category("tautau", Label("#tau_{h}#tau_{h}"), selection="pairType == 2"),
+        ]
+        return ObjectCollection(channels)
+
     def add_categories(self):
         categories = [
             Category("base", "base category"),
             Category("dum", "dummy category", selection="Htt_svfit_mass_nom > 50 "
                 " && Htt_svfit_mass_nom < 150"),
-            Category("tautau", "#tau#tau channel", selection="pairType == 2")
+            Category("mutau", "#mu#tau channel", selection="pairType == 0"),
+            Category("etau", "e#tau channel", selection="pairType == 1"),
+            Category("tautau", "#tau#tau channel", selection="pairType == 2"),
         ]
         return ObjectCollection(categories)
 
@@ -53,6 +113,9 @@ class Config():
             ],
             "data_tau": [
                 "data_tau",
+            ],
+            "bkg": [
+                "tt_dl",
             ]
         }
         return ObjectCollection(processes), process_group_names
@@ -82,14 +145,18 @@ class Config():
                 self.processes.get("tt_dl"),
                 prefix="cms-xrd-global.cern.ch//",
                 locate="ingrid-se04.cism.ucl.ac.be:1094/",
-                xs=365.34),
+                xs=88.29, 
+                merging = {
+                    "tautau": 20,
+                    "etau": 40,
+                }),
             Dataset("tt_sl",
                 "/store/mc/RunIIAutumn18NanoAODv7/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/"
                 "NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21_ext3-v1/",
                 self.processes.get("tt_sl"),
                 prefix="cms-xrd-global.cern.ch//",
                 locate="se-xrd01.jinr-t1.ru:1095/",
-                xs=88.29),
+                xs=365.34),
             
             # Tau 2018
             Dataset("data_tau_a",
