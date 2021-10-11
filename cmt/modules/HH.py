@@ -44,6 +44,10 @@ class HHProducer(JetLepMetModule):
 
         self.out.branch("HHKinFit_mass%s" % self.systs, "F")
         self.out.branch("HHKinFit_chi2%s" % self.systs, "F")
+
+        self.out.branch("VBFjj_mass%s" % self.systs, "F")
+        self.out.branch("VBFjj_deltaEta%s" % self.systs, "F")
+        self.out.branch("VBFjj_deltaPhi%s" % self.systs, "F")
         pass
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
@@ -59,6 +63,7 @@ class HHProducer(JetLepMetModule):
 
         dau1, dau2, dau1_tlv, dau2_tlv = self.get_daus(event, muons, electrons, taus) #FIXME FROM HERE
         bjet1, bjet2, bjet1_tlv, bjet2_tlv = self.get_bjets(event, jets)
+        vbfjet1, vbfjet2, vbfjet1_tlv, vbfjet2_tlv = self.get_vbfjets(event, jets)
         met, met_tlv = self.get_met(event)
 
         met_tv = ROOT.TVector2(met_tlv.Px(), met_tlv.Py())
@@ -93,21 +98,16 @@ class HHProducer(JetLepMetModule):
         HHKinFit_mass = results[0]
         HHKinFit_chi2 = results[1]
 
-        # try:
-            # kinFit.fit()
-            # HHKinFit_mass = kinFit.getMH()
-            # HHKinFit_chi2 = kinFit.getChi2()
-        # # except Exception:
-        # except ROOT.HHKinFit2.HHInvMConstraintException as e:
-            # HHKinFit_mass = -999.
-            # HHKinFit_chi2 = -999.
-        # except ROOT.HHKinFit2.HHEnergyRangeException as e:
-            # HHKinFit_mass = -999.
-            # HHKinFit_chi2 = -999.
-        # except ROOT.HHKinFit2.HHEnergyConstraintException as e:
-            # HHKinFit_mass = -999.
-            # HHKinFit_chi2 = -999.
-            
+        # VBF jet composition
+        if not vbfjet1:
+            VBFjj_mass = -999.
+            VBFjj_deltaEta = -999.
+            VBFjj_deltaPhi = -999.
+        else:
+            VBFjj_tlv = vbfjet1_tlv + vbfjet2_tlv
+            VBFjj_mass = VBFjj_tlv.M()
+            VBFjj_deltaEta = vbfjet1_tlv.Eta() - vbfjet2_tlv.Eta()
+            VBFjj_deltaPhi = vbfjet1_tlv.DeltaPhi(vbfjet2_tlv)
         
         self.out.fillBranch("Hbb_pt%s" % self.systs, hbb_tlv.Pt())
         self.out.fillBranch("Hbb_eta%s" % self.systs, hbb_tlv.Eta())
@@ -131,6 +131,11 @@ class HHProducer(JetLepMetModule):
 
         self.out.fillBranch("HHKinFit_mass%s" % self.systs, HHKinFit_mass)
         self.out.fillBranch("HHKinFit_chi2%s" % self.systs, HHKinFit_chi2)
+
+        self.out.fillBranch("VBFjj_mass%s" % self.systs, VBFjj_mass)
+        self.out.fillBranch("VBFjj_deltaEta%s" % self.systs, VBFjj_deltaEta)
+        self.out.fillBranch("VBFjj_deltaPhi%s" % self.systs, VBFjj_deltaPhi)
+
         return True
 
 

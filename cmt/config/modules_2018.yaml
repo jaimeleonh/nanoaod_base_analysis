@@ -13,6 +13,22 @@
     # name: Counter
     # path: cmt.modules.counter
 
+puWeight:
+    name: puWeight
+    path: cmt.modules.weight
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+
+
+2_counter:
+    name: WeightedCounter
+    path: cmt.modules.counter
+    parameters:
+        histo_name: events
+        isMC: self.dataset.process.isMC
+        weights: self.config.weights.total_events_weights
+
 2:
     name: MetFilter
     path: cmt.modules.METfilters
@@ -20,18 +36,6 @@
         isMC: self.dataset.process.isMC
         year: self.config.year
 
-2_counter:
-    name: Counter
-    path: cmt.modules.counter
-    parameters:
-        histo_name: MetFilter
-
-3_w1:
-    name: puWeight
-    path: cmt.modules.weight
-    parameters:
-        isMC: self.dataset.process.isMC
-        year: self.config.year
 
 3_w2:
     name: prefiringWeight
@@ -39,12 +43,14 @@
     parameters:
         isMC: self.dataset.process.isMC
 
+
 tau_sf:
     name: tauCorrections
     path: cmt.modules.weight
     parameters:
         isMC: self.dataset.process.isMC
         year: self.config.year
+
 
 hhlep:
     name: HHLepton
@@ -54,17 +60,20 @@ hhlep:
         year: self.config.year
         runPeriod: self.dataset.runPeriod
 
+
 hhlep_counter:
     name: Counter
     path: cmt.modules.counter
     parameters:
         histo_name: HHLepton
 
+
 hhlep_var:
     name: HHLeptonVariable
     path: cmt.modules.HHLepton
     parameters:
         isMC: self.dataset.process.isMC
+
 
 jet_syst:
     name: createJMECorrector
@@ -78,6 +87,7 @@ jet_syst:
         noGroom: False
         splitJER: True
 
+
 hhjets:
     name: HHJets
     path: cmt.modules.HHJets
@@ -85,11 +95,13 @@ hhjets:
         year: self.config.year
         isMC: self.dataset.process.isMC
 
+
 hhjets_counter:
     name: Counter
     path: cmt.modules.counter
     parameters:
         histo_name: HHJets
+
 
 trigSF:
     name: Htt_trigSF
@@ -98,11 +110,13 @@ trigSF:
         year: self.config.year
         isMC: self.dataset.process.isMC
 
+
 svfit:
     name: SVFit
     path: cmt.modules.SVFit
     parameters:
         isMC: self.dataset.process.isMC
+
 
 hh:  
     name: HH

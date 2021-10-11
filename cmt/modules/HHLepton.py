@@ -89,6 +89,7 @@ class HHLeptonProducer(JetLepMetModule):
         self.out.branch('dau1_index', 'I')
         self.out.branch('dau2_index', 'I')
         self.out.branch('isVBFtrigger', 'I')
+        self.out.branch('isOS', 'I')
 
         self.out.branch('dau1_eta', 'F')
         self.out.branch('dau1_phi', 'F')
@@ -122,7 +123,7 @@ class HHLeptonProducer(JetLepMetModule):
             "pass ele trigger", "pass lepton veto",
             "goodtau events", "tau-tau pairs",
             "pass tau trigger", "pass lepton veto",
-            ]
+        ]
         for ibin, binname in enumerate(bins):
             self.histo.GetXaxis().SetBinLabel(ibin + 1, binname)
 
@@ -176,8 +177,8 @@ class HHLeptonProducer(JetLepMetModule):
                     muontaupair = LeptonTauPair(
                         muon, eval("muon.pt%s" % self.muon_syst), muon.pfRelIso04_all,
                         tau, eval("tau.pt%s" % self.tau_syst), tau.rawDeepTau2017v2p1VSjet)
-                    if muontaupair.check_charge():
-                        muontaupairs.append((imuon, itau, muontaupair))
+                    # if muontaupair.check_charge():
+                    muontaupairs.append((imuon, itau, muontaupair))
 
             if len(muontaupairs) != 0:
                 muontaupairs.sort(key=lambda x: x[2], reverse=True)
@@ -190,6 +191,7 @@ class HHLeptonProducer(JetLepMetModule):
 
                 self.out.fillBranch("pairType", 0)
                 self.out.fillBranch("isVBFtrigger", 0)
+                self.out.fillBranch("isOS", int(muontaupairs[0][2].check_charge()))
 
                 self.out.fillBranch("dau1_index", muontaupairs[0][0])
                 self.out.fillBranch("dau1_eta", muon.eta)
@@ -251,8 +253,8 @@ class HHLeptonProducer(JetLepMetModule):
                     electrontaupair = LeptonTauPair(
                         electron, eval("electron.pt%s" % self.electron_syst), electron.pfRelIso03_all,
                         tau, eval("tau.pt%s" % self.tau_syst), tau.rawDeepTau2017v2p1VSjet)
-                    if electrontaupair.check_charge():
-                        electrontaupairs.append((ielectron, itau, electrontaupair))
+                    # if electrontaupair.check_charge():
+                    electrontaupairs.append((ielectron, itau, electrontaupair))
 
             if len(electrontaupairs) != 0:
                 electrontaupairs.sort(key=lambda x: x[2], reverse=True)
@@ -264,6 +266,7 @@ class HHLeptonProducer(JetLepMetModule):
                 self.histo.Fill(9)
                 self.out.fillBranch("pairType", 1)
                 self.out.fillBranch("isVBFtrigger", 0)
+                self.out.fillBranch("isOS", int(electrontaupairs[0][2].check_charge()))
 
                 self.out.fillBranch("dau1_index", electrontaupairs[0][0])
                 self.out.fillBranch("dau1_eta", electron.eta)
@@ -330,8 +333,8 @@ class HHLeptonProducer(JetLepMetModule):
             tautaupair = LeptonTauPair(
                 tau1, eval("tau1.pt%s" % self.tau_syst), tau1.rawDeepTau2017v2p1VSjet,
                 tau2, eval("tau2.pt%s" % self.tau_syst), tau2.rawDeepTau2017v2p1VSjet)
-            if tautaupair.check_charge():
-                tautaupairs.append((tau1_index, tau2_index, tautaupair))
+            # if tautaupair.check_charge():
+            tautaupairs.append((tau1_index, tau2_index, tautaupair))
 
         if len(tautaupairs) != 0:
             tautaupairs.sort(key=lambda x: x[2], reverse=True)
@@ -344,6 +347,7 @@ class HHLeptonProducer(JetLepMetModule):
 
             self.out.fillBranch("pairType", 2)
             self.out.fillBranch("isVBFtrigger", pass_vbf)
+            self.out.fillBranch("isOS", int(tautaupairs[0][2].check_charge()))
 
             self.out.fillBranch("dau1_index", tautaupairs[0][0])
             self.out.fillBranch("dau1_eta", tau1.eta)

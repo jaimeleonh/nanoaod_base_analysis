@@ -87,6 +87,8 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
 
     def build_splitted_branches(self):
         import json
+        if self.dataset.get_aux("splitting"):
+            self.max_events = self.dataset.get_aux("splitting")
         if not os.path.exists(
                 os.path.expandvars("$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
                     self.config.name, self.max_events, self.dataset.name))):
@@ -214,8 +216,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         dataset_selection = self.dataset.get_aux("selection")
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
-        #selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
-        selection = "nTau >= 1"
+        # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
         modules = self.get_modules()
 
         if self.max_events == -1:

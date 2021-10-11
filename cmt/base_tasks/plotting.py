@@ -111,7 +111,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         if self.config.processes.get(self.dataset.process.name).isData:
             return "1"
         if category in self.config.weights.channels:
-            return join_root_selection(self.config.weights.channels[category], op="and")
+            return " * ".join(self.config.weights.channels[category])
         return self.config.weights.default
 
     @law.decorator.notify
@@ -135,7 +135,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             y_title = "Events" + y_axis_adendum
             title = "; %s; %s" % (x_title, y_title)
             for tag in [""] + self.get_syst_tags(feature):
-                if feature.get_aux("central") != "":
+                if feature.get_aux("central") != "" and self.dataset.process.isMC:
                     tag = "_%s%s" % (feature.get_aux("central"), tag)
                 if ".at" in feature.expression:
                     feature_expression = (feature.expression[:feature.expression.find(".at")] + tag
@@ -146,9 +146,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 hist_base = ROOT.TH1D(feature_name, title, *binning_args)
                 if nentries > 0:
                     hmodel = ROOT.RDF.TH1DModel(hist_base)
+                    print self.get_weight(self.category.name)
                     histos.append(
-                        df.Define("user_weight", self.get_weight(self.category.name)).Define(
-                            "var", feature_expression).Histo1D(hmodel, "var", "user_weight")
+                        df.Define("weight", "{}".format(self.get_weight(self.category.name))).Define(
+                            "var", feature_expression).Histo1D(hmodel, "var", "weight")
                     )
                 else:  # no entries available, append empty histogram
                     histos.append(hist_base)
@@ -324,6 +325,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             hist.hist_type = "data"
             hist.SetMarkerStyle(20)
             hist.SetMarkerColor(color)
+            hist.SetLineColor(color)
             hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
         for feature in self.features:
@@ -334,24 +336,26 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
             hist_title = "; %s; %s" % (x_title, y_title)
-            feature_name = feature.name + central_tag
             background_hists = []
             signal_hists = []
             data_hists = []
             all_hists = []
             colors = []
             for process, datasets in self.processes_datasets.items():
+                feature_name = feature.name + (central_tag if process.isMC else "")
                 process_histo = ROOT.TH1D(str(process.label), hist_title, *binning_args)
                 process_histo.process_label = str(process.label)
                 process_histo.Sumw2()
-                for dataset in datasets:                
+                for dataset in datasets:
                     dataset_histo = ROOT.TH1D(randomize("tmp"), hist_title, *binning_args)
+                    dataset_histo.Sumw2()
                     for category in self.expand_category():
                         inp = inputs["data"][
                             (dataset.name, category.name)].collection.targets.values()
                         for elem in inp:
                             rootfile = ROOT.TFile.Open(elem.path)
                             histo = copy(rootfile.Get(feature_name))
+                            rootfile.Close()
                             dataset_histo.Add(histo)
                     nevents = 0
                     inp = inputs["stats"][dataset.name]
@@ -385,7 +389,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 background_stack.hist_type = "background"
                 draw_hists = [background_stack] + signal_hists[::-1]
                 if not self.hide_data:
-                    draw_hists.extend(data_graphs[::-1])
+                    draw_hists.extend(data_hists[::-1])
 
             dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             dummy_hist.GetYaxis().SetMaxDigits(4)
@@ -405,13 +409,14 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 n_cols = 3
             col_width = 0.125
             n_rows = math.ceil(n_entries / float(n_cols))
-            row_width = 0.05
+            row_width = 0.06
             legend_x2 = 0.88
             legend_x1 = legend_x2 - n_cols * col_width
             legend_y2 = 0.88
             legend_y1 = legend_y2 - n_rows * row_width
 
             legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
+            legend.SetBorderSize(0)
             legend.SetNColumns(n_cols)
             for entry in entries:
                 legend.AddEntry(*entry)

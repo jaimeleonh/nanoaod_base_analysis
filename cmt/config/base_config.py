@@ -95,21 +95,23 @@ class Config():
 
     def add_processes(self):
         processes = [
-            Process("ggf_sm", Label("GGFSM"), color=(0, 0, 0), isSignal=True),
+            Process("ggf_sm", Label("$HH_{ggF}$"), color=(0, 0, 0), isSignal=True),
             Process("dy", Label("DY"), color=(255, 102, 102)),
             Process("tt", Label("t#bar{t}"), color=(255, 153, 0)),
             Process("tt_dl", Label("t#bar{t} DL"), color=(205, 0, 9), parent_process="tt"),
             Process("tt_sl", Label("t#bar{t} SL"), color=(255, 153, 0), parent_process="tt"),
             Process("tt_fh", Label("t#bar{t} FH"), color=(131, 38, 10), parent_process="tt"),
-            Process("data", Label(latex="DATA"), color=(0, 0, 0), isData=True),
-            Process("data_tau", Label(latex="DATA\\_TAU"), color=(0, 0, 0), parent_process="data", isData=True),
-            Process("data_e", Label(latex="DATA\\_E"), color=(0, 0, 0), parent_process="data", isData=True),
-            Process("data_mu", Label(latex="DATA\\_MU"), color=(0, 0, 0), parent_process="data", isData=True)
+            Process("data", Label("DATA"), color=(0, 0, 0), isData=True),
+            Process("data_tau", Label("DATA\_TAU"), color=(0, 0, 0), parent_process="data", isData=True),
+            Process("data_e", Label("DATA\_E"), color=(0, 0, 0), parent_process="data", isData=True),
+            Process("data_mu", Label("DATA\_MU"), color=(0, 0, 0), parent_process="data", isData=True)
         ]
 
         process_group_names = {
             "default": [
                 "ggf_sm",
+                "data_tau",
+                "tt_dl",
             ],
             "data_tau": [
                 "data_tau",
@@ -146,10 +148,11 @@ class Config():
                 prefix="cms-xrd-global.cern.ch//",
                 locate="ingrid-se04.cism.ucl.ac.be:1094/",
                 xs=88.29, 
-                merging = {
+                merging={
                     "tautau": 20,
                     "etau": 40,
-                }),
+                },
+                splitting=100000),
             Dataset("tt_sl",
                 "/store/mc/RunIIAutumn18NanoAODv7/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/"
                 "NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21_ext3-v1/",
@@ -164,25 +167,45 @@ class Config():
                 self.processes.get("data_tau"),
                 runPeriod="A",
                 prefix="xrootd-cms.infn.it//",
-                locate="grid-dcache.physik.rwth-aachen.de:1094/"),
+                locate="grid-dcache.physik.rwth-aachen.de:1094/",
+                splitting=200000,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },),
             Dataset("data_tau_b",
                 "/store/data/Run2018B/Tau/NANOAOD/02Apr2020-v1/",
                 self.processes.get("data_tau"),
                 runPeriod="B",
                 prefix="xrootd-cms.infn.it//",
-                locate="se-xrd01.jinr-t1.ru:1095/"),
+                locate="se-xrd01.jinr-t1.ru:1095/",
+                splitting=200000,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },),
             Dataset("data_tau_c",
                 "/store/data/Run2018C/Tau/NANOAOD/02Apr2020-v1/",
                 self.processes.get("data_tau"),
                 runPeriod="C",
                 prefix="xrootd-cms.infn.it//",
-                locate="cms03.lcg.cscs.ch:1094/"),
+                locate="cms03.lcg.cscs.ch:1094/",
+                splitting=200000,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },),
             Dataset("data_tau_d",
                 "/store/data/Run2018D/Tau/NANOAOD/02Apr2020-v2/",
                 self.processes.get("data_tau"),
                 runPeriod="D",
                 prefix="xrootd-cms.infn.it//",
-                locate="se-xrd01.jinr-t1.ru:1095/"),
+                locate="se-xrd01.jinr-t1.ru:1095/",
+                splitting=200000,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },),
 
         ]
         return ObjectCollection(datasets)
@@ -211,10 +234,12 @@ class Config():
     def add_weights(self):
         weights = DotDict()
         weights.default = "1"
+        weights.total_events_weights = ["genWeight", "puWeight"]
         weights.channels = {
             "mutau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],
             "etau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],
-            "tautau": ["genWeight", "puWeight", "PrefireWeight", "trigSF",
+            # "tautau": ["genWeight", "puWeight", "PrefireWeight", "trigSF",
+            "tautau": ["puWeight", "PrefireWeight", "trigSF",
                 "Tau_sfDeepTau2017v2p1VSjet_Medium.at(dau1_index)",
                 "Tau_sfDeepTau2017v2p1VSjet_Medium.at(dau2_index)",
                 "Tau_sfDeepTau2017v2p1VSe_VVLoose.at(dau1_index)",
