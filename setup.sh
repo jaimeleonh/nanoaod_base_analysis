@@ -23,14 +23,31 @@ action() {
     else
         export CMT_ON_LXPLUS="0"
     fi
+    
+    # check if we're on gaeui (ciemat)
+    if [[ "$( hostname )" = gae*.ciemat.es ]]; then
+        export CMT_ON_CIEMAT="1"
+    else
+        export CMT_ON_CIEMAT="0"
+    fi
 
     # default cern name
     if [ -z "$CMT_CERN_USER" ]; then
         if [ "$CMT_ON_LXPLUS" = "1" ]; then
             export CMT_CERN_USER="$( whoami )"
-        else
+        elif [ "$CMT_ON_CIEMAT" = "0" ]; then
             2>&1 echo "please set CMT_CERN_USER to your CERN user name and try again"
             return "1"
+        fi
+    fi
+
+    # default ciemat name
+    if [ -z "$CMT_CIEMAT_USER" ]; then
+        if [ "$CMT_ON_CIEMAT" = "1" ]; then
+            export CMT_CIEMAT_USER="$( whoami )"
+        # elif [ "$CMT_ON_LXPLUS" = "0" ]; then
+            # 2>&1 echo "please set CMT_CIEMAT_USER to your CIEMAT user name and try again"
+            # return "1"
         fi
     fi
 
@@ -47,7 +64,11 @@ action() {
     # other defaults
     [ -z "$CMT_SOFTWARE" ] && export CMT_SOFTWARE="$CMT_DATA/software"
     [ -z "$CMT_STORE_LOCAL" ] && export CMT_STORE_LOCAL="$CMT_DATA/store"
-    [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/eos/user/${CMT_CERN_USER:0:1}/$CMT_CERN_USER/cmt"
+    if [ -n "$CMT_CIEMAT_USER" ]; then
+      [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/nfs/cms/$CMT_CIEMAT_USER/cmt"
+    elif [ -n "$CMT_CERN_USER" ]; then
+      [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/eos/user/${CMT_CERN_USER:0:1}/$CMT_CERN_USER/cmt"
+    fi
     [ -z "$CMT_STORE" ] && export CMT_STORE="$CMT_STORE_EOS"
     [ -z "$CMT_JOB_DIR" ] && export CMT_JOB_DIR="$CMT_DATA/jobs"
     [ -z "$CMT_TMP_DIR" ] && export CMT_TMP_DIR="$CMT_DATA/tmp"
@@ -141,8 +162,7 @@ action() {
             scramv1 project CMSSW "$CMT_CMSSW_VERSION"
         fi
         cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-        cmsenv
-        
+
         export NANOTOOLS_PATH="PhysicsTools/NanoAODTools"
         if [ ! -d "$NANOTOOLS_PATH" ]; then
           git clone https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
@@ -151,14 +171,8 @@ action() {
 
         export HHKINFIT_PATH="HHKinFit2"
         if [ ! -d "$HHKINFIT_PATH" ]; then
-          git clone https://github.com/LLRCMS/HHKinFit2.git -b bbtautau_LegacyRun2
-          scram b
-        fi
-
-        export HHBTAG_PATH="HHTools"
-        if [ ! -d "$HHBTAG_PATH" ]; then
-          git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
-          git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
+          git clone https://github.com/bvormwald/HHKinFit2.git -b CMSSWversion
+          rm -r HHKinFit2/HHKinFit2CMSSWPlugins/plugins/
           scram b
         fi
 
@@ -168,7 +182,7 @@ action() {
           git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
           scram b
         fi
-        
+
         export HTT_PATH="HTT-utilities"
         if [ ! -d "$HTT_PATH" ]; then
           git clone https://github.com/CMS-HTT/LeptonEff-interface.git HTT-utilities
@@ -182,6 +196,13 @@ action() {
           wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root
           wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root
           cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
+          scram b
+        fi
+
+        export HHBTAG_PATH="HHTools"
+        if [ ! -d "$HHBTAG_PATH" ]; then
+          git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
+          git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
           scram b
         fi
 

@@ -125,28 +125,29 @@ class Config():
     def add_datasets(self):
         datasets = [
             Dataset("ggf_sm",
-                "/store/mc/RunIIAutumn18NanoAODv7/"
-                "GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8"
-                "/NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/",
-                self.processes.get("ggf_sm"),
-                prefix="cms-xrd-global.cern.ch//",
-                locate="ingrid-se04.cism.ucl.ac.be:1094/",
-                xs=0.001726),
+                # "/store/mc/RunIIAutumn18NanoAODv7/"
+                # "GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8"
+                # "/NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/",
+                dataset="/GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("ggf_sm"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.001726,
+                splitting=400000,),
 
             # Background samples
             Dataset("dy_high",
-                "/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/"
+                dataset="/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/"
                 "RunIIAutumn18NanoAOD-102X_upgrade2018_realistic_v15-v1/NANOAODSIM/",
-                self.processes.get("dy"),
-                prefix="cms-xrd-global.cern.ch//",
-                locate="xrootd.cmsaf.mit.edu:1094/",
+                process=self.processes.get("dy"),
+                prefix="xrootd-cms.infn.it//",
+                # prefix="cms-xrd-global.cern.ch//",
                 xs=6077.22),
             Dataset("tt_dl",
-                "/store/mc/RunIIAutumn18NanoAODv7/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
-                "NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/",
-                self.processes.get("tt_dl"),
-                prefix="cms-xrd-global.cern.ch//",
-                locate="ingrid-se04.cism.ucl.ac.be:1094/",
+                dataset="/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("tt_dl"),
+                prefix="xrootd-cms.infn.it//",
                 xs=88.29, 
                 merging={
                     "tautau": 20,
@@ -154,54 +155,52 @@ class Config():
                 },
                 splitting=100000),
             Dataset("tt_sl",
-                "/store/mc/RunIIAutumn18NanoAODv7/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/"
-                "NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21_ext3-v1/",
-                self.processes.get("tt_sl"),
-                prefix="cms-xrd-global.cern.ch//",
-                locate="se-xrd01.jinr-t1.ru:1095/",
+                dataset="/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext3-v1/"
+                "NANOAODSIM",
+                process=self.processes.get("tt_sl"),
+                prefix="xrootd-cms.infn.it//",
                 xs=365.34),
             
             # Tau 2018
             Dataset("data_tau_a",
-                "/store/data/Run2018A/Tau/NANOAOD/02Apr2020-v1/",
-                self.processes.get("data_tau"),
+                dataset="/Tau/Run2018A-02Apr2020-v1/NANOAOD",
+                process=self.processes.get("data_tau"),
                 runPeriod="A",
-                prefix="xrootd-cms.infn.it//",
-                locate="grid-dcache.physik.rwth-aachen.de:1094/",
-                splitting=200000,
+                # prefix="xrootd-cms.infn.it//",
+                splitting=400000,
                 merging={
                     "tautau": 20,
                     "etau": 40,
                 },),
             Dataset("data_tau_b",
-                "/store/data/Run2018B/Tau/NANOAOD/02Apr2020-v1/",
-                self.processes.get("data_tau"),
+                dataset="/Tau/Run2018B-02Apr2020-v1/NANOAOD",
+                process=self.processes.get("data_tau"),
                 runPeriod="B",
                 prefix="xrootd-cms.infn.it//",
                 locate="se-xrd01.jinr-t1.ru:1095/",
-                splitting=200000,
+                splitting=400000,
                 merging={
                     "tautau": 20,
                     "etau": 40,
                 },),
             Dataset("data_tau_c",
-                "/store/data/Run2018C/Tau/NANOAOD/02Apr2020-v1/",
-                self.processes.get("data_tau"),
+                dataset="/Tau/Run2018C-02Apr2020-v1/NANOAOD",
+                process=self.processes.get("data_tau"),
                 runPeriod="C",
                 prefix="xrootd-cms.infn.it//",
                 locate="cms03.lcg.cscs.ch:1094/",
-                splitting=200000,
+                splitting=400000,
                 merging={
                     "tautau": 20,
                     "etau": 40,
                 },),
             Dataset("data_tau_d",
-                "/store/data/Run2018D/Tau/NANOAOD/02Apr2020-v2/",
-                self.processes.get("data_tau"),
+                dataset="/Tau/Run2018D-02Apr2020-v2/NANOAOD",
+                process=self.processes.get("data_tau"),
                 runPeriod="D",
                 prefix="xrootd-cms.infn.it//",
-                locate="se-xrd01.jinr-t1.ru:1095/",
-                splitting=200000,
+                splitting=400000,
                 merging={
                     "tautau": 20,
                     "etau": 40,

@@ -25,6 +25,10 @@ from abc import abstractmethod
 
 law.contrib.load("cms", "git", "htcondor", "root", "tasks", "telegram", "tensorflow", "wlcg")
 
+class Target():
+    def __init__(self, path, *args, **kwargs):
+        self.path = path
+
 
 class Task(law.Task):
 
@@ -92,7 +96,8 @@ class Task(law.Task):
 
     def wlcg_target(self, *args, **kwargs):
         kwargs.setdefault("fs", self.default_wlcg_fs)
-        cls = law.wlcg.WLCGDirectoryTarget if kwargs.pop("dir", False) else law.wlcg.WLCGFileTarget
+        # cls = law.wlcg.WLCGDirectoryTarget if kwargs.pop("dir", False) else law.wlcg.WLCGFileTarget
+        cls = Target
         path = self.wlcg_path(*args, **kwargs)
         kwargs.pop("avoid_store", False)
         return cls(path, **kwargs)
@@ -269,13 +274,13 @@ class HTCondorWorkflow(HTCondorWorkflowExt):
         config.render_variables["cmt_env_path"] = os.environ["PATH"]
 
         # custom job file content
-        config.custom_content.append(("requirements", "(OpSysAndVer =?= \"CentOS7\")"))
+        # config.custom_content.append(("requirements", "(OpSysAndVer =?= \"CentOS7\")"))
         config.custom_content.append(("getenv", "true"))
         config.custom_content.append(("log", "/dev/null"))
         config.custom_content.append(("+MaxRuntime", int(math.floor(self.max_runtime * 3600)) - 1))
 
         # print "{}/x509up".format(os.getenv("HOME"))
-        config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("HOME"))))
+        config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))
         #config.custom_content.append(("arguments", "$(Proxy_path)"))
         
         return config
@@ -312,10 +317,11 @@ class InputData(DatasetTask, law.ExternalTask):
         if self.file_index != law.NO_INT:
             return self.dynamic_target(
                 self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name))[self.file_index],
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), 
+                    index=self.file_index),
                 avoid_store=True)
         else:
             cls = law.SiblingFileCollection
             return cls([self.dynamic_target(file_path, avoid_store=True)
                 for file_path in self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name))])
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False)])

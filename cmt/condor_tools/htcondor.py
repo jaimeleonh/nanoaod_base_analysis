@@ -74,6 +74,8 @@ class HTCondorWorkflowProxyExt(law.contrib.htcondor.workflow.HTCondorWorkflowPro
             config.input_files.append(dashboard_file)
             config.render_variables["dashboard_file"] = pf(os.path.basename(dashboard_file))
 
+        config.input_files.append(os.path.expandvars("$X509_USER_PROXY"))
+
         # output files
         config.output_files = []
 

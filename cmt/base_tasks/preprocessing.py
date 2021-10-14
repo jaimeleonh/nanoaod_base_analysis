@@ -79,11 +79,11 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         else:
             if "$" in self.keep_and_drop_file:
                 self.keep_and_drop_file = os.path.expandvars(self.keep_and_drop_file)
-        
-        if not hasattr(self, "splitted_branches") and self.is_workflow():
-            self.splitted_branches = self.build_splitted_branches()
-        elif not hasattr(self, "splitted_branches"):
-            self.splitted_branches = self.get_splitted_branches
+        if self.max_events != -1:
+            if not hasattr(self, "splitted_branches") and self.is_workflow():
+                self.splitted_branches = self.build_splitted_branches()
+            elif not hasattr(self, "splitted_branches"):
+                self.splitted_branches = self.get_splitted_branches
 
     def build_splitted_branches(self):
         import json
@@ -94,9 +94,11 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
                     self.config.name, self.max_events, self.dataset.name))):
             ROOT = import_root()
             files = self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=None)
             branches = []
             for ifil, fil in enumerate(files):
+                fil = self.dataset.get_files(
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), index=ifil)
                 f = ROOT.TFile.Open(fil)
                 tree = f.Get(self.tree_name)
                 nevents = tree.GetEntries()
@@ -134,7 +136,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             return len(self.splitted_branches)
         else:
             return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
 
     def workflow_requires(self):
         return {"data": InputData.req(self)}
@@ -196,8 +198,8 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         # prepare inputs and outputs
         # inp = self.input()["data"].path
         inp = self.input().path
+        print inp
         outp = self.output()
-
         d = {}
         # count events
         if self.max_events == -1:
