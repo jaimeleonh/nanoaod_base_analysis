@@ -75,13 +75,15 @@ class BasePlotTask(ConfigTaskWithCategory):
         return feature.binning, y_axis_adendum
 
     def get_systematics(self, feature):
-        return self.systematics  # FIXME to include only systs allowed by the variable
+        return feature.systematics
 
-    def get_syst_tags(self, feature):
-        tags = []
+    def get_systs(self, feature, isMC):
+        systs = []
+        if not isMC:
+            return systs
         for syst in self.get_systematics(feature):
-            tags.append(syst)
-        return tags
+            systs.append(syst)
+        return systs
 
     def get_output_postfix(self):
         postfix = ""
@@ -98,10 +100,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         return self.n_files_after_merging
 
     def workflow_requires(self):
-        return {"data": MergeCategorization.vreq(self)}
+        return {"data": MergeCategorization.vreq(self, workflow="local")}
 
     def requires(self):
-        return MergeCategorization.vreq(self, branch=self.branch)
+        return MergeCategorization.vreq(self, workflow="local", branch=self.branch)
 
     def output(self):
         return self.local_target("data_{}_{}.root".format(
@@ -119,6 +121,9 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     def run(self):
         ROOT = import_root()
 
+        isMC = self.dataset.process.isMC
+        directions = ["up", "down"]
+
         # prepare inputs and outputs
         inp = self.input().targets[self.branch].path
         outp = self.output().path
@@ -134,21 +139,27 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = "Events" + y_axis_adendum
             title = "; %s; %s" % (x_title, y_title)
-            for tag in [""] + self.get_syst_tags(feature):
-                if feature.get_aux("central") != "" and self.dataset.process.isMC:
-                    tag = "_%s%s" % (feature.get_aux("central"), tag)
-                if ".at" in feature.expression:
-                    feature_expression = (feature.expression[:feature.expression.find(".at")] + tag
-                        + feature.expression[feature.expression.find(".at"):])
+
+            systs = [""] + self.get_systs(feature, isMC)
+
+            for syst, direction in zip(systs, directions):
+                if syst == "" and direction != directions[0]:  # avoid repeating central histo
+                    continue
+                # define tag just for histograms's name
+                if syst != "" and isMC:
+                    tag = "_%s_%s" % (syst, direction)
                 else:
-                    feature_expression = feature.expression + tag
+                    tag = ""
+                feature_expression = self.config.get_object_expression(
+                    feature, isMC, syst, direction)
                 feature_name = feature.name + tag
                 hist_base = ROOT.TH1D(feature_name, title, *binning_args)
                 if nentries > 0:
                     hmodel = ROOT.RDF.TH1DModel(hist_base)
-                    print self.get_weight(self.category.name)
                     histos.append(
-                        df.Define("weight", "{}".format(self.get_weight(self.category.name))).Define(
+                        df.Define(
+                            "weight", "{}".format(self.get_weight(self.category.name))
+                        ).Define(
                             "var", feature_expression).Histo1D(hmodel, "var", "weight")
                     )
                 else:  # no entries available, append empty histogram
@@ -269,7 +280,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         return postfix
 
     def output(self):
-
         # output definitions, i.e. key, file prefix, extension
         output_data = []
         if self.save_pdf:
@@ -330,8 +340,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         for feature in self.features:
             binning_args, y_axis_adendum = self.get_binning(feature)
-            central_tag = ("_" + feature.get_aux("central") 
-                if feature.get_aux("central") != "" else "")
+
             x_title = (str(feature.get_aux("x_title"))
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
@@ -342,7 +351,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             all_hists = []
             colors = []
             for process, datasets in self.processes_datasets.items():
-                feature_name = feature.name + (central_tag if process.isMC else "")
+                feature_name = feature.name  # FIXME: What about systs?
                 process_histo = ROOT.TH1D(str(process.label), hist_title, *binning_args)
                 process_histo.process_label = str(process.label)
                 process_histo.Sumw2()
@@ -361,7 +370,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     inp = inputs["stats"][dataset.name]
                     with open(inp.path) as f:
                         stats = json.load(f)
-                        nevents += stats["nevents"]
+                        # nevents += stats["nevents"]
+                        nevents += stats["nweightedevents"]
                     if nevents != 0:
                         dataset_histo.Scale(dataset.xs * lumi / (nevents))
                     process_histo.Add(dataset_histo)
@@ -398,7 +408,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             dummy_hist.SetMinimum(0)  # FIXME in case of log scale
             draw_labels = get_labels(upper_right="")
 
-            print [hist.process_label for hist in all_hists]
             entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
             n_entries = len(entries)
             if n_entries <= 4:

@@ -99,6 +99,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             for ifil, fil in enumerate(files):
                 fil = self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), index=ifil)
+                print fil
                 f = ROOT.TFile.Open(fil)
                 tree = f.Get(self.tree_name)
                 nevents = tree.GetEntries()
@@ -253,6 +254,10 @@ class PreprocessWrapper(DatasetCategoryWrapperTask):
 class Categorization(Preprocess):
     base_category_name = luigi.Parameter(default="base", description="the name of the "
         "base category with the initial selection, default: base")
+    systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
+        "default: None")
+    systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
+        "for categorization, default: None")
     # regions not supported
     region_name = None
 
@@ -292,7 +297,8 @@ class Categorization(Preprocess):
         outp = self.output()
 
         # build the full selection
-        selection = self.category.selection
+        selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
+            self.systematic, self.systematic_direction)
         dataset_selection = self.dataset.get_aux("selection")
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
@@ -343,8 +349,8 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
             for inp in inputs:
                 tf = ROOT.TFile.Open(inp.path)
                 tree = tf.Get(self.tree_name)
-                if tree.GetEntries() > 0:
-                    good_inputs.append(inp)
+                # if tree.GetEntries() > 0:
+                good_inputs.append(inp)
             if good_inputs:
                 law.root.hadd_task(self, good_inputs, tmp_out, local=True)
             else:
@@ -375,25 +381,34 @@ class MergeCategorizationStats(DatasetTaskWithCategory, law.tasks.ForestMerge):
             end_branch=end_leaf)
 
     def trace_merge_inputs(self, inputs):
-        return [inp["stats"] for inp in inputs["collection"].targets.values()]
+        return [inp["data"] for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
         return self.local_target("stats.json")
 
     def merge(self, inputs, output):
         # output content
-        stats = dict(nevents=0)
+        stats = dict(nevents=0, nweightedevents=0)
 
         # merge
         for inp in inputs:
             try:
-                _stats = inp.load(formatter="json")
+                if "json" in inp.path:
+                    _stats = inp.load(formatter="json")
+                elif "root" in inp.path:
+                    _stats = inp.load(formatter="root")
             except:
                 print("error leading input target {}".format(inp))
                 raise
 
-            # add evt_den
-            stats["nevents"] += _stats["nevents"]
+            # add nevents
+            if "json" in inp.path:
+                stats["nevents"] += _stats["nevents"]
+                stats["nweightedevents"] += _stats["nweightedevents"]
+            else:
+                histo = _stats.Get("histos/events")
+                stats["nevents"] += histo.GetBinContent(1)
+                stats["nweightedevents"] += histo.GetBinContent(2)
 
         output.parent.touch()
         output.dump(stats, indent=4, formatter="json")
