@@ -147,7 +147,7 @@ class HHLeptonProducer(JetLepMetModule):
         # muon-tau channels
         goodmuons = []
         for imuon, muon in enumerate(muons):
-            if (abs(muon.eta) > 2.1 or muon.jetRelIso > 0.15 or abs(muon.dxy) > 0.045
+            if (abs(muon.eta) > 2.1 or muon.pfRelIso04_all > 0.15 or abs(muon.dxy) > 0.045
                     or abs(muon.dz) > 0.2 or not muon.tightId):
                 continue
             goodmuons.append((imuon, muon))

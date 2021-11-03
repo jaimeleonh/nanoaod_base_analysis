@@ -417,4 +417,6 @@ class MergeCategorizationStats(DatasetTaskWithCategory, law.tasks.ForestMerge):
 class MergeCategorizationStatsWrapper(DatasetCategoryWrapperTask):
 
     def atomic_requires(self, dataset, category):
-        return MergeCategorizationStats.req(self, dataset_name=dataset.name, category_name=category.name)
+        return MergeCategorizationStats.req(self, dataset_name=dataset.name,
+            category_name=category.name)
+

@@ -1,18 +1,3 @@
-# createJMECorrector:
-    # path: PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun2
-    # parameters:
-        # isMC: self.dataset.isMC
-        # dataYear: self.config.year
-        # runPeriod: self.dataset.runPeriod
-        # jesUncert: All
-        # jetType: AK4PFchs
-        # noGroom: False
-        # splitJER: True
-
-# 1:
-    # name: Counter
-    # path: cmt.modules.counter
-
 puWeight:
     name: puWeight
     path: cmt.modules.weight
