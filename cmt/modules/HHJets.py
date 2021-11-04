@@ -64,7 +64,9 @@ class HHJetsProducer(JetLepMetModule):
         met, met_tlv = self.get_met(event)
 
         bjets = []
+        #print "** JETS **"
         for ijet, jet in enumerate(jets):
+            #print jet.pt, jet.eta
             if eval("jet.pt%s" % self.jet_syst) < 20 or abs(jet.eta) > 2.4:
                 continue
             if jet.puId < 4 and eval("jet.pt%s" % self.jet_syst) <= 50:  
@@ -78,6 +80,7 @@ class HHJetsProducer(JetLepMetModule):
             )
             if abs(jet_tlv.DeltaR(dau1_tlv)) < 0.5 or abs(jet.DeltaR(dau2_tlv)) < 0.5:
                 continue
+            #print jet.pt, jet.eta
             bjets.append((ijet, jet))
 
         if len(bjets) < 2:

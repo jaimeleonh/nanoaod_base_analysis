@@ -58,7 +58,7 @@ class HHLeptonProducer(JetLepMetModule):
                 ["HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1"]
                     if (e.run < 317509 and not self.isMC)
                     else ["HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_CrossL1"])
-            self.trigger_checker.etau_triggers = ["HLT_Ele32_WPTight_Gsf", "HLT_Ele35_WPTight_Gsf"]
+            self.trigger_checker.etau_triggers = ["", "HLT_Ele35_WPTight_Gsf"]
             self.trigger_checker.etau_crosstriggers = lambda e: (
                 ["HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTau30_eta2p1_CrossL1"]
                     if (e.run < 317509 and not self.isMC)
@@ -147,6 +147,7 @@ class HHLeptonProducer(JetLepMetModule):
         # muon-tau channels
         goodmuons = []
         for imuon, muon in enumerate(muons):
+            # print muon.pt, muon.eta, muon.pfRelIso04_all, muon.dxy, muon.dz, muon.tightId
             if (abs(muon.eta) > 2.1 or muon.pfRelIso04_all > 0.15 or abs(muon.dxy) > 0.045
                     or abs(muon.dz) > 0.2 or not muon.tightId):
                 continue
@@ -161,6 +162,7 @@ class HHLeptonProducer(JetLepMetModule):
                     continue
                 if tau.decayMode not in [0, 1, 10, 11]:
                     continue
+                print tau.pt, tau.eta
                 goodtaus.append((itau, tau))
             
             muontaupairs = []
@@ -245,11 +247,17 @@ class HHLeptonProducer(JetLepMetModule):
                     self.histo.Fill(6)
                     if tau.DeltaR(electron) < 0.5: continue
                     self.histo.Fill(7)
+                    # print electron.eta, tau.eta
+                    # print event.HLT_Ele32_WPTight_Gsf,
+                    # print event.HLT_Ele35_WPTight_Gsf,
+                    # print event.HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTauHPS30_eta2p1_CrossL1
+        
                     if not self.trigger_checker.check_etau(event,
                             eval("electron.pt%s" % self.electron_syst), electron.eta,
                             eval("tau.pt%s" % self.tau_syst), tau.eta, th1=1, th2=5):
                         continue
                     self.histo.Fill(8)
+                    # print electron.pt, tau.pt
                     electrontaupair = LeptonTauPair(
                         electron, eval("electron.pt%s" % self.electron_syst), electron.pfRelIso03_all,
                         tau, eval("tau.pt%s" % self.tau_syst), tau.rawDeepTau2017v2p1VSjet)
@@ -309,32 +317,35 @@ class HHLeptonProducer(JetLepMetModule):
         if goodtaus:
             self.histo.Fill(10)
         tautaupairs = []
-        for i in range(len(goodtaus) - 1):
-            for j in range(i + 1, len(goodtaus)):
+        for i in range(len(goodtaus)):
+            for j in range(len(goodtaus)):
+                if i == j:
+                    continue
                 self.histo.Fill(11)
                 tau1_index = goodtaus[i][0]
                 tau1 = goodtaus[i][1]
                 tau2_index = goodtaus[j][0]
                 tau2 = goodtaus[j][1]
             
-            pass_ditau = self.trigger_checker.check_tautau(event,
-                eval("tau1.pt%s" % self.tau_syst), tau1.eta,
-                eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=40, abs_th2=40)
-            # passing vbf trigger ONLY
-            pass_vbf = not pass_ditau and self.trigger_checker.check_vbftautau(event,
-                eval("tau1.pt%s" % self.tau_syst), tau1.eta,
-                eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=25, abs_th2=25)
+                pass_ditau = self.trigger_checker.check_tautau(event,
+                    eval("tau1.pt%s" % self.tau_syst), tau1.eta,
+                    eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=40, abs_th2=40)
+                # passing vbf trigger ONLY
+                pass_vbf = not pass_ditau and self.trigger_checker.check_vbftautau(event,
+                    eval("tau1.pt%s" % self.tau_syst), tau1.eta,
+                    eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=25, abs_th2=25)
+                #print tau1.pt, tau2.pt, tau1.rawDeepTau2017v2p1VSjet, tau2.rawDeepTau2017v2p1VSjet, pass_ditau, pass_vbf
 
-            if not (pass_ditau or pass_vbf):
-                continue
-            self.histo.Fill(12)
-            pass_vbf = int(pass_vbf)
+                if not (pass_ditau or pass_vbf):
+                    continue
+                self.histo.Fill(12)
+                pass_vbf = int(pass_vbf)
 
-            tautaupair = LeptonTauPair(
-                tau1, eval("tau1.pt%s" % self.tau_syst), tau1.rawDeepTau2017v2p1VSjet,
-                tau2, eval("tau2.pt%s" % self.tau_syst), tau2.rawDeepTau2017v2p1VSjet)
-            # if tautaupair.check_charge():
-            tautaupairs.append((tau1_index, tau2_index, tautaupair))
+                tautaupair = LeptonTauPair(
+                    tau1, eval("tau1.pt%s" % self.tau_syst), tau1.rawDeepTau2017v2p1VSjet,
+                    tau2, eval("tau2.pt%s" % self.tau_syst), tau2.rawDeepTau2017v2p1VSjet)
+                # if tautaupair.check_charge():
+                tautaupairs.append((tau1_index, tau2_index, tautaupair))
 
         if len(tautaupairs) != 0:
             tautaupairs.sort(key=lambda x: x[2], reverse=True)
