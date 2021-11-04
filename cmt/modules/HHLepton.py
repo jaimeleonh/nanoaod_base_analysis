@@ -58,7 +58,7 @@ class HHLeptonProducer(JetLepMetModule):
                 ["HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1"]
                     if (e.run < 317509 and not self.isMC)
                     else ["HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_CrossL1"])
-            self.trigger_checker.etau_triggers = ["", "HLT_Ele35_WPTight_Gsf"]
+            self.trigger_checker.etau_triggers = ["HLT_Ele32_WPTight_Gsf", "HLT_Ele35_WPTight_Gsf"]
             self.trigger_checker.etau_crosstriggers = lambda e: (
                 ["HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTau30_eta2p1_CrossL1"]
                     if (e.run < 317509 and not self.isMC)
@@ -162,7 +162,7 @@ class HHLeptonProducer(JetLepMetModule):
                     continue
                 if tau.decayMode not in [0, 1, 10, 11]:
                     continue
-                print tau.pt, tau.eta
+                # print tau.pt, tau.eta
                 goodtaus.append((itau, tau))
             
             muontaupairs = []
@@ -247,7 +247,7 @@ class HHLeptonProducer(JetLepMetModule):
                     self.histo.Fill(6)
                     if tau.DeltaR(electron) < 0.5: continue
                     self.histo.Fill(7)
-                    # print electron.eta, tau.eta
+                    # print electron.pt, tau.pt, electron.eta, tau.eta
                     # print event.HLT_Ele32_WPTight_Gsf,
                     # print event.HLT_Ele35_WPTight_Gsf,
                     # print event.HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTauHPS30_eta2p1_CrossL1
@@ -331,7 +331,9 @@ class HHLeptonProducer(JetLepMetModule):
                     eval("tau1.pt%s" % self.tau_syst), tau1.eta,
                     eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=40, abs_th2=40)
                 # passing vbf trigger ONLY
-                pass_vbf = not pass_ditau and self.trigger_checker.check_vbftautau(event,
+                
+
+                pass_vbf = (not pass_ditau) and self.trigger_checker.check_vbftautau(event,
                     eval("tau1.pt%s" % self.tau_syst), tau1.eta,
                     eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=25, abs_th2=25)
                 #print tau1.pt, tau2.pt, tau1.rawDeepTau2017v2p1VSjet, tau2.rawDeepTau2017v2p1VSjet, pass_ditau, pass_vbf
@@ -340,16 +342,21 @@ class HHLeptonProducer(JetLepMetModule):
                     continue
                 self.histo.Fill(12)
                 pass_vbf = int(pass_vbf)
+                
+                # print "ditau", event.HLT_DoubleMediumChargedIsoPFTauHPS35_Trk1_eta2p1_Reg
+                # print "vbf", event.HLT_VBF_DoubleLooseChargedIsoPFTauHPS20_Trk1_eta2p1
+                # print pass_ditau, pass_vbf, tau1.pt, tau2.pt
 
                 tautaupair = LeptonTauPair(
                     tau1, eval("tau1.pt%s" % self.tau_syst), tau1.rawDeepTau2017v2p1VSjet,
                     tau2, eval("tau2.pt%s" % self.tau_syst), tau2.rawDeepTau2017v2p1VSjet)
                 # if tautaupair.check_charge():
-                tautaupairs.append((tau1_index, tau2_index, tautaupair))
+                tautaupairs.append((tau1_index, tau2_index, tautaupair, pass_vbf))
 
         if len(tautaupairs) != 0:
             tautaupairs.sort(key=lambda x: x[2], reverse=True)
             tau1, tau2 = tautaupairs[0][2].pair
+            # print "FINAL TAU", tau1.pt, tau1.eta, tau2.pt, tau2.eta
 
             fail_lepton_veto, _ = lepton_veto(electrons, muons, taus)
             if fail_lepton_veto:
@@ -357,7 +364,7 @@ class HHLeptonProducer(JetLepMetModule):
             self.histo.Fill(13)
 
             self.out.fillBranch("pairType", 2)
-            self.out.fillBranch("isVBFtrigger", pass_vbf)
+            self.out.fillBranch("isVBFtrigger", tautaupairs[0][3])
             self.out.fillBranch("isOS", int(tautaupairs[0][2].check_charge()))
 
             self.out.fillBranch("dau1_index", tautaupairs[0][0])
