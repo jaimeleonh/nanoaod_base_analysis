@@ -58,7 +58,7 @@ class HHLeptonProducer(JetLepMetModule):
                 ["HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1"]
                     if (e.run < 317509 and not self.isMC)
                     else ["HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_CrossL1"])
-            self.trigger_checker.etau_triggers = ["", "HLT_Ele35_WPTight_Gsf"]
+            self.trigger_checker.etau_triggers = ["HLT_Ele32_WPTight_Gsf", "HLT_Ele35_WPTight_Gsf"]
             self.trigger_checker.etau_crosstriggers = lambda e: (
                 ["HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTau30_eta2p1_CrossL1"]
                     if (e.run < 317509 and not self.isMC)
