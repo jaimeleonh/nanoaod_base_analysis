@@ -158,7 +158,7 @@ class HHLeptonProducer(JetLepMetModule):
             for itau, tau in enumerate(taus):
                 if tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7:
                     continue
-                if tau.dz > 0.2:
+                if abs(tau.dz) > 0.2:
                     continue
                 if tau.decayMode not in [0, 1, 10, 11]:
                     continue
@@ -235,7 +235,7 @@ class HHLeptonProducer(JetLepMetModule):
             for itau, tau in enumerate(taus):
                 if tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7:
                     continue
-                if tau.dz > 0.2:
+                if abs(tau.dz) > 0.2:
                     continue
                 if tau.decayMode not in [0, 1, 10, 11]:
                     continue
@@ -308,7 +308,7 @@ class HHLeptonProducer(JetLepMetModule):
         for itau, tau in enumerate(taus):
             if tau.idDeepTau2017v2p1VSmu < 1 or tau.idDeepTau2017v2p1VSe < 3:
                 continue
-            if tau.dz > 0.2:
+            if abs(tau.dz) > 0.2:
                 continue
             if tau.decayMode not in [0, 1, 10, 11]:
                 continue
@@ -326,7 +326,9 @@ class HHLeptonProducer(JetLepMetModule):
                 tau1 = goodtaus[i][1]
                 tau2_index = goodtaus[j][0]
                 tau2 = goodtaus[j][1]
-            
+
+                if tau1.DeltaR(tau2) < 0.5: continue
+
                 pass_ditau = self.trigger_checker.check_tautau(event,
                     eval("tau1.pt%s" % self.tau_syst), tau1.eta,
                     eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=40, abs_th2=40)
