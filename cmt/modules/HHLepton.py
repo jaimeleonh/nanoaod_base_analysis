@@ -156,7 +156,8 @@ class HHLeptonProducer(JetLepMetModule):
             self.histo.Fill(0)
             goodtaus = []
             for itau, tau in enumerate(taus):
-                if tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7:
+                if (tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7
+                        or tau.idDeepTau2017v2p1VSjet < 1):
                     continue
                 if abs(tau.dz) > 0.2:
                     continue
@@ -233,7 +234,8 @@ class HHLeptonProducer(JetLepMetModule):
             self.histo.Fill(5)
             goodtaus = []
             for itau, tau in enumerate(taus):
-                if tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7:
+                if (tau.idDeepTau2017v2p1VSmu < 15 or tau.idDeepTau2017v2p1VSe < 7
+                        or tau.idDeepTau2017v2p1VSjet < 1):
                     continue
                 if abs(tau.dz) > 0.2:
                     continue
@@ -306,7 +308,8 @@ class HHLeptonProducer(JetLepMetModule):
 
         goodtaus = []
         for itau, tau in enumerate(taus):
-            if tau.idDeepTau2017v2p1VSmu < 1 or tau.idDeepTau2017v2p1VSe < 3:
+            if (tau.idDeepTau2017v2p1VSmu < 1 or tau.idDeepTau2017v2p1VSe < 3
+                    or tau.idDeepTau2017v2p1VSjet < 1):
                 continue
             if abs(tau.dz) > 0.2:
                 continue
