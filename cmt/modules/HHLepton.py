@@ -231,7 +231,7 @@ class HHLeptonProducer(JetLepMetModule):
         for ielectron, electron in enumerate(electrons):
             # if (not (electron.mvaFall17V2Iso_WP80 or electron.mvaFall17V2noIso_WP80)
             if ((not electron.mvaFall17V2Iso_WP80)
-                    or abs(electron.dxy) > 0.045 or abs(electron.dz) > 0.2)):
+                    or abs(electron.dxy) > 0.045 or abs(electron.dz) > 0.2):
                 continue
             goodelectrons.append((ielectron, electron))
         if goodelectrons:
