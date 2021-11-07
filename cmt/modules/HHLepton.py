@@ -163,6 +163,9 @@ class HHLeptonProducer(JetLepMetModule):
                     continue
                 if tau.decayMode not in [0, 1, 10, 11]:
                     continue
+                # common tau pt req for both single and cross triggers
+                if eval("tau.pt%s" % self.tau_syst) <= 20.:
+                    continue
                 # print tau.pt, tau.eta
                 goodtaus.append((itau, tau))
             
@@ -226,8 +229,9 @@ class HHLeptonProducer(JetLepMetModule):
         # electron-tau channels
         goodelectrons = []
         for ielectron, electron in enumerate(electrons):
-            if (not (electron.mvaFall17V2Iso_WP80 or electron.mvaFall17V2noIso_WP80)
-                    or abs(electron.dxy) > 0.045 or abs(electron.dz) > 0.2):
+            # if (not (electron.mvaFall17V2Iso_WP80 or electron.mvaFall17V2noIso_WP80)
+            if ((not electron.mvaFall17V2Iso_WP80)
+                    or abs(electron.dxy) > 0.045 or abs(electron.dz) > 0.2)):
                 continue
             goodelectrons.append((ielectron, electron))
         if goodelectrons:
@@ -240,6 +244,9 @@ class HHLeptonProducer(JetLepMetModule):
                 if abs(tau.dz) > 0.2:
                     continue
                 if tau.decayMode not in [0, 1, 10, 11]:
+                    continue
+                # common tau pt req for both single and cross triggers
+                if eval("tau.pt%s" % self.tau_syst) <= 20.:
                     continue
                 goodtaus.append((itau, tau))
 

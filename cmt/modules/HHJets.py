@@ -66,10 +66,13 @@ class HHJetsProducer(JetLepMetModule):
         bjets = []
         #print "** JETS **"
         for ijet, jet in enumerate(jets):
-            #print jet.pt, jet.eta
+            # print jet.pt_nom, jet.eta, jet.puId, jet.jetId, jet.genJetIdx,
             if eval("jet.pt%s" % self.jet_syst) < 20 or abs(jet.eta) > 2.4:
+                # print "does not pass pt and eta"
                 continue
-            if jet.puId < 4 and eval("jet.pt%s" % self.jet_syst) <= 50:  
+
+            if (jet.puId < 4 and eval("jet.pt%s" % self.jet_syst) <= 50) or jet.jetId < 2:
+                # print "does not pass id"
                 continue
             jet_tlv = ROOT.TLorentzVector()
             jet_tlv.SetPtEtaPhiM(
@@ -79,8 +82,10 @@ class HHJetsProducer(JetLepMetModule):
                 eval("jet.mass%s" % self.jet_syst)
             )
             if abs(jet_tlv.DeltaR(dau1_tlv)) < 0.5 or abs(jet.DeltaR(dau2_tlv)) < 0.5:
+                # print "does not pass deltaR with leptons"
                 continue
-            #print jet.pt, jet.eta
+            # print jet.pt, jet.eta
+            # print "passes everything"
             bjets.append((ijet, jet))
 
         if len(bjets) < 2:
@@ -139,7 +144,7 @@ class HHJetsProducer(JetLepMetModule):
             HHbtag_rel_met_pt_htt_pt_, HHbtag_htt_scalar_pt_, HHbtag_evt_)
 
         HHbtag_scores = zip([bjet[0] for bjet in bjets], HHbtag_scores)
-        HHbtag_scores.sort(key=lambda x:x[1])  # sort by the obtained HHbtag score
+        HHbtag_scores.sort(key=lambda x:x[1], reverse=True)  # sort by the obtained HHbtag score
 
         # 2 "bjets" with the higher HHbtag score are the selected H(bb) candidates
         bjet1 = HHbtag_scores[0]
