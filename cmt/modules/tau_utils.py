@@ -218,27 +218,40 @@ def lepton_veto(electrons, muons, taus, obj=None):
     # https://twiki.cern.ch/twiki/bin/viewauth/CMS/HiggsToTauTauWorkingLegacyRun2#Common_lepton_vetoes
     nleps = 0
     # check extra muon veto
+
+    # print "muons: "
     for muon in muons:
+        # print muon.pt, muon.eta, muon.phi, muon.dz, muon.dxy, muon.pfRelIso04_all, muon.mediumId, muon.tightId,
         if obj == muon:
+            # print "mymuon"
             continue
-        if any([muon.DeltaR(tau) < 0.4 for tau in taus]):
-            continue 
+        # if any([muon.DeltaR(tau) < 0.4 for tau in taus]):
+            # print "deltaR"
+            # continue
         if (abs(muon.eta) > 2.4 or muon.pt < 10 or abs(muon.dz) > 0.2
-                or abs(muon.dxy) > 0.045 or muon.pfRelIso04_all > 0.3
-                or muon.mediumId or muon.tightId):
+                or abs(muon.dxy) > 0.045 or muon.pfRelIso04_all > 0.3):
+            # print "stuff"
             continue
-        nleps += 1
+        if (muon.mediumId or muon.tightId):
+            nleps += 1
 
     # check extra electron veto
+    # print "electrons: "
     for electron in electrons:
+        print electron.pt, electron.eta, electron.phi, electron.dz, electron.dxy, electron.pfRelIso03_all, electron.convVeto, electron.lostHits, electron.mvaFall17V2Iso_WP90,
         if obj == electron:
+            # print "mye"
             continue
-        if any([electron.DeltaR(tau) < 0.4 for tau in taus]):
-            continue 
+        # if any([electron.DeltaR(tau) < 0.4 for tau in taus]):
+            # print "deltaR"
+            # continue
         if (abs(electron.eta) > 2.5 or electron.pt < 10 or abs(electron.dz) > 0.2
                 or abs(electron.dxy) > 0.045 or electron.pfRelIso03_all > 0.3):
+            # print "stuff"
             continue
-        if electron.convVeto==1 and electron.lostHits <= 1 and electron.mvaFall17V2Iso_WP90:
+        if electron.convVeto == 1 and electron.lostHits <= 1 and electron.mvaFall17V2Iso_WP90:
+            # print
             nleps += 1
+        # print "cosas raras"
 
     return (nleps > 0), nleps

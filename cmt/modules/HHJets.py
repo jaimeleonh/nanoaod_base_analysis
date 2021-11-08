@@ -91,7 +91,7 @@ class HHJetsProducer(JetLepMetModule):
         if len(bjets) < 2:
             return False
 
-        bjets.sort(key = lambda x: x[1].btagDeepFlavB, reverse=True)
+        bjets.sort(key=lambda x: x[1].btagDeepFlavB, reverse=True)
         htt_tlv = dau1_tlv + dau2_tlv
 
         HHbtag_jet_pt_ = ROOT.vector(float)()
