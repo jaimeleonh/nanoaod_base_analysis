@@ -11,7 +11,7 @@ class HHLeptonProducer(JetLepMetModule):
         self.isMC = isMC
         self.year = year
         self.runPeriod = runPeriod
-        self.trigger_checker = TriggerChecker()
+        self.trigger_checker = TriggerChecker(year)
 
         if self.year == 2016:
             self.trigger_checker.mutau_triggers = ["HLT_IsoMu22", "HLT_IsoMu22_eta2p1",
@@ -168,7 +168,6 @@ class HHLeptonProducer(JetLepMetModule):
                     continue
                 # print tau.pt, tau.eta
                 goodtaus.append((itau, tau))
-            
             muontaupairs = []
             for (imuon, muon) in goodmuons:
                 for (itau, tau) in goodtaus:
@@ -176,8 +175,8 @@ class HHLeptonProducer(JetLepMetModule):
                     if tau.DeltaR(muon) < 0.5: continue
                     self.histo.Fill(2)
                     if not self.trigger_checker.check_mutau(event,
-                            eval("muon.pt%s" % self.muon_syst), muon.eta,
-                            eval("tau.pt%s" % self.tau_syst), tau.eta, th1=1, th2=5):
+                            eval("muon.pt%s" % self.muon_syst), muon.eta, muon.phi,
+                            eval("tau.pt%s" % self.tau_syst), tau.eta, tau.phi, th1=1, th2=5):
                         continue
                     self.histo.Fill(3)
                     muontaupair = LeptonTauPair(
@@ -262,8 +261,8 @@ class HHLeptonProducer(JetLepMetModule):
                     # print event.HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTauHPS30_eta2p1_CrossL1
         
                     if not self.trigger_checker.check_etau(event,
-                            eval("electron.pt%s" % self.electron_syst), electron.eta,
-                            eval("tau.pt%s" % self.tau_syst), tau.eta, th1=1, th2=5):
+                            eval("electron.pt%s" % self.electron_syst), electron.eta, electron.phi,
+                            eval("tau.pt%s" % self.tau_syst), tau.eta, tau.phi, th1=1, th2=5):
                         continue
                     self.histo.Fill(8)
                     # print electron.pt, tau.pt
@@ -340,14 +339,12 @@ class HHLeptonProducer(JetLepMetModule):
                 if tau1.DeltaR(tau2) < 0.5: continue
 
                 pass_ditau = self.trigger_checker.check_tautau(event,
-                    eval("tau1.pt%s" % self.tau_syst), tau1.eta,
-                    eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=40, abs_th2=40)
+                    eval("tau1.pt%s" % self.tau_syst), tau1.eta, tau1.phi,
+                    eval("tau2.pt%s" % self.tau_syst), tau2.eta, tau2.phi, abs_th1=40, abs_th2=40)
                 # passing vbf trigger ONLY
-                
-
                 pass_vbf = (not pass_ditau) and self.trigger_checker.check_vbftautau(event,
-                    eval("tau1.pt%s" % self.tau_syst), tau1.eta,
-                    eval("tau2.pt%s" % self.tau_syst), tau2.eta, abs_th1=25, abs_th2=25)
+                    eval("tau1.pt%s" % self.tau_syst), tau1.eta, tau1.phi,
+                    eval("tau2.pt%s" % self.tau_syst), tau2.eta, tau2.phi, abs_th1=25, abs_th2=25)
                 #print tau1.pt, tau2.pt, tau1.rawDeepTau2017v2p1VSjet, tau2.rawDeepTau2017v2p1VSjet, pass_ditau, pass_vbf
 
                 if not (pass_ditau or pass_vbf):

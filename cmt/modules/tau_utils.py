@@ -1,4 +1,19 @@
 import re
+import os
+from math import sqrt
+from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
+
+def Phi_mpi_pi(x):
+    while (x >= 3.14159):
+        x -= (2 * 3.14159)
+    while (x < -3.14159):
+        x += (2 * 3.14159)
+    return x;
+
+def deltaR(obj1_eta, obj1_phi, obj2_eta, obj2_phi):
+    deta = obj1_eta - obj2_eta
+    dphi = Phi_mpi_pi(obj1_phi - obj2_phi)
+    return sqrt(deta * deta + dphi * dphi)
 
 
 # extracted from https://github.com/cms-tau-pog/TauFW/blob/master/PicoProducer/python/analysis/utils.py
@@ -40,6 +55,16 @@ class LeptonTauPair(LeptonPair):
 
 class TriggerChecker:
     """Class to check whether the event passed certain HLT trigger paths"""
+    def __init__(self, year, path="$CMT_BASE/cmt/modules/tau_triggers/tau_triggers_{}.json"):
+        self.year = year
+        self.path = os.path.expandvars(path.format(year))
+        self.json = self.load_json(self.path)
+    
+    def load_json(self, path):
+        import json
+        with open(path) as f:
+            d = json.load(f)
+        return d
 
     def is_function(self, event, triggers):
         if callable(triggers):
@@ -47,14 +72,13 @@ class TriggerChecker:
         else:
             return triggers
 
-    def check_mutau(self, event, pt1, eta1, pt2, eta2,
+    def check_mutau(self, event, pt1, eta1, phi1, pt2, eta2, phi2,
             th1=None, th2=None, abs_th1=None, abs_th2=None):
         assert hasattr(self, "mutau_triggers") and hasattr(self, "mutau_crosstriggers")
 
         # check single lepton triggers
         mutau_triggers = self.is_function(event, self.mutau_triggers)
         for trigger in mutau_triggers:
-
             # muon and tau eta requirements
             if abs(eta1) > 2.1 or abs(eta2) > 2.3:
                 continue
@@ -66,14 +90,16 @@ class TriggerChecker:
                 if pt1 < pt_th + th1: continue
             else:
                 raise ValueError("Mu trigger pt thresholds are not set")
-            if eval("event." + trigger) == 1:
+            if (eval("event." + trigger) != 1):
+                continue
+            trigObjs = Collection(event, "TrigObj")
+            if self.match_hlt_object(trigger, trigObjs, eta1, phi1, "Muon"):
                 return True
 
         # check cross triggers
         mutau_crosstriggers = self.is_function(event, self.mutau_crosstriggers)
         for cross_trigger in mutau_crosstriggers:
             trigger = cross_trigger
-
             # muon and tau eta requirements
             if abs(eta1) > 2.1 or abs(eta2) > 2.1:
                 continue
@@ -94,18 +120,21 @@ class TriggerChecker:
                 if pt2 < pt_th + th2: continue
             else:
                 raise ValueError("Tau cross trigger pt thresholds are not set")
-            if eval("event." + cross_trigger) == 1:
+            if eval("event." + cross_trigger) != 1:
+                continue
+            trigObjs = Collection(event, "TrigObj")
+            if (self.match_hlt_object(trigger, trigObjs, eta1, phi1, "Muon") and 
+                    self.match_hlt_object(trigger, trigObjs, eta2, phi2, "Tau")):
                 return True
         return False
         
-    def check_etau(self, event, pt1, eta1, pt2, eta2,
+    def check_etau(self, event, pt1, eta1, phi1, pt2, eta2, phi2,
             th1=None, th2=None, abs_th1=None, abs_th2=None):
         assert hasattr(self, "etau_triggers") and hasattr(self, "etau_crosstriggers")
 
         # check single lepton triggers
         etau_triggers = self.is_function(event, self.etau_triggers)
         for trigger in etau_triggers:
-
             # muon and tau eta requirements
             if abs(eta1) > 2.1 or abs(eta2) > 2.3:
                 continue
@@ -117,7 +146,10 @@ class TriggerChecker:
                 if pt1 < pt_th + th1: continue
             else:
                 raise ValueError("E trigger pt thresholds are not set")
-            if eval("event." + trigger) == 1:
+            if eval("event." + trigger) != 1:
+                continue
+            trigObjs = Collection(event, "TrigObj")
+            if self.match_hlt_object(trigger, trigObjs, eta1, phi1, "Electron"):
                 return True
 
         # check cross triggers
@@ -145,11 +177,15 @@ class TriggerChecker:
                 if pt2 < pt_th + th2: continue
             else:
                 raise ValueError("Tau cross trigger pt thresholds are not set")
-            if eval("event." + cross_trigger) == 1:
+            if eval("event." + cross_trigger) != 1:
+                continue
+            trigObjs = Collection(event, "TrigObj")
+            if (self.match_hlt_object(trigger, trigObjs, eta1, phi1, "Electron")
+                    and self.match_hlt_object(trigger, trigObjs, eta2, phi2, "Tau")):
                 return True
         return False
 
-    def check_tautau(self, event, pt1, eta1, pt2, eta2,
+    def check_tautau(self, event, pt1, eta1, phi1, pt2, eta2, phi2,
             th1=None, th2=None, abs_th1=None, abs_th2=None):
         assert hasattr(self, "tautau_triggers")
 
@@ -177,11 +213,15 @@ class TriggerChecker:
                 if pt2 < pt_th + th2: continue
             else:
                 raise ValueError("Tau2 trigger pt thresholds are not set")
-            if eval("event." + tautau_trigger) == 1:
+            if eval("event." + tautau_trigger) != 1:
+                continue
+            trigObjs = Collection(event, "TrigObj")
+            if (self.match_hlt_object(trigger, trigObjs, eta1, phi1, "Tau")
+                    and self.match_hlt_object(trigger, trigObjs, eta2, phi2, "Tau")):
                 return True
         return False
 
-    def check_vbftautau(self, event, pt1, eta1, pt2, eta2,
+    def check_vbftautau(self, event, pt1, eta1, phi1, pt2, eta2, phi2,
             th1=None, th2=None, abs_th1=None, abs_th2=None):
         assert hasattr(self, "vbf_triggers")
 
@@ -209,7 +249,26 @@ class TriggerChecker:
                 if pt2 < pt_th + th2: continue
             else:
                 raise ValueError("Tau2 trigger pt thresholds are not set")
-            if eval("event." + tautau_trigger) == 1:
+            if eval("event." + tautau_trigger) != 1:
+                continue
+            trigObjs = Collection(event, "TrigObj")
+            if (self.match_hlt_object(trigger, trigObjs, eta1, phi1, "Tau")
+                    and self.match_hlt_object(trigger, trigObjs, eta2, phi2, "Tau")):
+                return True
+        return False
+
+    def match_hlt_object(self, trigger_path, trigger_objs, offline_eta, offline_phi, obj_type):
+        assert obj_type in ["Tau", "Electron", "Muon"]
+        filter_bits = self.json["hltpaths"][trigger_path][obj_type]["filterbits"]
+        for trigger_obj in trigger_objs:
+            matched_trigger_bits = True
+            for filter_bit in filter_bits:
+                if (trigger_obj.filterBits & self.json["filterbits"][obj_type][filter_bit]) == 0:
+                    matched_trigger_bits = False
+                    break
+            if not matched_trigger_bits:
+                continue
+            if deltaR(offline_eta, offline_phi, trigger_obj.eta, trigger_obj.phi) < 0.5:
                 return True
         return False
 
@@ -232,13 +291,14 @@ def lepton_veto(electrons, muons, taus, obj=None):
                 or abs(muon.dxy) > 0.045 or muon.pfRelIso04_all > 0.3):
             # print "stuff"
             continue
-        if (muon.mediumId or muon.tightId):
-            nleps += 1
+        if not (muon.mediumId or muon.tightId):
+            continue
+        nleps += 1
 
     # check extra electron veto
     # print "electrons: "
     for electron in electrons:
-        print electron.pt, electron.eta, electron.phi, electron.dz, electron.dxy, electron.pfRelIso03_all, electron.convVeto, electron.lostHits, electron.mvaFall17V2Iso_WP90,
+        # print electron.pt, electron.eta, electron.phi, electron.dz, electron.dxy, electron.pfRelIso03_all, electron.convVeto, electron.lostHits, electron.mvaFall17V2Iso_WP90,
         if obj == electron:
             # print "mye"
             continue
@@ -246,12 +306,15 @@ def lepton_veto(electrons, muons, taus, obj=None):
             # print "deltaR"
             # continue
         if (abs(electron.eta) > 2.5 or electron.pt < 10 or abs(electron.dz) > 0.2
-                or abs(electron.dxy) > 0.045 or electron.pfRelIso03_all > 0.3):
+                or abs(electron.dxy) > 0.045):
             # print "stuff"
             continue
-        if electron.convVeto == 1 and electron.lostHits <= 1 and electron.mvaFall17V2Iso_WP90:
+        if not ((electron.pfRelIso03_all < 0.3 and electron.mvaFall17V2noIso_WP90)
+                or electron.mvaFall17V2Iso_WP90):
+            continue
+        # if electron.convVeto == 1 and electron.lostHits <= 1:
             # print
-            nleps += 1
+        nleps += 1
         # print "cosas raras"
 
     return (nleps > 0), nleps
