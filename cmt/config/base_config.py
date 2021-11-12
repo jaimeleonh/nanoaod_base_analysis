@@ -35,6 +35,12 @@ class Config():
     def join_selection_channels(self, selection):
         return jrs([jrs(jrs(selection[ch.name], op="and"), ch.selection, op="and")
             for ch in self.channels], op="or")
+    
+    def combine_selections_per_channel(self, selection1, selection2):
+        selection = DotDict()
+        for channel in selection1:
+            selection[channel] = jrs(selection1[channel], selection2[channel], op="or")
+        return selection
 
     def add_regions(self):
         selection = OrderedDict()
@@ -87,31 +93,70 @@ class Config():
         return ObjectCollection(channels)
 
     def add_categories(self):
+        reject_sel = ["pairType == -31415"]
+    
         sel = DotDict()
         df = lambda i, op, wp: "Jet_btagDeepFlavB.at(bjet{}_JetIdx) {} {}".format(i, op, self.btag[wp])
         sel["btag"] = DotDict(
             m_first=[df(1, ">", "medium")],
+            m_second=[df(2, ">", "medium")],
             m_any=[jrs(df(1, ">", "medium"), df(2, ">", "medium"), op="or")],
-            m_one_any=[jrs(
-                jrs(df(1, ">", "medium"), df(2, "<", "medium"), op="and"),
-                jrs(df(2, ">", "medium"), df(1, "<", "medium"), op="and"),
-                op="or",
-            )],
             l=[df(1, ">", "loose"), df(2, "<", "loose")],
             ll=[df(1, ">", "loose"), df(2, ">", "loose")],
-            m=[df(1, ">", "medium"), df(2, "<", "medium")],
+            m=[jrs(jrs(df(1, ">", "medium"), df(2, "<", "medium"), op="and"),
+                jrs(df(1, "<", "medium"), df(2, ">", "medium"), op="and"), op="or")],
             mm=[df(1, ">", "medium"), df(2, ">", "medium")],
             not_mm=[df(1, "<", "medium"), df(2, "<", "medium")],
         )
 
-        _excl_vbf_loose_nob = ["[VBFjj_mass] > 500", "abs([VBFjj_deltaEta]) > 3", "isVBFtrigger == 0"]
+        _excl_vbf_loose_nob = ["[VBFjj_mass] > 500", "abs([VBFjj_deltaEta]) > 3",
+            "isVBFtrigger == 0"]
         _excl_vbf_loose = _excl_vbf_loose_nob + sel.btag.m_any
         _excl_non_vbf_loose = ["!" + jrs(_excl_vbf_loose, op="and")]
+        
+        _excl_vbf_tight_nob = ["[VBFjet1_pt] > 140", "[VBFjet2_pt] > 60", "[VBFjj_mass] > 800",
+            "abs([VBFjj_deltaEta]) > 3", "isVBFtrigger == 1"]
+        _excl_vbf_tight = _excl_vbf_tight_nob + sel.btag.m_any
+        _excl_non_vbf_tight = ["!" + jrs(_excl_vbf_tight, op="and")]
+        
+        _excl_non_vbf = ["!" + jrs(jrs(_excl_vbf_loose, op="and"), jrs(_excl_vbf_tight, op="and"),
+            op="or")]
+
+        mass_ellipse_sel = ["(([Htt_svfit_mass] - 129.) * ([Htt_svfit_mass] - 129.)/ (53. * 53.)"
+            " + ([Hbb_mass] - 169.) * ([Hbb_mass] - 169.) / (145. * 145.)) < 1"]
+        mass_boost_sel = ["(([Htt_svfit_mass] - 128.) * ([Htt_svfit_mass] - 128.) / (60. * 60.)"
+            " + ([Hbb_mass] - 159.) * ([Hbb_mass] - 159.) / (94. * 94.)) < 1"]
+        sel["resolved_1b"] = DotDict({
+            ch: (sel.btag.m + mass_ellipse_sel + ["isBoosted != 1"]
+                + _excl_non_vbf_loose)
+            for ch in self.channels.names()
+        })
+        sel["resolved_1b_combined"] = self.join_selection_channels(sel["resolved_1b"])
+        sel["resolved_2b"] = DotDict({
+            ch: (sel.btag.mm + mass_ellipse_sel + ["isBoosted != 1"]
+                + _excl_non_vbf)
+            for ch in self.channels.names()
+        })
+        sel["resolved_2b_combined"] = self.join_selection_channels(sel["resolved_2b"])
+        sel["boosted"] = DotDict({
+            ch: (sel.btag.ll + mass_boost_sel + ["isBoosted == 1"]
+                + _excl_non_vbf)
+            for ch in self.channels.names()
+        })
+        sel["boosted_combined"] = self.join_selection_channels(sel["boosted"])
         sel["vbf_loose"] = DotDict({
             ch: _excl_vbf_loose
             for ch in self.channels.names()
         })
         sel["vbf_loose_combined"] = self.join_selection_channels(sel.vbf_loose)
+        sel["vbf_tight"] = DotDict(
+            mutau=reject_sel,  # category not used, should always reject
+            etau=reject_sel,  # category not used, should always reject
+            tautau=_excl_vbf_tight + sel.btag.m_any,
+        )
+        sel["vbf_tight_combined"] = self.join_selection_channels(sel.vbf_tight)
+        sel["vbf"] = self.combine_selections_per_channel(sel.vbf_tight, sel.vbf_loose)
+        sel["vbf_combined"] = self.join_selection_channels(sel.vbf)
 
         categories = [
             Category("base", "base category"),
@@ -120,8 +165,18 @@ class Config():
             Category("mutau", "#mu#tau channel", selection="pairType == 0"),
             Category("etau", "e#tau channel", selection="pairType == 1"),
             Category("tautau", "#tau#tau channel", selection="pairType == 2"),
+            Category("resolved_1b", label="Resolved 1b category",
+                selection=sel["resolved_1b_combined"]),
+            Category("resolved_2b", label="Resolved 2b category",
+                selection=sel["resolved_2b_combined"]),
+            Category("boosted", label="Boosted category",
+                selection=sel["boosted_combined"]),
             Category("vbf_loose", label="VBF (loose) category",
                 selection=sel["vbf_loose_combined"]),
+            Category("vbf_tight", label="VBF (tight) category",
+                selection=sel["vbf_tight_combined"]),
+            Category("vbf", label="VBF category",
+                selection=sel["vbf_combined"]),
         ]
         return ObjectCollection(categories)
 
@@ -248,6 +303,10 @@ class Config():
         features = [
             Feature("Htt_svfit_mass", "Htt_svfit_mass", binning=(10, 50, 150),
                 x_title=Label("H(#tau^{+} #tau^{-}) (SVfit) mass"),
+                units="GeV",
+                central="jet_smearing"),
+            Feature("Hbb_mass", "Hbb_mass", binning=(10, 50, 150),
+                x_title=Label("H(b #bar{b})) mass"),
                 units="GeV",
                 central="jet_smearing"),
             Feature("bjet1_pt", "Jet_pt.at(bjet1_JetIdx)", binning=(10, 50, 150),
