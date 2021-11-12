@@ -112,8 +112,11 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     def get_weight(self, category, **kwargs):
         if self.config.processes.get(self.dataset.process.name).isData:
             return "1"
-        if category in self.config.weights.channels:
-            return " * ".join(self.config.weights.channels[category])
+        else:
+            return self.config.join_selection_channels(self.config.weights.channels_mult)
+        # if category in self.config.weights.channels:
+            # for channel in self.config.channels:
+            # return " * ".join(self.config.weights.channels[category])
         return self.config.weights.default
 
     @law.decorator.notify

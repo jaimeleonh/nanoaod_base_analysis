@@ -354,6 +354,8 @@ class Config():
                 "Tau_sfDeepTau2017v2p1VSmu_VLoose.at(dau1_index)",
                 "Tau_sfDeepTau2017v2p1VSmu_VLoose.at(dau2_index)"]
         }
+        weights.channels_mult = {channel: jrs(weights.channels[channel], op="*")
+            for channel in weights.channels}
         return weights
 
     def add_systematics(self):
