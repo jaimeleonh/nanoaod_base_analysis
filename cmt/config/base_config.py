@@ -190,7 +190,7 @@ class Config():
             Process("tt_fh", Label("t#bar{t} FH"), color=(131, 38, 10), parent_process="tt"),
             Process("data", Label("DATA"), color=(0, 0, 0), isData=True),
             Process("data_tau", Label("DATA\_TAU"), color=(0, 0, 0), parent_process="data", isData=True),
-            Process("data_e", Label("DATA\_E"), color=(0, 0, 0), parent_process="data", isData=True),
+            Process("data_etau", Label("DATA\_E"), color=(0, 0, 0), parent_process="data", isData=True),
             Process("data_mu", Label("DATA\_MU"), color=(0, 0, 0), parent_process="data", isData=True)
         ]
 
@@ -209,7 +209,7 @@ class Config():
             "signal": [
                 "ggf_sm",
             ]
-        }
+            }
         return ObjectCollection(processes), process_group_names
 
     def add_datasets(self):
@@ -288,6 +288,50 @@ class Config():
             Dataset("data_tau_d",
                 dataset="/Tau/Run2018D-02Apr2020-v2/NANOAOD",
                 process=self.processes.get("data_tau"),
+                runPeriod="D",
+                # prefix="xrootd-cms.infn.it//",
+                splitting=400000,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },),
+
+            # EGamma 2018
+            Dataset("data_etau_a",
+                dataset="/EGamma/Run2018A-02Apr2020-v1/NANOAOD",
+                process=self.processes.get("data_etau"),
+                runPeriod="A",
+                # prefix="xrootd-cms.infn.it//",
+                splitting=400000,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },),
+            Dataset("data_etau_b",
+                dataset="/EGamma/Run2018B-02Apr2020-v1/NANOAOD",
+                process=self.processes.get("data_etau"),
+                runPeriod="B",
+                # prefix="xrootd-cms.infn.it//",
+                # locate="se-xrd01.jinr-t1.ru:1095/",
+                splitting=400000,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },),
+            Dataset("data_etau_c",
+                dataset="/EGamma/Run2018C-02Apr2020-v1/NANOAOD",
+                process=self.processes.get("data_etau"),
+                runPeriod="C",
+                # prefix="xrootd-cms.infn.it//",
+                # locate="cms03.lcg.cscs.ch:1094/",
+                splitting=400000,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },),
+            Dataset("data_etau_d",
+                dataset="/EGamma/Run2018D-02Apr2020-v1/NANOAOD",
+                process=self.processes.get("data_etau"),
                 runPeriod="D",
                 # prefix="xrootd-cms.infn.it//",
                 splitting=400000,

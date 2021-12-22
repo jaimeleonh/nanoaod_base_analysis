@@ -6,13 +6,13 @@ puWeight:
         year: self.config.year
 
 
-# 2_counter:
-    # name: WeightedCounter
-    # path: cmt.modules.counter
-    # parameters:
-        # histo_name: events
-        # isMC: self.dataset.process.isMC
-        # weights: self.config.weights.total_events_weights
+weighted_counter:
+    name: WeightedCounter
+    path: cmt.modules.counter
+    parameters:
+        histo_name: events
+        isMC: self.dataset.process.isMC
+        weights: self.config.weights.total_events_weights
 
 2:
     name: MetFilter

@@ -10,9 +10,8 @@ from cmt.modules.baseModules import JetLepMetModule
 ROOT = import_root()
 
 class PUjetID_SFProducer(JetLepMetModule):
-    def __init__(self, isMC, year, *args, **kwargs):
+    def __init__(self, year, *args, **kwargs):
         super(PUjetID_SFProducer, self).__init__(*args, **kwargs)
-        self.isMC = isMC
         self.year = year
 
         f_eff = ROOT.TFile.Open(os.path.expandvars(
@@ -209,4 +208,7 @@ class PUjetID_SFProducer(JetLepMetModule):
 
 
 def PUjetID_SF(**kwargs):
+    isMC = kwargs.pop("isMC")
+    if not isMC:
+        return lambda: DummyModule(**kwargs)
     return lambda: PUjetID_SFProducer(**kwargs)
