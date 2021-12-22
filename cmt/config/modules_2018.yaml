@@ -6,13 +6,13 @@ puWeight:
         year: self.config.year
 
 
-2_counter:
-    name: WeightedCounter
-    path: cmt.modules.counter
-    parameters:
-        histo_name: events
-        isMC: self.dataset.process.isMC
-        weights: self.config.weights.total_events_weights
+# 2_counter:
+    # name: WeightedCounter
+    # path: cmt.modules.counter
+    # parameters:
+        # histo_name: events
+        # isMC: self.dataset.process.isMC
+        # weights: self.config.weights.total_events_weights
 
 2:
     name: MetFilter
@@ -81,11 +81,19 @@ hhjets:
         isMC: self.dataset.process.isMC
 
 
-hhjets_counter:
-    name: Counter
-    path: cmt.modules.counter
+# hhjets_counter:
+    # name: Counter
+    # path: cmt.modules.counter
+    # parameters:
+        # histo_name: HHJets
+
+
+PUjetID_SF:
+    name: PUjetID_SF
+    path: cmt.modules.PUjetID_SF
     parameters:
-        histo_name: HHJets
+        year: self.config.year
+        isMC: self.dataset.process.isMC
 
 
 trigSF:
@@ -96,11 +104,25 @@ trigSF:
         isMC: self.dataset.process.isMC
 
 
+# trigSF_counter:
+    # name: Counter
+    # path: cmt.modules.counter
+    # parameters:
+        # histo_name: trigSF
+
+
 svfit:
     name: SVFit
     path: cmt.modules.SVFit
     parameters:
         isMC: self.dataset.process.isMC
+
+
+# svfit_counter:
+    # name: Counter
+    # path: cmt.modules.counter
+    # parameters:
+        # histo_name: svfit
 
 
 hh:  

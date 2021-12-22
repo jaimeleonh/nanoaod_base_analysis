@@ -143,12 +143,14 @@ class TriggerChecker:
                 if pt1 < abs_th1: continue
             elif th1:
                 pt_th = int(re.search(r"Ele[0-9]+", trigger).group()[3:])
+                # print trigger, pt_th, pt1 + th1
                 if pt1 < pt_th + th1: continue
             else:
                 raise ValueError("E trigger pt thresholds are not set")
             if eval("event." + trigger) != 1:
                 continue
             trigObjs = Collection(event, "TrigObj")
+            # print trigger, self.match_hlt_object(trigger, trigObjs, eta1, phi1, "Electron")
             if self.match_hlt_object(trigger, trigObjs, eta1, phi1, "Electron"):
                 return True
 
@@ -166,6 +168,7 @@ class TriggerChecker:
                 if pt1 < abs_th1: continue
             elif th1:
                 pt_th = int(re.search(r"Ele[0-9]+", cross_trigger).group()[3:])
+                # print trigger, pt1, pt_th + th1
                 if pt1 < pt_th + th1: continue
             else:
                 raise ValueError("E cross trigger pt thresholds are not set")
@@ -174,6 +177,7 @@ class TriggerChecker:
                 if pt2 < abs_th2: continue
             elif th2:
                 pt_th = int(re.search(r"Tau[0-9]+", trigger.replace("TauHPS", "Tau")).group()[3:])
+                # print trigger, pt2, pt_th + th2
                 if pt2 < pt_th + th2: continue
             else:
                 raise ValueError("Tau cross trigger pt thresholds are not set")

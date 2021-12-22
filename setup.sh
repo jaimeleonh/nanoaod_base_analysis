@@ -236,6 +236,7 @@ action() {
             cmt_pip_install pip
             cmt_pip_install flake8
             cmt_pip_install luigi==2.8.13
+            cmt_pip_install tabulate
             cmt_pip_install git+https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools.git
             cmt_pip_install git+https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools.git
             cmt_pip_install --no-deps git+https://github.com/riga/law
