@@ -5,7 +5,7 @@ from copy import deepcopy as copy
 
 from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
 from analysis_tools.utils import import_root, getContentHisto2D
-from cmt.modules.baseModules import JetLepMetModule
+from cmt.modules.baseModules import JetLepMetModule, DummyModule
 
 ROOT = import_root()
 
@@ -209,6 +209,7 @@ class PUjetID_SFProducer(JetLepMetModule):
 
 def PUjetID_SF(**kwargs):
     isMC = kwargs.pop("isMC")
+    year = kwargs.pop("year")
     if not isMC:
         return lambda: DummyModule(**kwargs)
-    return lambda: PUjetID_SFProducer(**kwargs)
+    return lambda: PUjetID_SFProducer(year, **kwargs)

@@ -258,7 +258,7 @@ class Config():
                 process=self.processes.get("data_tau"),
                 runPeriod="A",
                 # prefix="xrootd-cms.infn.it//",
-                splitting=400000,
+                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -269,7 +269,7 @@ class Config():
                 runPeriod="B",
                 # prefix="xrootd-cms.infn.it//",
                 # locate="se-xrd01.jinr-t1.ru:1095/",
-                splitting=400000,
+                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -280,7 +280,7 @@ class Config():
                 runPeriod="C",
                 # prefix="xrootd-cms.infn.it//",
                 # locate="cms03.lcg.cscs.ch:1094/",
-                splitting=400000,
+                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -290,7 +290,7 @@ class Config():
                 process=self.processes.get("data_tau"),
                 runPeriod="D",
                 # prefix="xrootd-cms.infn.it//",
-                splitting=400000,
+                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -302,7 +302,7 @@ class Config():
                 process=self.processes.get("data_etau"),
                 runPeriod="A",
                 # prefix="xrootd-cms.infn.it//",
-                splitting=400000,
+                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -313,7 +313,7 @@ class Config():
                 runPeriod="B",
                 # prefix="xrootd-cms.infn.it//",
                 # locate="se-xrd01.jinr-t1.ru:1095/",
-                splitting=400000,
+                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -324,7 +324,7 @@ class Config():
                 runPeriod="C",
                 # prefix="xrootd-cms.infn.it//",
                 # locate="cms03.lcg.cscs.ch:1094/",
-                splitting=400000,
+                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -334,7 +334,7 @@ class Config():
                 process=self.processes.get("data_etau"),
                 runPeriod="D",
                 # prefix="xrootd-cms.infn.it//",
-                splitting=400000,
+                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,

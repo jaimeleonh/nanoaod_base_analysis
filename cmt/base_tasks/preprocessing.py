@@ -79,11 +79,26 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         else:
             if "$" in self.keep_and_drop_file:
                 self.keep_and_drop_file = os.path.expandvars(self.keep_and_drop_file)
+        if self.dataset.get_aux("splitting"):
+            self.max_events = self.dataset.get_aux("splitting")
         if self.max_events != -1:
             if not hasattr(self, "splitted_branches") and self.is_workflow():
                 self.splitted_branches = self.build_splitted_branches()
             elif not hasattr(self, "splitted_branches"):
                 self.splitted_branches = self.get_splitted_branches
+
+    def get_n_events(self, fil):
+        ROOT = import_root()
+        for trial in range(10): 
+            try:
+                f = ROOT.TFile.Open(fil)
+                tree = f.Get(self.tree_name)
+                nevents = tree.GetEntries()
+                f.Close()
+                return nevents
+            except:
+                print("Failed opening %s, %s/10 trials" % (fil, trial + 1))
+        raise RuntimeError("Failed opening %s" % fil)
 
     def build_splitted_branches(self):
         import json
@@ -97,14 +112,10 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=None)
             branches = []
             for ifil, fil in enumerate(files):
+                nevents = -1
                 fil = self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), index=ifil)
-                print fil
-                f = ROOT.TFile.Open(fil)
-                tree = f.Get(self.tree_name)
-                nevents = tree.GetEntries()
-                f.Close()
-
+                nevents = self.get_n_events(fil)
                 initial_event = 0
                 isplit = 0
                 while initial_event < nevents:
@@ -199,14 +210,11 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         # prepare inputs and outputs
         # inp = self.input()["data"].path
         inp = self.input().path
-        print inp
         outp = self.output()
         d = {}
         # count events
         if self.max_events == -1:
-            f = ROOT.TFile.Open(inp)
-            tree = f.Get(self.tree_name)
-            d["nevents"] = tree.GetEntries()
+            d["nevents"] = self.get_n_events(inp)
         else:
             d["nevents"] = (self.splitted_branches[self.branch]["max_events"]
                 - self.splitted_branches[self.branch]["initial_event"])
@@ -220,6 +228,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
         # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
+        # selection = "(event == 105356)"
         modules = self.get_modules()
 
         if self.max_events == -1:
