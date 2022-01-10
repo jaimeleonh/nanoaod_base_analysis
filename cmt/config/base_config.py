@@ -208,8 +208,12 @@ class Config():
             ],
             "signal": [
                 "ggf_sm",
+            ],
+            "etau": [
+                "tt_dl",
+                "data_etau",
             ]
-            }
+        }
         return ObjectCollection(processes), process_group_names
 
     def add_datasets(self):
@@ -219,7 +223,8 @@ class Config():
                 # "GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8"
                 # "/NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/",
                 dataset="/GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
+                    "NANOAODSIM",
                 process=self.processes.get("ggf_sm"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=0.001726,
@@ -228,14 +233,20 @@ class Config():
             # Background samples
             Dataset("dy_high",
                 dataset="/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/"
-                "RunIIAutumn18NanoAOD-102X_upgrade2018_realistic_v15-v1/NANOAODSIM/",
+                    "RunIIAutumn18NanoAOD-102X_upgrade2018_realistic_v15-v1/NANOAODSIM",
                 process=self.processes.get("dy"),
                 # prefix="xrootd-cms.infn.it//",
                 # prefix="cms-xrd-global.cern.ch//",
-                xs=6077.22),
+                xs=6077.22, 
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },
+                splitting=100000),
             Dataset("tt_dl",
                 dataset="/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
+                    "NANOAODSIM",
                 process=self.processes.get("tt_dl"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=88.29, 
@@ -250,7 +261,12 @@ class Config():
                 "NANOAODSIM",
                 process=self.processes.get("tt_sl"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=365.34),
+                xs=365.34,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },
+                splitting=100000),
             
             # Tau 2018
             Dataset("data_tau_a",

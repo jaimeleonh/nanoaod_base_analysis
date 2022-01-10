@@ -113,10 +113,11 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         if self.config.processes.get(self.dataset.process.name).isData:
             return "1"
         else:
-            return self.config.join_selection_channels(self.config.weights.channels_mult)
-        # if category in self.config.weights.channels:
+            #print self.config.join_selection_channels(self.config.weights.channels_mult)
+            # return self.config.weights.channels_mult["tautau"]
+            if category in self.config.weights.channels:
             # for channel in self.config.channels:
-            # return " * ".join(self.config.weights.channels[category])
+                return " * ".join(self.config.weights.channels[category])
         return self.config.weights.default
 
     @law.decorator.notify
@@ -375,7 +376,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         stats = json.load(f)
                         # nevents += stats["nevents"]
                         nevents += stats["nweightedevents"]
-                    if nevents != 0:
+                    if nevents != 0 and not process.isData:
                         dataset_histo.Scale(dataset.xs * lumi / (nevents))
                     process_histo.Add(dataset_histo)
                 if process.isSignal:

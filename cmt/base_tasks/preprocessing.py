@@ -115,6 +115,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
                 nevents = -1
                 fil = self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), index=ifil)
+                print("Analyzing file %s" % fil)
                 nevents = self.get_n_events(fil)
                 initial_event = 0
                 isplit = 0
@@ -228,7 +229,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
         # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
-        # selection = "(event == 105356)"
+        # selection = "(event == 960406)"
         modules = self.get_modules()
 
         if self.max_events == -1:
@@ -289,7 +290,7 @@ class Categorization(Preprocess):
     def output(self):
         return {
             "data": self.local_target("data_%s.root" % self.branch),
-            "stats": self.local_target("data_%s.json" % self.branch)
+            # "stats": self.local_target("data_%s.json" % self.branch)
         }
             # "root": self.local_target("{}".format(self.input()["data"].path.split("/")[-1])),
             # "json": self.local_target(
@@ -305,17 +306,28 @@ class Categorization(Preprocess):
         inp = self.input()["data"].path
         outp = self.output()
 
-        # build the full selection
-        selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
-            self.systematic, self.systematic_direction)
-        dataset_selection = self.dataset.get_aux("selection")
-        if dataset_selection and dataset_selection != "1":
-            selection = jrs(dataset_selection, selection, op="and")
+        tf = ROOT.TFile.Open(inp)
+        try:
+            tree = tf.Get(self.tree_name)
+            if tree.GetEntries() > 0:
+                # build the full selection
+                selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
+                    self.systematic, self.systematic_direction)
+                dataset_selection = self.dataset.get_aux("selection")
+                if dataset_selection and dataset_selection != "1":
+                    selection = jrs(dataset_selection, selection, op="and")
 
-        df = ROOT.RDataFrame(self.tree_name, inp)
-        filtered_df = df.Define("selection", selection).Filter("selection")
-        filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path))
-        copy(self.input()["stats"].path, outp["stats"].path)
+                df = ROOT.RDataFrame(self.tree_name, inp)
+                filtered_df = df.Define("selection", selection).Filter("selection")
+                filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path))
+            else:
+                tf.Close()
+                copy(inp, outp["data"].path)
+
+        except:  # empty input file
+            tf.Close()
+            copy(inp, outp["data"].path)
+        #copy(self.input()["stats"].path, outp["stats"].path)
 
 
 class CategorizationWrapper(DatasetCategoryWrapperTask):
@@ -415,9 +427,13 @@ class MergeCategorizationStats(DatasetTaskWithCategory, law.tasks.ForestMerge):
                 stats["nevents"] += _stats["nevents"]
                 stats["nweightedevents"] += _stats["nweightedevents"]
             else:
-                histo = _stats.Get("histos/events")
-                stats["nevents"] += histo.GetBinContent(1)
-                stats["nweightedevents"] += histo.GetBinContent(2)
+                try:
+                    histo = _stats.Get("histos/events")
+                    stats["nevents"] += histo.GetBinContent(1)
+                    stats["nweightedevents"] += histo.GetBinContent(2)
+                except:
+                    stats["nevents"] += 0
+                    stats["nweightedevents"] += 0
 
         output.parent.touch()
         output.dump(stats, indent=4, formatter="json")

@@ -45,7 +45,7 @@ class HHJetsProducer(JetLepMetModule):
         
         self.out.branch('Jet_HHbtag', "F", lenVar='nJet')
         
-        self.out.branch('isBoosted', 'b')
+        self.out.branch('isBoosted', 'I')
         pass
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
@@ -64,13 +64,10 @@ class HHJetsProducer(JetLepMetModule):
         met, met_tlv = self.get_met(event)
 
         bjets = []
+        all_jet_indexes = []
         #print "** JETS **"
         for ijet, jet in enumerate(jets):
-            # print jet.pt_nom, jet.eta, jet.puId, jet.jetId, jet.genJetIdx,
-            if eval("jet.pt%s" % self.jet_syst) < 20 or abs(jet.eta) > 2.4:
-                # print "does not pass pt and eta"
-                continue
-
+            print eval("jet.pt%s" % self.jet_syst), jet.eta, jet.puId, jet.jetId
             if (jet.puId < 4 and eval("jet.pt%s" % self.jet_syst) <= 50) or jet.jetId < 2:
                 # print "does not pass id"
                 continue
@@ -86,7 +83,11 @@ class HHJetsProducer(JetLepMetModule):
                 continue
             # print jet.pt, jet.eta
             # print "passes everything"
-            bjets.append((ijet, jet))
+            if eval("jet.pt%s" % self.jet_syst) > 20 and abs(jet.eta) < 2.4:
+                bjets.append((ijet, jet))
+            # store also jets w/ eta < 4.7 for vbf analysis
+            if eval("jet.pt%s" % self.jet_syst) > 20 and abs(jet.eta) < 4.7:
+                all_jet_indexes.append(ijet)
 
         if len(bjets) < 2:
             return False
@@ -147,13 +148,17 @@ class HHJetsProducer(JetLepMetModule):
         HHbtag_scores.sort(key=lambda x:x[1], reverse=True)  # sort by the obtained HHbtag score
 
         # 2 "bjets" with the higher HHbtag score are the selected H(bb) candidates
-        bjet1 = HHbtag_scores[0]
-        bjet2 = HHbtag_scores[1]
-        
-        # let's get the H(bb) object and tlv
-        bjet1_obj = jets[bjet1[0]]
-        bjet2_obj = jets[bjet2[0]]
-        
+        bjet1_JetIdx = HHbtag_scores[0][0]
+        bjet2_JetIdx = HHbtag_scores[1][0]
+
+        if (eval("jets[bjet1_JetIdx].pt%s" % self.jet_syst) <
+                eval("jets[bjet2_JetIdx].pt%s" % self.jet_syst)):
+            bjet1_JetIdx = HHbtag_scores[1][0]
+            bjet2_JetIdx = HHbtag_scores[0][0]
+
+        # let's get the H(bb) object and tlv for the boosted analysis (later)
+        bjet1_obj = jets[bjet1_JetIdx]
+        bjet2_obj = jets[bjet2_JetIdx]
         bjet1_tlv = ROOT.TLorentzVector()
         bjet2_tlv = ROOT.TLorentzVector()
         bjet1_tlv.SetPtEtaPhiM(eval("bjet1_obj.pt%s" % self.jet_syst), bjet1_obj.eta,
@@ -161,27 +166,33 @@ class HHJetsProducer(JetLepMetModule):
         bjet2_tlv.SetPtEtaPhiM(eval("bjet2_obj.pt%s" % self.jet_syst), bjet2_obj.eta,
             bjet2_obj.phi, eval("bjet2_obj.mass%s" % self.jet_syst))
 
-        bjets = dict(bjets)
         vbf_jet_pairs = []
-        if len(HHbtag_scores) >= 4:
-            for i in range(2, len(HHbtag_scores) - 1):
-                for j in range(i + 1, len(HHbtag_scores)):
-                    jet1_idx = HHbtag_scores[i][0]
-                    jet2_idx = HHbtag_scores[j][0]
-                    if (eval("bjets[jet1_idx].pt%s" % self.jet_syst) < 30
-                            or eval("bjets[jet2_idx].pt%s" % self.jet_syst) < 30
-                            or abs(bjets[jet1_idx].eta) > 4.7 or abs(bjets[jet2_idx].eta) > 4.7):
+        if len(all_jet_indexes) >= 4:
+            for i in range(len(all_jet_indexes)):
+                if all_jet_indexes[i] in [bjet1_JetIdx, bjet2_JetIdx]:
+                    continue
+                for j in range(i + 1, len(all_jet_indexes)):
+                    if all_jet_indexes[j] in [bjet1_JetIdx, bjet2_JetIdx]:
                         continue
-                    vbf_jet_pairs.append(JetPair(bjets[jet1_idx], bjets[jet2_idx], self.jet_syst,
+
+                    jet1_idx = all_jet_indexes[i]
+                    jet2_idx = all_jet_indexes[j]
+                    if (eval("jets[jet1_idx].pt%s" % self.jet_syst) < 30
+                            or eval("jets[jet2_idx].pt%s" % self.jet_syst) < 30
+                            or abs(jets[jet1_idx].eta) > 4.7 or abs(jets[jet2_idx].eta) > 4.7):
+                        continue
+                    vbf_jet_pairs.append(JetPair(jets[jet1_idx], jets[jet2_idx], self.jet_syst,
                         index1=jet1_idx, index2=jet2_idx))
+                    print eval("vbf_jet_pairs[-1].obj1.pt%s" % self.jet_syst), eval("vbf_jet_pairs[-1].obj2.pt%s" % self.jet_syst), vbf_jet_pairs[-1].inv_mass
+
             if vbf_jet_pairs:
                 vbf_pair = max(vbf_jet_pairs)
 
-        self.out.fillBranch("bjet1_JetIdx", bjet1[0])
-        self.out.fillBranch("bjet2_JetIdx", bjet2[0])
+        self.out.fillBranch("bjet1_JetIdx", bjet1_JetIdx)
+        self.out.fillBranch("bjet2_JetIdx", bjet2_JetIdx)
 
         if vbf_jet_pairs:
-            if vbf_pair.obj1.pt > vbf_pair.obj1.pt:
+            if vbf_pair.obj1.pt > vbf_pair.obj2.pt:
                 self.out.fillBranch("VBFjet1_JetIdx", vbf_pair.obj1_index)
                 self.out.fillBranch("VBFjet2_JetIdx", vbf_pair.obj2_index)
             else:
@@ -201,7 +212,7 @@ class HHJetsProducer(JetLepMetModule):
         # is the event boosted?
         # we loop over the fat AK8 jets, apply a mass cut and verify that its subjets match
         # the jets we selected before.
-        is_boosted = False
+        is_boosted = 0
         for ifatjet, fatjet in enumerate(fatjets):
             if fatjet.msoftdrop < 30:
                 continue
@@ -223,7 +234,7 @@ class HHJetsProducer(JetLepMetModule):
                 (abs(bjet1_tlv.DeltaR(subj2_tlv)) > 0.4
                     or abs(bjet2_tlv.DeltaR(subj1_tlv)) > 0.4)):
                 continue
-            is_boosted = True
+            is_boosted = 1
         self.out.fillBranch("isBoosted", is_boosted)
         return True
 
