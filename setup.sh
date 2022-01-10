@@ -169,6 +169,12 @@ action() {
           scram b
         fi
 
+        export BASEMODULES_PATH="Base/Modules"
+        if [ ! -d "$BASEMODULES_PATH" ]; then
+          git clone https://github.com/jaimeleonh/cmt-base-modules.git Base/Modules
+          scram b
+        fi
+
         export HHKINFIT_PATH="HHKinFit2"
         if [ ! -d "$HHKINFIT_PATH" ]; then
           git clone https://github.com/bvormwald/HHKinFit2.git -b CMSSWversion

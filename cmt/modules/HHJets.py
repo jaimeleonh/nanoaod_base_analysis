@@ -67,7 +67,7 @@ class HHJetsProducer(JetLepMetModule):
         all_jet_indexes = []
         #print "** JETS **"
         for ijet, jet in enumerate(jets):
-            print eval("jet.pt%s" % self.jet_syst), jet.eta, jet.puId, jet.jetId
+            # print eval("jet.pt%s" % self.jet_syst), jet.eta, jet.puId, jet.jetId
             if (jet.puId < 4 and eval("jet.pt%s" % self.jet_syst) <= 50) or jet.jetId < 2:
                 # print "does not pass id"
                 continue
@@ -183,7 +183,7 @@ class HHJetsProducer(JetLepMetModule):
                         continue
                     vbf_jet_pairs.append(JetPair(jets[jet1_idx], jets[jet2_idx], self.jet_syst,
                         index1=jet1_idx, index2=jet2_idx))
-                    print eval("vbf_jet_pairs[-1].obj1.pt%s" % self.jet_syst), eval("vbf_jet_pairs[-1].obj2.pt%s" % self.jet_syst), vbf_jet_pairs[-1].inv_mass
+                    # print eval("vbf_jet_pairs[-1].obj1.pt%s" % self.jet_syst), eval("vbf_jet_pairs[-1].obj2.pt%s" % self.jet_syst), vbf_jet_pairs[-1].inv_mass
 
             if vbf_jet_pairs:
                 vbf_pair = max(vbf_jet_pairs)

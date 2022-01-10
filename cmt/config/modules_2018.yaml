@@ -113,7 +113,7 @@ trigSF:
 
 svfit:
     name: SVFit
-    path: cmt.modules.SVFit
+    path: Tools.Tools.svfit
     parameters:
         isMC: self.dataset.process.isMC
 
@@ -127,6 +127,6 @@ svfit:
 
 hh:  
     name: HH
-    path: cmt.modules.HH
+    path: Tools.Tools.hh
     parameters:
         isMC: self.dataset.process.isMC
