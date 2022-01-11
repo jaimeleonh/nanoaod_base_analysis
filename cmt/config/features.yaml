@@ -1,0 +1,6 @@
+svfit:
+    name: SVFitRDFProducer
+    path: Tools.Tools.svfit
+    parameters:
+        isMC: self.dataset.process.isMC
+

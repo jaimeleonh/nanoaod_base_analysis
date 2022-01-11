@@ -268,6 +268,8 @@ class Categorization(Preprocess):
         "default: None")
     systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
         "for categorization, default: None")
+    feature_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
+        default="")
     # regions not supported
     region_name = None
 
@@ -292,9 +294,40 @@ class Categorization(Preprocess):
             "data": self.local_target("data_%s.root" % self.branch),
             # "stats": self.local_target("data_%s.json" % self.branch)
         }
-            # "root": self.local_target("{}".format(self.input()["data"].path.split("/")[-1])),
-            # "json": self.local_target(
-                # "{}".format(self.input()["data"].path.split("/")[-1]).replace(".root", ".json")),
+
+    def get_feature_modules(self):
+        module_params = None
+        if self.feature_modules_file:
+            import yaml
+            from cmt.utils.yaml_utils import ordered_load
+            with open(os.path.expandvars("$CMT_BASE/cmt/config/{}.yaml".format(self.feature_modules_file))) as f:
+                module_params = ordered_load(f, yaml.SafeLoader)
+        else:
+            return []
+
+        def _args(*_nargs, **_kwargs):
+            return _nargs, _kwargs
+
+        modules = []
+        if module_params:
+            for tag in module_params.keys():
+                parameter_str = ""
+                assert "name" in module_params[tag] and "path" in module_params[tag]
+                name = module_params[tag]["name"]
+                if "parameters" in module_params[tag]:
+                    for param, value in module_params[tag]["parameters"].items():
+                        if isinstance(value, str):
+                            if "self" in value:
+                                value = eval(value)
+                        if isinstance(value, str):
+                            parameter_str += param + " = '{}', ".format(value)
+                        else:
+                            parameter_str += param + " = {}, ".format(value)
+                mod = module_params[tag]["path"]
+                mod = __import__(mod, fromlist=[name])
+                nargs, kwargs = eval('_args(%s)' % parameter_str)
+                modules.append(getattr(mod, name)(**kwargs))
+        return modules
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -318,13 +351,17 @@ class Categorization(Preprocess):
                     selection = jrs(dataset_selection, selection, op="and")
 
                 df = ROOT.RDataFrame(self.tree_name, inp)
+                feature_modules = self.get_feature_modules()
+                if len(feature_modules) > 0:
+                    for module in feature_modules:
+                        df, _ = module.run(df)
                 filtered_df = df.Define("selection", selection).Filter("selection")
                 filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path))
             else:
                 tf.Close()
                 copy(inp, outp["data"].path)
 
-        except:  # empty input file
+        except ReferenceError:  # empty input file
             tf.Close()
             copy(inp, outp["data"].path)
         #copy(self.input()["stats"].path, outp["stats"].path)
