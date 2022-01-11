@@ -111,11 +111,11 @@ trigSF:
         # histo_name: trigSF
 
 
-svfit:
-    name: SVFit
-    path: Tools.Tools.svfit
-    parameters:
-        isMC: self.dataset.process.isMC
+        #svfit:
+        #    name: SVFit
+        #    path: Tools.Tools.svfit
+        #    parameters:
+        #        isMC: self.dataset.process.isMC
 
 
 # svfit_counter:
@@ -125,8 +125,8 @@ svfit:
         # histo_name: svfit
 
 
-hh:  
-    name: HH
-    path: Tools.Tools.hh
-    parameters:
-        isMC: self.dataset.process.isMC
+# hh:
+    # name: HH
+    # path: Tools.Tools.hh
+    # parameters:
+        # isMC: self.dataset.process.isMC

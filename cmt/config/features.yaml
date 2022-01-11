@@ -4,3 +4,8 @@ svfit:
     parameters:
         isMC: self.dataset.process.isMC
 
+hh:
+    name: HHKinFitRDFProducer
+    path: Tools.Tools.hh
+    parameters:
+        isMC: self.dataset.process.isMC
