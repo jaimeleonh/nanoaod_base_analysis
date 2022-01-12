@@ -1,5 +1,5 @@
 drop Photon*
-drop HLT*
+#drop HLT*
 drop L1*
 #drop Flag*
 drop HTXS*

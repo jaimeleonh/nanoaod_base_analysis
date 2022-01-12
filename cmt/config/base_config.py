@@ -46,32 +46,32 @@ class Config():
         selection = OrderedDict()
         region_names = ["Signal region", "OS inv. iso", "SS iso", "SS inv. iso"]
         selection["os_iso"] = {
-            "mutau": ["isOS == 1", "dau1_iso < 0.15", "dau2_idDeepTau2017v2p1VSjet >= 5"],
-            "etau": ["isOS == 1", "dau1_iso == 1", "dau2_idDeepTau2017v2p1VSjet >= 5"],
-            "tautau": ["isOS == 1", "dau1_idDeepTau2017v2p1VSjet >= 5",
-                "dau2_idDeepTau2017v2p1VSjet >= 5"],
+            "mutau": ["isOS == 1", "dau2_idDeepTau2017v2p1VSjet >= 31"],
+            "etau": ["isOS == 1", "dau2_idDeepTau2017v2p1VSjet >= 31"],
+            "tautau": ["isOS == 1", "dau1_idDeepTau2017v2p1VSjet >= 31",
+                "dau2_idDeepTau2017v2p1VSjet >= 31"],
         }
         selection["os_inviso"] = {
-            "mutau": ["isOS == 1", "dau1_iso < 0.15", "dau2_idDeepTau2017v2p1VSjet >= 1",
-                "dau2_idDeepTau2017v2p1VSjet < 5"],
-            "etau": ["isOS == 1", "dau1_iso == 1", "dau2_idDeepTau2017v2p1VSjet >= 1",
-                "dau2_idDeepTau2017v2p1VSjet < 5"],
-            "tautau": ["isOS == 1", "dau1_idDeepTau2017v2p1VSjet >= 5",
-                "dau2_idDeepTau2017v2p1VSjet >= 1", "dau2_idDeepTau2017v2p1VSjet < 5"],
+            "mutau": ["isOS == 1", "dau2_idDeepTau2017v2p1VSjet >= 1",
+                "dau2_idDeepTau2017v2p1VSjet < 31"],
+            "etau": ["isOS == 1", "dau2_idDeepTau2017v2p1VSjet >= 1",
+                "dau2_idDeepTau2017v2p1VSjet < 31"],
+            "tautau": ["isOS == 1", "dau1_idDeepTau2017v2p1VSjet >= 31",
+                "dau2_idDeepTau2017v2p1VSjet >= 1", "dau2_idDeepTau2017v2p1VSjet < 31"],
         }
         selection["ss_iso"] = {
-            "mutau": ["isOS == 0", "dau1_iso < 0.15", "dau2_idDeepTau2017v2p1VSjet >= 5"],
-            "etau": ["isOS == 0", "dau1_iso == 1", "dau2_idDeepTau2017v2p1VSjet >= 5"],
-            "tautau": ["isOS == 0", "dau1_idDeepTau2017v2p1VSjet >= 5",
-                "dau2_idDeepTau2017v2p1VSjet >= 5"],
+            "mutau": ["isOS == 0", "dau2_idDeepTau2017v2p1VSjet >= 31"],
+            "etau": ["isOS == 0",  "dau2_idDeepTau2017v2p1VSjet >= 31"],
+            "tautau": ["isOS == 0", "dau1_idDeepTau2017v2p1VSjet >= 31",
+                "dau2_idDeepTau2017v2p1VSjet >= 31"],
         }
         selection["ss_inviso"] = {
-            "mutau": ["isOS == 0", "dau1_iso < 0.15", "dau2_idDeepTau2017v2p1VSjet >= 1",
-                "dau2_idDeepTau2017v2p1VSjet < 5"],
-            "etau": ["isOS == 0", "dau1_iso == 1", "dau2_idDeepTau2017v2p1VSjet >= 1",
-                "dau2_idDeepTau2017v2p1VSjet < 5"],
-            "tautau": ["isOS == 0", "dau1_idDeepTau2017v2p1VSjet >= 5",
-                "dau2_idDeepTau2017v2p1VSjet >= 1", "dau2_idDeepTau2017v2p1VSjet < 5"],
+            "mutau": ["isOS == 0", "dau2_idDeepTau2017v2p1VSjet >= 1",
+                "dau2_idDeepTau2017v2p1VSjet < 31"],
+            "etau": ["isOS == 0", "dau2_idDeepTau2017v2p1VSjet >= 1",
+                "dau2_idDeepTau2017v2p1VSjet < 31"],
+            "tautau": ["isOS == 0", "dau1_idDeepTau2017v2p1VSjet >= 31",
+                "dau2_idDeepTau2017v2p1VSjet >= 1", "dau2_idDeepTau2017v2p1VSjet < 31"],
         }
         regions = []
         for ikey, key in enumerate(selection):
@@ -211,6 +211,7 @@ class Config():
             ],
             "etau": [
                 "tt_dl",
+                "dy",
                 "data_etau",
             ]
         }
@@ -233,7 +234,7 @@ class Config():
             # Background samples
             Dataset("dy_high",
                 dataset="/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/"
-                    "RunIIAutumn18NanoAOD-102X_upgrade2018_realistic_v15-v1/NANOAODSIM",
+                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
                 process=self.processes.get("dy"),
                 # prefix="xrootd-cms.infn.it//",
                 # prefix="cms-xrd-global.cern.ch//",
@@ -361,8 +362,12 @@ class Config():
 
     def add_features(self):
         features = [
-            Feature("Htt_svfit_mass", "Htt_svfit_mass", binning=(10, 50, 150),
-                x_title=Label("H(#tau^{+} #tau^{-}) (SVfit) mass"),
+            Feature("Htt_svfit_mass", "Htt_svfit_mass", binning=(30, 0, 300),
+                x_title=Label("H(#tau^{+} #tau^{-}) (SVFIT) mass"),
+                units="GeV",
+                central="jet_smearing"),
+            Feature("Htt_mass", "Htt_mass", binning=(30, 0, 300),
+                x_title=Label("H(#tau^{+} #tau^{-}) mass"),
                 units="GeV",
                 central="jet_smearing"),
             Feature("Hbb_mass", "Hbb_mass", binning=(10, 50, 150),

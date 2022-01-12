@@ -106,7 +106,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         return MergeCategorization.vreq(self, workflow="local", branch=self.branch)
 
     def output(self):
-        return self.local_target("data_{}_{}.root".format(
+        return self.local_target("data{}_{}.root".format(
             self.get_output_postfix(), self.branch))
 
     def get_weight(self, category, **kwargs):
@@ -133,6 +133,11 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         outp = self.output().path
 
         df = ROOT.RDataFrame(self.tree_name, inp)
+
+        if self.region_name != law.NO_STR:
+            sel = self.config.regions.get(self.region_name).selection
+            df = df.Filter(sel)
+
         tf = ROOT.TFile.Open(inp)
         tree = tf.Get(self.tree_name)
         nentries = tree.GetEntries()
@@ -354,6 +359,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             data_hists = []
             all_hists = []
             colors = []
+            print self.processes_datasets.items()
             for process, datasets in self.processes_datasets.items():
                 feature_name = feature.name  # FIXME: What about systs?
                 process_histo = ROOT.TH1D(str(process.label), hist_title, *binning_args)
@@ -379,6 +385,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     if nevents != 0 and not process.isData:
                         dataset_histo.Scale(dataset.xs * lumi / (nevents))
                     process_histo.Add(dataset_histo)
+                print process.name, process_histo.Integral()
                 if process.isSignal:
                     setup_signal_hist(process_histo, ROOT.TColor.GetColor(*process.color)) # FIXME include custom colors
                     signal_hists.append(process_histo)
@@ -388,7 +395,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 else:
                     setup_background_hist(process_histo, ROOT.TColor.GetColor(*process.color))
                     background_hists.append(process_histo)
-                all_hists.append(process_histo)
+                if not process.isData or not self.hide_data:
+                    all_hists.append(process_histo)
 
             if not self.stack:
                 for hist in all_hists:
@@ -407,7 +415,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             dummy_hist.GetYaxis().SetMaxDigits(4)
-            maximum = max([hist.GetMaximum() for hist in all_hists])
+            maximum = max([hist.GetMaximum() for hist in draw_hists])
             dummy_hist.SetMaximum(1.1 * maximum)
             dummy_hist.SetMinimum(0)  # FIXME in case of log scale
             draw_labels = get_labels(upper_right="")
