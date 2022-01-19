@@ -160,6 +160,9 @@ class Config():
 
         categories = [
             Category("base", "base category"),
+            Category("base_selection", "base category", selection="(Sum$(Tau_pt->fElements > 17) > 0"
+                " && (Sum$(Muon_pt->fElements > 17) > 0 || Sum$(Electron_pt->fElements > 17) > 0)"
+                " || Sum$(Tau_pt->fElements > 17) > 1 && Sum$(Jet_pt->fElements > 17) > 1)"),
             Category("dum", "dummy category", selection="Htt_svfit_mass_nom > 50 "
                 " && Htt_svfit_mass_nom < 150"),
             Category("mutau", "#mu#tau channel", selection="pairType == 0"),
@@ -183,11 +186,18 @@ class Config():
     def add_processes(self):
         processes = [
             Process("ggf_sm", Label("$HH_{ggF}$"), color=(0, 0, 0), isSignal=True),
-            Process("dy", Label("DY"), color=(255, 102, 102)),
+            Process("dy", Label("DY"), color=(255, 102, 102), isDY=True),
+
             Process("tt", Label("t#bar{t}"), color=(255, 153, 0)),
             Process("tt_dl", Label("t#bar{t} DL"), color=(205, 0, 9), parent_process="tt"),
             Process("tt_sl", Label("t#bar{t} SL"), color=(255, 153, 0), parent_process="tt"),
             Process("tt_fh", Label("t#bar{t} FH"), color=(131, 38, 10), parent_process="tt"),
+
+            Process("others", Label("Others"), color=(134, 136, 138)),
+            Process("wjets", Label("W + jets"), color=(134, 136, 138), parent_process="others"),
+            Process("tw", Label("t + W"), color=(134, 136, 138), parent_process="others"),
+            Process("singlet", Label("Single t"), color=(134, 136, 138), parent_process="others"),
+
             Process("data", Label("DATA"), color=(0, 0, 0), isData=True),
             Process("data_tau", Label("DATA\_TAU"), color=(0, 0, 0), parent_process="data", isData=True),
             Process("data_etau", Label("DATA\_E"), color=(0, 0, 0), parent_process="data", isData=True),
@@ -268,7 +278,72 @@ class Config():
                     "etau": 40,
                 },
                 splitting=100000),
+
+            # Others
+            # Wjets
+            Dataset("wjets",
+                dataset="/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("wjets"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=61526.7,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },
+                splitting=200000),
+
+            # tW
+            Dataset("st_tw_antitop",
+                dataset="/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext1-v1/"
+                "NANOAODSIM",
+                process=self.processes.get("tw"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=35.85,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },
+                splitting=200000),
+            Dataset("st_tw_top",
+                dataset="/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext1-v1/"
+                "NANOAODSIM",
+                process=self.processes.get("tW"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=35.85,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },
+                splitting=200000),
+
+            # single top
+            Dataset("st_antitop",
+                dataset="/ST_t-channel_antitop_5f_TuneCP5_13TeV-powheg-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("singlet"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=80.95,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },
+                splitting=200000),
+            Dataset("st_top",
+                dataset="/ST_t-channel_top_5f_TuneCP5_13TeV-powheg-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("singlet"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=136.02,
+                merging={
+                    "tautau": 20,
+                    "etau": 40,
+                },
+                splitting=200000),
             
+            # DATA
             # Tau 2018
             Dataset("data_tau_a",
                 dataset="/Tau/Run2018A-02Apr2020-v1/NANOAOD",
@@ -407,7 +482,7 @@ class Config():
     def add_weights(self):
         weights = DotDict()
         weights.default = "1"
-        weights.total_events_weights = ["genWeight", "puWeight"]
+        weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
         weights.channels = {
             "mutau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],
             "etau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],

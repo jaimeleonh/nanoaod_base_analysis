@@ -12,6 +12,7 @@ import contextlib
 import itertools
 from collections import OrderedDict, defaultdict
 import os
+import json
 
 import law
 import luigi
@@ -23,6 +24,97 @@ from cmt.base_tasks.base import (
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData,
     ConfigTaskWithCategory, SplittedTask
 )
+
+class PreCounter(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
+    weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
+        default="")
+    # regions not supported
+    region_name = None
+
+    default_store = "$CMT_STORE_EOS_CATEGORIZATION"
+    default_wlcg_fs = "wlcg_fs_categorization"
+
+    tree_name = "Events"
+
+    def create_branch_map(self):
+        return len(self.dataset.get_files(
+            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
+
+    def workflow_requires(self):
+        return {"data": InputData.req(self)}
+
+    def requires(self):
+            return InputData.req(self, file_index=self.branch)
+
+    def output(self):
+        # return {
+            # "data": self.local_target("data_%s.root" % self.branch),
+            # "stats": self.local_target("data_%s.json" % self.branch)
+        # }
+        return  self.local_target("data_%s.json" % self.branch)
+
+    def get_feature_modules(self, filename):
+        module_params = None
+        if filename:
+            import yaml
+            from cmt.utils.yaml_utils import ordered_load
+            with open(os.path.expandvars("$CMT_BASE/cmt/config/{}.yaml".format(filename))) as f:
+                module_params = ordered_load(f, yaml.SafeLoader)
+        else:
+            return []
+
+        def _args(*_nargs, **_kwargs):
+            return _nargs, _kwargs
+
+        modules = []
+        if module_params:
+            for tag in module_params.keys():
+                parameter_str = ""
+                assert "name" in module_params[tag] and "path" in module_params[tag]
+                name = module_params[tag]["name"]
+                if "parameters" in module_params[tag]:
+                    for param, value in module_params[tag]["parameters"].items():
+                        if isinstance(value, str):
+                            if "self" in value:
+                                value = eval(value)
+                        if isinstance(value, str):
+                            parameter_str += param + " = '{}', ".format(value)
+                        else:
+                            parameter_str += param + " = {}, ".format(value)
+                mod = module_params[tag]["path"]
+                mod = __import__(mod, fromlist=[name])
+                nargs, kwargs = eval('_args(%s)' % parameter_str)
+                modules.append(getattr(mod, name)(**kwargs)())
+        return modules
+
+    @law.decorator.notify
+    @law.decorator.localize(input=False)
+    def run(self):
+        from shutil import copy
+        ROOT = import_root()
+
+        # prepare inputs and outputs
+        inp = self.input().path
+        outp = self.output()
+        df = ROOT.RDataFrame(self.tree_name, inp)
+        weight_modules = self.get_feature_modules(self.weights_file)
+        if len(weight_modules) > 0:
+            for module in weight_modules:
+                df, _ = module.run(df)
+
+        weights = self.config.weights.total_events_weights
+        print weights, "*".join(weights)
+        hmodel = ("", "", 1, 1, 2)
+        histo_noweight = df.Define("var", "1.").Histo1D(hmodel, "var")
+        if not self.isData:
+            histo_weight = df.Define("var", "1.").Define("weight", " * ".join(weights)).Histo1D(
+                hmodel, "var", "weight")
+        else:
+            histo_weight = df.Define("var", "1.").Histo1D(hmodel, "var")
+
+        d = {"nevents": histo_noweight.Integral(), "nweightedevents": histo_weight.Integral()}
+        with open(create_file_dir(self.output().path), "w+") as f:
+            json.dump(d, f, indent=4)
 
 
 class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
@@ -101,7 +193,6 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         raise RuntimeError("Failed opening %s" % fil)
 
     def build_splitted_branches(self):
-        import json
         if self.dataset.get_aux("splitting"):
             self.max_events = self.dataset.get_aux("splitting")
         if not os.path.exists(
@@ -204,7 +295,6 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         from shutil import move
         from PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor import PostProcessor
         from analysis_tools.utils import import_root
-        import json
 
         ROOT = import_root()
 
@@ -326,7 +416,7 @@ class Categorization(Preprocess):
                 mod = module_params[tag]["path"]
                 mod = __import__(mod, fromlist=[name])
                 nargs, kwargs = eval('_args(%s)' % parameter_str)
-                modules.append(getattr(mod, name)(**kwargs))
+                modules.append(getattr(mod, name)(**kwargs)())
         return modules
 
     @law.decorator.notify

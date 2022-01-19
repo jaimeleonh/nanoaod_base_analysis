@@ -1,18 +1,25 @@
-puWeight:
-    name: puWeight
-    path: cmt.modules.weight
-    parameters:
-        isMC: self.dataset.process.isMC
-        year: self.config.year
+# dystitch:
+    # name: DYstitching
+    # path: Tools.Tools.dyreweighting
+    # parameters:
+        # isDY: self.dataset.process.get_aux('isDY', False)
+        # year: self.config.year
+
+# puWeight:
+    # name: puWeight
+    # path: cmt.modules.weight
+    # parameters:
+        # isMC: self.dataset.process.isMC
+        # year: self.config.year
 
 
-weighted_counter:
-    name: WeightedCounter
-    path: cmt.modules.counter
-    parameters:
-        histo_name: events
-        isMC: self.dataset.process.isMC
-        weights: self.config.weights.total_events_weights
+# weighted_counter:
+    # name: WeightedCounter
+    # path: cmt.modules.counter
+    # parameters:
+        # histo_name: events
+        # isMC: self.dataset.process.isMC
+        # weights: self.config.weights.total_events_weights
 
 2:
     name: MetFilter
@@ -102,31 +109,3 @@ trigSF:
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
-
-
-# trigSF_counter:
-    # name: Counter
-    # path: cmt.modules.counter
-    # parameters:
-        # histo_name: trigSF
-
-
-        #svfit:
-        #    name: SVFit
-        #    path: Tools.Tools.svfit
-        #    parameters:
-        #        isMC: self.dataset.process.isMC
-
-
-# svfit_counter:
-    # name: Counter
-    # path: cmt.modules.counter
-    # parameters:
-        # histo_name: svfit
-
-
-# hh:
-    # name: HH
-    # path: Tools.Tools.hh
-    # parameters:
-        # isMC: self.dataset.process.isMC
