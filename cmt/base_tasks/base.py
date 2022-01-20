@@ -208,6 +208,8 @@ class DatasetWrapperTask(ConfigTask):
 
     dataset_names = law.CSVParameter(default=(), description="names or name "
         "patterns of datasets to use, uses all datasets when empty, default: ()")
+    process_names = law.CSVParameter(default=(), description="names or name "
+        "patterns of processes to use, default: ()")
     dataset_tags = law.CSVParameter(default=(), description="list of tags for "
         "filtering datasets selected via dataset_names, default: ()")
     skip_dataset_names = law.CSVParameter(default=(), description="names or name pattern of "
@@ -234,7 +236,21 @@ class DatasetWrapperTask(ConfigTask):
         skip_datasets = self._find_datasets(self.skip_dataset_names, self.skip_dataset_tags)
 
         # then get actual datasets and filter
-        dataset_names = self.dataset_names
+        dataset_names = list(self.dataset_names)
+        if not dataset_names and self.process_names:
+            for dataset in self.config.datasets:
+                process = dataset.process
+                if process.name in self.process_names:
+                    dataset_names.append(dataset.name)
+                elif process.parent_process:
+                    while True:
+                        process = self.config.processes.get(process.parent_process)
+                        if process.name in self.process_names:
+                            dataset_names.append(dataset.name)
+                            break
+                        if not process.parent_process:
+                            break
+
         if not dataset_names and not self.dataset_tags:
             dataset_names = self.get_default_dataset_names()
         self.datasets = [

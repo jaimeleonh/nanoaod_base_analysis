@@ -310,7 +310,7 @@ class Config():
                 dataset="/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
                 "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext1-v1/"
                 "NANOAODSIM",
-                process=self.processes.get("tW"),
+                process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
                 merging={
