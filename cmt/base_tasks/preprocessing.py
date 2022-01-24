@@ -25,6 +25,54 @@ from cmt.base_tasks.base import (
     ConfigTaskWithCategory, SplittedTask, DatasetTask
 )
 
+
+class DatasetSuperWrapperTask(DatasetWrapperTask, law.WrapperTask):
+
+    exclude_index = True
+
+    def __init__(self, *args, **kwargs):
+        super(DatasetSuperWrapperTask, self).__init__(*args, **kwargs)
+
+    @abc.abstractmethod
+    def atomic_requires(self, dataset):
+        return None
+
+    def requires(self):
+        return OrderedDict(
+            (dataset.name, self.atomic_requires(dataset))
+            for dataset in self.datasets
+        )
+
+
+class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
+    category_names = law.CSVParameter(default=("baseline_even",), description="names of categories "
+        "to run, default: (baseline_even,)")
+
+    exclude_index = True
+
+    def __init__(self, *args, **kwargs):
+        super(DatasetCategoryWrapperTask, self).__init__(*args, **kwargs)
+
+        # tasks wrapped by this class do not allow composite categories, so split them here
+        self.categories = []
+        for name in self.category_names:
+            category = self.config.categories.get(name)
+            if category.subcategories:
+                self.categories.extend(category.subcategories)
+            else:
+                self.categories.append(category)
+
+    @abc.abstractmethod
+    def atomic_requires(self, dataset, category):
+        return None
+
+    def requires(self):
+        return OrderedDict(
+            ((dataset.name, category.name), self.atomic_requires(dataset, category))
+            for dataset, category in itertools.product(self.datasets, self.categories)
+        )
+
+
 class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
@@ -116,33 +164,10 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask)
             json.dump(d, f, indent=4)
 
 
-class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
-    category_names = law.CSVParameter(default=("baseline_even",), description="names of categories "
-        "to run, default: (baseline_even,)")
+class PreCounterWrapper(DatasetSuperWrapperTask):
 
-    exclude_index = True
-
-    def __init__(self, *args, **kwargs):
-        super(DatasetCategoryWrapperTask, self).__init__(*args, **kwargs)
-
-        # tasks wrapped by this class do not allow composite categories, so split them here
-        self.categories = []
-        for name in self.category_names:
-            category = self.config.categories.get(name)
-            if category.subcategories:
-                self.categories.extend(category.subcategories)
-            else:
-                self.categories.append(category)
-
-    @abc.abstractmethod
-    def atomic_requires(self, dataset, category):
-        return None
-
-    def requires(self):
-        return OrderedDict(
-            ((dataset.name, category.name), self.atomic_requires(dataset, category))
-            for dataset, category in itertools.product(self.datasets, self.categories)
-        )
+    def atomic_requires(self, dataset):
+        return PreCounter.req(self, dataset_name=dataset.name)
 
 
 class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
@@ -565,9 +590,7 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
         output.dump(stats, indent=4, formatter="json")
 
 
-class MergeCategorizationStatsWrapper(DatasetCategoryWrapperTask):
+class MergeCategorizationStatsWrapper(DatasetSuperWrapperTask):
 
-    def atomic_requires(self, dataset, category):
-        return MergeCategorizationStats.req(self, dataset_name=dataset.name,
-            category_name=category.name)
-
+    def atomic_requires(self, dataset):
+        return MergeCategorizationStats.req(self, dataset_name=dataset.name)
