@@ -580,7 +580,7 @@ class Config():
             return get_expression(feature)
 
     # other methods
-    def get_qcd_regions(region, category, wp="", shape_region="os_inviso",
+    def get_qcd_regions(self, region, category, wp="", shape_region="os_inviso",
             signal_region_wp="os_iso", sym=False):
         # the region must be set and tagged os_iso
         if not region:

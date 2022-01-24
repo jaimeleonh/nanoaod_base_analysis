@@ -18,7 +18,7 @@ import luigi
 
 from analysis_tools import ObjectCollection
 from analysis_tools.utils import (
-    import_root, create_file_dir, join_root_selection, randomize
+    import_root, create_file_dir, join_root_selection, randomize, randomize
 )
 from plotting_tools.root import get_labels, Canvas
 from cmt.base_tasks.base import ( 
@@ -45,6 +45,8 @@ class BasePlotTask(ConfigTaskWithCategory):
     systematics = law.CSVParameter(default=(), description="list of systematics, default: empty")
     shape_region = luigi.ChoiceParameter(default="os_inviso", choices=("os_inviso", "ss_iso"),
         significant=False, description="shape region default: os_inviso")
+    remove_horns = luigi.BoolParameter(default=False, description="whether to remove horns "
+        "from distributions, default: False")
 
     tree_name = "Events"
     
@@ -234,7 +236,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     
     # Not implemented yet
     bin_opt_version = None
-    remove_horns = False
+    # remove_horns = False
 
     default_process_group_name = "default"
 
@@ -272,6 +274,19 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     self.processes_datasets[process] = []
                 self.processes_datasets[process].append(dataset)
                 self.datasets_to_run.append(dataset)
+
+        # get QCD regions when requested
+        self.qcd_regions = None
+        if self.do_qcd:
+            wp = self.qcd_wp if self.qcd_wp != law.NO_STR else ""
+            self.qcd_regions = self.config.get_qcd_regions(region=self.region, category=self.category,
+                wp=wp, shape_region=self.shape_region, signal_region_wp=self.qcd_signal_region_wp,
+                sym=self.qcd_sym_shape)
+
+            # complain when no data is present
+            if not any(dataset.process.isData for dataset in self.datasets):
+                raise Exception("no real dataset passed for QCD estimation")
+
 
     def requires(self):
         reqs = {}
@@ -392,7 +407,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
         # helper to extract the qcd shape in a region
-        def get_qcd(region, bin_limit=0.):
+        data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
+        background_names = [p.name for p in self.processes_datasets.keys()
+            if not p.isData and not p.isSignal]
+        def get_qcd(region, files, bin_limit=0.):
             d_hist = files[region].Get("histograms/" + data_names[0])
             if not d_hist:
                 raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
@@ -406,7 +424,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         b_name, region))
                 b_hists.append(b_hist)
 
-            qcd_hist = d_hist.Clone(create_random_name("qcd_" + region))
+            qcd_hist = d_hist.Clone(randomize("qcd_" + region))
             for hist in b_hists:
                 qcd_hist.Add(hist, -1.)
 
@@ -441,6 +459,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 feature_name = feature.name  # FIXME: What about systs?
                 process_histo = ROOT.TH1D(str(process.label), hist_title, *binning_args)
                 process_histo.process_label = str(process.label)
+                process_histo.cmt_process_name = process.name
                 process_histo.Sumw2()
                 for dataset in datasets:
                     dataset_histo = ROOT.TH1D(randomize("tmp"), hist_title, *binning_args)
@@ -489,69 +508,72 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                             else self.qcd_feature)
                     else:
                         my_feature = feature.name
-                    qcd_shape_files[key] = inputs["qcd"][key]["root"].targets[my_feature].path
+                    qcd_shape_files[key] = ROOT.TFile.Open(inputs["qcd"][key]["root"].targets[my_feature].path)
 
-            # do the qcd extrapolation
-            if "shape" in qcd_shape_files:
-                qcd_hist = get_qcd("shape").Clone(create_random_name("qcd"))
-                qcd_hist.Scale(1. / qcd_hist.Integral())
-            else:  #sym shape
-                qcd_hist = get_qcd("shape1").Clone(create_random_name("qcd"))
-                qcd_hist2 = get_qcd("shape2").Clone(create_random_name("qcd"))
-                qcd_hist.Scale(1. / qcd_hist.Integral())
-                qcd_hist2.Scale(1. / qcd_hist2.Integral())
-                qcd_hist.Add(qcd_hist2)
-                qcd_hist.Scale(0.5)
-                
-            n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
-                get_qcd("os_inviso", -999))
-            n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
-                get_qcd("ss_iso", -999))
-            n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
-                get_qcd("ss_inviso", -999))
-            # if not n_ss_iso or not n_ss_inviso:
-            if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
-                print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")
-                qcd_scaling = 0.
-                qcd_inviso = 0.
-                qcd_inviso_error = 0.
-                qcd_hist.Scale(qcd_scaling)
-            else:
-                qcd_inviso = n_os_inviso / n_ss_inviso
-                qcd_inviso_error = qcd_inviso * sqrt(
-                    (n_os_inviso_error / n_os_inviso) * (n_os_inviso_error / n_os_inviso)
-                    + (n_ss_inviso_error / n_ss_inviso) * (n_ss_inviso_error / n_ss_inviso)
-                )
-                qcd_scaling = n_os_inviso * n_ss_iso / n_ss_inviso
-                os_inviso_rel_error = n_os_inviso_error / n_os_inviso
-                ss_iso_rel_error = n_ss_iso_error / n_ss_iso
-                ss_inviso_rel_error = n_ss_inviso_error / n_ss_inviso
-                new_errors_sq = []
-                for ibin in range(1, qcd_hist.GetNbinsX() + 1):
-                    if qcd_hist.GetBinContent(ibin) > 0:
-                        bin_rel_error = qcd_hist.GetBinError(ibin) / qcd_hist.GetBinContent(ibin)
-                    else:
-                        bin_rel_error = 0
-                    new_errors_sq.append(bin_rel_error * bin_rel_error
-                        + os_inviso_rel_error * os_inviso_rel_error
-                        + ss_iso_rel_error * ss_iso_rel_error
-                        + ss_inviso_rel_error * ss_inviso_rel_error)
-                qcd_hist.Scale(qcd_scaling)
-                # fix errors
-                for ibin in range(1, qcd_hist.GetNbinsX() + 1):
-                    qcd_hist.SetBinError(ibin, qcd_hist.GetBinContent(ibin)
-                        * sqrt(new_errors_sq[ibin - 1]))
+                # do the qcd extrapolation
+                if "shape" in qcd_shape_files:
+                    qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
+                    qcd_hist.Scale(1. / qcd_hist.Integral())
+                else:  #sym shape
+                    qcd_hist = get_qcd("shape1", qcd_shape_files).Clone(randomize("qcd"))
+                    qcd_hist2 = get_qcd("shape2", qcd_shape_files).Clone(randomize("qcd"))
+                    qcd_hist.Scale(1. / qcd_hist.Integral())
+                    qcd_hist2.Scale(1. / qcd_hist2.Integral())
+                    qcd_hist.Add(qcd_hist2)
+                    qcd_hist.Scale(0.5)
 
-            # store and style
-            yield_error = ROOT.Double()
-            qcd_hist.hmc_yield = qcd_hist.IntegralAndError(0, qcd_hist.GetNbinsX() + 1, yield_error)
-            qcd_hist.hmc_yield_error = float(yield_error)
-            qcd_hist.hmc_scale = 1.
-            qcd_hist.SetTitle("QCD")
-            setup_background_hist(qcd_hist, ROOT.kYellow)
-            background_hists.append(qcd_hist)
-            background_names.append("qcd")
-            all_hists.append(qcd_hist)
+                n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
+                    get_qcd("os_inviso", qcd_shape_files, -999))
+                n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
+                    get_qcd("ss_iso", qcd_shape_files, -999))
+                n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
+                    get_qcd("ss_inviso", qcd_shape_files, -999))
+                # if not n_ss_iso or not n_ss_inviso:
+                if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
+                    print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")
+                    qcd_scaling = 0.
+                    qcd_inviso = 0.
+                    qcd_inviso_error = 0.
+                    qcd_hist.Scale(qcd_scaling)
+                else:
+                    qcd_inviso = n_os_inviso / n_ss_inviso
+                    qcd_inviso_error = qcd_inviso * math.sqrt(
+                        (n_os_inviso_error / n_os_inviso) * (n_os_inviso_error / n_os_inviso)
+                        + (n_ss_inviso_error / n_ss_inviso) * (n_ss_inviso_error / n_ss_inviso)
+                    )
+                    qcd_scaling = n_os_inviso * n_ss_iso / n_ss_inviso
+                    os_inviso_rel_error = n_os_inviso_error / n_os_inviso
+                    ss_iso_rel_error = n_ss_iso_error / n_ss_iso
+                    ss_inviso_rel_error = n_ss_inviso_error / n_ss_inviso
+                    new_errors_sq = []
+                    for ib in range(1, qcd_hist.GetNbinsX() + 1):
+                        if qcd_hist.GetBinContent(ib) > 0:
+                            bin_rel_error = qcd_hist.GetBinError(ib) / qcd_hist.GetBinContent(ib)
+                        else:
+                            bin_rel_error = 0
+                        new_errors_sq.append(bin_rel_error * bin_rel_error
+                            + os_inviso_rel_error * os_inviso_rel_error
+                            + ss_iso_rel_error * ss_iso_rel_error
+                            + ss_inviso_rel_error * ss_inviso_rel_error)
+                    qcd_hist.Scale(qcd_scaling)
+                    # fix errors
+                    for ib in range(1, qcd_hist.GetNbinsX() + 1):
+                        qcd_hist.SetBinError(ib, qcd_hist.GetBinContent(ib)
+                            * math.sqrt(new_errors_sq[ib - 1]))
+
+                # store and style
+                yield_error = ROOT.Double()
+                qcd_hist.cmt_yield = qcd_hist.IntegralAndError(
+                    0, qcd_hist.GetNbinsX() + 1, yield_error)
+                qcd_hist.cmt_yield_error = float(yield_error)
+                qcd_hist.cmt_scale = 1.
+                qcd_hist.cmt_process_name = "qcd"
+                qcd_hist.process_label = "QCD"
+                qcd_hist.SetTitle("QCD")
+                setup_background_hist(qcd_hist, ROOT.kYellow)
+                background_hists.append(qcd_hist)
+                background_names.append("qcd")
+                all_hists.append(qcd_hist)
 
             if not self.stack:
                 for hist in all_hists:
@@ -613,7 +635,17 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 outputs.append(self.output()["png"].targets[feature.name].path)
             if self.save_pdf:
                 outputs.append(self.output()["pdf"].targets[feature.name].path)
-            if self.save_root:
-                outputs.append(self.output()["root"].targets[feature.name].path)  # FIXME
             for output in outputs:
                 c.SaveAs(create_file_dir(output))
+
+            if self.save_root:
+                f = ROOT.TFile.Open(create_file_dir(
+                    self.output()["root"].targets[feature.name].path), "RECREATE")
+                f.cd()
+                # c.Write("canvas") #FIXME
+
+                hist_dir = f.mkdir("histograms")
+                hist_dir.cd()
+                for hist in all_hists:
+                    hist.Write(hist.cmt_process_name)
+                f.Close()
