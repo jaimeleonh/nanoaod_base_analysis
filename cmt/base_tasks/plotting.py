@@ -313,7 +313,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 reqs["qcd"]["ss_iso"] = FeaturePlot.vreq(self,
                     region_name=self.qcd_regions.ss_iso.name, category_name=self.qcd_category_name,
                     blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
-                    save_pdf=True, save_yields=True, feature_names=(self.qcd_feature,),
+                    save_pdf=True, save_yields=False, feature_names=(self.qcd_feature,),
                     bin_opt_version=law.NO_STR, remove_horns=self.remove_horns, _exclude=["feature_tags",
                         "shape_region", "qcd_category_name", "qcd_sym_shape", "bin_opt_version",
                         "qcd_signal_region_wp"])
@@ -326,7 +326,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     region_name=self.qcd_regions.ss_inviso.name,
                     category_name=self.qcd_category_name,
                     blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
-                    save_pdf=True, save_yields=True, feature_names=(self.qcd_feature,),
+                    save_pdf=True, save_yields=False, feature_names=(self.qcd_feature,),
                     bin_opt_version=law.NO_STR, remove_horns=self.remove_horns, _exclude=["feature_tags", 
                         "shape_region", "qcd_category_name", "qcd_sym_shape", "bin_opt_version",
                         "qcd_signal_region_wp"])
@@ -495,7 +495,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 else:
                     setup_background_hist(process_histo, ROOT.TColor.GetColor(*process.color))
                     background_hists.append(process_histo)
-                if not process.isData or not self.hide_data:
+                if not process.isData: #or not self.hide_data:
                     all_hists.append(process_histo)
 
             # qcd shape files
@@ -574,6 +574,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 background_hists.append(qcd_hist)
                 background_names.append("qcd")
                 all_hists.append(qcd_hist)
+
+            if not self.hide_data:
+                all_hists += data_hists
 
             if not self.stack:
                 for hist in all_hists:
