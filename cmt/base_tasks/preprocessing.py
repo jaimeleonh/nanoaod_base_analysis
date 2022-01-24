@@ -22,10 +22,10 @@ from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import ( 
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData,
-    ConfigTaskWithCategory, SplittedTask
+    ConfigTaskWithCategory, SplittedTask, DatasetTask
 )
 
-class PreCounter(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
+class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
     # regions not supported
@@ -103,10 +103,9 @@ class PreCounter(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
                 df, _ = module.run(df)
 
         weights = self.config.weights.total_events_weights
-        print weights, "*".join(weights)
         hmodel = ("", "", 1, 1, 2)
         histo_noweight = df.Define("var", "1.").Histo1D(hmodel, "var")
-        if not self.isData:
+        if not self.dataset.process.isData:
             histo_weight = df.Define("var", "1.").Define("weight", " * ".join(weights)).Histo1D(
                 hmodel, "var", "weight")
         else:
@@ -428,7 +427,6 @@ class Categorization(Preprocess):
         # prepare inputs and outputs
         inp = self.input()["data"].path
         outp = self.output()
-
         tf = ROOT.TFile.Open(inp)
         try:
             tree = tf.Get(self.tree_name)
@@ -511,7 +509,7 @@ class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
         return MergeCategorization.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
-class MergeCategorizationStats(DatasetTaskWithCategory, law.tasks.ForestMerge):
+class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
 
     # regions not supported
     region_name = None
@@ -522,14 +520,15 @@ class MergeCategorizationStats(DatasetTaskWithCategory, law.tasks.ForestMerge):
     default_wlcg_fs = "wlcg_fs_categorization"
 
     def merge_workflow_requires(self):
-        return Preprocess.req(self, _prefer_cli=["workflow"])
+        return PreCounter.req(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return Preprocess.req(self, branch=-1, workflow="local", start_branch=start_leaf,
+        return PreCounter.req(self, branch=-1, workflow="local", start_branch=start_leaf,
             end_branch=end_leaf)
 
     def trace_merge_inputs(self, inputs):
-        return [inp["data"] for inp in inputs["collection"].targets.values()]
+        # return [inp["data"] for inp in inputs["collection"].targets.values()]
+        return [inp for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
         return self.local_target("stats.json")
