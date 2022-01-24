@@ -579,5 +579,43 @@ class Config():
         else:  # for now, o
             return get_expression(feature)
 
+    # other methods
+    def get_qcd_regions(region, category, wp="", shape_region="os_inviso",
+            signal_region_wp="os_iso", sym=False):
+        # the region must be set and tagged os_iso
+        if not region:
+            raise Exception("region must not be empty")
+        # if not region.has_tag("qcd_os_iso"):
+        #     raise Exception("region must be tagged as 'qcd_os_iso' but isn't")
+
+        # the category must be compatible with the estimation technique
+        # if category.has_tag("qcd_incompatible"):
+        #     raise Exception("category '{}' incompatible with QCD estimation".format(category.name))
+
+        if wp != "":
+            wp = "__" + wp
+
+        # get other qcd regions
+        prefix = region.name[:-len(signal_region_wp)]
+        qcd_regions = {"ss_inviso": self.regions.get(prefix + "ss_inviso" + wp)}
+        # for the inverted regions, allow different working points
+        default_config = ["os_inviso", "ss_iso"]
+        for key in default_config:
+            region_name = (prefix + key + wp if key != "ss_iso"
+                else prefix + "ss_" + signal_region_wp[len("os_"):])
+            qcd_regions[key] = self.regions.get(region_name)
+
+        if sym:
+            qcd_regions["shape1"] = self.regions.get(prefix + shape_region + wp)
+            qcd_regions["shape2"] = self.regions.get(
+                prefix + "ss_" + signal_region_wp[len("os_"):])
+        else:
+            if shape_region == "os_inviso":
+                qcd_regions["shape"] = self.regions.get(prefix + shape_region + wp)
+            else:
+                qcd_regions["shape"] = self.regions.get(
+                    prefix + "ss_" + signal_region_wp[len("os_"):])
+        return DotDict(qcd_regions)
+
 
 config = Config("base", year=2018, ecm=13, lumi_pb=59741)
