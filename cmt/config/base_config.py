@@ -251,7 +251,7 @@ class Config():
                 xs=6077.22, 
                 merging={
                     "tautau": 20,
-                    "etau": 40,
+                    "etau": 20,
                 },
                 splitting=100000),
             Dataset("tt_dl",
@@ -288,8 +288,8 @@ class Config():
                 # prefix="xrootd-cms.infn.it//",
                 xs=61526.7,
                 merging={
-                    "tautau": 20,
-                    "etau": 40,
+                    "tautau": 5,
+                    "etau": 10,
                 },
                 splitting=200000),
 
@@ -301,10 +301,6 @@ class Config():
                 process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
                 splitting=200000),
             Dataset("st_tw_top",
                 dataset="/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
@@ -313,10 +309,6 @@ class Config():
                 process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
                 splitting=200000),
 
             # single top
@@ -326,10 +318,6 @@ class Config():
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=80.95,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
                 splitting=200000),
             Dataset("st_top",
                 dataset="/ST_t-channel_top_5f_TuneCP5_13TeV-powheg-pythia8/"
@@ -337,10 +325,6 @@ class Config():
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=136.02,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
                 splitting=200000),
             
             # DATA
