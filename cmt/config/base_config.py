@@ -221,7 +221,9 @@ class Config():
             ],
             "etau": [
                 "tt_dl",
+                "tt_sl",
                 "dy",
+                "others",
                 "data_etau",
             ]
         }
@@ -468,9 +470,9 @@ class Config():
         weights.default = "1"
         weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
         weights.channels = {
-            "mutau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],
-            "etau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],
-            "tautau": ["genWeight", "puWeight", "PrefireWeight", "trigSF",
+            "mutau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],# "DYscale_MTT"],
+            "etau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],# "DYscale_MTT"],
+            "tautau": ["genWeight", "puWeight", "PrefireWeight", "trigSF",# "DYscale_MTT",
                 "Tau_sfDeepTau2017v2p1VSjet_Medium.at(dau1_index)",
                 "Tau_sfDeepTau2017v2p1VSjet_Medium.at(dau2_index)",
                 "Tau_sfDeepTau2017v2p1VSe_VVLoose.at(dau1_index)",

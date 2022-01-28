@@ -22,3 +22,10 @@ hhvar:
     path: Tools.Tools.hh
     parameters:
         isMC: self.dataset.process.isMC
+
+puweight:
+    name: puWeightRDF
+    path: Base.Modules.puWeightProducer
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year

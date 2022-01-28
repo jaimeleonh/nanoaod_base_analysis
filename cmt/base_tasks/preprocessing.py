@@ -516,12 +516,13 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
     def merge(self, inputs, output):
         ROOT = import_root()
         with output.localize("w") as tmp_out:
+            # law.root.hadd_task(self, [inp.path for inp in inputs], tmp_out, local=True)
             good_inputs = []
             for inp in inputs:
                 tf = ROOT.TFile.Open(inp.path)
                 tree = tf.Get(self.tree_name)
-                # if tree.GetEntries() > 0:
-                good_inputs.append(inp)
+                if tree.GetEntries() > 0:
+                    good_inputs.append(inp)
             if good_inputs:
                 law.root.hadd_task(self, good_inputs, tmp_out, local=True)
             else:
