@@ -221,7 +221,9 @@ class Config():
             ],
             "etau": [
                 "tt_dl",
+                "tt_sl",
                 "dy",
+                "others",
                 "data_etau",
             ]
         }
@@ -251,7 +253,7 @@ class Config():
                 xs=6077.22, 
                 merging={
                     "tautau": 20,
-                    "etau": 40,
+                    "etau": 20,
                 },
                 splitting=100000),
             Dataset("tt_dl",
@@ -288,8 +290,8 @@ class Config():
                 # prefix="xrootd-cms.infn.it//",
                 xs=61526.7,
                 merging={
-                    "tautau": 20,
-                    "etau": 40,
+                    "tautau": 5,
+                    "etau": 10,
                 },
                 splitting=200000),
 
@@ -301,10 +303,6 @@ class Config():
                 process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
                 splitting=200000),
             Dataset("st_tw_top",
                 dataset="/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
@@ -313,10 +311,6 @@ class Config():
                 process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
                 splitting=200000),
 
             # single top
@@ -333,10 +327,6 @@ class Config():
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=136.02,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
                 splitting=200000),
             
             # DATA
@@ -480,9 +470,9 @@ class Config():
         weights.default = "1"
         weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
         weights.channels = {
-            "mutau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],
-            "etau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],
-            "tautau": ["genWeight", "puWeight", "PrefireWeight", "trigSF",
+            "mutau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],# "DYscale_MTT"],
+            "etau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],# "DYscale_MTT"],
+            "tautau": ["genWeight", "puWeight", "PrefireWeight", "trigSF",# "DYscale_MTT",
                 "Tau_sfDeepTau2017v2p1VSjet_Medium.at(dau1_index)",
                 "Tau_sfDeepTau2017v2p1VSjet_Medium.at(dau2_index)",
                 "Tau_sfDeepTau2017v2p1VSe_VVLoose.at(dau1_index)",
