@@ -353,6 +353,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             output_file = inp.split("/")[-1]
         else:
             maxEntries = self.max_events
+            # maxEntries = 100
             firstEntry = self.splitted_branches[self.branch]["initial_event"]
             postfix = "_%s" % self.splitted_branches[self.branch]["split"]
             output_file = ("%s." % postfix).join(inp.split("/")[-1].split("."))
@@ -376,7 +377,7 @@ class PreprocessWrapper(DatasetCategoryWrapperTask):
 
 # class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
 class Categorization(Preprocess):
-    base_category_name = luigi.Parameter(default="base", description="the name of the "
+    base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
         "base category with the initial selection, default: base")
     systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
         "default: None")

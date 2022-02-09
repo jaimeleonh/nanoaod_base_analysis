@@ -326,10 +326,6 @@ class Config():
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=80.95,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
                 splitting=200000),
             Dataset("st_top",
                 dataset="/ST_t-channel_top_5f_TuneCP5_13TeV-powheg-pythia8/"
