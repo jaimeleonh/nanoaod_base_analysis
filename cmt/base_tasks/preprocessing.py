@@ -343,7 +343,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
         # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
-        # selection = "(event == 960406)"
+        # selection = "(event == 131062)"
         modules = self.get_modules()
 
         if self.max_events == -1:
@@ -353,7 +353,8 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             output_file = inp.split("/")[-1]
         else:
             maxEntries = self.max_events
-            # maxEntries = 100
+            # maxEntries = 1
+            # firstEntry = 228
             firstEntry = self.splitted_branches[self.branch]["initial_event"]
             postfix = "_%s" % self.splitted_branches[self.branch]["split"]
             output_file = ("%s." % postfix).join(inp.split("/")[-1].split("."))
@@ -465,12 +466,17 @@ class Categorization(Preprocess):
                     selection = jrs(dataset_selection, selection, op="and")
 
                 df = ROOT.RDataFrame(self.tree_name, inp)
+                branches = list(df.GetColumnNames())
                 feature_modules = self.get_feature_modules()
                 if len(feature_modules) > 0:
                     for module in feature_modules:
-                        df, _ = module.run(df)
+                        df, add_branches = module.run(df)
+                        branches += add_branches
+                branch_list = ROOT.vector('string')()
+                for branch_name in branches:
+                    branch_list.push_back(branch_name)
                 filtered_df = df.Define("selection", selection).Filter("selection")
-                filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path))
+                filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path), branch_list)
             else:
                 tf.Close()
                 copy(inp, outp["data"].path)
