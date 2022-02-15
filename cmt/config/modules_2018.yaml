@@ -82,7 +82,7 @@ jet_syst:
 
 hhjets:
     name: HHJets
-    path: cmt.modules.HHJets
+    path: Tools.Tools.HHJets
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
