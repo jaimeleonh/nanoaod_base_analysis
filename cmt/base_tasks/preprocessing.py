@@ -92,7 +92,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask)
         return {"data": InputData.req(self)}
 
     def requires(self):
-            return InputData.req(self, file_index=self.branch)
+        return InputData.req(self, file_index=self.branch)
 
     def output(self):
         # return {
@@ -294,6 +294,8 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             return _nargs, _kwargs
 
         modules = []
+        if not module_params:
+            return modules
         for tag in module_params.keys():
             parameter_str = ""
             assert "name" in module_params[tag] and "path" in module_params[tag]
@@ -343,7 +345,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
         # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
-        # selection = "(event == 131062)"
+        # selection = "(event == 974871)"
         modules = self.get_modules()
 
         if self.max_events == -1:
