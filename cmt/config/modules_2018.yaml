@@ -53,11 +53,11 @@ hhlep:
         runPeriod: self.dataset.runPeriod
 
 
-hhlep_counter:
-    name: Counter
-    path: cmt.modules.counter
-    parameters:
-        histo_name: HHLepton
+# hhlep_counter:
+    # name: Counter
+    # path: cmt.modules.counter
+    # parameters:
+        # histo_name: HHLepton
 
 
 hhlep_var:
@@ -105,7 +105,7 @@ PUjetID_SF:
 
 trigSF:
     name: Htt_trigSF
-    path: cmt.modules.Htt_trigSF
+    path: Tools.Tools.Htt_trigSF
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
