@@ -97,7 +97,7 @@ hhjets:
 
 PUjetID_SF:
     name: PUjetID_SF
-    path: cmt.modules.PUjetID_SF
+    path: Tools.Tools.PUjetID_SF
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
