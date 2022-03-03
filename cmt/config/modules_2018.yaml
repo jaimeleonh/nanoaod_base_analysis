@@ -7,7 +7,7 @@
 
 # puWeight:
     # name: puWeight
-    # path: cmt.modules.weight
+    # path: Base.Modules.puWeight
     # parameters:
         # isMC: self.dataset.process.isMC
         # year: self.config.year
@@ -21,6 +21,7 @@
         # isMC: self.dataset.process.isMC
         # weights: self.config.weights.total_events_weights
 
+
 2:
     name: MetFilter
     path: Base.Modules.METfilters
@@ -30,8 +31,17 @@
 
 
 3_w2:
+    name: prescaleWeight
+    path: Tools.Tools.weight
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+
+
+
+4_w2:
     name: prefiringWeight
-    path: cmt.modules.weight
+    path: Base.Modules.prefiringWeight
     parameters:
         isMC: self.dataset.process.isMC
 
@@ -62,7 +72,7 @@ hhlep:
 
 hhlep_var:
     name: HHLeptonVariable
-    path: cmt.modules.HHLepton
+    path: Tools.Tools.HHLepton
     parameters:
         isMC: self.dataset.process.isMC
 

@@ -1,4 +1,4 @@
-drop Photon*
+#drop Photon*
 #drop HLT*
 drop L1*
 #drop Flag*
