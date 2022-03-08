@@ -170,6 +170,45 @@ class PreCounterWrapper(DatasetSuperWrapperTask):
         return PreCounter.req(self, dataset_name=dataset.name)
 
 
+class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
+    modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
+        default="")
+    weights_file = None
+
+    def output(self):
+        return  self.local_target("data_%s.root" % self.branch)
+
+    @law.decorator.notify
+    @law.decorator.localize(input=False)
+    def run(self):
+        from shutil import copy
+        ROOT = import_root()
+        ROOT.ROOT.EnableImplicitMT()
+
+        # prepare inputs and outputs
+        inp = self.input().path
+        outp = self.output()
+        df = ROOT.RDataFrame(self.tree_name, inp)
+
+        selection = self.category.selection
+        dataset_selection = self.dataset.get_aux("selection")
+        if dataset_selection and dataset_selection != "1":
+            selection = jrs(dataset_selection, selection, op="and")
+
+        filtered_df = df.Define("selection", selection).Filter("selection")
+
+        modules = self.get_feature_modules(self.modules_file)
+        branches = list(df.GetColumnNames())
+        if len(modules) > 0:
+            for module in modules:
+                filtered_df, add_branches = module.run(filtered_df)
+                branches += add_branches
+        branch_list = ROOT.vector('string')()
+        for branch_name in branches:
+            branch_list.push_back(branch_name)
+        filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
+
+
 class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
 
     modules = luigi.DictParameter(default=None)
@@ -340,12 +379,12 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             json.dump(d, f, indent = 4)
 
         # build the full selection
-        selection = self.category.selection
-        dataset_selection = self.dataset.get_aux("selection")
-        if dataset_selection and dataset_selection != "1":
-            selection = jrs(dataset_selection, selection, op="and")
+        selection = self.category.get_aux("nt_selection", "")
+        # dataset_selection = self.dataset.get_aux("selection")
+        # if dataset_selection and dataset_selection != "1":
+            # selection = jrs(dataset_selection, selection, op="and")
         # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
-        # selection = "(event == 974871)"
+        # selection = "(event == 974821)"
         modules = self.get_modules()
 
         if self.max_events == -1:

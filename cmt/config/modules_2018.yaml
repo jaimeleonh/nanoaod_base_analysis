@@ -38,7 +38,6 @@
         year: self.config.year
 
 
-
 4_w2:
     name: prefiringWeight
     path: Base.Modules.prefiringWeight
@@ -48,7 +47,7 @@
 
 tau_sf:
     name: tauCorrections
-    path: cmt.modules.weight
+    path: Tools.Tools.weight
     parameters:
         isMC: self.dataset.process.isMC
         year: self.config.year
@@ -119,3 +118,18 @@ trigSF:
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
+
+
+svfit:
+    name: SVFit
+    path: Tools.Tools.svfit
+    parameters:
+        isMC: self.dataset.process.isMC
+
+
+hh:  
+    name: HH
+    path: Tools.Tools.hh
+    parameters:
+        isMC: self.dataset.process.isMC
+

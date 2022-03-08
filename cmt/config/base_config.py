@@ -94,7 +94,7 @@ class Config():
 
     def add_categories(self):
         reject_sel = ["pairType == -31415"]
-    
+
         sel = DotDict()
         df = lambda i, op, wp: "Jet_btagDeepFlavB.at(bjet{}_JetIdx) {} {}".format(i, op, self.btag[wp])
         sel["btag"] = DotDict(
@@ -160,13 +160,23 @@ class Config():
 
         categories = [
             Category("base", "base category"),
-            Category("base_selection", "base category", selection="(Sum$(Tau_pt->fElements > 17) > 0"
-                " && (Sum$(Muon_pt->fElements > 17) > 0 || Sum$(Electron_pt->fElements > 17) > 0)"
-                " || Sum$(Tau_pt->fElements > 17) > 1 && Sum$(Jet_pt->fElements > 17) > 1)"),
+            Category("base_selection", "base category",
+                nt_selection="(Sum$(Tau_pt->fElements > 17) > 0"
+                    " && ((Sum$(Muon_pt->fElements > 17) > 0"
+                    " || Sum$(Electron_pt->fElements > 17) > 0)"
+                    " || Sum$(Tau_pt->fElements > 17) > 1)"
+                    " && Sum$(Jet_pt->fElements > 17) > 1)",
+                selection="Tau_pt[Tau_pt > 17].size() > 0 "
+                    "&& ((Muon_pt[Muon_pt > 17].size() > 0"
+                    "|| Electron_pt[Electron_pt > 17].size() > 0)"
+                    "|| Tau_pt[Tau_pt > 17].size() > 1)"
+                    "&& Jet_pt[Jet_pt > 17].size() > 0"),
             Category("dum", "dummy category", selection="Htt_svfit_mass_nom > 50 "
                 " && Htt_svfit_mass_nom < 150"),
             Category("mutau", "#mu#tau channel", selection="pairType == 0"),
             Category("etau", "e#tau channel", selection="pairType == 1"),
+            # Category("etau", "e#tau channel", selection="pairType >= -999"),
+            # Category("etau", "e#tau channel", selection="1."),
             Category("tautau", "#tau#tau channel", selection="pairType == 2"),
             Category("resolved_1b", label="Resolved 1b category",
                 selection=sel["resolved_1b_combined"]),
