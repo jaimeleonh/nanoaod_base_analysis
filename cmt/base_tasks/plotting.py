@@ -11,21 +11,35 @@ from copy import deepcopy as copy
 import json
 import math
 import itertools
+import functools
 from collections import OrderedDict
 
 import law
 import luigi
+import plotlib.root as r
+from cmt.util import hist_to_array, hist_to_graph, get_graph_maximum, update_graph_values
+
 
 from analysis_tools import ObjectCollection
 from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize, randomize
 )
-from plotting_tools.root import get_labels, Canvas
+from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import ( 
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, ConfigTaskWithCategory
 )
 
 from cmt.base_tasks.preprocessing import Preprocess, MergeCategorization, MergeCategorizationStats
+
+cmt_style = r.styles.copy("default", "cmt_style")
+cmt_style.style.ErrorX = 0
+cmt_style.x_axis.TitleOffset = 1.22
+cmt_style.y_axis.TitleOffset = 1.48
+cmt_style.legend.TextSize = 20
+cmt_style.style.legend_dy = 0.035
+cmt_style.style.legend_y2 = 0.93
+
+EMPTY = -1.e5
 
 class BasePlotTask(ConfigTaskWithCategory):
     base_category_name = luigi.Parameter(default="base", description="the name of the "
@@ -304,7 +318,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.do_qcd:
             reqs["qcd"] = {
                 key: self.req(self, region_name=region.name, blinded=False, hide_data=False,
-                    do_qcd=False, stack=True, save_root=True, save_pdf=True, save_yields=True,
+                    do_qcd=False, stack=True, save_root=True, save_pdf=True, save_yields=False,
                     remove_horns=False,_exclude=["feature_tags", "shape_region",
                     "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp"])
                 for key, region in self.qcd_regions.items()
@@ -578,6 +592,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if not self.hide_data:
                 all_hists += data_hists
 
+            bkg_histo = None
+            data_histo = None
             if not self.stack:
                 for hist in all_hists:
                     scale = 1. / (hist.Integral() or 1.)
@@ -588,17 +604,19 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 background_stack = ROOT.THStack(randomize("stack"), "stack")
                 for hist in background_hists[::-1]:
                     background_stack.Add(hist)
+                    if not bkg_histo:
+                        bkg_histo = hist.Clone()
+                    else:
+                        bkg_histo.Add(hist.Clone())
                 background_stack.hist_type = "background"
                 draw_hists = [background_stack] + signal_hists[::-1]
                 if not self.hide_data:
                     draw_hists.extend(data_hists[::-1])
-
-            dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
-            dummy_hist.GetYaxis().SetMaxDigits(4)
-            maximum = max([hist.GetMaximum() for hist in draw_hists])
-            dummy_hist.SetMaximum(1.1 * maximum)
-            dummy_hist.SetMinimum(0)  # FIXME in case of log scale
-            draw_labels = get_labels(upper_right="")
+                    for hist in data_hists:
+                        if not data_histo:
+                            data_histo = hist.Clone()
+                        else:
+                            data_histo.Add(hist.Clone())
 
             entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
             n_entries = len(entries)
@@ -622,8 +640,23 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             for entry in entries:
                 legend.AddEntry(*entry)
 
+            dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             # Draw
-            c = Canvas()
+            if self.hide_data or len(data_hists) == 0:
+                c = Canvas()
+            else:
+                c = RatioCanvas()
+                dummy_hist.GetXaxis().SetLabelOffset(100)
+                dummy_hist.GetXaxis().SetTitleOffset(100)
+                c.get_pad(1).cd()
+
+            r.setup_hist(dummy_hist, pad=c.get_pad(1))
+            dummy_hist.GetYaxis().SetMaxDigits(4)
+            maximum = max([hist.GetMaximum() for hist in draw_hists])
+            dummy_hist.SetMaximum(1.1 * maximum)
+            dummy_hist.SetMinimum(0.001)  # FIXME in case of log scale
+            draw_labels = get_labels(upper_right="")
+
             dummy_hist.Draw()
             for hist in draw_hists:
                 option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
@@ -632,6 +665,61 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             for label in draw_labels:
                 label.Draw()
             legend.Draw()
+
+            if not (self.hide_data or len(data_hists) == 0):
+                dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
+                r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
+                    props={"Minimum": 0.25, "Maximum": 1.75})
+                r.setup_y_axis(dummy_ratio_hist.GetYaxis(), pad=c.get_pad(2),
+                    props={"Ndivisions": 3})
+                dummy_ratio_hist.GetYaxis().SetTitle("Data / MC")
+                dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
+                dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
+
+                data_graph = hist_to_graph(data_histo, remove_zeros=False, errors=True,
+                    asymm=True, overflow=False, underflow=False,
+                    attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
+                bkg_graph = hist_to_graph(bkg_histo, remove_zeros=False, errors=True,
+                    asymm=True, overflow=False, underflow=False,
+                    attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
+
+                ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
+                mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                r.setup_graph(ratio_graph)
+                r.setup_graph(mc_unc_graph, props={"FillStyle": 1001, "LineColor": 0,
+                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": 16})
+
+                for i in range(binning_args[0]):
+                    x, d, b = ROOT.Double(), ROOT.Double(), ROOT.Double()
+                    data_graph.GetPoint(i, x, d)
+                    bkg_graph.GetPoint(i, x, b)
+                    if d == EMPTY or b == 0:
+                        ratio_graph.SetPoint(i, x, EMPTY)
+                    else:
+                        ratio_graph.SetPoint(i, x, d / b)
+                        ratio_graph.SetPointEYhigh(i, data_graph.GetErrorYhigh(i) / b)
+                        ratio_graph.SetPointEYlow(i, data_graph.GetErrorYlow(i) / b)
+                    # set the mc uncertainty
+                    if b == 0:
+                        mc_unc_graph.SetPoint(i, x, EMPTY)
+                    else:
+                        mc_unc_graph.SetPoint(i, x, 1.)
+                        mc_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                            bkg_graph.GetErrorYhigh(i) / b)
+
+                c.get_pad(2).cd()
+                dummy_ratio_hist.Draw()
+                mc_unc_graph.Draw("2,SAME")
+                if not self.hide_data:
+                    ratio_graph.Draw("PEZ,SAME")
+                lines = []
+                for y in [0.5, 1.0, 1.5]:
+                    l = ROOT.TLine(binning_args[1], y, binning_args[2], y)
+                    r.setup_line(l, props={"NDC": False, "LineStyle": 3, "LineWidth": 1,
+                        "LineColor": 1})
+                    lines.append(l)
+                for line in lines:
+                    line.Draw("same")
 
             outputs = []
             if self.save_png:
