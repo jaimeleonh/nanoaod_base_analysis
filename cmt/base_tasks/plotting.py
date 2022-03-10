@@ -231,6 +231,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "grouping, only encoded into output paths when changed, default: default")
     bins_in_x_axis = luigi.BoolParameter(default=False, description="whether to show in the x axis "
         "bin numbers instead of the feature value, default: False")
+    plot_systematics = luigi.BoolParameter(default=True, description="whether plot systematics, "
+        "default: True")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
         # "optimization task to use, not used when empty, default: empty")
@@ -384,7 +386,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     def complete(self):
         return ConfigTaskWithCategory.complete(self)
 
-
     @law.decorator.notify
     @law.decorator.safe_output
     def run(self):
@@ -395,7 +396,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         inputs = self.input()
 
         lumi = self.config.lumi_pb
-        
+
         def setup_signal_hist(hist, color):
             hist.hist_type = "signal"
             hist.legend_style = "l"
@@ -420,10 +421,62 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             hist.SetLineColor(color)
             hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
-        # helper to extract the qcd shape in a region
         data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
+        signal_names = [p.name for p in self.processes_datasets.keys() if p.isSignal]
         background_names = [p.name for p in self.processes_datasets.keys()
             if not p.isData and not p.isSignal]
+
+        # systematics
+        systematics = {}
+        if self.plot_systematics:
+            all_signal_names = []
+            all_background_names = []
+            for p in self.config.processes:
+                if p.isSignal:
+                    all_signal_names.append(p.get_aux("llr_name")
+                        if p.get_aux("llr_name", None) else p.name)
+                elif not p.isData:
+                    all_background_names.append(p.get_aux("llr_name")
+                        if p.get_aux("llr_name", None) else p.name)
+
+            from cmt.analysis.systReader import systReader
+            syst_folder = os.environ["CMT_BASE"] + "/cmt/files/systematics/"
+            syst = systReader(syst_folder + "systematics_{}.cfg".format(self.config.year),
+                all_signal_names, all_background_names, None)
+            syst.writeOutput(False)
+            syst.verbose(False)
+
+            channel = self.config.get_channel_from_region(self.region)
+            if(channel == "mutau"):
+                syst.addSystFile(syst_folder + "systematics_mutau_%s.cfg" % self.config.year)
+            elif(channel == "etau"):
+                syst.addSystFile(syst_folder + "systematics_etau_%s.cfg" % self.config.year)
+            syst.addSystFile(syst_folder + "syst_th.cfg")
+            syst.writeSystematics()
+            for isy, syst_name in enumerate(syst.SystNames):
+                if "CMS_scale_t" in syst.SystNames[isy] or "CMS_scale_j" in syst.SystNames[isy]:
+                    continue
+                for dataset in self.datasets:
+                    process = dataset.process
+                    while True:
+                        process_name = (process.get_aux("llr_name")
+                            if process.get_aux("llr_name", None) else p.name)
+                        if process_name in syst.SystProcesses[isy]:
+                            iproc = syst.SystProcesses[isy].index(process_name)
+                            systVal = syst.SystValues[isy][iproc]
+                            if dataset.name not in systematics:
+                                systematics[dataset.name] = []
+                            systematics[dataset.name].append((syst_name, eval(systVal) - 1))
+                            break
+                        elif process.parent_process:
+                            process=self.config.processes.get(dataset.process.parent_process)
+                        else:
+                            break
+            for dataset_name in systematics:
+                systematics[dataset_name] = math.sqrt(sum([x[1] * x[1]
+                    for x in systematics[dataset_name]]))
+
+        # helper to extract the qcd shape in a region
         def get_qcd(region, files, bin_limit=0.):
             d_hist = files[region].Get("histograms/" + data_names[0])
             if not d_hist:
@@ -468,7 +521,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             signal_hists = []
             data_hists = []
             all_hists = []
-            colors = []
+            colors = []            
+            if self.plot_systematics:
+                bkg_histo_syst = ROOT.TH1D("syst", hist_title, *binning_args)
             for process, datasets in self.processes_datasets.items():
                 feature_name = feature.name  # FIXME: What about systs?
                 process_histo = ROOT.TH1D(str(process.label), hist_title, *binning_args)
@@ -496,6 +551,14 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         if nevents != 0:
                             dataset_histo.Scale(dataset.xs * lumi / nevents)
                     process_histo.Add(dataset_histo)
+                    if self.plot_systematics and not process.isData and not process.isSignal:
+                        dataset_histo_syst = dataset_histo.Clone()
+                        for ibin in range(1, dataset_histo_syst.GetNbinsX() + 1):
+                            dataset_histo_syst.SetBinError(ibin,
+                                float(dataset_histo.GetBinContent(ibin)) * systematics[dataset.name]
+                            )
+                        bkg_histo_syst.Add(dataset_histo_syst)
+
                 yield_error = ROOT.Double()
                 process_histo.cmt_yield = process_histo.IntegralAndError(0,
                     process_histo.GetNbinsX() + 1, yield_error)
@@ -686,8 +749,18 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
                 mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
                 r.setup_graph(ratio_graph)
-                r.setup_graph(mc_unc_graph, props={"FillStyle": 1001, "LineColor": 0,
-                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": 16})
+                r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
+                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+                if self.plot_systematics:
+                    syst_graph = hist_to_graph(bkg_histo_syst, remove_zeros=False, errors=True,
+                        asymm=True, overflow=False, underflow=False,
+                        attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
+                    syst_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                    r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
+                        "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
+                    all_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                    r.setup_graph(all_unc_graph, props={"FillStyle": 3007, "LineColor": 0,
+                        "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
 
                 for i in range(binning_args[0]):
                     x, d, b = ROOT.Double(), ROOT.Double(), ROOT.Double()
@@ -704,14 +777,30 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         mc_unc_graph.SetPoint(i, x, EMPTY)
                     else:
                         mc_unc_graph.SetPoint(i, x, 1.)
+                        mc_error = bkg_graph.GetErrorYhigh(i) / b
                         mc_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
-                            bkg_graph.GetErrorYhigh(i) / b)
+                            mc_error)
+                        if self.plot_systematics:
+                        # syst only
+                            syst_unc_graph.SetPoint(i, x, 1.)
+                            syst_error = syst_graph.GetErrorYhigh(i) / b
+                            syst_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                                syst_error)
+                            # syst + stat
+                            all_unc_graph.SetPoint(i, x, 1.)
+                            tot_unc = math.sqrt(mc_error ** 2 + syst_error ** 2)
+                            all_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                                tot_unc)
 
                 c.get_pad(2).cd()
                 dummy_ratio_hist.Draw()
                 mc_unc_graph.Draw("2,SAME")
                 if not self.hide_data:
                     ratio_graph.Draw("PEZ,SAME")
+                if self.plot_systematics:
+                    # syst_unc_graph.Draw("2,SAME")
+                    all_unc_graph.Draw("2,SAME")
+
                 lines = []
                 for y in [0.5, 1.0, 1.5]:
                     l = ROOT.TLine(binning_args[1], y, binning_args[2], y)

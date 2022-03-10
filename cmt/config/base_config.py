@@ -196,17 +196,20 @@ class Config():
     def add_processes(self):
         processes = [
             Process("ggf_sm", Label("$HH_{ggF}$"), color=(0, 0, 0), isSignal=True),
-            Process("dy", Label("DY"), color=(255, 102, 102), isDY=True),
+            Process("dy", Label("DY"), color=(255, 102, 102), isDY=True, llr_name="DY"),
 
-            Process("tt", Label("t#bar{t}"), color=(255, 153, 0)),
+            Process("tt", Label("t#bar{t}"), color=(255, 153, 0), llr_name="TT"),
             Process("tt_dl", Label("t#bar{t} DL"), color=(205, 0, 9), parent_process="tt"),
             Process("tt_sl", Label("t#bar{t} SL"), color=(255, 153, 0), parent_process="tt"),
             Process("tt_fh", Label("t#bar{t} FH"), color=(131, 38, 10), parent_process="tt"),
 
             Process("others", Label("Others"), color=(134, 136, 138)),
-            Process("wjets", Label("W + jets"), color=(134, 136, 138), parent_process="others"),
-            Process("tw", Label("t + W"), color=(134, 136, 138), parent_process="others"),
-            Process("singlet", Label("Single t"), color=(134, 136, 138), parent_process="others"),
+            Process("wjets", Label("W + jets"), color=(134, 136, 138), parent_process="others",
+                llr_name="WJets"),
+            Process("tw", Label("t + W"), color=(134, 136, 138), parent_process="others",
+                llr_name="TW"),
+            Process("singlet", Label("Single t"), color=(134, 136, 138), parent_process="others",
+                llr_name="singleT"),
 
             Process("data", Label("DATA"), color=(0, 0, 0), isData=True),
             Process("data_tau", Label("DATA\_TAU"), color=(0, 0, 0), parent_process="data", isData=True),
@@ -576,6 +579,15 @@ class Config():
             return get_expression(feature)
 
     # other methods
+
+    def get_channel_from_region(self, region):
+        for sign in ["os", "ss"]:
+            if sign in region.name:
+                if region.name.startswith(sign):
+                    return ""
+                return region.name[:region.name.index("_%s" % sign)]
+        return ""
+
     def get_qcd_regions(self, region, category, wp="", shape_region="os_inviso",
             signal_region_wp="os_iso", sym=False):
         # the region must be set and tagged os_iso
