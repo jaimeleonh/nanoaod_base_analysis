@@ -196,6 +196,7 @@ class Config():
     def add_processes(self):
         processes = [
             Process("ggf_sm", Label("$HH_{ggF}$"), color=(0, 0, 0), isSignal=True),
+            Process("vbf_sm", Label("$HH_{VBF}$"), color=(0, 0, 0), isSignal=True),
             Process("dy", Label("DY"), color=(255, 102, 102), isDY=True, llr_name="DY"),
 
             Process("tt", Label("t#bar{t}"), color=(255, 153, 0), llr_name="TT"),
@@ -245,16 +246,20 @@ class Config():
     def add_datasets(self):
         datasets = [
             Dataset("ggf_sm",
-                # "/store/mc/RunIIAutumn18NanoAODv7/"
-                # "GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8"
-                # "/NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/",
                 dataset="/GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8/"
                     "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
                     "NANOAODSIM",
                 process=self.processes.get("ggf_sm"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=0.001726,
-                splitting=400000,),
+                xs=0.03105),
+
+            Dataset("vbf_sm",
+                dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_1_dipoleRecoilOff"
+                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("vbf_sm"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.001726),
 
             # Background samples
             Dataset("dy_high",
