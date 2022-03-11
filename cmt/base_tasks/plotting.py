@@ -63,12 +63,12 @@ class BasePlotTask(ConfigTaskWithCategory):
         "from distributions, default: False")
 
     tree_name = "Events"
-    
+
     def __init__(self, *args, **kwargs):
         super(BasePlotTask, self).__init__(*args, **kwargs)
         # select features
         self.features = self.get_features()
-    
+
     def get_features(self):
         features = []
         for feature in self.config.features:
@@ -165,18 +165,27 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             y_title = "Events" + y_axis_adendum
             title = "; %s; %s" % (x_title, y_title)
 
-            systs = [""] + self.get_systs(feature, isMC)
+            systs = ["central"] + self.get_systs(feature, isMC)
 
-            for syst, direction in zip(systs, directions):
-                if syst == "" and direction != directions[0]:  # avoid repeating central histo
-                    continue
+            systs_directions = [("central", "")]
+            if isMC:
+                systs_directions += list(itertools.product(systs, directions))
+
+            for syst_name, direction in systs_directions:
+                if syst_name != "central":
+                    syst = self.config.systematics.get(syst_name)
+                else:
+                    syst = self.config.systematics.get(feature.central)
+
                 # define tag just for histograms's name
-                if syst != "" and isMC:
-                    tag = "_%s_%s" % (syst, direction)
+                if syst_name != "central" and isMC:
+                    tag = "_%s" % syst_name
+                    if direction != "":
+                        tag += "_%s" % direction
                 else:
                     tag = ""
                 feature_expression = self.config.get_object_expression(
-                    feature, isMC, syst, direction)
+                    feature, isMC, syst_name, direction)
                 feature_name = feature.name + tag
                 hist_base = ROOT.TH1D(feature_name, title, *binning_args)
                 if nentries > 0:
@@ -249,7 +258,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         # significant=False, description="threshold method to be used, default: yield")
     # region_to_optimize = luigi.Parameter(default=law.NO_STR, description="region used for the "
         # "optimization, default: same region as plot")
-    
+
     # Not implemented yet
     bin_opt_version = None
     # remove_horns = False
@@ -273,7 +282,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 processes += get_processes(process=self.config.processes.get(
                     dataset.process.parent_process))
             return processes
-        
+
         for dataset in self.datasets:
             processes = get_processes(dataset=dataset)
             filtered_processes = ObjectCollection()
@@ -303,7 +312,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if not any(dataset.process.isData for dataset in self.datasets):
                 raise Exception("no real dataset passed for QCD estimation")
 
-
     def requires(self):
         reqs = {}
         reqs["data"] = OrderedDict(
@@ -316,7 +324,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             (dataset.name, MergeCategorizationStats.vreq(self, dataset_name=dataset.name))
             for dataset in self.datasets_to_run if not dataset.process.isData
         )
-        
+
         if self.do_qcd:
             reqs["qcd"] = {
                 key: self.req(self, region_name=region.name, blinded=False, hide_data=False,

@@ -35,7 +35,7 @@ class Config():
     def join_selection_channels(self, selection):
         return jrs([jrs(jrs(selection[ch.name], op="and"), ch.selection, op="and")
             for ch in self.channels], op="or")
-    
+
     def combine_selections_per_channel(self, selection1, selection2):
         selection = DotDict()
         for channel in selection1:
@@ -118,7 +118,7 @@ class Config():
             "abs([VBFjj_deltaEta]) > 3", "isVBFtrigger == 1"]
         _excl_vbf_tight = _excl_vbf_tight_nob + sel.btag.m_any
         _excl_non_vbf_tight = ["!" + jrs(_excl_vbf_tight, op="and")]
-        
+
         _excl_non_vbf = ["!" + jrs(jrs(_excl_vbf_loose, op="and"), jrs(_excl_vbf_tight, op="and"),
             op="or")]
 
@@ -307,7 +307,6 @@ class Config():
                     "etau": 10,
                 },
                 splitting=200000),
-
             # tW
             Dataset("st_tw_antitop",
                 dataset="/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
@@ -325,7 +324,6 @@ class Config():
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
                 splitting=200000),
-
             # single top
             Dataset("st_antitop",
                 dataset="/ST_t-channel_antitop_5f_TuneCP5_13TeV-powheg-pythia8/"
@@ -341,7 +339,7 @@ class Config():
                 # prefix="xrootd-cms.infn.it//",
                 xs=136.02,
                 splitting=200000),
-            
+
             # DATA
             # Tau 2018
             Dataset("data_tau_a",
@@ -451,7 +449,8 @@ class Config():
             Feature("bjet1_pt", "Jet_pt.at(bjet1_JetIdx)", binning=(10, 50, 150),
                 x_title=Label("b_1 p_t"),
                 units="GeV",
-                central="jet_smearing"),
+                central="jet_smearing",
+                systematics=["empty"]),
             Feature("bjet2_pt", "Jet_pt.at(bjet2_JetIdx)", binning=(10, 50, 150),
                 x_title=Label("b_2 p_t"),
                 units="GeV",
@@ -499,7 +498,8 @@ class Config():
 
     def add_systematics(self):
         systematics = [
-            Systematic("jet_smearing", "nom")
+            Systematic("jet_smearing", "_nom"),
+            Systematic("empty", "", up="", down="")
         ]
         return ObjectCollection(systematics)
 
@@ -514,11 +514,11 @@ class Config():
         return self.systematics.get(feature.central).expression
 
     def get_object_expression(self, feature, isMC=False,
-            systematic=None, systematic_direction=None):
+            syst_name=None, systematic_direction=""):
         """
         Returns a feature or category's expression including the systematic considered
         """
-        
+
         def get_expression(obj):
             if isinstance(obj, Feature):
                 return obj.expression
@@ -547,35 +547,30 @@ class Config():
                 feature_name_to_look = feature_expression[initial + 1: final]
                 feature_to_look = self.features.get(feature_name_to_look)
 
-                if isMC and systematic in feature_to_look.systematics:
-                    syst = self.systematics.get(systematic)
-                    tag = "_%s%s" % (syst.expression, syst.get(systematic_direction))
-                else:
+                if not isMC:
                     tag = ""
-
-                if self.get_central_value(feature_to_look) != "" and isMC:
-                    tag = "_%s%s" % (self.get_central_value(feature_to_look), tag)
-                else:
-                    tag = ""
+                elif syst_name == "central":
+                    tag = "%s" % self.systematics.get(feature_to_look.central).expression
+                elif isMC and syst_name in feature_to_look.systematics:
+                    syst = self.systematics.get(syst_name)
+                    tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
 
                 feature_to_look_expression = add_systematic_tag(feature_to_look.expression, tag)
                 feature_expression = feature_expression.replace(feature_expression[initial: final + 1],
                     feature_to_look_expression)
             return feature_expression
+
         elif isinstance(feature, Feature):  # not derived expression and not a category
-            if not systematic or systematic not in feature.systematics:
+            if not isMC:
                 tag = ""
-            elif systematic in feature.systematics:
-                syst = self.systematics.get(systematic)
-                tag = "_%s%s" % (syst.expression, syst.get(systematic_direction))
-            
-            if self.get_central_value(feature) != "" and isMC:
-                tag = ("_%s%s" % (self.get_central_value(feature), tag)
-                if tag else "_%s" % (self.get_central_value(feature)))
-            else:
-                tag = ""
+            elif syst_name == "central":
+                tag = "%s" % self.systematics.get(feature.central).expression
+            elif isMC and syst_name in feature.systematics:
+                syst = self.systematics.get(syst_name)
+                tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
+
             return add_systematic_tag(feature.expression, tag)
-        else:  # for now, o
+        else:
             return get_expression(feature)
 
     # other methods
