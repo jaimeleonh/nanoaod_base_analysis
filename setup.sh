@@ -283,7 +283,11 @@ action() {
         if [ "$CMT_FORCE_SOFTWARE" = "1" ]; then
             cmt_setup_software force
         else
-            cmt_setup_software silent
+	    if [ "$CMT_FORCE_CMSSW" = "1" ]; then
+                cmt_setup_software force_cmssw
+	    else
+	        cmt_setup_software silent
+	    fi
         fi
     fi
 
