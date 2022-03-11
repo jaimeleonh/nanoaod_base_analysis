@@ -209,6 +209,12 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
 
 
+class PreprocessRDFWrapper(DatasetCategoryWrapperTask):
+
+    def atomic_requires(self, dataset, category):
+        return PreprocessRDF.vreq(self, dataset_name=dataset.name, category_name=category.name)
+
+
 class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
 
     modules = luigi.DictParameter(default=None)

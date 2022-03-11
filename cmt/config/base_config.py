@@ -35,7 +35,7 @@ class Config():
     def join_selection_channels(self, selection):
         return jrs([jrs(jrs(selection[ch.name], op="and"), ch.selection, op="and")
             for ch in self.channels], op="or")
-    
+
     def combine_selections_per_channel(self, selection1, selection2):
         selection = DotDict()
         for channel in selection1:
@@ -118,7 +118,7 @@ class Config():
             "abs([VBFjj_deltaEta]) > 3", "isVBFtrigger == 1"]
         _excl_vbf_tight = _excl_vbf_tight_nob + sel.btag.m_any
         _excl_non_vbf_tight = ["!" + jrs(_excl_vbf_tight, op="and")]
-        
+
         _excl_non_vbf = ["!" + jrs(jrs(_excl_vbf_loose, op="and"), jrs(_excl_vbf_tight, op="and"),
             op="or")]
 
@@ -196,17 +196,21 @@ class Config():
     def add_processes(self):
         processes = [
             Process("ggf_sm", Label("$HH_{ggF}$"), color=(0, 0, 0), isSignal=True),
-            Process("dy", Label("DY"), color=(255, 102, 102), isDY=True),
+            Process("vbf_sm", Label("$HH_{VBF}$"), color=(0, 0, 0), isSignal=True),
+            Process("dy", Label("DY"), color=(255, 102, 102), isDY=True, llr_name="DY"),
 
-            Process("tt", Label("t#bar{t}"), color=(255, 153, 0)),
+            Process("tt", Label("t#bar{t}"), color=(255, 153, 0), llr_name="TT"),
             Process("tt_dl", Label("t#bar{t} DL"), color=(205, 0, 9), parent_process="tt"),
             Process("tt_sl", Label("t#bar{t} SL"), color=(255, 153, 0), parent_process="tt"),
             Process("tt_fh", Label("t#bar{t} FH"), color=(131, 38, 10), parent_process="tt"),
 
             Process("others", Label("Others"), color=(134, 136, 138)),
-            Process("wjets", Label("W + jets"), color=(134, 136, 138), parent_process="others"),
-            Process("tw", Label("t + W"), color=(134, 136, 138), parent_process="others"),
-            Process("singlet", Label("Single t"), color=(134, 136, 138), parent_process="others"),
+            Process("wjets", Label("W + jets"), color=(134, 136, 138), parent_process="others",
+                llr_name="WJets"),
+            Process("tw", Label("t + W"), color=(134, 136, 138), parent_process="others",
+                llr_name="TW"),
+            Process("singlet", Label("Single t"), color=(134, 136, 138), parent_process="others",
+                llr_name="singleT"),
 
             Process("data", Label("DATA"), color=(0, 0, 0), isData=True),
             Process("data_tau", Label("DATA\_TAU"), color=(0, 0, 0), parent_process="data", isData=True),
@@ -242,16 +246,20 @@ class Config():
     def add_datasets(self):
         datasets = [
             Dataset("ggf_sm",
-                # "/store/mc/RunIIAutumn18NanoAODv7/"
-                # "GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8"
-                # "/NANOAODSIM/Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/",
                 dataset="/GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8/"
                     "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
                     "NANOAODSIM",
                 process=self.processes.get("ggf_sm"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=0.001726,
-                splitting=400000,),
+                xs=0.03105),
+
+            Dataset("vbf_sm",
+                dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_1_dipoleRecoilOff"
+                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("vbf_sm"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.001726),
 
             # Background samples
             Dataset("dy_high",
@@ -304,7 +312,6 @@ class Config():
                     "etau": 10,
                 },
                 splitting=200000),
-
             # tW
             Dataset("st_tw_antitop",
                 dataset="/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
@@ -322,7 +329,6 @@ class Config():
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
                 splitting=200000),
-
             # single top
             Dataset("st_antitop",
                 dataset="/ST_t-channel_antitop_5f_TuneCP5_13TeV-powheg-pythia8/"
@@ -338,7 +344,7 @@ class Config():
                 # prefix="xrootd-cms.infn.it//",
                 xs=136.02,
                 splitting=200000),
-            
+
             # DATA
             # Tau 2018
             Dataset("data_tau_a",
@@ -448,7 +454,8 @@ class Config():
             Feature("bjet1_pt", "Jet_pt.at(bjet1_JetIdx)", binning=(10, 50, 150),
                 x_title=Label("b_1 p_t"),
                 units="GeV",
-                central="jet_smearing"),
+                central="jet_smearing",
+                systematics=["empty"]),
             Feature("bjet2_pt", "Jet_pt.at(bjet2_JetIdx)", binning=(10, 50, 150),
                 x_title=Label("b_2 p_t"),
                 units="GeV",
@@ -496,7 +503,8 @@ class Config():
 
     def add_systematics(self):
         systematics = [
-            Systematic("jet_smearing", "nom")
+            Systematic("jet_smearing", "_nom"),
+            Systematic("empty", "", up="", down="")
         ]
         return ObjectCollection(systematics)
 
@@ -511,11 +519,11 @@ class Config():
         return self.systematics.get(feature.central).expression
 
     def get_object_expression(self, feature, isMC=False,
-            systematic=None, systematic_direction=None):
+            syst_name=None, systematic_direction=""):
         """
         Returns a feature or category's expression including the systematic considered
         """
-        
+
         def get_expression(obj):
             if isinstance(obj, Feature):
                 return obj.expression
@@ -544,38 +552,42 @@ class Config():
                 feature_name_to_look = feature_expression[initial + 1: final]
                 feature_to_look = self.features.get(feature_name_to_look)
 
-                if isMC and systematic in feature_to_look.systematics:
-                    syst = self.systematics.get(systematic)
-                    tag = "_%s%s" % (syst.expression, syst.get(systematic_direction))
-                else:
+                if not isMC:
                     tag = ""
-
-                if self.get_central_value(feature_to_look) != "" and isMC:
-                    tag = "_%s%s" % (self.get_central_value(feature_to_look), tag)
-                else:
-                    tag = ""
+                elif syst_name == "central":
+                    tag = "%s" % self.systematics.get(feature_to_look.central).expression
+                elif isMC and syst_name in feature_to_look.systematics:
+                    syst = self.systematics.get(syst_name)
+                    tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
 
                 feature_to_look_expression = add_systematic_tag(feature_to_look.expression, tag)
                 feature_expression = feature_expression.replace(feature_expression[initial: final + 1],
                     feature_to_look_expression)
             return feature_expression
+
         elif isinstance(feature, Feature):  # not derived expression and not a category
-            if not systematic or systematic not in feature.systematics:
+            if not isMC:
                 tag = ""
-            elif systematic in feature.systematics:
-                syst = self.systematics.get(systematic)
-                tag = "_%s%s" % (syst.expression, syst.get(systematic_direction))
-            
-            if self.get_central_value(feature) != "" and isMC:
-                tag = ("_%s%s" % (self.get_central_value(feature), tag)
-                if tag else "_%s" % (self.get_central_value(feature)))
-            else:
-                tag = ""
+            elif syst_name == "central":
+                tag = "%s" % self.systematics.get(feature.central).expression
+            elif isMC and syst_name in feature.systematics:
+                syst = self.systematics.get(syst_name)
+                tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
+
             return add_systematic_tag(feature.expression, tag)
-        else:  # for now, o
+        else:
             return get_expression(feature)
 
     # other methods
+
+    def get_channel_from_region(self, region):
+        for sign in ["os", "ss"]:
+            if sign in region.name:
+                if region.name.startswith(sign):
+                    return ""
+                return region.name[:region.name.index("_%s" % sign)]
+        return ""
+
     def get_qcd_regions(self, region, category, wp="", shape_region="os_inviso",
             signal_region_wp="os_iso", sym=False):
         # the region must be set and tagged os_iso
