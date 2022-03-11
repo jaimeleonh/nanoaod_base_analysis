@@ -204,6 +204,11 @@ class Config():
             Process("tt_sl", Label("t#bar{t} SL"), color=(255, 153, 0), parent_process="tt"),
             Process("tt_fh", Label("t#bar{t} FH"), color=(131, 38, 10), parent_process="tt"),
 
+            Process("tth", Label("t#bar{t}H"), color=(255, 153, 0), llr_name="TTH"),
+            Process("tth_bb", Label("t#bar{t}H"), color=(255, 153, 0), parent_process="tth"),
+            Process("tth_tautau", Label("t#bar{t}H"), color=(255, 153, 0), parent_process="tth"),
+            Process("tth_nonbb", Label("t#bar{t}H"), color=(255, 153, 0), parent_process="tth"),
+
             Process("others", Label("Others"), color=(134, 136, 138)),
             Process("wjets", Label("W + jets"), color=(134, 136, 138), parent_process="others",
                 llr_name="WJets"),
@@ -300,6 +305,32 @@ class Config():
                 splitting=100000),
 
             # Others
+            # ttH
+            Dataset("tth_bb",
+                dataset="/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8/"
+                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_EXT_102X_upgrade2018_realistic_v21-v1/"
+                    "NANOAODSIM",
+                process=self.processes.get("tth_bb"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.2953,
+                splitting=200000),
+            Dataset("tth_tautau",
+                dataset="/ttHToTauTau_M125_TuneCP5_13TeV-powheg-pythia8/"
+                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
+                    "NANOAODSIM",
+                process=self.processes.get("tth_tautau"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.031805,
+                splitting=200000),
+            Dataset("tth_nonbb",
+                dataset="/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8/"
+                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
+                    "NANOAODSIM",
+                process=self.processes.get("tth_nonbb"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.17996,
+                splitting=200000),
+
             # Wjets
             Dataset("wjets",
                 dataset="/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/"
