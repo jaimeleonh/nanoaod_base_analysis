@@ -303,6 +303,14 @@ class Config():
                     "etau": 40,
                 },
                 splitting=100000),
+            Dataset("tt_fh",
+                dataset="/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8/"
+                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
+                    "NANOAODSIM",
+                process=self.processes.get("tt_fh"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=377.96,
+                splitting=100000),
 
             # Others
             # ttH
