@@ -16,6 +16,13 @@ hhlepton:
         filter: True
 
 
+hhleptonVar:
+    name: HHLeptonVarRDF
+    path: Tools.Tools.HHLepton
+    parameters:
+        isMC: self.dataset.process.isMC
+
+
 jet_smearing:
     name: jetSmearerRDF
     path: Base.Modules.smearing
