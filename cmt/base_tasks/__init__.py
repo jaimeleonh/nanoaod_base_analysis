@@ -1,2 +1,3 @@
-from preprocessing import Preprocess, Categorization
-from plotting import PrePlot
+from preprocessing import *
+from shards import *
+from plotting import *

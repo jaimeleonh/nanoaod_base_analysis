@@ -385,7 +385,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             json.dump(d, f, indent = 4)
 
         # build the full selection
-        selection = self.category.get_aux("nt_selection", "")
+        selection = self.category.get_aux("nt_selection", self.category.selection)
         # dataset_selection = self.dataset.get_aux("selection")
         # if dataset_selection and dataset_selection != "1":
             # selection = jrs(dataset_selection, selection, op="and")
