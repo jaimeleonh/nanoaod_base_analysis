@@ -25,7 +25,7 @@ class Config():
         self.channels = self.add_channels()
         self.regions = self.add_regions()
         self.categories = self.add_categories()
-        self.processes, self.process_group_names = self.add_processes()
+        self.processes, self.process_group_names, self.process_training_names = self.add_processes()
         self.datasets = self.add_datasets()
         self.features = self.add_features()
         self.versions = self.add_versions()
@@ -246,7 +246,15 @@ class Config():
                 "data_etau",
             ]
         }
-        return ObjectCollection(processes), process_group_names
+
+        process_training_names = {
+            "default": [
+                "ggf_sm",
+                "dy"
+            ]
+        }
+
+        return ObjectCollection(processes), process_group_names, process_training_names
 
     def add_datasets(self):
         datasets = [
