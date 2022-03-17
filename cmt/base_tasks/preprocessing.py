@@ -183,7 +183,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     def run(self):
         from shutil import copy
         ROOT = import_root()
-        ROOT.ROOT.EnableImplicitMT()
+        # ROOT.ROOT.EnableImplicitMT()
 
         # prepare inputs and outputs
         inp = self.input().path
@@ -390,7 +390,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         # if dataset_selection and dataset_selection != "1":
             # selection = jrs(dataset_selection, selection, op="and")
         # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
-        # selection = "(event == 974821)"
+        # selection = "(event == 365212)"
         modules = self.get_modules()
 
         if self.max_events == -1:
