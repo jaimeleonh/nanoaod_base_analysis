@@ -41,7 +41,8 @@ class Config_ul_2018(Config):
                     "tautau": 20,
                     "etau": 20,
                 },
-                splitting=100000),
+                splitting=100000,
+                tags=["ul"]),
             Dataset("tt_dl",
                 dataset="/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
@@ -52,7 +53,8 @@ class Config_ul_2018(Config):
                     "tautau": 20,
                     "etau": 40,
                 },
-                splitting=100000),
+                splitting=100000,
+                tags=["ul"]),
             Dataset("tt_sl",
                 dataset="/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
@@ -63,14 +65,16 @@ class Config_ul_2018(Config):
                     "tautau": 20,
                     "etau": 40,
                 },
-                splitting=100000),
+                splitting=100000,
+                tags=["ul"]),
             Dataset("tt_fh",
                 dataset="/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
                 process=self.processes.get("tt_fh"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=377.96,
-                splitting=100000),
+                splitting=100000,
+                tags=["ul"]),
 
             # Others
             # ttH
@@ -80,21 +84,24 @@ class Config_ul_2018(Config):
                 process=self.processes.get("tth_bb"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=0.2953,
-                splitting=200000),
+                splitting=200000,
+                tags=["ul"]),
             Dataset("tth_tautau",
                 dataset="/ttHToTauTau_M125_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
                 process=self.processes.get("tth_tautau"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=0.031805,
-                splitting=200000),
+                splitting=200000,
+                tags=["ul"]),
             Dataset("tth_nonbb",
                 dataset="/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
                 process=self.processes.get("tth_nonbb"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=0.17996,
-                splitting=200000),
+                splitting=200000,
+                tags=["ul"]),
 
             # Wjets
             Dataset("wjets",
@@ -107,7 +114,8 @@ class Config_ul_2018(Config):
                     "tautau": 5,
                     "etau": 10,
                 },
-                splitting=200000),
+                splitting=200000,
+                tags=["ul"]),
             # tW
             Dataset("st_tw_antitop",
                 dataset="/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
@@ -115,14 +123,16 @@ class Config_ul_2018(Config):
                 process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
-                splitting=200000),
+                splitting=200000,
+                tags=["ul"]),
             Dataset("st_tw_top",
                 dataset="/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
                 process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=35.85,
-                splitting=200000),
+                splitting=200000,
+                tags=["ul"]),
             # single top
             # Dataset("st_antitop",
                 # dataset="/ST_t-channel_antitop_5f_TuneCP5_13TeV-powheg-pythia8/"
@@ -137,7 +147,8 @@ class Config_ul_2018(Config):
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=136.02,
-                splitting=200000),
+                splitting=200000,
+                tags=["ul"]),
 
             # DATA
             # Tau 2018
@@ -150,7 +161,8 @@ class Config_ul_2018(Config):
                 merging={
                     "tautau": 20,
                     "etau": 40,
-                },),
+                },
+                tags=["ul"]),
             Dataset("data_tau_b",
                 dataset="/Tau/Run2018B-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
                 process=self.processes.get("data_tau"),
@@ -161,7 +173,8 @@ class Config_ul_2018(Config):
                 merging={
                     "tautau": 20,
                     "etau": 40,
-                },),
+                },
+                tags=["ul"]),
             Dataset("data_tau_c",
                 dataset="/Tau/Run2018C-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
                 process=self.processes.get("data_tau"),
@@ -172,7 +185,8 @@ class Config_ul_2018(Config):
                 merging={
                     "tautau": 20,
                     "etau": 40,
-                },),
+                },
+                tags=["ul"]),
             Dataset("data_tau_d",
                 dataset="/Tau/Run2018D-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
                 process=self.processes.get("data_tau"),
@@ -182,7 +196,8 @@ class Config_ul_2018(Config):
                 merging={
                     "tautau": 20,
                     "etau": 40,
-                },),
+                },
+                tags=["ul"]),
 
             # EGamma 2018
             Dataset("data_etau_a",
@@ -194,7 +209,8 @@ class Config_ul_2018(Config):
                 merging={
                     "tautau": 20,
                     "etau": 40,
-                },),
+                },
+                tags=["ul"]),
             Dataset("data_etau_b",
                 dataset="/EGamma/Run2018B-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
                 process=self.processes.get("data_etau"),
@@ -205,7 +221,8 @@ class Config_ul_2018(Config):
                 merging={
                     "tautau": 20,
                     "etau": 40,
-                },),
+                },
+                tags=["ul"]),
             Dataset("data_etau_c",
                 dataset="/EGamma/Run2018C-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
                 process=self.processes.get("data_etau"),
@@ -216,7 +233,8 @@ class Config_ul_2018(Config):
                 merging={
                     "tautau": 20,
                     "etau": 40,
-                },),
+                },
+                tags=["ul"]),
             Dataset("data_etau_d",
                 dataset="/EGamma/Run2018D-UL2018_MiniAODv2_NanoAODv9-v3/NANOAOD",
                 process=self.processes.get("data_etau"),
@@ -226,7 +244,8 @@ class Config_ul_2018(Config):
                 merging={
                     "tautau": 20,
                     "etau": 40,
-                },),
+                },
+                tags=["ul"]),
 
         ]
         return ObjectCollection(datasets)
