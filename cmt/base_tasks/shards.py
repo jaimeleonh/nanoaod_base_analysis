@@ -6,6 +6,7 @@
 
 __all__ = []
 
+import os
 import law
 import luigi
 from collections import OrderedDict
@@ -216,7 +217,7 @@ class MergeShards(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
     merge_factor = 20
 
-    default_store = "$HMC_STORE_EOS_SHARDS"
+    default_store = "$CMT_STORE_EOS_SHARDS"
     default_wlcg_fs = "wlcg_fs_shards"
 
     def merge_workflow_requires(self):
