@@ -76,6 +76,7 @@ action() {
     [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc820"
     [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_11_1_0_pre4"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="2"
+    [ -z "$CMT_CORRECTIONLIB_PATH" ] && export CMT_CORRECTIONLIB_PATH="$CMT_BASE/correctionlib"
 
     # specific eos dirs
     [ -z "$CMT_STORE_EOS_CATEGORIZATION" ] && export CMT_STORE_EOS_CATEGORIZATION="$CMT_STORE_EOS"
@@ -162,6 +163,26 @@ action() {
             scramv1 project CMSSW "$CMT_CMSSW_VERSION"
         fi
         cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
+
+        if [ ! -d "$CMT_CORRECTIONLIB_PATH" ]; then
+            cmsenv
+            git clone --recursive https://github.com/cms-nanoAOD/correctionlib.git
+            cd correctionlib
+            make PYTHON=python
+            make install
+            mv correctionlib $CMT_BASE/
+            cd ..
+            rm -rf correctionlib
+
+            cd "$CMT_BASE"
+            git clone https://github.com/jaimeleonh/correctionlib-wrapper.git
+            cd correctionlib-wrapper
+            echo \#include \"$CMT_BASE/correctionlib/include/correction.h\" > custom_custom_sf.h
+            tail -n +2 custom_sf.h >> custom_custom_sf.h
+            mv custom_custom_sf.h custom_sf.h
+            cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
+        fi
+        cmt_add_lib "$CMT_BASE/correctionlib/lib/"
 
         export NANOTOOLS_PATH="PhysicsTools/NanoAODTools"
         if [ ! -d "$NANOTOOLS_PATH" ]; then
