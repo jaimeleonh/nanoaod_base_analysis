@@ -170,11 +170,11 @@ action() {
             cd correctionlib
             make PYTHON=python
             make install
-            mv correctionlib $CMT_BASE/
+            mv correctionlib $CMT_DATA/
             cd ..
             rm -rf correctionlib
 
-            cd "$CMT_BASE"
+            cd "$CMT_DATA"
             git clone https://github.com/jaimeleonh/correctionlib-wrapper.git
             cd correctionlib-wrapper
             echo \#include \"$CMT_BASE/correctionlib/include/correction.h\" > custom_custom_sf.h
@@ -182,7 +182,8 @@ action() {
             mv custom_custom_sf.h custom_sf.h
             cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
         fi
-        cmt_add_lib "$CMT_BASE/correctionlib/lib/"
+        cmt_add_lib "$CMT_DATA/correctionlib/lib/"
+        cmt_add_lib "$CMT_DATA/correctionlib-wrapper/"
 
         export NANOTOOLS_PATH="PhysicsTools/NanoAODTools"
         if [ ! -d "$NANOTOOLS_PATH" ]; then
@@ -233,6 +234,11 @@ action() {
           scram b
         fi
 
+        export TAU_CORRECTIONS_PATH="TauCorrections"
+        if [ ! -d "$HHBTAG_PATH" ]; then
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git TauCorrections/TauCorrections
+          scram b
+        fi
         #export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
         #if [ ! -d "$COMBINE_PATH" ]; then
         #    git clone https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git $COMBINE_PATH

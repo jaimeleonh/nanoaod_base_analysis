@@ -118,3 +118,11 @@ PUjetID_SF:
     parameters:
         isMC: self.dataset.process.isMC
 
+
+tauCorrections:
+    name: tauSFRDF
+    path: TauCorrections.TauCorrections.tauCorrections
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+        isUL: self.dataset.has_tag('ul')
