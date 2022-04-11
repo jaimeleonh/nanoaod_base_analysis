@@ -235,7 +235,7 @@ action() {
         fi
 
         export TAU_CORRECTIONS_PATH="TauCorrections"
-        if [ ! -d "$HHBTAG_PATH" ]; then
+        if [ ! -d "$TAU_CORRECTIONS_PATH" ]; then
           git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git TauCorrections/TauCorrections
           scram b
         fi
