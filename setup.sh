@@ -76,7 +76,7 @@ action() {
     [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc820"
     [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_11_1_0_pre4"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="2"
-    [ -z "$CMT_CORRECTIONLIB_PATH" ] && export CMT_CORRECTIONLIB_PATH="$CMT_BASE/correctionlib"
+    [ -z "$CMT_CORRECTIONLIB_PATH" ] && export CMT_CORRECTIONLIB_PATH="$CMT_DATA/correctionlib"
 
     # specific eos dirs
     [ -z "$CMT_STORE_EOS_CATEGORIZATION" ] && export CMT_STORE_EOS_CATEGORIZATION="$CMT_STORE_EOS"
