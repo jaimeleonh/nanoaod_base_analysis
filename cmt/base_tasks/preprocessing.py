@@ -86,7 +86,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask)
 
     def create_branch_map(self):
         return len(self.dataset.get_files(
-            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
+            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
 
     def workflow_requires(self):
         return {"data": InputData.req(self)}
@@ -269,7 +269,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
                     self.config.name, self.max_events, self.dataset.name))):
             ROOT = import_root()
             files = self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=None)
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False)
             branches = []
             for ifil, fil in enumerate(files):
                 nevents = -1
