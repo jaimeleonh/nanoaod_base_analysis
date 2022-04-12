@@ -177,7 +177,7 @@ action() {
             cd "$CMT_DATA"
             git clone https://github.com/jaimeleonh/correctionlib-wrapper.git
             cd correctionlib-wrapper
-            echo \#include \"$CMT_BASE/correctionlib/include/correction.h\" > custom_custom_sf.h
+            echo \#include \"$CMT_DATA/correctionlib/include/correction.h\" > custom_custom_sf.h
             tail -n +2 custom_sf.h >> custom_custom_sf.h
             mv custom_custom_sf.h custom_sf.h
             cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
@@ -185,30 +185,31 @@ action() {
         cmt_add_lib "$CMT_DATA/correctionlib/lib/"
         cmt_add_lib "$CMT_DATA/correctionlib-wrapper/"
 
+        compile=false
         export NANOTOOLS_PATH="PhysicsTools/NanoAODTools"
         if [ ! -d "$NANOTOOLS_PATH" ]; then
           git clone https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
-          scram b
+          compile=true
         fi
 
         export BASEMODULES_PATH="Base/Modules"
         if [ ! -d "$BASEMODULES_PATH" ]; then
           git clone https://github.com/jaimeleonh/cmt-base-modules.git Base/Modules
-          scram b
+          compile=true
         fi
 
         export HHKINFIT_PATH="HHKinFit2"
         if [ ! -d "$HHKINFIT_PATH" ]; then
           git clone https://github.com/bvormwald/HHKinFit2.git -b CMSSWversion
           rm -r HHKinFit2/HHKinFit2CMSSWPlugins/plugins/
-          scram b
+          compile=true
         fi
 
         export SVFIT_PATH="TauAnalysis"
         if [ ! -d "$SVFIT_PATH" ]; then
           git clone https://github.com/LLRCMS/ClassicSVfit.git TauAnalysis/ClassicSVfit -b bbtautau_LegacyRun2
           git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
-          scram b
+          compile=true
         fi
 
         export HTT_PATH="HTT-utilities"
@@ -224,20 +225,25 @@ action() {
           wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root
           wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root
           cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-          scram b
+          compile=true
         fi
 
         export HHBTAG_PATH="HHTools"
         if [ ! -d "$HHBTAG_PATH" ]; then
           git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
           git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
-          scram b
+          compile=true
         fi
 
         export TAU_CORRECTIONS_PATH="TauCorrections"
         if [ ! -d "$TAU_CORRECTIONS_PATH" ]; then
           git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git TauCorrections/TauCorrections
-          scram b
+          compile=true
+        fi
+
+        if [ compile == true ]
+        then
+            scram b
         fi
         #export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
         #if [ ! -d "$COMBINE_PATH" ]; then
