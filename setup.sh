@@ -73,9 +73,9 @@ action() {
     [ -z "$CMT_JOB_DIR" ] && export CMT_JOB_DIR="$CMT_DATA/jobs"
     [ -z "$CMT_TMP_DIR" ] && export CMT_TMP_DIR="$CMT_DATA/tmp"
     [ -z "$CMT_CMSSW_BASE" ] && export CMT_CMSSW_BASE="$CMT_DATA/cmssw"
-    [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc820"
-    [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_11_1_0_pre4"
-    [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="2"
+    [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10"
+    [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6"
+    [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
     [ -z "$CMT_CORRECTIONLIB_PATH" ] && export CMT_CORRECTIONLIB_PATH="$CMT_DATA/correctionlib"
 
     # specific eos dirs
@@ -177,38 +177,39 @@ action() {
             cd "$CMT_DATA"
             git clone https://github.com/jaimeleonh/correctionlib-wrapper.git
             cd correctionlib-wrapper
-            echo \#include \"$CMT_BASE/correctionlib/include/correction.h\" > custom_custom_sf.h
+            echo \#include \"$CMT_DATA/correctionlib/include/correction.h\" > custom_custom_sf.h
             tail -n +2 custom_sf.h >> custom_custom_sf.h
             mv custom_custom_sf.h custom_sf.h
             cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
         fi
         cmt_add_lib "$CMT_DATA/correctionlib/lib/"
         cmt_add_lib "$CMT_DATA/correctionlib-wrapper/"
-
+        
+        compile=false
         export NANOTOOLS_PATH="PhysicsTools/NanoAODTools"
         if [ ! -d "$NANOTOOLS_PATH" ]; then
           git clone https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
-          scram b
+          compile=true
         fi
 
         export BASEMODULES_PATH="Base/Modules"
         if [ ! -d "$BASEMODULES_PATH" ]; then
           git clone https://github.com/jaimeleonh/cmt-base-modules.git Base/Modules
-          scram b
+          compile=true
         fi
 
         export HHKINFIT_PATH="HHKinFit2"
         if [ ! -d "$HHKINFIT_PATH" ]; then
           git clone https://github.com/bvormwald/HHKinFit2.git -b CMSSWversion
           rm -r HHKinFit2/HHKinFit2CMSSWPlugins/plugins/
-          scram b
+          compile=true
         fi
 
         export SVFIT_PATH="TauAnalysis"
         if [ ! -d "$SVFIT_PATH" ]; then
           git clone https://github.com/LLRCMS/ClassicSVfit.git TauAnalysis/ClassicSVfit -b bbtautau_LegacyRun2
           git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
-          scram b
+          compile=true
         fi
 
         export HTT_PATH="HTT-utilities"
@@ -224,21 +225,27 @@ action() {
           wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root
           wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root
           cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-          scram b
+          compile=true
         fi
 
         export HHBTAG_PATH="HHTools"
         if [ ! -d "$HHBTAG_PATH" ]; then
           git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
           git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
-          scram b
+          compile=true
         fi
 
         export TAU_CORRECTIONS_PATH="TauCorrections"
-        if [ ! -d "$HHBTAG_PATH" ]; then
+        if [ ! -d "$TAU_CORRECTIONS_PATH" ]; then
           git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git TauCorrections/TauCorrections
-          scram b
+          compile=true
         fi
+
+        if [ compile == true ]
+        then
+            scram b
+        fi
+             
         #export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
         #if [ ! -d "$COMBINE_PATH" ]; then
         #    git clone https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git $COMBINE_PATH
@@ -279,7 +286,7 @@ action() {
 
         # gfal python bindings
         cmt_add_bin "$CMT_GFAL_DIR/bin"
-        cmt_add_py "$CMT_GFAL_DIR/lib/python2.7/site-packages"
+        cmt_add_py "$CMT_GFAL_DIR/lib/python3/site-packages"
         cmt_add_lib "$CMT_GFAL_DIR/lib"
 
         if [ ! -d "$CMT_GFAL_DIR" ]; then
@@ -292,12 +299,12 @@ action() {
             mkdir -p "$CMT_GFAL_DIR"
             (
                 cd "$CMT_GFAL_DIR"
-                mkdir -p include bin lib/gfal2-plugins lib/python2.7/site-packages
+                mkdir -p include bin lib/gfal2-plugins lib/python3/site-packages
                 ln -s "$lcg_base"/include/gfal2* include
                 ln -s "$lcg_base"/bin/gfal-* bin
                 ln -s "$lcg_base"/lib64/libgfal* lib
                 ln -s "$lcg_base"/lib64/gfal2-plugins/libgfal* lib/gfal2-plugins
-                ln -s "$lcg_base"/lib64/python2.7/site-packages/gfal* lib/python2.7/site-packages
+                ln -s "$lcg_base"/lib64/python3/site-packages/gfal* lib/python3/site-packages
                 cd lib/gfal2-plugins
                 rm libgfal_plugin_http.so libgfal_plugin_xrootd.so
                 curl https://cernbox.cern.ch/index.php/s/qgrogVY4bwcuCXt/download > libgfal_plugin_xrootd.so

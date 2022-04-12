@@ -1,4 +1,4 @@
-from job_base import JobArgumentsExt
+from cmt.condor_tools.job_base import JobArgumentsExt
 
 from collections import OrderedDict
 

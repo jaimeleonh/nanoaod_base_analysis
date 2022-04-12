@@ -46,14 +46,14 @@ met_smearing:
         isMC: self.dataset.process.isMC
 
 
-hhjets:
-    name: HHJetsRDF
-    path: Tools.Tools.HHJets
-    parameters:
-        year: self.config.year
-        isMC: self.dataset.process.isMC
-        met_smear_tag: smeared
-        filter: True
+# hhjets:
+    # name: HHJetsRDF
+    # path: Tools.Tools.HHJets
+    # parameters:
+        # year: self.config.year
+        # isMC: self.dataset.process.isMC
+        # met_smear_tag: smeared
+        # filter: True
 
 
 dyscaling:
@@ -72,36 +72,36 @@ svfit:
         met_smear_tag: smeared
 
 
-hh:
-    name: HHKinFitRDF
-    path: Tools.Tools.hh
-    parameters:
-        isMC: self.dataset.process.isMC
-        met_smear_tag: smeared
+# # hh:
+    # # name: HHKinFitRDF
+    # # path: Tools.Tools.hh
+    # # parameters:
+        # # isMC: self.dataset.process.isMC
+        # # met_smear_tag: smeared
 
 
-hhvar:
-    name: HHVarRDF
-    path: Tools.Tools.hh
-    parameters:
-        isMC: self.dataset.process.isMC
-        met_smear_tag: smeared
+# # hhvar:
+    # # name: HHVarRDF
+    # # path: Tools.Tools.hh
+    # # parameters:
+        # # isMC: self.dataset.process.isMC
+        # # met_smear_tag: smeared
 
 
-trigSF:
-    name: Htt_trigSFRDF
-    path: Tools.Tools.Htt_trigSF
-    parameters:
-        year: self.config.year
-        isMC: self.dataset.process.isMC
+# trigSF:
+    # name: Htt_trigSFRDF
+    # path: Tools.Tools.Htt_trigSF
+    # parameters:
+        # year: self.config.year
+        # isMC: self.dataset.process.isMC
 
 
-PUjetID_SF:
-    name: PUjetID_SFRDF
-    path: Tools.Tools.PUjetID_SF
-    parameters:
-        year: self.config.year
-        isMC: self.dataset.process.isMC
+# PUjetID_SF:
+    # name: PUjetID_SFRDF
+    # path: Tools.Tools.PUjetID_SF
+    # parameters:
+        # year: self.config.year
+        # isMC: self.dataset.process.isMC
 
 
 3_w2:
