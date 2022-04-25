@@ -76,7 +76,6 @@ action() {
     [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10"
     [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
-    [ -z "$CMT_CORRECTIONLIB_PATH" ] && export CMT_CORRECTIONLIB_PATH="$CMT_DATA/correctionlib"
 
     # specific eos dirs
     [ -z "$CMT_STORE_EOS_CATEGORIZATION" ] && export CMT_STORE_EOS_CATEGORIZATION="$CMT_STORE_EOS"
@@ -114,6 +113,12 @@ action() {
         export LD_LIBRARY_PATH="$1:$LD_LIBRARY_PATH"
     }
     export -f cmt_add_lib
+
+    cmt_add_root_inc() {
+        export ROOT_INCLUDE_PATH="$ROOT_INCLUDE_PATH:$1"
+    }
+    export -f cmt_add_root_inc
+
 
 
     #
@@ -163,53 +168,34 @@ action() {
             scramv1 project CMSSW "$CMT_CMSSW_VERSION"
         fi
         cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-
-        if [ ! -d "$CMT_CORRECTIONLIB_PATH" ]; then
-            cmsenv
-            git clone --recursive https://github.com/cms-nanoAOD/correctionlib.git
-            cd correctionlib
-            make PYTHON=python
-            make install
-            mv correctionlib $CMT_DATA/
-            cd ..
-            rm -rf correctionlib
-
-            cd "$CMT_DATA"
-            git clone https://github.com/jaimeleonh/correctionlib-wrapper.git
-            cd correctionlib-wrapper
-            echo \#include \"$CMT_DATA/correctionlib/include/correction.h\" > custom_custom_sf.h
-            tail -n +2 custom_sf.h >> custom_custom_sf.h
-            mv custom_custom_sf.h custom_sf.h
-            cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-        fi
-        cmt_add_lib "$CMT_DATA/correctionlib/lib/"
-        cmt_add_lib "$CMT_DATA/correctionlib-wrapper/"
         
-        compile=false
+        eval `scramv1 runtime -sh`
+
+        compile="0"
         export NANOTOOLS_PATH="PhysicsTools/NanoAODTools"
         if [ ! -d "$NANOTOOLS_PATH" ]; then
           git clone https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
-          compile=true
+          compile="1"
         fi
 
         export BASEMODULES_PATH="Base/Modules"
         if [ ! -d "$BASEMODULES_PATH" ]; then
           git clone https://github.com/jaimeleonh/cmt-base-modules.git Base/Modules
-          compile=true
+          compile="1"
         fi
 
         export HHKINFIT_PATH="HHKinFit2"
         if [ ! -d "$HHKINFIT_PATH" ]; then
           git clone https://github.com/bvormwald/HHKinFit2.git -b CMSSWversion
           rm -r HHKinFit2/HHKinFit2CMSSWPlugins/plugins/
-          compile=true
+          compile="1"
         fi
 
         export SVFIT_PATH="TauAnalysis"
         if [ ! -d "$SVFIT_PATH" ]; then
           git clone https://github.com/LLRCMS/ClassicSVfit.git TauAnalysis/ClassicSVfit -b bbtautau_LegacyRun2
           git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
-          compile=true
+          compile="1"
         fi
 
         export HTT_PATH="HTT-utilities"
@@ -221,27 +207,31 @@ action() {
           cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
           mkdir TauAnalysisTools
           git clone -b run2_SFs https://github.com/cms-tau-pog/TauTriggerSFs TauAnalysisTools/TauTriggerSFs
+          rm TauAnalysisTools/TauTriggerSFs/python/*.py
           cd TauAnalysisTools/TauTriggerSFs/data
           wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root
           wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root
           cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-          compile=true
+          compile="1"
         fi
 
         export HHBTAG_PATH="HHTools"
         if [ ! -d "$HHBTAG_PATH" ]; then
           git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
           git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
-          compile=true
+          compile="1"
         fi
 
-        export TAU_CORRECTIONS_PATH="TauCorrections"
-        if [ ! -d "$TAU_CORRECTIONS_PATH" ]; then
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git TauCorrections/TauCorrections
-          compile=true
+        export CORRECTIONS_PATH="Corrections"
+        cmt_add_root_inc $(correction config --incdir)
+        if [ ! -d "$CORRECTIONS_PATH" ]; then
+          git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/Tau
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
+          compile="1"
         fi
 
-        if [ compile == true ]
+        if [ "$compile" == "1" ]
         then
             scram b
         fi
@@ -318,11 +308,11 @@ action() {
         if [ "$CMT_FORCE_SOFTWARE" = "1" ]; then
             cmt_setup_software force
         else
-	    if [ "$CMT_FORCE_CMSSW" = "1" ]; then
+            if [ "$CMT_FORCE_CMSSW" = "1" ]; then
                 cmt_setup_software force_cmssw
-	    else
-	        cmt_setup_software silent
-	    fi
+            else
+                cmt_setup_software silent
+            fi
         fi
     fi
 
