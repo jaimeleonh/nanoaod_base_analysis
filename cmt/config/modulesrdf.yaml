@@ -102,7 +102,7 @@ PUjetID_SF:
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
-
+        isUL: self.dataset.has_tag('ul')
 
 3_w2:
     name: prescaleWeightRDF

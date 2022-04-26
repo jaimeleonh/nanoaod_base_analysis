@@ -1,9 +1,19 @@
 puweight:
     name: puWeightRDF
-    path: Base.Modules.puWeightProducer
+    path: Corrections.LUM.puWeight
     parameters:
         isMC: self.dataset.process.isMC
         year: self.config.year
+        isUL: self.dataset.has_tag('ul')
+
+# UL only
+# puweightCor:
+    # name: puWeightRDF
+    # path: Corrections.LUM.puWeightCor
+    # parameters:
+        # isMC: self.dataset.process.isMC
+        # year: self.config.year
+        # isUL: self.dataset.has_tag('ul')
 
 dystitching:
     name: DYstitchingRDF
@@ -11,3 +21,4 @@ dystitching:
     parameters:
         year: self.config.year
         isDY: self.dataset.process.get_aux('isDY', False)
+        isUL: self.dataset.has_tag('ul')

@@ -4,7 +4,7 @@ from analysis_tools.utils import join_root_selection as jrs
 from plotting_tools import Label
 from collections import OrderedDict
 
-from base_config import Config
+from cmt.config.base_config import Config
 
 class Config_ul_2018(Config):
     
@@ -250,4 +250,4 @@ class Config_ul_2018(Config):
         ]
         return ObjectCollection(datasets)
 
-config = Config("ul_2018", year=2018, ecm=13, lumi_pb=59741)
+config = Config_ul_2018("ul_2018", year=2018, ecm=13, lumi_pb=59741)
