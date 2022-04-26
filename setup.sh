@@ -228,6 +228,7 @@ action() {
           git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
           git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/Tau
           git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections.git Corrections/LUM
           compile="1"
         fi
 
