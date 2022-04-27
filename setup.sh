@@ -226,9 +226,12 @@ action() {
         cmt_add_root_inc $(correction config --incdir)
         if [ ! -d "$CORRECTIONS_PATH" ]; then
           git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/Tau
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/TAU
           git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
           git clone https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections.git Corrections/LUM
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections.git Corrections/MUO
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections.git Corrections/EGM
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections.git Corrections/BTV
           compile="1"
         fi
 

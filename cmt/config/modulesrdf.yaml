@@ -1,3 +1,20 @@
+puweight:
+    name: puWeightRDF
+    path: Corrections.LUM.puWeight
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+        isUL: self.dataset.has_tag('ul')
+
+# UL only
+# puweightCor:
+    # name: puWeightRDF
+    # path: Corrections.LUM.puWeightCor
+    # parameters:
+        # isMC: self.dataset.process.isMC
+        # year: self.config.year
+        # isUL: self.dataset.has_tag('ul')
+
 2:
     name: MetFilterRDF
     path: Base.Modules.METfilters
@@ -30,6 +47,7 @@ jet_smearing:
         year: self.config.year
         isMC: self.dataset.process.isMC
         jerTag: self.config.year
+        isUL: self.dataset.has_tag('ul')
 
 
 jet_smear_val:
@@ -52,6 +70,7 @@ hhjets:
     parameters:
         year: self.config.year
         isMC: self.dataset.process.isMC
+        isUL: self.dataset.has_tag('ul')
         met_smear_tag: smeared
         filter: True
 
@@ -117,11 +136,36 @@ PUjetID_SF:
     path: Base.Modules.prefiringWeight
     parameters:
         isMC: self.dataset.process.isMC
+        isUL: self.dataset.has_tag('ul')
 
 
-tauCorrections:
+tauSF:
     name: tauSFRDF
-    path: Corrections.Tau.tauCorrections
+    path: Corrections.TAU.tauCorrections
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+        isUL: self.dataset.has_tag('ul')
+
+muSF:
+    name: muSFRDF
+    path: Corrections.MUO.muCorrections
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+        isUL: self.dataset.has_tag('ul')
+
+eleSD:
+    name: eleSFRDF
+    path: Corrections.EGM.eleCorrections
+    parameters:
+        isMC: self.dataset.process.isMC
+        year: self.config.year
+        isUL: self.dataset.has_tag('ul')
+
+btag:
+    name: btag_SFRDF
+    path: Corrections.BTV.btag_SF
     parameters:
         isMC: self.dataset.process.isMC
         year: self.config.year
