@@ -187,6 +187,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
         # prepare inputs and outputs
         inp = self.input().path
+        print(inp)
         outp = self.output()
         df = ROOT.RDataFrame(self.tree_name, inp)
 
@@ -196,6 +197,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             selection = jrs(dataset_selection, selection, op="and")
 
         filtered_df = df.Define("selection", selection).Filter("selection")
+        filtered_df = filtered_df.Filter("event == 0")
 
         modules = self.get_feature_modules(self.modules_file)
         branches = list(df.GetColumnNames())

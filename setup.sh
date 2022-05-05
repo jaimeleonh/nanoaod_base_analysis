@@ -171,69 +171,69 @@ action() {
         
         eval `scramv1 runtime -sh`
 
-        compile="0"
-        export NANOTOOLS_PATH="PhysicsTools/NanoAODTools"
-        if [ ! -d "$NANOTOOLS_PATH" ]; then
-          git clone https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
-          compile="1"
-        fi
+        # # # # # # # # # # # # compile="0"
+        # # # # # # # # # # # # export NANOTOOLS_PATH="PhysicsTools/NanoAODTools"
+        # # # # # # # # # # # # if [ ! -d "$NANOTOOLS_PATH" ]; then
+          # # # # # # # # # # # # git clone https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
+          # # # # # # # # # # # # compile="1"
+        # # # # # # # # # # # # fi
 
-        export BASEMODULES_PATH="Base/Modules"
-        if [ ! -d "$BASEMODULES_PATH" ]; then
-          git clone https://github.com/jaimeleonh/cmt-base-modules.git Base/Modules
-          compile="1"
-        fi
+        # # # # # # # # # # # # export BASEMODULES_PATH="Base/Modules"
+        # # # # # # # # # # # # if [ ! -d "$BASEMODULES_PATH" ]; then
+          # # # # # # # # # # # # git clone https://github.com/jaimeleonh/cmt-base-modules.git Base/Modules
+          # # # # # # # # # # # # compile="1"
+        # # # # # # # # # # # # fi
 
-        export HHKINFIT_PATH="HHKinFit2"
-        if [ ! -d "$HHKINFIT_PATH" ]; then
-          git clone https://github.com/bvormwald/HHKinFit2.git -b CMSSWversion
-          rm -r HHKinFit2/HHKinFit2CMSSWPlugins/plugins/
-          compile="1"
-        fi
+        # # # # # # # # # # # # export HHKINFIT_PATH="HHKinFit2"
+        # # # # # # # # # # # # if [ ! -d "$HHKINFIT_PATH" ]; then
+          # # # # # # # # # # # # git clone https://github.com/bvormwald/HHKinFit2.git -b CMSSWversion
+          # # # # # # # # # # # # rm -r HHKinFit2/HHKinFit2CMSSWPlugins/plugins/
+          # # # # # # # # # # # # compile="1"
+        # # # # # # # # # # # # fi
 
-        export SVFIT_PATH="TauAnalysis"
-        if [ ! -d "$SVFIT_PATH" ]; then
-          git clone https://github.com/LLRCMS/ClassicSVfit.git TauAnalysis/ClassicSVfit -b bbtautau_LegacyRun2
-          git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
-          compile="1"
-        fi
+        # # # # # # # # # # # # export SVFIT_PATH="TauAnalysis"
+        # # # # # # # # # # # # if [ ! -d "$SVFIT_PATH" ]; then
+          # # # # # # # # # # # # git clone https://github.com/LLRCMS/ClassicSVfit.git TauAnalysis/ClassicSVfit -b bbtautau_LegacyRun2
+          # # # # # # # # # # # # git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
+          # # # # # # # # # # # # compile="1"
+        # # # # # # # # # # # # fi
 
-        export HTT_PATH="HTT-utilities"
-        if [ ! -d "$HTT_PATH" ]; then
-          git clone https://github.com/CMS-HTT/LeptonEff-interface.git HTT-utilities
-          cd HTT-utilities/LepEffInterface/
-          rm -rf data
-          git clone https://github.com/CMS-HTT/LeptonEfficiencies.git data
-          cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-          mkdir TauAnalysisTools
-          git clone -b run2_SFs https://github.com/cms-tau-pog/TauTriggerSFs TauAnalysisTools/TauTriggerSFs
-          rm TauAnalysisTools/TauTriggerSFs/python/*.py
-          cd TauAnalysisTools/TauTriggerSFs/data
-          wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root
-          wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root
-          cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-          compile="1"
-        fi
+        # # # # # # # # # # # # export HTT_PATH="HTT-utilities"
+        # # # # # # # # # # # # if [ ! -d "$HTT_PATH" ]; then
+          # # # # # # # # # # # # git clone https://github.com/CMS-HTT/LeptonEff-interface.git HTT-utilities
+          # # # # # # # # # # # # cd HTT-utilities/LepEffInterface/
+          # # # # # # # # # # # # rm -rf data
+          # # # # # # # # # # # # git clone https://github.com/CMS-HTT/LeptonEfficiencies.git data
+          # # # # # # # # # # # # cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
+          # # # # # # # # # # # # mkdir TauAnalysisTools
+          # # # # # # # # # # # # git clone -b run2_SFs https://github.com/cms-tau-pog/TauTriggerSFs TauAnalysisTools/TauTriggerSFs
+          # # # # # # # # # # # # rm TauAnalysisTools/TauTriggerSFs/python/*.py
+          # # # # # # # # # # # # cd TauAnalysisTools/TauTriggerSFs/data
+          # # # # # # # # # # # # wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root
+          # # # # # # # # # # # # wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root
+          # # # # # # # # # # # # cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
+          # # # # # # # # # # # # compile="1"
+        # # # # # # # # # # # # fi
 
-        export HHBTAG_PATH="HHTools"
-        if [ ! -d "$HHBTAG_PATH" ]; then
-          git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
-          git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
-          compile="1"
-        fi
+        # # # # # # # # # # # # export HHBTAG_PATH="HHTools"
+        # # # # # # # # # # # # if [ ! -d "$HHBTAG_PATH" ]; then
+          # # # # # # # # # # # # git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
+          # # # # # # # # # # # # git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
+          # # # # # # # # # # # # compile="1"
+        # # # # # # # # # # # # fi
 
-        export CORRECTIONS_PATH="Corrections"
-        cmt_add_root_inc $(correction config --incdir)
-        if [ ! -d "$CORRECTIONS_PATH" ]; then
-          git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/TAU
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections.git Corrections/LUM
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections.git Corrections/MUO
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections.git Corrections/EGM
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections.git Corrections/BTV
-          compile="1"
-        fi
+        # # # # # # # # # # # # export CORRECTIONS_PATH="Corrections"
+        # # # # # # # # # # # # cmt_add_root_inc $(correction config --incdir)
+        # # # # # # # # # # # # if [ ! -d "$CORRECTIONS_PATH" ]; then
+          # # # # # # # # # # # # git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
+          # # # # # # # # # # # # git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/TAU
+          # # # # # # # # # # # # git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
+          # # # # # # # # # # # # git clone https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections.git Corrections/LUM
+          # # # # # # # # # # # # git clone https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections.git Corrections/MUO
+          # # # # # # # # # # # # git clone https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections.git Corrections/EGM
+          # # # # # # # # # # # # git clone https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections.git Corrections/BTV
+          # # # # # # # # # # # # compile="1"
+        # # # # # # # # # # # # fi
 
         if [ "$compile" == "1" ]
         then
@@ -272,7 +272,7 @@ action() {
             cmt_pip_install luigi==2.8.13
             cmt_pip_install tabulate
             cmt_pip_install git+https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools.git
-            cmt_pip_install git+https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools.git
+            # cmt_pip_install git+https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools.git
             cmt_pip_install --no-deps git+https://github.com/riga/law
             cmt_pip_install --no-deps git+https://github.com/riga/plotlib
             cmt_pip_install --no-deps gast==0.2.2  # https://github.com/tensorflow/autograph/issues/1
