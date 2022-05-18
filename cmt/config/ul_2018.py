@@ -208,7 +208,7 @@ class Config_ul_2018(Config):
                 splitting=-1,
                 merging={
                     "tautau": 20,
-                    "etau": 40,
+                    "etau": 10,
                 },
                 tags=["ul"]),
             Dataset("data_etau_b",
@@ -220,7 +220,7 @@ class Config_ul_2018(Config):
                 splitting=-1,
                 merging={
                     "tautau": 20,
-                    "etau": 40,
+                    "etau": 10,
                 },
                 tags=["ul"]),
             Dataset("data_etau_c",
@@ -232,7 +232,7 @@ class Config_ul_2018(Config):
                 splitting=-1,
                 merging={
                     "tautau": 20,
-                    "etau": 40,
+                    "etau": 10,
                 },
                 tags=["ul"]),
             Dataset("data_etau_d",
@@ -243,7 +243,7 @@ class Config_ul_2018(Config):
                 splitting=-1,
                 merging={
                     "tautau": 20,
-                    "etau": 40,
+                    "etau": 10,
                 },
                 tags=["ul"]),
 

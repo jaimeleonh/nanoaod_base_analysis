@@ -680,16 +680,14 @@ class Config():
         weights.default = "1"
         weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
         weights.channels = {
-            "mutau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],# "DYscale_MTT"],
-            "etau": ["genWeight", "puWeight", "PrefireWeight", "trigSF"],# "DYscale_MTT"],
-            "tautau": ["genWeight", "puWeight", "PrefireWeight", "trigSF",# "DYscale_MTT",
-                "Tau_sfDeepTau2017v2p1VSjet_Medium.at(dau1_index)",
-                "Tau_sfDeepTau2017v2p1VSjet_Medium.at(dau2_index)",
-                "Tau_sfDeepTau2017v2p1VSe_VVLoose.at(dau1_index)",
-                "Tau_sfDeepTau2017v2p1VSe_VVLoose.at(dau2_index)",
-                "Tau_sfDeepTau2017v2p1VSmu_VLoose.at(dau1_index)",
-                "Tau_sfDeepTau2017v2p1VSmu_VLoose.at(dau2_index)"]
+            "mutau": ["genWeight", "puWeight", "prescaleWeight", "trigSF",
+                "idAndIsoAndFakeSF_deep_pt", "L1PreFiringWeight_Nom", "PUjetID_SF"
+            ],
+            # "DYscale_MTT"],
         }
+        weights.channels["etau"] = weights.channels["mutau"]
+        weights.channels["tautau"] = weights.channels["mutau"]
+        
         weights.channels_mult = {channel: jrs(weights.channels[channel], op="*")
             for channel in weights.channels}
         return weights
