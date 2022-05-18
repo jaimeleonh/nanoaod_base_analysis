@@ -19,7 +19,7 @@ import law
 
 from law.util import merge_dicts
 from law.contrib.htcondor.job import HTCondorJobFileFactory
-from cmt.condor_tools.htcondor import HTCondorWorkflowExt
+# from cmt.condor_tools.htcondor import HTCondorWorkflowExt
 
 from abc import abstractmethod
 
@@ -262,7 +262,7 @@ class DatasetWrapperTask(ConfigTask):
         return list(self.config.datasets.names())
 
 
-class HTCondorWorkflow(HTCondorWorkflowExt):
+class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
 
     only_missing = luigi.BoolParameter(default=True, significant=False, description="skip tasks "
         "that are considered complete, default: True")
@@ -296,7 +296,7 @@ class HTCondorWorkflow(HTCondorWorkflowExt):
         config.custom_content.append(("+MaxRuntime", int(math.floor(self.max_runtime * 3600)) - 1))
 
         # print "{}/x509up".format(os.getenv("HOME"))
-        config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))
+        # config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))
         #config.custom_content.append(("arguments", "$(Proxy_path)"))
         
         return config
