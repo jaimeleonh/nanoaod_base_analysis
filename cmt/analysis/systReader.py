@@ -26,7 +26,7 @@ class systReader:
 
     def writeSystematics(self):
         if self.printResult:
-            print "reading systematics"
+            print("reading systematics")
         section = ""
         outputLine = ""
         OutputLines = []
@@ -66,7 +66,7 @@ class systReader:
 
                         OutputLines.append(outputLine)
                         if self.printResult:
-                            print outputLine
+                            print(outputLine)
                         outputLine = ""
                         self.SystProcesses.append(activeProc)
                         self.SystValues.append(activeVal)
@@ -74,7 +74,7 @@ class systReader:
                         activeVal = []
 
                     if self.printResult:
-                        print "writing syst for ", section
+                        print("writing syst for ", section)
                     self.SystNames.append(section)
                     continue
 
@@ -98,12 +98,12 @@ class systReader:
                     outputLine += systLine[chan]
             OutputLines.append(outputLine)
             if self.printResult:
-                print outputLine
+                print(outputLine)
             self.SystProcesses.append(activeProc)
             self.SystValues.append(activeVal)
         if self.printResult:
             for line in OutputLines:
-                print outputLine
+                print(outputLine)
         if self.writeOut:
             for line in OutputLines:
                 self.theOutputFile.write(line + "\n")
