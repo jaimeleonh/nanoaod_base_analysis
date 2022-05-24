@@ -195,8 +195,24 @@ class Config():
 
     def add_processes(self):
         processes = [
-            Process("ggf_sm", Label("$HH_{ggF}$"), color=(0, 0, 0), isSignal=True),
-            Process("vbf_sm", Label("$HH_{VBF}$"), color=(0, 0, 0), isSignal=True),
+            Process("ggf", Label("$HH_{ggF}$"), color=(0, 0, 0), isSignal=True, llr_name="ggH"),
+            Process("ggf_sm", Label("$HH_{ggF}$"), color=(0, 0, 0), isSignal=True, parent_process="ggf"),
+
+            Process("vbf", Label("$HH_{VBF}$"), color=(0, 0, 0), isSignal=True, llr_name="qqH"),
+            Process("vbf_sm", Label("$HH_{VBF}$"), color=(0, 0, 0), isSignal=True, parent_process="vbf"),
+            Process("vbf_0p5_1_1", Label("$HH_{VBF}^{(0.5,1,1)}$"), color=(0, 0, 0),
+                isSignal=True, parent_process="vbf"),
+            Process("vbf_1p5_1_1", Label("$HH_{VBF}^{(1.5,1,1)}$"), color=(0, 0, 0),
+                isSignal=True, parent_process="vbf"),
+            Process("vbf_1_0_1", Label("$HH_{VBF}^{(1,0,1)}$"), color=(0, 0, 0),
+                isSignal=True, parent_process="vbf"),
+            Process("vbf_1_1_0", Label("$HH_{VBF}^{(1,1,0)}$"), color=(0, 0, 0),
+                isSignal=True, parent_process="vbf"),
+            Process("vbf_1_1_2", Label("$HH_{VBF}^{(1,1,2)}$"),
+                color=(0, 0, 0), isSignal=True, parent_process="vbf"),
+            Process("vbf_1_2_1", Label("$HH_{VBF}^{(1,2,1)}$"),
+                color=(0, 0, 0), isSignal=True, parent_process="vbf"),
+
             Process("dy", Label("DY"), color=(255, 102, 102), isDY=True, llr_name="DY"),
 
             Process("tt", Label("t#bar{t}"), color=(255, 153, 0), llr_name="TT"),
@@ -244,6 +260,15 @@ class Config():
                 "dy",
                 "others",
                 "data_etau",
+            ],
+            "vbf": [
+                "vbf_sm",
+                "vbf_0p5_1_1",
+                "vbf_1p5_1_1",
+                "vbf_1_0_1",
+                "vbf_1_1_0",
+                "vbf_1_1_2",
+                "vbf_1_2_1"
             ]
         }
 
@@ -273,6 +298,54 @@ class Config():
                 process=self.processes.get("vbf_sm"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=0.001726),
+
+            Dataset("vbf_0p5_1_1",
+                dataset="/VBFHHTo2B2Tau_CV_0_5_C2V_1_C3_1_dipoleRecoilOff"
+                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("vbf_0p5_1_1"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.010824),
+
+            Dataset("vbf_1p5_1_1",
+                dataset="/VBFHHTo2B2Tau_CV_1_5_C2V_1_C3_1_dipoleRecoilOff"
+                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("vbf_1p5_1_1"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.066018),
+
+            Dataset("vbf_1_0_1",
+                dataset="/VBFHHTo2B2Tau_CV_1_C2V_0_C3_1_dipoleRecoilOff"
+                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("vbf_1_0_1"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.027080),
+
+            Dataset("vbf_1_1_0",
+                dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_0_dipoleRecoilOff"
+                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("vbf_1_1_0"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.004609),
+
+            Dataset("vbf_1_1_2",
+                dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_2_dipoleRecoilOff"
+                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("vbf_1_1_2"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.001423),
+
+            Dataset("vbf_1_2_1",
+                dataset="/VBFHHTo2B2Tau_CV_1_C2V_2_C3_1_dipoleRecoilOff"
+                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
+                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
+                process=self.processes.get("vbf_1_2_1"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=0.014218),
 
             # Background samples
             Dataset("dy_high",
@@ -601,7 +674,7 @@ class Config():
             Feature("HH_phi", "HH_phi", binning=(20, -3.2, 3.2),
                 x_title=Label("HH #phi"),
                 central="jet_smearing"),
-            Feature("HH_mass", "HH_mass", binning=(30, 0, 300),
+            Feature("HH_mass", "HH_mass", binning=(50, 0, 1000),
                 x_title=Label("HH m"),
                 units="GeV",
                 central="jet_smearing"),
@@ -617,13 +690,13 @@ class Config():
             Feature("HH_svfit_phi", "HH_svfit_phi", binning=(20, -3.2, 3.2),
                 x_title=Label("HH #phi (SVFit)"),
                 central="jet_smearing"),
-            Feature("HH_svfit_mass", "HH_svfit_mass", binning=(30, 0, 300),
+            Feature("HH_svfit_mass", "HH_svfit_mass", binning=(50, 0, 1000),
                 x_title=Label("HH m (SVFit)"),
                 units="GeV",
                 central="jet_smearing"),
 
             # HH KinFit
-            Feature("HHKinFit_mass", "HHKinFit_mass", binning=(30, 0, 300),
+            Feature("HHKinFit_mass", "HHKinFit_mass", binning=(50, 0, 1000),
                 x_title=Label("HH m (Kin. Fit)"),
                 units="GeV",
                 central="jet_smearing"),
@@ -681,7 +754,7 @@ class Config():
         weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
         weights.channels = {
             "mutau": ["genWeight", "puWeight", "prescaleWeight", "trigSF",
-                "idAndIsoAndFakeSF_deep_pt", "L1PreFiringWeight_Nom", "PUjetID_SF"
+                "L1PreFiringWeight_Nom", "PUjetID_SF"
             ],
             # "DYscale_MTT"],
         }

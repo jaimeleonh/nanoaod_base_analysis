@@ -19,10 +19,12 @@ import luigi
 import plotlib.root as r
 from cmt.util import hist_to_array, hist_to_graph, get_graph_maximum, update_graph_values
 
+from ctypes import c_double
+
 
 from analysis_tools import ObjectCollection
 from analysis_tools.utils import (
-    import_root, create_file_dir, join_root_selection, randomize, randomize
+    import_root, create_file_dir, join_root_selection, randomize
 )
 from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import ( 
@@ -40,6 +42,8 @@ cmt_style.style.legend_dy = 0.035
 cmt_style.style.legend_y2 = 0.93
 
 EMPTY = -1.e5
+
+ROOT = import_root()
 
 class BasePlotTask(ConfigTaskWithCategory):
     base_category_name = luigi.Parameter(default="base", description="the name of the "
@@ -139,8 +143,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
-        ROOT = import_root()
-
         isMC = self.dataset.process.isMC
         directions = ["up", "down"]
 
@@ -153,6 +155,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         if self.region_name != law.NO_STR:
             sel = self.config.regions.get(self.region_name).selection
             df = df.Filter(sel)
+        
+        df = df.Filter("dau1_pt > 25")  # FIXME, temporary fix
 
         tf = ROOT.TFile.Open(inp)
         tree = tf.Get(self.tree_name)
@@ -165,12 +169,12 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             y_title = "Events" + y_axis_adendum
             title = "; %s; %s" % (x_title, y_title)
 
-            systs = ["central"] + self.get_systs(feature, isMC)
-
+            systs = self.get_systs(feature, isMC)
             systs_directions = [("central", "")]
             if isMC:
                 systs_directions += list(itertools.product(systs, directions))
 
+            # loop over systematics and up/down variations
             for syst_name, direction in systs_directions:
                 if syst_name != "central":
                     syst = self.config.systematics.get(syst_name)
@@ -242,6 +246,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "bin numbers instead of the feature value, default: False")
     plot_systematics = luigi.BoolParameter(default=True, description="whether plot systematics, "
         "default: True")
+    fixed_colors = luigi.BoolParameter(default=False, description="whether to use fixed colors "
+        "for plotting, default: False")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
         # "optimization task to use, not used when empty, default: empty")
@@ -394,46 +400,32 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     def complete(self):
         return ConfigTaskWithCategory.complete(self)
 
-    @law.decorator.notify
-    @law.decorator.safe_output
-    def run(self):
-        ROOT = import_root()
-        ROOT.gStyle.SetOptStat(0)
 
-        # create root tchains for inputs
-        inputs = self.input()
+    def setup_signal_hist(self, hist, color):
+        hist.hist_type = "signal"
+        hist.legend_style = "l"
+        hist.SetLineColor(color)
 
-        lumi = self.config.lumi_pb
-
-        def setup_signal_hist(hist, color):
-            hist.hist_type = "signal"
+    def setup_background_hist(self, hist, color):
+        hist.hist_type = "background"
+        if self.stack:
+            hist.SetLineColor(ROOT.kBlack)
+            hist.SetLineWidth(1)
+            hist.SetFillColor(color)
+            hist.legend_style = "f"
+        else:
+            hist.SetLineColor(color)
             hist.legend_style = "l"
-            hist.SetLineColor(color)
 
-        def setup_background_hist(hist, color):
-            hist.hist_type = "background"
-            if self.stack:
-                hist.SetLineColor(ROOT.kBlack)
-                hist.SetLineWidth(1)
-                hist.SetFillColor(color)
-                hist.legend_style = "f"
-            else:
-                hist.SetLineColor(color)
-                hist.legend_style = "l"
+    def setup_data_hist(self, hist, color):
+        hist.legend_style = "lp"
+        hist.hist_type = "data"
+        hist.SetMarkerStyle(20)
+        hist.SetMarkerColor(color)
+        hist.SetLineColor(color)
+        hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
-        def setup_data_hist(hist, color):
-            hist.legend_style = "lp"
-            hist.hist_type = "data"
-            hist.SetMarkerStyle(20)
-            hist.SetMarkerColor(color)
-            hist.SetLineColor(color)
-            hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
-
-        data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
-        signal_names = [p.name for p in self.processes_datasets.keys() if p.isSignal]
-        background_names = [p.name for p in self.processes_datasets.keys()
-            if not p.isData and not p.isSignal]
-
+    def plot(self):
         # systematics
         systematics = {}
         if self.plot_systematics:
@@ -486,13 +478,13 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         # helper to extract the qcd shape in a region
         def get_qcd(region, files, bin_limit=0.):
-            d_hist = files[region].Get("histograms/" + data_names[0])
+            d_hist = files[region].Get("histograms/" + self.data_names[0])
             if not d_hist:
                 raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
-                    data_names[0], region, files[region]))
+                    self.data_names[0], region, files[region]))
 
             b_hists = []
-            for b_name in background_names:
+            for b_name in self.background_names:
                 b_hist = files[region].Get("histograms/" + b_name)
                 if not b_hist:
                     raise Exception("background histogram '{}' not found in region '{}'".format(
@@ -511,7 +503,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             return qcd_hist
 
         def get_integral_and_error(hist):
-            error = ROOT.Double()
+            error = c_double(0.)
             integral = hist.IntegralAndError(0, hist.GetNbinsX() + 1, error)
             error = float(error)
             compatible = True if integral <= 0 else False
@@ -519,69 +511,18 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             return integral, error, compatible
 
         for feature in self.features:
-            binning_args, y_axis_adendum = self.get_binning(feature)
+            background_hists = self.histos[feature.name]["background"]
+            signal_hists = self.histos[feature.name]["signal"]
+            data_hists = self.histos[feature.name]["data"]
+            all_hists = self.histos[feature.name]["all"]         
+            if self.plot_systematics:
+                bkg_histo_syst = self.histos[feature.name]["bkg_histo_syst"]
 
+            binning_args, y_axis_adendum = self.get_binning(feature)
             x_title = (str(feature.get_aux("x_title"))
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
             hist_title = "; %s; %s" % (x_title, y_title)
-            background_hists = []
-            signal_hists = []
-            data_hists = []
-            all_hists = []
-            colors = []            
-            if self.plot_systematics:
-                bkg_histo_syst = ROOT.TH1D("syst", hist_title, *binning_args)
-            for process, datasets in self.processes_datasets.items():
-                feature_name = feature.name  # FIXME: What about systs?
-                process_histo = ROOT.TH1D(str(process.label), hist_title, *binning_args)
-                process_histo.process_label = str(process.label)
-                process_histo.cmt_process_name = process.name
-                process_histo.Sumw2()
-                for dataset in datasets:
-                    dataset_histo = ROOT.TH1D(randomize("tmp"), hist_title, *binning_args)
-                    dataset_histo.Sumw2()
-                    for category in self.expand_category():
-                        inp = inputs["data"][
-                            (dataset.name, category.name)].collection.targets.values()
-                        for elem in inp:
-                            rootfile = ROOT.TFile.Open(elem.path)
-                            histo = copy(rootfile.Get(feature_name))
-                            rootfile.Close()
-                            dataset_histo.Add(histo)
-                    if not process.isData:
-                        nevents = 0
-                        inp = inputs["stats"][dataset.name]
-                        with open(inp.path) as f:
-                            stats = json.load(f)
-                            # nevents += stats["nevents"]
-                            nevents += stats["nweightedevents"]
-                        if nevents != 0:
-                            dataset_histo.Scale(dataset.xs * lumi / nevents)
-                    process_histo.Add(dataset_histo)
-                    if self.plot_systematics and not process.isData and not process.isSignal:
-                        dataset_histo_syst = dataset_histo.Clone()
-                        for ibin in range(1, dataset_histo_syst.GetNbinsX() + 1):
-                            dataset_histo_syst.SetBinError(ibin,
-                                float(dataset_histo.GetBinContent(ibin)) * systematics[dataset.name]
-                            )
-                        bkg_histo_syst.Add(dataset_histo_syst)
-
-                yield_error = ROOT.Double()
-                process_histo.cmt_yield = process_histo.IntegralAndError(0,
-                    process_histo.GetNbinsX() + 1, yield_error)
-                process_histo.cmt_yield_error = float(yield_error)
-                if process.isSignal:
-                    setup_signal_hist(process_histo, ROOT.TColor.GetColor(*process.color)) # FIXME include custom colors
-                    signal_hists.append(process_histo)
-                elif process.isData:
-                    setup_data_hist(process_histo, ROOT.TColor.GetColor(*process.color))
-                    data_hists.append(process_histo)
-                else:
-                    setup_background_hist(process_histo, ROOT.TColor.GetColor(*process.color))
-                    background_hists.append(process_histo)
-                if not process.isData: #or not self.hide_data:
-                    all_hists.append(process_histo)
 
             # qcd shape files
             qcd_shape_files = None
@@ -647,7 +588,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                             * math.sqrt(new_errors_sq[ib - 1]))
 
                 # store and style
-                yield_error = ROOT.Double()
+                yield_error = c_double(0.)
                 qcd_hist.cmt_yield = qcd_hist.IntegralAndError(
                     0, qcd_hist.GetNbinsX() + 1, yield_error)
                 qcd_hist.cmt_yield_error = float(yield_error)
@@ -655,7 +596,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 qcd_hist.cmt_process_name = "qcd"
                 qcd_hist.process_label = "QCD"
                 qcd_hist.SetTitle("QCD")
-                setup_background_hist(qcd_hist, ROOT.kYellow)
+                self.setup_background_hist(qcd_hist, ROOT.kYellow)
                 background_hists.append(qcd_hist)
                 background_names.append("qcd")
                 all_hists.append(qcd_hist)
@@ -721,7 +662,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 dummy_hist.GetXaxis().SetTitleOffset(100)
                 c.get_pad(1).cd()
 
-            r.setup_hist(dummy_hist, pad=c.get_pad(1))
+            # r.setup_hist(dummy_hist, pad=c.get_pad(1))
+            r.setup_hist(dummy_hist)
             dummy_hist.GetYaxis().SetMaxDigits(4)
             maximum = max([hist.GetMaximum() for hist in draw_hists])
             dummy_hist.SetMaximum(1.1 * maximum)
@@ -771,9 +713,11 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
 
                 for i in range(binning_args[0]):
-                    x, d, b = ROOT.Double(), ROOT.Double(), ROOT.Double()
+                    x, d, b = c_double(0.), c_double(0.), c_double(0.)
                     data_graph.GetPoint(i, x, d)
                     bkg_graph.GetPoint(i, x, b)
+                    d = d.value
+                    b = b.value
                     if d == EMPTY or b == 0:
                         ratio_graph.SetPoint(i, x, EMPTY)
                     else:
@@ -837,3 +781,94 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 for hist in all_hists:
                     hist.Write(hist.cmt_process_name)
                 f.Close()
+
+    @law.decorator.notify
+    @law.decorator.safe_output
+    def run(self):
+        ROOT.gStyle.SetOptStat(0)
+
+        # create root tchains for inputs
+        inputs = self.input()
+
+        lumi = self.config.lumi_pb
+
+        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
+        self.signal_names = [p.name for p in self.processes_datasets.keys() if p.isSignal]
+        self.background_names = [p.name for p in self.processes_datasets.keys()
+            if not p.isData and not p.isSignal]
+
+        if self.fixed_colors:
+            colors = list(range(2, 2 + len(self.processes_datasets.keys())))
+
+        self.histos = {}
+        for feature in self.features:
+            self.histos[feature.name] = {"background": [], "signal": [], "data": [], "all": []}
+
+            binning_args, y_axis_adendum = self.get_binning(feature)
+            x_title = (str(feature.get_aux("x_title"))
+                + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
+            y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
+            hist_title = "; %s; %s" % (x_title, y_title)
+
+            if self.plot_systematics:
+                self.histos[feature.name]["bkg_histo_syst"] = ROOT.TH1D(
+                    randomize("syst"), hist_title, *binning_args)
+
+            for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+                feature_name = feature.name  # FIXME: What about systs?
+                process_histo = ROOT.TH1D(randomize(process.name), hist_title, *binning_args)
+                process_histo.process_label = str(process.label)
+                process_histo.cmt_process_name = process.name
+                process_histo.Sumw2()
+                for dataset in datasets:
+                    dataset_histo = ROOT.TH1D(randomize("tmp"), hist_title, *binning_args)
+                    dataset_histo.Sumw2()
+                    for category in self.expand_category():
+                        inp = inputs["data"][
+                            (dataset.name, category.name)].collection.targets.values()
+                        for elem in inp:
+                            rootfile = ROOT.TFile.Open(elem.path)
+                            histo = copy(rootfile.Get(feature_name))
+                            rootfile.Close()
+                            dataset_histo.Add(histo)
+                    if not process.isData:
+                        nevents = 0
+                        inp = inputs["stats"][dataset.name]
+                        with open(inp.path) as f:
+                            stats = json.load(f)
+                            # nevents += stats["nevents"]
+                            nevents += stats["nweightedevents"]
+                        if nevents != 0:
+                            dataset_histo.Scale(dataset.xs * lumi / nevents)
+                    process_histo.Add(dataset_histo)
+                    if self.plot_systematics and not process.isData and not process.isSignal:
+                        dataset_histo_syst = dataset_histo.Clone()
+                        for ibin in range(1, dataset_histo_syst.GetNbinsX() + 1):
+                            dataset_histo_syst.SetBinError(ibin,
+                                float(dataset_histo.GetBinContent(ibin)) * systematics[dataset.name]
+                            )
+                        self.histos[feature.name]["bkg_histo_syst"].Add(dataset_histo_syst)
+
+                yield_error = c_double(0.)
+                process_histo.cmt_yield = process_histo.IntegralAndError(0,
+                    process_histo.GetNbinsX() + 1, yield_error)
+                process_histo.cmt_yield_error = yield_error.value
+
+                if self.fixed_colors:
+                    color = colors[iproc]
+                else:
+                    color = ROOT.TColor.GetColor(*process.color)
+
+                if process.isSignal:
+                    self.setup_signal_hist(process_histo, color)
+                    self.histos[feature.name]["signal"].append(process_histo)
+                elif process.isData:
+                    self.setup_data_hist(process_histo, color)
+                    self.histos[feature.name]["data"].append(process_histo)
+                else:
+                    self.setup_background_hist(process_histo, color)
+                    self.histos[feature.name]["background"].append(process_histo)
+                if not process.isData: #or not self.hide_data:
+                   self.histos[feature.name]["all"].append(process_histo)
+
+        self.plot()

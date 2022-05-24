@@ -250,4 +250,21 @@ class Config_ul_2018(Config):
         ]
         return ObjectCollection(datasets)
 
+    def add_weights(self):
+        weights = DotDict()
+        weights.default = "1"
+        weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
+        weights.channels = {
+            "mutau": ["genWeight", "puWeight", "prescaleWeight", "trigSF",
+                "idAndIsoAndFakeSF_deep_pt", "L1PreFiringWeight_Nom", "PUjetID_SF"
+            ],
+            # "DYscale_MTT"],
+        }
+        weights.channels["etau"] = weights.channels["mutau"]
+        weights.channels["tautau"] = weights.channels["mutau"]
+
+        weights.channels_mult = {channel: jrs(weights.channels[channel], op="*")
+            for channel in weights.channels}
+        return weights
+
 config = Config_ul_2018("ul_2018", year=2018, ecm=13, lumi_pb=59741)
