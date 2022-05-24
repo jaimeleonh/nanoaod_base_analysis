@@ -176,7 +176,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     weights_file = None
 
     def output(self):
-        return  self.local_target("data_%s.root" % self.branch)
+        return self.local_target("data_%s.root" % self.branch)
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -187,6 +187,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
         # prepare inputs and outputs
         inp = self.input().path
+        print(inp)
         outp = self.output()
         df = ROOT.RDataFrame(self.tree_name, inp)
 
@@ -196,6 +197,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             selection = jrs(dataset_selection, selection, op="and")
 
         filtered_df = df.Define("selection", selection).Filter("selection")
+        # filtered_df = filtered_df.Filter("event == 693225")
 
         modules = self.get_feature_modules(self.modules_file)
         branches = list(df.GetColumnNames())
@@ -240,7 +242,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         else:
             if "$" in self.keep_and_drop_file:
                 self.keep_and_drop_file = os.path.expandvars(self.keep_and_drop_file)
-        if self.dataset.get_aux("splitting"):
+        if self.dataset.get_aux("splitting") and self.max_events != -1:
             self.max_events = self.dataset.get_aux("splitting")
         if self.max_events != -1:
             if not hasattr(self, "splitted_branches") and self.is_workflow():
@@ -424,7 +426,7 @@ class PreprocessWrapper(DatasetCategoryWrapperTask):
 
 
 # class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
-class Categorization(Preprocess):
+class Categorization(PreprocessRDF):
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
         "base category with the initial selection, default: base")
     systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
@@ -433,6 +435,9 @@ class Categorization(Preprocess):
         "for categorization, default: None")
     feature_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
+    from_rdf = luigi.BoolParameter(default=True, description="whether preprocessing was performed "
+        "with PreprocessRDF, default: True")
+
     # regions not supported
     region_name = None
 
@@ -441,16 +446,33 @@ class Categorization(Preprocess):
 
     tree_name = "Events"
 
-    # def create_branch_map(self):
-        # return len(self.dataset.get_files(
-            # os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name)))
+    def __init__(self, *args, **kwargs):
+        # if self.from_rdf:
+            # self.max_events = -1
+        # print(self.max_events)
+        super(Categorization, self).__init__(*args, **kwargs)
+
+    def create_branch_map(self):
+        # if self.max_events != -1 and not self.from_rdf:
+        if not self.from_rdf:
+            return len(self.splitted_branches)
+        else:
+            return len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
 
     def workflow_requires(self):
-        return {"data": Preprocess.vreq(self, category_name=self.base_category_name)}
+        if not self.from_rdf:
+            return {"data": Preprocess.vreq(self, category_name=self.base_category_name)}
+        else:
+            return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
 
     def requires(self):
-        return Preprocess.vreq(self, category_name=self.base_category_name,
-            branch=self.branch)
+        if not self.from_rdf:
+            return Preprocess.vreq(self, category_name=self.base_category_name,
+                branch=self.branch)
+        else:
+            return PreprocessRDF.vreq(self, category_name=self.base_category_name,
+                branch=self.branch)
 
     def output(self):
         return {
@@ -499,7 +521,8 @@ class Categorization(Preprocess):
         ROOT = import_root()
 
         # prepare inputs and outputs
-        inp = self.input()["data"].path
+        # inp = self.input()["data"].path
+        inp = self.input().path
         outp = self.output()
         tf = ROOT.TFile.Open(inp)
         try:
@@ -574,13 +597,16 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
             good_inputs = []
             for inp in inputs:
                 tf = ROOT.TFile.Open(inp.path)
-                tree = tf.Get(self.tree_name)
-                if tree.GetEntries() > 0:
-                    good_inputs.append(inp)
-            if good_inputs:
-                law.root.hadd_task(self, good_inputs, tmp_out, local=True)
-            else:
-                raise Exception("No good files were found")
+                try:
+                    tree = tf.Get(self.tree_name)
+                    if tree.GetEntries() > 0:
+                        good_inputs.append(inp)
+                except:
+                    print("File %s not used" % inp.path)
+            #if good_inputs:
+            law.root.hadd_task(self, good_inputs, tmp_out, local=True)
+            #else:
+            #    raise Exception("No good files were found")
 
 
 class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
