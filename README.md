@@ -1,7 +1,7 @@
 # Installation (on lxplus)
 
 ```
-git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git -b HHbbtt
+git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git -b py3
 cd nanoaod_base_analysis
 source setup.sh
 law index --verbose
