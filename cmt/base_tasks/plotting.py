@@ -130,7 +130,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             self.get_output_postfix(), self.branch))
 
     def get_weight(self, category, **kwargs):
-        if self.config.processes.get(self.dataset.process.name).isData:
+        if self.config.processes.get(self.dataset.process.name).isData or not self.apply_weights:
             return "1"
         else:
             #print self.config.join_selection_channels(self.config.weights.channels_mult)
@@ -156,7 +156,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             sel = self.config.regions.get(self.region_name).selection
             df = df.Filter(sel)
         
-        df = df.Filter("dau1_pt > 25")  # FIXME, temporary fix
+        # df = df.Filter("dau1_pt > 25")  # FIXME, temporary fix
 
         tf = ROOT.TFile.Open(inp)
         tree = tf.Get(self.tree_name)
@@ -168,7 +168,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = "Events" + y_axis_adendum
             title = "; %s; %s" % (x_title, y_title)
-
             systs = self.get_systs(feature, isMC)
             systs_directions = [("central", "")]
             if isMC:
@@ -176,11 +175,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
             # loop over systematics and up/down variations
             for syst_name, direction in systs_directions:
-                if syst_name != "central":
-                    syst = self.config.systematics.get(syst_name)
-                else:
-                    syst = self.config.systematics.get(feature.central)
-
+                # if syst_name != "central":
+                    # syst = self.config.systematics.get(syst_name)
+                # else:
+                    # syst = self.config.systematics.get(feature.central)
                 # define tag just for histograms's name
                 if syst_name != "central" and isMC:
                     tag = "_%s" % syst_name
@@ -328,7 +326,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         )
         reqs["stats"] = OrderedDict(
             (dataset.name, MergeCategorizationStats.vreq(self, dataset_name=dataset.name))
-            for dataset in self.datasets_to_run if not dataset.process.isData
+            for dataset in self.datasets_to_run if not dataset.process.isData and self.apply_weights
         )
 
         if self.do_qcd:
@@ -425,7 +423,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         hist.SetLineColor(color)
         hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
-    def plot(self):
+    def get_systematics(self):
         # systematics
         systematics = {}
         if self.plot_systematics:
@@ -475,7 +473,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             for dataset_name in systematics:
                 systematics[dataset_name] = math.sqrt(sum([x[1] * x[1]
                     for x in systematics[dataset_name]]))
+        return systematics
 
+    def plot(self):
         # helper to extract the qcd shape in a region
         def get_qcd(region, files, bin_limit=0.):
             d_hist = files[region].Get("histograms/" + self.data_names[0])
@@ -505,7 +505,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         def get_integral_and_error(hist):
             error = c_double(0.)
             integral = hist.IntegralAndError(0, hist.GetNbinsX() + 1, error)
-            error = float(error)
+            error = error.value
             compatible = True if integral <= 0 else False
             # compatible = True if integral - error <= 0 else False
             return integral, error, compatible
@@ -534,7 +534,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                             else self.qcd_feature)
                     else:
                         my_feature = feature.name
-                    qcd_shape_files[key] = ROOT.TFile.Open(inputs["qcd"][key]["root"].targets[my_feature].path)
+                    qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
 
                 # do the qcd extrapolation
                 if "shape" in qcd_shape_files:
@@ -591,14 +591,13 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 yield_error = c_double(0.)
                 qcd_hist.cmt_yield = qcd_hist.IntegralAndError(
                     0, qcd_hist.GetNbinsX() + 1, yield_error)
-                qcd_hist.cmt_yield_error = float(yield_error)
+                qcd_hist.cmt_yield_error = yield_error.value
                 qcd_hist.cmt_scale = 1.
                 qcd_hist.cmt_process_name = "qcd"
                 qcd_hist.process_label = "QCD"
                 qcd_hist.SetTitle("QCD")
                 self.setup_background_hist(qcd_hist, ROOT.kYellow)
                 background_hists.append(qcd_hist)
-                background_names.append("qcd")
                 all_hists.append(qcd_hist)
 
             if not self.hide_data:
@@ -613,8 +612,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     hist.scale = scale
                 draw_hists = all_hists[::-1]
             else:
-                background_stack = ROOT.THStack(randomize("stack"), "stack")
+                background_stack = ROOT.THStack(randomize("stack"), "")
                 for hist in background_hists[::-1]:
+                    # hist.SetFillColor(ROOT.kRed)
                     background_stack.Add(hist)
                     if not bkg_histo:
                         bkg_histo = hist.Clone()
@@ -654,7 +654,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             # Draw
-            if self.hide_data or len(data_hists) == 0:
+            if self.hide_data or len(data_hists) == 0 or not self.stack:
                 c = Canvas()
             else:
                 c = RatioCanvas()
@@ -665,21 +665,22 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             # r.setup_hist(dummy_hist, pad=c.get_pad(1))
             r.setup_hist(dummy_hist)
             dummy_hist.GetYaxis().SetMaxDigits(4)
+            print([hist.GetMaximum() for hist in draw_hists])
+            print(max([hist.GetMaximum() for hist in draw_hists]))
             maximum = max([hist.GetMaximum() for hist in draw_hists])
             dummy_hist.SetMaximum(1.1 * maximum)
             dummy_hist.SetMinimum(0.001)  # FIXME in case of log scale
             draw_labels = get_labels(upper_right="")
 
             dummy_hist.Draw()
-            for hist in draw_hists:
+            for ih, hist in enumerate(draw_hists):
                 option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
                 hist.Draw(option)
 
             for label in draw_labels:
-                label.Draw()
-            legend.Draw()
-
-            if not (self.hide_data or len(data_hists) == 0):
+                label.Draw("same")
+            legend.Draw("same")
+            if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack):
                 dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
                 r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
                     props={"Minimum": 0.25, "Maximum": 1.75})
@@ -797,6 +798,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         self.background_names = [p.name for p in self.processes_datasets.keys()
             if not p.isData and not p.isSignal]
 
+        if self.plot_systematics:
+            systematics = self.get_systematics()
+
         if self.fixed_colors:
             colors = list(range(2, 2 + len(self.processes_datasets.keys())))
 
@@ -831,7 +835,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                             histo = copy(rootfile.Get(feature_name))
                             rootfile.Close()
                             dataset_histo.Add(histo)
-                    if not process.isData:
+                    if not process.isData and self.apply_weights:
                         nevents = 0
                         inp = inputs["stats"][dataset.name]
                         with open(inp.path) as f:
@@ -870,5 +874,4 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     self.histos[feature.name]["background"].append(process_histo)
                 if not process.isData: #or not self.hide_data:
                    self.histos[feature.name]["all"].append(process_histo)
-
         self.plot()

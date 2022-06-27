@@ -174,7 +174,7 @@ class Config():
             Category("dum", "dummy category", selection="Htt_svfit_mass_nom > 50 "
                 " && Htt_svfit_mass_nom < 150"),
             Category("mutau", "#mu#tau channel", selection="pairType == 0"),
-            Category("etau", "e#tau channel", selection="pairType == 1"),
+            Category("etau", "e#tau channel", selection="pairType >= 1"),
             # Category("etau", "e#tau channel", selection="pairType >= -999"),
             # Category("etau", "e#tau channel", selection="1."),
             Category("tautau", "#tau#tau channel", selection="pairType == 2"),
@@ -214,6 +214,7 @@ class Config():
                 color=(0, 0, 0), isSignal=True, parent_process="vbf"),
 
             Process("dy", Label("DY"), color=(255, 102, 102), isDY=True, llr_name="DY"),
+            Process("dy_high", Label("DY"), color=(255, 102, 102), isDY=True, parent_process="dy"),
 
             Process("tt", Label("t#bar{t}"), color=(255, 153, 0), llr_name="TT"),
             Process("tt_dl", Label("t#bar{t} DL"), color=(205, 0, 9), parent_process="tt"),
@@ -236,17 +237,21 @@ class Config():
             Process("data", Label("DATA"), color=(0, 0, 0), isData=True),
             Process("data_tau", Label("DATA\_TAU"), color=(0, 0, 0), parent_process="data", isData=True),
             Process("data_etau", Label("DATA\_E"), color=(0, 0, 0), parent_process="data", isData=True),
-            Process("data_mu", Label("DATA\_MU"), color=(0, 0, 0), parent_process="data", isData=True)
+            Process("data_mutau", Label("DATA\_MU"), color=(0, 0, 0), parent_process="data", isData=True)
         ]
 
         process_group_names = {
             "default": [
                 "ggf_sm",
                 "data_tau",
+                "dy_high",
                 "tt_dl",
             ],
             "data_tau": [
                 "data_tau",
+            ],
+            "data_etau": [
+                "data_etau",
             ],
             "bkg": [
                 "tt_dl",
@@ -351,7 +356,7 @@ class Config():
             Dataset("dy_high",
                 dataset="/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/"
                     "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("dy"),
+                process=self.processes.get("dy_high"),
                 # prefix="xrootd-cms.infn.it//",
                 # prefix="cms-xrd-global.cern.ch//",
                 xs=6077.22, 
@@ -751,7 +756,8 @@ class Config():
     def add_weights(self):
         weights = DotDict()
         weights.default = "1"
-        weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
+        # weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
+        weights.total_events_weights = ["genWeight", "puWeight"]
         weights.channels = {
             "mutau": ["genWeight", "puWeight", "prescaleWeight", "trigSF",
                 "L1PreFiringWeight_Nom", "PUjetID_SF"

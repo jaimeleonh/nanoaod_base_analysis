@@ -13,13 +13,12 @@ class Config_ul_2018(Config):
 
     def add_datasets(self):
         datasets = [
-            # Dataset("ggf_sm",
-                # dataset="/GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8/"
-                    # "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
-                    # "NANOAODSIM",
-                # process=self.processes.get("ggf_sm"),
-                # # prefix="xrootd-cms.infn.it//",
-                # xs=0.03105),
+            Dataset("ggf_sm",
+                dataset="/GluGluToHHTo2B2Tau_TuneCP5_PSWeights_node_SM_13TeV-madgraph-pythia8/"
+                    "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+                process=self.processes.get("ggf_sm"),
+                xs=0.03105,
+                tags=["ul"]),
 
             # Dataset("vbf_sm",
                 # dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_1_dipoleRecoilOff"
@@ -33,13 +32,14 @@ class Config_ul_2018(Config):
             Dataset("dy_high",
                 dataset="/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-                process=self.processes.get("dy"),
+                process=self.processes.get("dy_high"),
                 # prefix="xrootd-cms.infn.it//",
                 # prefix="cms-xrd-global.cern.ch//",
                 xs=6077.22, 
                 merging={
                     "tautau": 20,
                     "etau": 20,
+                    "mutau": 20,
                 },
                 splitting=100000,
                 tags=["ul"]),
@@ -51,6 +51,7 @@ class Config_ul_2018(Config):
                 xs=88.29, 
                 merging={
                     "tautau": 20,
+                    "mutau": 20,
                     "etau": 40,
                 },
                 splitting=100000,
@@ -63,6 +64,7 @@ class Config_ul_2018(Config):
                 xs=365.34,
                 merging={
                     "tautau": 20,
+                    "mutau": 60,
                     "etau": 40,
                 },
                 splitting=100000,
@@ -247,18 +249,56 @@ class Config_ul_2018(Config):
                 },
                 tags=["ul"]),
 
+            # SingleMuon 2018
+            Dataset("data_mutau_a",
+                dataset="/SingleMuon/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
+                process=self.processes.get("data_mutau"),
+                runPeriod="A",
+                # prefix="xrootd-cms.infn.it//",
+                splitting=-1,
+                merging={
+                    "mutau": 20,
+                    "tautau": 10,
+                    "etau": 10,
+                },
+                tags=["ul"]),
+            Dataset("data_mutau_b",
+                dataset="/SingleMuon/Run2018B-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
+                process=self.processes.get("data_mutau"),
+                runPeriod="B",
+                # prefix="xrootd-cms.infn.it//",
+                splitting=-1,
+                merging={
+                    "mutau": 20,
+                    "tautau": 10,
+                    "etau": 10,
+                },
+                tags=["ul"]),
+            Dataset("data_mutau_c",
+                dataset="/SingleMuon/Run2018C-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
+                process=self.processes.get("data_mutau"),
+                runPeriod="C",
+                # prefix="xrootd-cms.infn.it//",
+                splitting=-1,
+                merging={
+                    "mutau": 20,
+                    "tautau": 10,
+                    "etau": 10,
+                },
+                tags=["ul"]),
+
         ]
         return ObjectCollection(datasets)
 
     def add_weights(self):
         weights = DotDict()
         weights.default = "1"
-        weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
+        # weights.total_events_weights = ["genWeight", "puWeight", "DYstitchWeight"]
+        weights.total_events_weights = ["genWeight", "puWeight"]
         weights.channels = {
             "mutau": ["genWeight", "puWeight", "prescaleWeight", "trigSF",
-                "idAndIsoAndFakeSF_deep_pt", "L1PreFiringWeight_Nom", "PUjetID_SF"
+                "idAndIsoAndFakeSF_deep_pt", "L1PreFiringWeight_Nom", "PUjetID_SF", "bTagweightReshape"
             ],
-            # "DYscale_MTT"],
         }
         weights.channels["etau"] = weights.channels["mutau"]
         weights.channels["tautau"] = weights.channels["mutau"]

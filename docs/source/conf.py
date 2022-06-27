@@ -5,7 +5,7 @@
 project = 'nanoaod-base-analysis'
 
 import sys, os
-sys.path.insert(0, os.path.abspath('../../cmt'))
+sys.path.insert(0, os.path.abspath('../../'))
 
 release = '0.1'
 version = '0.1.0'

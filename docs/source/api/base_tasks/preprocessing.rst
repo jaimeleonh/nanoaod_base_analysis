@@ -8,9 +8,6 @@ cmt.base_tasks.preprocessing
 Class ``PreprocessRDF``
 -----------------------
 
-.. contents::
-
-
 .. autoclass:: PreprocessRDF
    :members:
 
