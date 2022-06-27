@@ -175,6 +175,13 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         default="")
     weights_file = None
 
+    """
+    Perform the preprocessing step applying a preselection + running RDF modules
+
+    Arguments:
+        modules_file: filename inside cms/config with the RDF modules to run
+    """
+
     def output(self):
         return self.local_target("data_%s.root" % self.branch)
 
@@ -196,8 +203,12 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         if dataset_selection and dataset_selection != "1":
             selection = jrs(dataset_selection, selection, op="and")
 
-        filtered_df = df.Define("selection", selection).Filter("selection")
-        # filtered_df = filtered_df.Filter("event == 693225")
+        if selection != "":
+            filtered_df = df.Define("selection", selection).Filter("selection")
+        else:
+            filtered_df = df
+
+        # filtered_df = filtered_df.Filter("event == 83362796")
 
         modules = self.get_feature_modules(self.modules_file)
         branches = list(df.GetColumnNames())
@@ -392,7 +403,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         # if dataset_selection and dataset_selection != "1":
             # selection = jrs(dataset_selection, selection, op="and")
         # selection = "Jet_pt > 500" # hard-coded to reduce the number of events for testing
-        # selection = "(event == 365212)"
+        # selection = "(event == 265939)"
         modules = self.get_modules()
 
         if self.max_events == -1:
@@ -538,6 +549,9 @@ class Categorization(PreprocessRDF):
                 df = ROOT.RDataFrame(self.tree_name, inp)
                 branches = list(df.GetColumnNames())
                 feature_modules = self.get_feature_modules()
+
+                # df = df.Filter("event == 265939")
+
                 if len(feature_modules) > 0:
                     for module in feature_modules:
                         df, add_branches = module.run(df)
