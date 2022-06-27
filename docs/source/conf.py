@@ -3,6 +3,8 @@
 # -- Project information
 
 project = 'nanoaod-base-analysis'
+
+import sys, os
 sys.path.insert(0, os.path.abspath('../../cmt'))
 
 release = '0.1'

@@ -171,16 +171,18 @@ class PreCounterWrapper(DatasetSuperWrapperTask):
 
 
 class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
-    modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
-        default="")
-    weights_file = None
-
     """
     Perform the preprocessing step applying a preselection + running RDF modules
 
     Arguments:
         modules_file: filename inside cms/config with the RDF modules to run
     """
+
+    modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
+        default="")
+    weights_file = None
+
+
 
     def output(self):
         return self.local_target("data_%s.root" % self.branch)
