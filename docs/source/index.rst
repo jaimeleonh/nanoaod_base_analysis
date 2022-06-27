@@ -3,7 +3,7 @@ Welcome to nanoaod-base-analysis's documentation!
 
 
 Check out the :doc:`usage` section for further information, including
-how to :ref:`installation` the project.
+how to :ref:`install` the project.
 
 .. note::
 
@@ -15,4 +15,3 @@ Contents
 .. toctree::
 
    usage
-   api
