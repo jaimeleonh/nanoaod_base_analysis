@@ -316,6 +316,42 @@ class SplittedTask():
     def get_splitted_branches(self):
         return
 
+class RDFModuleTask():
+    def get_feature_modules(self, filename):
+        module_params = None
+        if filename:
+            import yaml
+            from cmt.utils.yaml_utils import ordered_load
+            with open(os.path.expandvars("$CMT_BASE/cmt/config/{}.yaml".format(filename))) as f:
+                module_params = ordered_load(f, yaml.SafeLoader)
+        else:
+            return []
+
+        def _args(*_nargs, **_kwargs):
+            return _nargs, _kwargs
+
+        modules = []
+        if module_params:
+            for tag in module_params.keys():
+                parameter_str = ""
+                assert "name" in module_params[tag] and "path" in module_params[tag]
+                name = module_params[tag]["name"]
+                if "parameters" in module_params[tag]:
+                    for param, value in module_params[tag]["parameters"].items():
+                        if isinstance(value, str):
+                            if "self" in value:
+                                value = eval(value)
+                        if isinstance(value, str):
+                            parameter_str += param + " = '{}', ".format(value)
+                        else:
+                            parameter_str += param + " = {}, ".format(value)
+                mod = module_params[tag]["path"]
+                mod = __import__(mod, fromlist=[name])
+                nargs, kwargs = eval('_args(%s)' % parameter_str)
+                modules.append(getattr(mod, name)(**kwargs)())
+        return modules
+
+
 
 class InputData(DatasetTask, law.ExternalTask):
 

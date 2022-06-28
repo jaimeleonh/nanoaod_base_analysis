@@ -22,7 +22,7 @@ from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import ( 
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData,
-    ConfigTaskWithCategory, SplittedTask, DatasetTask
+    ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask
 )
 
 
@@ -73,7 +73,7 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
         )
 
 
-class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
+class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask, RDFModuleTask):
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
     # regions not supported
@@ -100,40 +100,6 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask)
             # "stats": self.local_target("data_%s.json" % self.branch)
         # }
         return  self.local_target("data_%s.json" % self.branch)
-
-    def get_feature_modules(self, filename):
-        module_params = None
-        if filename:
-            import yaml
-            from cmt.utils.yaml_utils import ordered_load
-            with open(os.path.expandvars("$CMT_BASE/cmt/config/{}.yaml".format(filename))) as f:
-                module_params = ordered_load(f, yaml.SafeLoader)
-        else:
-            return []
-
-        def _args(*_nargs, **_kwargs):
-            return _nargs, _kwargs
-
-        modules = []
-        if module_params:
-            for tag in module_params.keys():
-                parameter_str = ""
-                assert "name" in module_params[tag] and "path" in module_params[tag]
-                name = module_params[tag]["name"]
-                if "parameters" in module_params[tag]:
-                    for param, value in module_params[tag]["parameters"].items():
-                        if isinstance(value, str):
-                            if "self" in value:
-                                value = eval(value)
-                        if isinstance(value, str):
-                            parameter_str += param + " = '{}', ".format(value)
-                        else:
-                            parameter_str += param + " = {}, ".format(value)
-                mod = module_params[tag]["path"]
-                mod = __import__(mod, fromlist=[name])
-                nargs, kwargs = eval('_args(%s)' % parameter_str)
-                modules.append(getattr(mod, name)(**kwargs)())
-        return modules
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -181,8 +147,6 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
         default="")
     weights_file = None
-
-
 
     def output(self):
         return self.local_target("data_%s.root" % self.branch)
@@ -493,40 +457,6 @@ class Categorization(PreprocessRDF):
             # "stats": self.local_target("data_%s.json" % self.branch)
         }
 
-    def get_feature_modules(self):
-        module_params = None
-        if self.feature_modules_file:
-            import yaml
-            from cmt.utils.yaml_utils import ordered_load
-            with open(os.path.expandvars("$CMT_BASE/cmt/config/{}.yaml".format(self.feature_modules_file))) as f:
-                module_params = ordered_load(f, yaml.SafeLoader)
-        else:
-            return []
-
-        def _args(*_nargs, **_kwargs):
-            return _nargs, _kwargs
-
-        modules = []
-        if module_params:
-            for tag in module_params.keys():
-                parameter_str = ""
-                assert "name" in module_params[tag] and "path" in module_params[tag]
-                name = module_params[tag]["name"]
-                if "parameters" in module_params[tag]:
-                    for param, value in module_params[tag]["parameters"].items():
-                        if isinstance(value, str):
-                            if "self" in value:
-                                value = eval(value)
-                        if isinstance(value, str):
-                            parameter_str += param + " = '{}', ".format(value)
-                        else:
-                            parameter_str += param + " = {}, ".format(value)
-                mod = module_params[tag]["path"]
-                mod = __import__(mod, fromlist=[name])
-                nargs, kwargs = eval('_args(%s)' % parameter_str)
-                modules.append(getattr(mod, name)(**kwargs)())
-        return modules
-
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
@@ -550,7 +480,7 @@ class Categorization(PreprocessRDF):
 
                 df = ROOT.RDataFrame(self.tree_name, inp)
                 branches = list(df.GetColumnNames())
-                feature_modules = self.get_feature_modules()
+                feature_modules = self.get_feature_modules(self.feature_modules_file)
 
                 # df = df.Filter("event == 265939")
 

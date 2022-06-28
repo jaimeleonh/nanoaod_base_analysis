@@ -28,7 +28,8 @@ from analysis_tools.utils import (
 )
 from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, ConfigTaskWithCategory
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, ConfigTaskWithCategory,
+    RDFModuleTask
 )
 
 from cmt.base_tasks.preprocessing import Preprocess, MergeCategorization, MergeCategorizationStats
@@ -114,7 +115,10 @@ class BasePlotTask(ConfigTaskWithCategory):
         return postfix
 
 
-class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondorWorkflow):
+class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondorWorkflow,
+        RDFModuleTask):
+    preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
+        default="")
 
     def create_branch_map(self):
         return self.n_files_after_merging
@@ -155,7 +159,12 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         if self.region_name != law.NO_STR:
             sel = self.config.regions.get(self.region_name).selection
             df = df.Filter(sel)
-        
+
+        modules = self.get_feature_modules(self.preplot_modules_file)
+        if len(modules) > 0:
+            for module in modules:
+                df, _ = module.run(df)
+
         # df = df.Filter("dau1_pt > 25")  # FIXME, temporary fix
 
         tf = ROOT.TFile.Open(inp)

@@ -286,6 +286,18 @@ class Config_ul_2018(Config):
                     "etau": 10,
                 },
                 tags=["ul"]),
+            Dataset("data_mutau_d",
+                dataset="/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
+                process=self.processes.get("data_mutau"),
+                runPeriod="D",
+                # prefix="xrootd-cms.infn.it//",
+                splitting=-1,
+                merging={
+                    "mutau": 20,
+                    "tautau": 10,
+                    "etau": 10,
+                },
+                tags=["ul"]),
 
         ]
         return ObjectCollection(datasets)

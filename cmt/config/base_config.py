@@ -263,8 +263,22 @@ class Config():
                 "tt_dl",
                 "tt_sl",
                 "dy",
-                "others",
+                "wjets",
                 "data_etau",
+            ],
+            "mutau": [
+                "tt_dl",
+                "tt_sl",
+                "dy",
+                "wjets",
+                "data_mutau",
+            ],
+            "tautau": [
+                "tt_dl",
+                "tt_sl",
+                "dy",
+                "wjets",
+                "data_tau",
             ],
             "vbf": [
                 "vbf_sm",
