@@ -156,6 +156,9 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
         df = ROOT.RDataFrame(self.tree_name, inp)
 
+        dataset_selection = self.dataset.get_aux("selection")
+        if dataset_selection and dataset_selection != "1":
+            df = df.Filter(dataset_selection)
         if self.region_name != law.NO_STR:
             sel = self.config.regions.get(self.region_name).selection
             df = df.Filter(sel)

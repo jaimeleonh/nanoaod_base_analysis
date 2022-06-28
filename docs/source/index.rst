@@ -1,9 +1,11 @@
 Welcome to nanoaod-base-analysis's documentation!
-===================================
+=================================================
 
 
 Check out the :doc:`usage` section for further information, including
-how to :ref:`install` the project.
+how to perform the :ref:`installation` of the project.
+
+Information about the code can be found under the :doc:`api/index`.
 
 .. note::
 

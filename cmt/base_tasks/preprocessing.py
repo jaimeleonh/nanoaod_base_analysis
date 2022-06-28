@@ -74,6 +74,15 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
 
 
 class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask, RDFModuleTask):
+    """
+    Performs a counting of the events with and without applying the necessary weights.
+    Weights are read from the config file.
+    In case they have to be computed, RDF modules can be run.
+
+    :param weights_file: filename inside cmt/config/ (w/o extension) with the RDF modules to run
+    :type weights_file: str
+    """
+
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
     # regions not supported
@@ -85,25 +94,39 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
     tree_name = "Events"
 
     def create_branch_map(self):
+        """
+        :return: number of files for the selected dataset
+        :rtype: int
+        """
         return len(self.dataset.get_files(
             os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
 
     def workflow_requires(self):
+        """
+        """
         return {"data": InputData.req(self)}
 
     def requires(self):
+        """
+        Each branch requires one input file
+        """
         return InputData.req(self, file_index=self.branch)
 
     def output(self):
-        # return {
-            # "data": self.local_target("data_%s.root" % self.branch),
-            # "stats": self.local_target("data_%s.json" % self.branch)
-        # }
+        """
+        :return: One file per input file
+        :rtype: `.json`
+        """
         return  self.local_target("data_%s.json" % self.branch)
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
+        """
+        Creates one RDataFrame per input file, runs the desired RDFModules
+        and counts the number of events w/ and w/o additional weights
+        """
+
         from shutil import copy
         ROOT = import_root()
 
@@ -138,10 +161,12 @@ class PreCounterWrapper(DatasetSuperWrapperTask):
 
 class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     """
-    Perform the preprocessing step applying a preselection + running RDF modules
+    Performs the preprocessing step applying a preselection + running RDF modules
 
-    Arguments:
-        modules_file: filename inside cms/config with the RDF modules to run
+    See requirements in :class:`.PreCounter`.
+
+    :param modules_file: filename inside cmt/config/ (w/o extension) with the RDF modules to run
+    :type modules_file: str
     """
 
     modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
@@ -149,18 +174,25 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     weights_file = None
 
     def output(self):
+        """
+        :return: One file per input file with the tree + additional branches
+        :rtype: `.root`
+        """
         return self.local_target("data_%s.root" % self.branch)
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
+        """
+        Creates one RDataFrame per input file, applies a preselection
+        and runs the desired RDFModules
+        """
         from shutil import copy
         ROOT = import_root()
         # ROOT.ROOT.EnableImplicitMT()
 
         # prepare inputs and outputs
         inp = self.input().path
-        print(inp)
         outp = self.output()
         df = ROOT.RDataFrame(self.tree_name, inp)
 
