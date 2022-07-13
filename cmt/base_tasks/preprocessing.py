@@ -197,9 +197,9 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         df = ROOT.RDataFrame(self.tree_name, inp)
 
         selection = self.category.selection
-        dataset_selection = self.dataset.get_aux("selection")
-        if dataset_selection and dataset_selection != "1":
-            selection = jrs(dataset_selection, selection, op="and")
+        # dataset_selection = self.dataset.get_aux("selection")
+        # if dataset_selection and dataset_selection != "1":
+            # selection = jrs(dataset_selection, selection, op="and")
 
         if selection != "":
             filtered_df = df.Define("selection", selection).Filter("selection")
@@ -542,6 +542,8 @@ class CategorizationWrapper(DatasetCategoryWrapperTask):
 
 
 class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
+    from_preprocess = luigi.BoolParameter(default=False, description="whether to use as input "
+        "PreprocessRDF, default: False")
 
     # regions not supported
     region_name = None
@@ -552,15 +554,25 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
     default_wlcg_fs = "wlcg_fs_categorization"
 
     def merge_workflow_requires(self):
-        return Categorization.req(self, _prefer_cli=["workflow"])
+        if not self.from_preprocess:
+            return Categorization.req(self, _prefer_cli=["workflow"])
+        else:
+            return PreprocessRDF.req(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
         # the requirement is a workflow, so start_leaf and end_leaf correspond to branches
-        return Categorization.req(self, branch=-1, workflow="local", start_branch=start_leaf,
-            end_branch=end_leaf)
+        if not self.from_preprocess:
+            return Categorization.req(self, branch=-1, workflow="local", start_branch=start_leaf,
+                end_branch=end_leaf)
+        else:
+            return PreprocessRDF.req(self, branch=-1, workflow="local", start_branch=start_leaf,
+                end_branch=end_leaf)
 
     def trace_merge_inputs(self, inputs):
-        return [inp["data"] for inp in inputs["collection"].targets.values()]
+        if not self.from_preprocess:
+            return [inp["data"] for inp in inputs["collection"].targets.values()]
+        else:
+            return [inp for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
         return law.SiblingFileCollection([
