@@ -171,8 +171,8 @@ class Config():
                     "|| Electron_pt[Electron_pt > 17].size() > 0)"
                     "|| Tau_pt[Tau_pt > 17].size() > 1)"
                     "&& Jet_pt[Jet_pt > 17].size() > 0"),
-            Category("dum", "dummy category", selection="Htt_svfit_mass_nom > 50 "
-                " && Htt_svfit_mass_nom < 150"),
+            # Category("dum", "dummy category", selection="event == 220524669"),
+            Category("dum", "dummy category", selection="event == 74472670"),
             Category("mutau", "#mu#tau channel", selection="pairType == 0"),
             Category("etau", "e#tau channel", selection="pairType >= 1"),
             # Category("etau", "e#tau channel", selection="pairType >= -999"),
@@ -377,8 +377,7 @@ class Config():
                 merging={
                     "tautau": 20,
                     "etau": 20,
-                },
-                splitting=100000),
+                }),
             Dataset("tt_dl",
                 dataset="/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
@@ -390,7 +389,7 @@ class Config():
                     "tautau": 20,
                     "etau": 40,
                 },
-                splitting=100000),
+                scaling=(0.96639, 0.00863),),
             Dataset("tt_sl",
                 dataset="/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/"
                 "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext3-v1/"
@@ -402,15 +401,16 @@ class Config():
                     "tautau": 20,
                     "etau": 40,
                 },
-                splitting=100000),
+                scaling=(0.96639, 0.00863),),
             Dataset("tt_fh",
-                dataset="/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8/"
-                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
+                dataset="/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/"
+                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext2-v1/"
                     "NANOAODSIM",
                 process=self.processes.get("tt_fh"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=377.96,
-                splitting=100000),
+                scaling=(0.96639, 0.00863),
+            ),
 
             # Others
             # ttH
@@ -420,24 +420,21 @@ class Config():
                     "NANOAODSIM",
                 process=self.processes.get("tth_bb"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=0.2953,
-                splitting=200000),
+                xs=0.2953),
             Dataset("tth_tautau",
                 dataset="/ttHToTauTau_M125_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
                     "NANOAODSIM",
                 process=self.processes.get("tth_tautau"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=0.031805,
-                splitting=200000),
+                xs=0.031805),
             Dataset("tth_nonbb",
                 dataset="/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
                     "NANOAODSIM",
                 process=self.processes.get("tth_nonbb"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=0.17996,
-                splitting=200000),
+                xs=0.17996),
 
             # Wjets
             Dataset("wjets",
@@ -449,8 +446,7 @@ class Config():
                 merging={
                     "tautau": 5,
                     "etau": 10,
-                },
-                splitting=200000),
+                }),
             # tW
             Dataset("st_tw_antitop",
                 dataset="/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
@@ -458,31 +454,27 @@ class Config():
                 "NANOAODSIM",
                 process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=35.85,
-                splitting=200000),
+                xs=35.85),
             Dataset("st_tw_top",
                 dataset="/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
                 "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext1-v1/"
                 "NANOAODSIM",
                 process=self.processes.get("tw"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=35.85,
-                splitting=200000),
+                xs=35.85),
             # single top
             Dataset("st_antitop",
                 dataset="/ST_t-channel_antitop_5f_TuneCP5_13TeV-powheg-pythia8/"
                 "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=80.95,
-                splitting=200000),
+                xs=80.95),
             Dataset("st_top",
                 dataset="/ST_t-channel_top_5f_TuneCP5_13TeV-powheg-pythia8/"
                 "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",
-                xs=136.02,
-                splitting=200000),
+                xs=136.02),
 
             # DATA
             # Tau 2018
@@ -491,7 +483,6 @@ class Config():
                 process=self.processes.get("data_tau"),
                 runPeriod="A",
                 # prefix="xrootd-cms.infn.it//",
-                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -502,7 +493,6 @@ class Config():
                 runPeriod="B",
                 # prefix="xrootd-cms.infn.it//",
                 # locate="se-xrd01.jinr-t1.ru:1095/",
-                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -513,7 +503,6 @@ class Config():
                 runPeriod="C",
                 # prefix="xrootd-cms.infn.it//",
                 # locate="cms03.lcg.cscs.ch:1094/",
-                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -523,7 +512,6 @@ class Config():
                 process=self.processes.get("data_tau"),
                 runPeriod="D",
                 # prefix="xrootd-cms.infn.it//",
-                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -535,7 +523,6 @@ class Config():
                 process=self.processes.get("data_etau"),
                 runPeriod="A",
                 # prefix="xrootd-cms.infn.it//",
-                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -546,7 +533,6 @@ class Config():
                 runPeriod="B",
                 # prefix="xrootd-cms.infn.it//",
                 # locate="se-xrd01.jinr-t1.ru:1095/",
-                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -557,7 +543,6 @@ class Config():
                 runPeriod="C",
                 # prefix="xrootd-cms.infn.it//",
                 # locate="cms03.lcg.cscs.ch:1094/",
-                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,
@@ -567,7 +552,6 @@ class Config():
                 process=self.processes.get("data_etau"),
                 runPeriod="D",
                 # prefix="xrootd-cms.infn.it//",
-                splitting=-1,
                 merging={
                     "tautau": 20,
                     "etau": 40,

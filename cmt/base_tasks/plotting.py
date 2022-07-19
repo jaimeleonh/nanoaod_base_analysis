@@ -47,8 +47,38 @@ EMPTY = -1.e5
 ROOT = import_root()
 
 class BasePlotTask(ConfigTaskWithCategory):
-    base_category_name = luigi.Parameter(default="base", description="the name of the "
-        "base category with the initial selection, default: base")
+    """
+    Task that wraps parameters used in all plotting tasks. Can't be run.
+
+    :param feature_names: names of features to plot. Uses all features when empty.
+    :type feature_names: csv string
+
+    :param feature_tags: list of tags for filtering features selected via feature names.
+    :type feature_tags: csv string
+
+    :param skip_feature_names: names or name pattern of features to skip
+    :type skip_feature_names: csv string
+
+    :param skip_feature_tags: list of tags of features to skip
+    :type skip_feature_tags: csv string
+
+    :param apply_weights: whether to apply weights and scaling to all histograms.
+    :type apply_weights: bool
+
+    :param n_bins: NOT YET IMPLEMENTED. Custom number of bins for plotting,
+        defaults to the value configured by the feature when empty.
+    :type n_bins: int
+
+    :param systematics: NOT YET IMPLEMENTED. List of custom systematics to be considered.
+    :type systematics: csv list
+
+    :param shape_region: shape region used for QCD computation.
+    :type shape_region: str from choice list
+
+    :param remove_horns: NOT YET IMPLEMENTED. Whether to remove the eta horns present in 2017
+    :type remove_horns: bool
+    """
+
     feature_names = law.CSVParameter(default=(), description="names of features to plot, uses all "
         "features when empty, default: ()")
     feature_tags = law.CSVParameter(default=(), description="list of tags for filtering features "
@@ -117,23 +147,51 @@ class BasePlotTask(ConfigTaskWithCategory):
 
 class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondorWorkflow,
         RDFModuleTask):
+    """
+    Performs the filling of histograms for all features considered. If systematics are considered,
+    it also produces the same histograms after applying those.
+
+    :param preplot_modules_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run.
+    :type preplot_modules_file: str
+    """
+
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
 
     def create_branch_map(self):
+        """
+        :return: number of files after merging (usually 1)
+        :rtype: int
+        """
         return self.n_files_after_merging
 
     def workflow_requires(self):
+        """
+        """
         return {"data": MergeCategorization.vreq(self, workflow="local")}
 
     def requires(self):
+        """
+        Each branch requires one input file
+        """
         return MergeCategorization.vreq(self, workflow="local", branch=self.branch)
 
     def output(self):
+        """
+        :return: One file per input file with all histograms to be plotted for each feature
+        :rtype: `.root`
+        """
         return self.local_target("data{}_{}.root".format(
             self.get_output_postfix(), self.branch))
 
     def get_weight(self, category, **kwargs):
+        """
+        Obtains the product of all weights depending on the category/channel applied.
+        Returns "1" if it's a data sample or the apply_weights parameter is set to False.
+
+        :return: Product of all weights to be applied
+        :rtype: str
+        """
         if self.config.processes.get(self.dataset.process.name).isData or not self.apply_weights:
             return "1"
         else:
@@ -147,6 +205,11 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
+        """
+        Creates one RDataFrame per input file, runs the desired RDFModules
+        and produces a set of plots per each feature, one for the nominal value
+        and others (if available) for all systematics.
+        """
         isMC = self.dataset.process.isMC
         directions = ["up", "down"]
 
@@ -222,6 +285,77 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
 
 class FeaturePlot(BasePlotTask, DatasetWrapperTask):
+    """
+    Performs the actual histogram plotting: loads the histograms obtained in the PrePlot tasks,
+    rescales them if needed and plots and saves them.
+
+    Example command:
+
+    ``law run FeaturePlot --version test --category-name etau --config-name ul_2018 \
+--process-group-name etau --feature-names Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta \
+--workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
+--dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
+--MergeCategorizationStats-version test_old --PrePlot-workflow htcondor``
+
+    :param stack: whether to show all backgrounds stacked (True) or normalized to 1 (False)
+    :type stack: bool
+
+    :param do_qcd: whether to estimate QCD using the ABCD method
+    :type do_qcd: bool
+
+    :param qcd_wp: working point to use for QCD estimation
+    :type qcd_wp: str from choice list
+
+    :param qcd_signal_region_wp: region to use as signal region for QCD estimation
+    :type qcd_signal_region_wp: str
+
+    :param shape_region: region to use as shape region for QCD estimation
+    :type shape_region: str from choice list
+
+    :param qcd_sym_shape: whether to symmetrise the shape coming from both possible shape regions
+    :type qcd_sym_shape: bool
+
+    :param qcd_category_name: category name used for the same sign regions in QCD estimation
+    :type qcd_category_name: str
+
+    :param hide_data: whether to show (False) or hide (True) the data histograms
+    :type hide_data: bool
+
+    :param normalize_signals: (NOT YET IMPLEMENTED) whether to normalize signals to the
+        total background yield (True) or not (False)
+    :type normalize_signals: bool
+
+    :param blinded: (NOT YET IMPLEMENTED) whether to blind data in specified regions
+    :type blinded: bool
+
+    :param save_png: whether to save plots in png
+    :type save_png: bool
+
+    :param save_pdf: whether to save plots in pdf
+    :type save_pdf: bool
+
+    :param save_root: whether to write plots in a root file
+    :type save_root: bool
+
+    :param save_yields: (NOT YET IMPLEMENTED) whether to save histogram yields in a json file
+    :type save_yields: bool
+
+    :param process_group_name: name of the process grouping name
+    :type process_group_name: str
+
+    :param bins_in_x_axis: (NOT YET IMPLEMENTED) whether to plot histograms with the bin numbers
+        in the x axis instead of the actual values
+    :type bins_in_x_axis: bool
+
+    :param plot_systematics: (NOT YET FULLY IMPLEMENTED) whether to plot histograms
+        with their uncertainties
+    :type plot_systematics: bool
+
+    :param fixed_colors: whether to plot histograms with their defined colors (False) or fixed colors
+        (True) starting from ``ROOT`` color ``2``.
+    :type fixed_colors: bool
+
+    """
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
         "them with dataset and category weights, and normalize afterwards, default: False")
     do_qcd = luigi.BoolParameter(default=False, description="whether to compute the QCD shape, "
@@ -329,6 +463,18 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 raise Exception("no real dataset passed for QCD estimation")
 
     def requires(self):
+        """
+        All requirements needed:
+
+            * Histograms coming from the PrePlot task.
+
+            * Number of total events coming from the MergeCategorizationStats task \
+              (to normalize MC histograms).
+
+            * If estimating QCD, FeaturePlot for the three additional QCD regions needed.
+
+        """
+
         reqs = {}
         reqs["data"] = OrderedDict(
             ((dataset.name, category.name), PrePlot.vreq(self,
@@ -374,6 +520,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         return reqs
 
     def get_output_postfix(self, feature, key="pdf"):
+        """
+        :return: string to be included in the output filenames
+        :rtype: str
+        """
         postfix = super(FeaturePlot, self).get_output_postfix()
         if self.process_group_name != self.default_process_group_name:
             postfix += "__pg_" + self.process_group_name
@@ -388,6 +538,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         return postfix
 
     def output(self):
+        """
+        Output files to be filled: pdf, png, root or json
+        """
         # output definitions, i.e. key, file prefix, extension
         output_data = []
         if self.save_pdf:
@@ -408,15 +561,24 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         }
 
     def complete(self):
+        """
+        Task is completed when all output are present
+        """
         return ConfigTaskWithCategory.complete(self)
 
 
     def setup_signal_hist(self, hist, color):
+        """
+        Method to apply signal format to an histogram
+        """
         hist.hist_type = "signal"
         hist.legend_style = "l"
         hist.SetLineColor(color)
 
     def setup_background_hist(self, hist, color):
+        """
+        Method to apply background format to an histogram
+        """
         hist.hist_type = "background"
         if self.stack:
             hist.SetLineColor(ROOT.kBlack)
@@ -428,6 +590,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             hist.legend_style = "l"
 
     def setup_data_hist(self, hist, color):
+        """
+        Method to apply data format to an histogram
+        """
         hist.legend_style = "lp"
         hist.hist_type = "data"
         hist.SetMarkerStyle(20)
@@ -436,6 +601,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
     def get_systematics(self):
+        """
+        Method to extract all normalization systematics from the KLUB files.
+        It considers the processes given by the process_group_name and their parents.
+        """
         # systematics
         systematics = {}
         if self.plot_systematics:
@@ -488,6 +657,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         return systematics
 
     def plot(self):
+        """
+        Performs the actual plotting.
+        """
         # helper to extract the qcd shape in a region
         def get_qcd(region, files, bin_limit=0.):
             d_hist = files[region].Get("histograms/" + self.data_names[0])
@@ -677,8 +849,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             # r.setup_hist(dummy_hist, pad=c.get_pad(1))
             r.setup_hist(dummy_hist)
             dummy_hist.GetYaxis().SetMaxDigits(4)
-            print([hist.GetMaximum() for hist in draw_hists])
-            print(max([hist.GetMaximum() for hist in draw_hists]))
             maximum = max([hist.GetMaximum() for hist in draw_hists])
             dummy_hist.SetMaximum(1.1 * maximum)
             dummy_hist.SetMinimum(0.001)  # FIXME in case of log scale
@@ -798,6 +968,11 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     @law.decorator.notify
     @law.decorator.safe_output
     def run(self):
+        """
+        Splits processes into data, signal and background. Creates histograms from each process
+        loading them from the input files. Scales the histograms and applies the correct format
+        to them.
+        """
         ROOT.gStyle.SetOptStat(0)
 
         # create root tchains for inputs
@@ -856,6 +1031,19 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                             nevents += stats["nweightedevents"]
                         if nevents != 0:
                             dataset_histo.Scale(dataset.xs * lumi / nevents)
+                            scaling = dataset.get_aux("scaling", None)
+                            if scaling:
+                                print("Scaling {} histo by {} +- {}".format(dataset.name, scaling[0], scaling[1]))
+                                old_errors = [dataset_histo.GetBinError(ibin) / dataset_histo.GetBinContent(ibin)
+                                    if dataset_histo.GetBinContent(ibin) != 0 else 0
+                                    for ibin in range(1, dataset_histo.GetNbinsX() + 1)]
+                                new_errors = [math.sqrt(elem ** 2 + (scaling[1] / scaling[0]) ** 2)
+                                    for elem in old_errors]
+                                dataset_histo.Scale(scaling[0])
+                                for ibin in range(1, dataset_histo.GetNbinsX() + 1):
+                                    dataset_histo.SetBinError(ibin, dataset_histo.GetBinContent(ibin)
+                                        * new_errors[ibin - 1])
+
                     process_histo.Add(dataset_histo)
                     if self.plot_systematics and not process.isData and not process.isSignal:
                         dataset_histo_syst = dataset_histo.Clone()

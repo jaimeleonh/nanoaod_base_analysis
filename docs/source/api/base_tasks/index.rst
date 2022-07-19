@@ -7,4 +7,4 @@ cmt.base_tasks
     :maxdepth: 2
    
     preprocessing
-
+    plotting

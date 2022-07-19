@@ -67,7 +67,7 @@ class NtupleMaker(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
 
         from shutil import copy
         ROOT = import_root()
-        ROOT.EnableImplicitMT()
+        # ROOT.EnableImplicitMT()
 
         ROOT.gInterpreter.Declare("""
             using Vfloat = const ROOT::RVec<float>&;
@@ -96,6 +96,7 @@ class NtupleMaker(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
 
         # prepare inputs and outputs
         inp = self.input().path
+        print(inp)
         outp = self.output()
         df = ROOT.RDataFrame(self.tree_name, inp)
 
@@ -152,6 +153,8 @@ class NtupleMaker(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
             branches.append(variable.lower())
         df = df.Define("njet", "jet_pt.size()")
         branches.append("njet")
+
+        df = df.Filter("(nmuon == 1 && nelectron == 0) || (nmuon == 0 && nelectron == 1) || (ntau >= 2 && nmuon == 0 && nelectron == 0)")
 
         branch_list = ROOT.vector('string')()
         for branch_name in branches:

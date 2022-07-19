@@ -79,7 +79,12 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
     Weights are read from the config file.
     In case they have to be computed, RDF modules can be run.
 
-    :param weights_file: filename inside cmt/config/ (w/o extension) with the RDF modules to run
+    Example command:
+
+    ``law run PreCounter --version test  --config-name base_config --dataset-name ggf_sm \
+--workflow htcondor --weights-file weight_file``
+
+    :param weights_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run
     :type weights_file: str
     """
 
@@ -154,7 +159,14 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
 
 
 class PreCounterWrapper(DatasetSuperWrapperTask):
+    """
+    Wrapper task to run the PreCounter task over several datasets in parallel.
 
+    Example command:
+
+    ``law run PreCounterWrapper --version test  --config-name base_config \
+--dataset-names tt_dl,tt_sl --PreCounter-weights-file weight_file --workers 2``
+    """
     def atomic_requires(self, dataset):
         return PreCounter.req(self, dataset_name=dataset.name)
 
@@ -165,7 +177,13 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
     See requirements in :class:`.PreCounter`.
 
-    :param modules_file: filename inside cmt/config/ (w/o extension) with the RDF modules to run
+    Example command:
+
+    ``law run PreprocessRDF --version test  --category-name base_selection \
+--config-name base_config --dataset-name ggf_sm --workflow htcondor \
+--modules-file modulesrdf --workers 10 --max-runtime 12h``
+
+    :param modules_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run
     :type modules_file: str
     """
 
@@ -193,6 +211,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
         # prepare inputs and outputs
         inp = self.input().path
+        print(inp)
         outp = self.output()
         df = ROOT.RDataFrame(self.tree_name, inp)
 
@@ -221,7 +240,15 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
 
 class PreprocessRDFWrapper(DatasetCategoryWrapperTask):
+    """
+    Wrapper task to run the PreprocessRDF task over several datasets in parallel.
 
+    Example command:
+
+    ``law run PreprocessRDFWrapper --version test  --category-name base_selection \
+--config-name ul_2018 --dataset-names tt_dl,tt_sl --PreprocessRDF-workflow htcondor \
+--PreprocessRDF-max-runtime 48h --PreprocessRDF-modules-file modulesrdf  --workers 10``
+    """
     def atomic_requires(self, dataset, category):
         return PreprocessRDF.vreq(self, dataset_name=dataset.name, category_name=category.name)
 
@@ -436,6 +463,31 @@ class PreprocessWrapper(DatasetCategoryWrapperTask):
 
 # class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
 class Categorization(PreprocessRDF):
+    """
+    Performs the categorization step running RDF modules and applying a post-selection
+
+    Example command:
+
+    ``law run Categorization --version test --category-name etau --config-name base_config \
+--dataset-name tt_dl --workflow local --base-category-name base_selection \
+--workers 10 --feature-modules-file features``
+
+    :param base_category_name: category name from the PreprocessRDF requirements.
+    :type base_category_name: str
+
+    :param systematic: systematic to use for categorization.
+    :type systematic: str
+
+    :param systematic_direction: systematic direction to use for categorization.
+    :type systematic_direction: str
+
+    :param feature_modules_file: filename inside ``cmt/config/`` (w/o extension)
+        with the RDF modules to run
+    :type feature_modules_file: str
+
+    :param from_rdf: whether preprocessing was performed with PreprocessRDF
+    :type from_rdf: bool
+    """
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
         "base category with the initial selection, default: base")
     systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
@@ -492,6 +544,10 @@ class Categorization(PreprocessRDF):
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
+        """
+        Creates one RDataFrame per input file, runs the desired RDFModules and applies a
+        post-selection
+        """
         from shutil import copy
         ROOT = import_root()
 
@@ -536,12 +592,37 @@ class Categorization(PreprocessRDF):
 
 
 class CategorizationWrapper(DatasetCategoryWrapperTask):
+    """
+    Wrapper task to run the Categorization task over several datasets in parallel.
+
+    Example command:
+
+    ``law run CategorizationWrapper --version test --category-names etau --config-name base_config \
+--dataset-names tt_dl,tt_sl --Categorization-workflow htcondor --workers 20 \
+--Categorization-base-category-name base_selection``
+    """
 
     def atomic_requires(self, dataset, category):
         return Categorization.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
 class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
+    """
+    Merges the output from the Categorization or PreprocessRDF tasks in order to reduce the
+    parallelization entering the plotting tasks. By default it merges into one output file,
+    although a bigger number can be set with the `merging` parameter inside the dataset
+    definition.
+
+    Example command:
+
+    ``law run MergeCategorization --version test --category-name etau \
+--config-name base_config --dataset-name tt_sl --workflow local --workers 4``
+
+    :param from_preprocess: wheter it merges the output from the PreprocessRDF task (True)
+        or Categorization (False, default)
+    :type from_preprocess: bool
+    """
+
     from_preprocess = luigi.BoolParameter(default=False, description="whether to use as input "
         "PreprocessRDF, default: False")
 
@@ -600,13 +681,29 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
 
 class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
+    """
+    Wrapper task to run the MergeCategorizationWrapper task over several datasets in parallel.
+
+    Example command:
+
+    ``law run MergeCategorizationWrapper --version test --category-names etau \
+--config-name base_config --dataset-names tt_dl,tt_sl --workers 10``
+    """
 
     def atomic_requires(self, dataset, category):
         return MergeCategorization.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
 class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
+    """
+    Merges the output from the PreCounter task in order to reduce the 
+    parallelization entering the plotting tasks.
 
+    Example command:
+
+    ``law run MergeCategorizationStats --version test --config-name base_config \
+--dataset-name dy_high --workers 10``
+    """
     # regions not supported
     region_name = None
 
@@ -662,6 +759,13 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
 
 
 class MergeCategorizationStatsWrapper(DatasetSuperWrapperTask):
+    """
+    Wrapper task to run the MergeCategorizationStatsWrapper task over several datasets in parallel.
 
+    Example command:
+
+    ``law run MergeCategorizationStatsWrapper --version test --config-name base_config \
+--dataset-names tt_dl,tt_sl --workers 10``
+    """
     def atomic_requires(self, dataset):
         return MergeCategorizationStats.req(self, dataset_name=dataset.name)

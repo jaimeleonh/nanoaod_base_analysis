@@ -19,7 +19,11 @@ class Config_ul_2018(Config):
                 process=self.processes.get("ggf_sm"),
                 xs=0.03105,
                 tags=["ul"]),
-
+            Dataset("ggf_sm_test",
+                folder="/eos/user/j/jleonhol/NanoTest/GluGluToHHTo2B2Tau_TuneCP5_PSWeights_node_SM_13TeV-madgraph-pythia8/NanoTestFullDis/220706_103244/0000",
+                process=self.processes.get("ggf_sm"),
+                xs=0.03105,
+                tags=["ul"]),
             # Dataset("vbf_sm",
                 # dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_1_dipoleRecoilOff"
                 # "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
@@ -54,7 +58,7 @@ class Config_ul_2018(Config):
                     "mutau": 20,
                     "etau": 40,
                 },
-                splitting=100000,
+                scaling=(0.96639, 0.00863),
                 tags=["ul"]),
             Dataset("tt_sl",
                 dataset="/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/"
@@ -67,7 +71,7 @@ class Config_ul_2018(Config):
                     "mutau": 60,
                     "etau": 40,
                 },
-                splitting=100000,
+                scaling=(0.96639, 0.00863),
                 tags=["ul"]),
             Dataset("tt_fh",
                 dataset="/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/"
@@ -75,7 +79,7 @@ class Config_ul_2018(Config):
                 process=self.processes.get("tt_fh"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=377.96,
-                splitting=100000,
+                scaling=(0.96639, 0.00863),
                 tags=["ul"]),
 
             # Others
@@ -156,6 +160,7 @@ class Config_ul_2018(Config):
             # Tau 2018
             Dataset("data_tau_a",
                 dataset="/Tau/Run2018A-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
+                selection="pairType == 2",
                 process=self.processes.get("data_tau"),
                 runPeriod="A",
                 # prefix="xrootd-cms.infn.it//",
@@ -167,6 +172,7 @@ class Config_ul_2018(Config):
                 tags=["ul"]),
             Dataset("data_tau_b",
                 dataset="/Tau/Run2018B-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
+                selection="pairType == 2",
                 process=self.processes.get("data_tau"),
                 runPeriod="B",
                 # prefix="xrootd-cms.infn.it//",
@@ -179,6 +185,7 @@ class Config_ul_2018(Config):
                 tags=["ul"]),
             Dataset("data_tau_c",
                 dataset="/Tau/Run2018C-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
+                selection="pairType == 2",
                 process=self.processes.get("data_tau"),
                 runPeriod="C",
                 # prefix="xrootd-cms.infn.it//",
@@ -191,6 +198,7 @@ class Config_ul_2018(Config):
                 tags=["ul"]),
             Dataset("data_tau_d",
                 dataset="/Tau/Run2018D-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
+                selection="pairType == 2",
                 process=self.processes.get("data_tau"),
                 runPeriod="D",
                 # prefix="xrootd-cms.infn.it//",
@@ -204,6 +212,7 @@ class Config_ul_2018(Config):
             # EGamma 2018
             Dataset("data_etau_a",
                 dataset="/EGamma/Run2018A-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
+                selection="pairType == 1",
                 process=self.processes.get("data_etau"),
                 runPeriod="A",
                 # prefix="xrootd-cms.infn.it//",
@@ -215,6 +224,7 @@ class Config_ul_2018(Config):
                 tags=["ul"]),
             Dataset("data_etau_b",
                 dataset="/EGamma/Run2018B-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
+                selection="pairType == 1",
                 process=self.processes.get("data_etau"),
                 runPeriod="B",
                 # prefix="xrootd-cms.infn.it//",
@@ -227,6 +237,7 @@ class Config_ul_2018(Config):
                 tags=["ul"]),
             Dataset("data_etau_c",
                 dataset="/EGamma/Run2018C-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
+                selection="pairType == 1",
                 process=self.processes.get("data_etau"),
                 runPeriod="C",
                 # prefix="xrootd-cms.infn.it//",
@@ -239,6 +250,7 @@ class Config_ul_2018(Config):
                 tags=["ul"]),
             Dataset("data_etau_d",
                 dataset="/EGamma/Run2018D-UL2018_MiniAODv2_NanoAODv9-v3/NANOAOD",
+                selection="pairType == 1",
                 process=self.processes.get("data_etau"),
                 runPeriod="D",
                 # prefix="xrootd-cms.infn.it//",
@@ -252,6 +264,7 @@ class Config_ul_2018(Config):
             # SingleMuon 2018
             Dataset("data_mutau_a",
                 dataset="/SingleMuon/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
+                selection="pairType == 0",
                 process=self.processes.get("data_mutau"),
                 runPeriod="A",
                 # prefix="xrootd-cms.infn.it//",
@@ -265,6 +278,7 @@ class Config_ul_2018(Config):
             Dataset("data_mutau_b",
                 dataset="/SingleMuon/Run2018B-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
                 process=self.processes.get("data_mutau"),
+                selection="pairType == 0",
                 runPeriod="B",
                 # prefix="xrootd-cms.infn.it//",
                 splitting=-1,
@@ -277,6 +291,7 @@ class Config_ul_2018(Config):
             Dataset("data_mutau_c",
                 dataset="/SingleMuon/Run2018C-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
                 process=self.processes.get("data_mutau"),
+                selection="pairType == 0",
                 runPeriod="C",
                 # prefix="xrootd-cms.infn.it//",
                 splitting=-1,
@@ -289,6 +304,7 @@ class Config_ul_2018(Config):
             Dataset("data_mutau_d",
                 dataset="/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
                 process=self.processes.get("data_mutau"),
+                selection="pairType == 0",
                 runPeriod="D",
                 # prefix="xrootd-cms.infn.it//",
                 splitting=-1,
@@ -309,7 +325,7 @@ class Config_ul_2018(Config):
         weights.total_events_weights = ["genWeight", "puWeight"]
         weights.channels = {
             "mutau": ["genWeight", "puWeight", "prescaleWeight", "trigSF",
-                "idAndIsoAndFakeSF_deep_pt", "L1PreFiringWeight_Nom", "PUjetID_SF", "bTagweightReshape"
+                "idAndIsoAndFakeSF_deep_pt", "L1PreFiringWeight_Nom", "PUjetID_SF", "bTagweightReshape2"
             ],
         }
         weights.channels["etau"] = weights.channels["mutau"]
