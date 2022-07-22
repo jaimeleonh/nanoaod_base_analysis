@@ -185,9 +185,14 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
     :param modules_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run
     :type modules_file: str
+
+    :param keep_and_drop_file: filename inside ``cmt/config/`` (w/o extension) with the RDF columns
+        to save in the output file
+    :type keep_and_drop_file: str
     """
 
-    modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
+    modules_file = luigi.Parameter(description="filename with RDF modules", default="")
+    keep_and_drop_file = luigi.Parameter(description="filename with branches to save, empty: all",
         default="")
     weights_file = None
 
@@ -233,6 +238,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             for module in modules:
                 filtered_df, add_branches = module.run(filtered_df)
                 branches += add_branches
+        branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
         branch_list = ROOT.vector('string')()
         for branch_name in branches:
             branch_list.push_back(branch_name)
@@ -576,6 +582,7 @@ class Categorization(PreprocessRDF):
                     for module in feature_modules:
                         df, add_branches = module.run(df)
                         branches += add_branches
+                branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
                 branch_list = ROOT.vector('string')()
                 for branch_name in branches:
                     branch_list.push_back(branch_name)

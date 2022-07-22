@@ -10,6 +10,7 @@ __all__ = [
 ]
 
 
+import re
 import os
 import math
 from collections import OrderedDict
@@ -351,6 +352,42 @@ class RDFModuleTask():
                 modules.append(getattr(mod, name)(**kwargs)())
         return modules
 
+    def get_branches_to_save(self, branchNames, keep_and_drop_file):
+        comment = re.compile(r"#.*")
+        ops = []
+        with open(
+                os.path.expandvars("$CMT_BASE/cmt/config/{}.txt".format(keep_and_drop_file))) as f:
+            lines = f.readlines()
+            for line in lines:
+                line = line.strip()
+                if len(line) == 0 or line[0] == '#':
+                    continue
+                line = re.sub(comment, "", line)
+                while line[-1] == "\\":
+                    line = line[:-1] + " " + file.next().strip()
+                    line = re.sub(comment, "", line)
+                try:
+                    (op, sel) = line.split()
+                    if op == "keep":
+                        ops.append((sel, 1))
+                    elif op == "drop":
+                        ops.append((sel, 0))
+                    else:
+                        raise ValueError("Error in file %s, line '%s': "% (filename, line)
+                            + ": it's not (keep|drop) "
+                        )
+                except ValueError as e:
+                    raise ValueError("Error in file %s, line '%s': " % (filename, line)
+                        + "it's not a keep or drop pattern"
+                    )
+        branchStatus = [1 for branchName in branchNames]
+        for pattern, stat in ops:
+            for ib, b in enumerate(branchNames):
+                if re.match(pattern, str(b)):
+                    branchStatus[ib] = stat
+
+        return [branchName for (branchName, branchStatus) in zip(branchNames, branchStatus)
+            if branchStatus == 1]
 
 
 class InputData(DatasetTask, law.ExternalTask):

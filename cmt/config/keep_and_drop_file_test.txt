@@ -1,0 +1,10 @@
+drop HLT.
+drop L1.
+drop HTXS.
+drop Flag.
+drop TrigObj.
+drop LowPtElectron.
+drop .Photon.
+drop Photon.
+drop IsoTrack.
+drop LHE.
