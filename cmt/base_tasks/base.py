@@ -353,6 +353,9 @@ class RDFModuleTask():
         return modules
 
     def get_branches_to_save(self, branchNames, keep_and_drop_file):
+        if not os.path.isfile(
+                os.path.expandvars("$CMT_BASE/cmt/config/{}.txt".format(keep_and_drop_file))):
+            return branchNames
         comment = re.compile(r"#.*")
         ops = []
         with open(
