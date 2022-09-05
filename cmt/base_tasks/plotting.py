@@ -29,7 +29,7 @@ from analysis_tools.utils import (
 from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import ( 
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, ConfigTaskWithCategory,
-    RDFModuleTask
+    RDFModuleTask, InputData
 )
 
 from cmt.base_tasks.preprocessing import Preprocess, MergeCategorization, MergeCategorizationStats
@@ -151,29 +151,40 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     Performs the filling of histograms for all features considered. If systematics are considered,
     it also produces the same histograms after applying those.
 
+    :param skip_processing: whether to skip the preprocessing and categorization steps.
+    :type skip_processing: bool
     :param preplot_modules_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run.
     :type preplot_modules_file: str
     """
 
+    skip_processing = luigi.BoolParameter(default=False, description="whether to skip"
+        " preprocessing and categorization steps, default: False")
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
 
     def create_branch_map(self):
         """
-        :return: number of files after merging (usually 1)
+        :return: number of files after merging (usually 1) unless skip_processing == True
         :rtype: int
         """
+        if self.skip_processing:
+            return len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
         return self.n_files_after_merging
 
     def workflow_requires(self):
         """
         """
+        if self.skip_processing:
+            return {"data": InputData.req(self)}
         return {"data": MergeCategorization.vreq(self, workflow="local")}
 
     def requires(self):
         """
         Each branch requires one input file
         """
+        if self.skip_processing:
+            return InputData.req(self, file_index=self.branch)
         return MergeCategorization.vreq(self, workflow="local", branch=self.branch)
 
     def output(self):
@@ -214,7 +225,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         directions = ["up", "down"]
 
         # prepare inputs and outputs
-        inp = self.input().targets[self.branch].path
+        if self.skip_processing:
+            inp = self.input().path
+        else:
+            inp = self.input().targets[self.branch].path
         outp = self.output().path
 
         df = ROOT.RDataFrame(self.tree_name, inp)

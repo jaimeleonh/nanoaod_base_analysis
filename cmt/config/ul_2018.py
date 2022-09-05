@@ -47,6 +47,19 @@ class Config_ul_2018(Config):
                 },
                 splitting=100000,
                 tags=["ul"]),
+            Dataset("dy_nlo",
+                dataset="/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/"
+                    "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
+                process=self.processes.get("dy_high"),
+                # prefix="xrootd-cms.infn.it//",
+                # prefix="cms-xrd-global.cern.ch//",
+                xs=6077.22,
+                merging={
+                    "tautau": 20,
+                    "etau": 20,
+                    "mutau": 20,
+                },
+                tags=["ul"]),
             Dataset("tt_dl",
                 dataset="/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
