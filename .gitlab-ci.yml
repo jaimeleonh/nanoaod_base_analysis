@@ -7,10 +7,6 @@ cmssw_setup:
     CMS_PATH: /cvmfs/cms.cern.ch
     CMT_CERN_USER: jleonhol
   script:
-    - automount
-    - echo "$USERPASS" | kinit jleonhol
-    - eosfusebind
-
     # IMPORTANT: Expand aliases in noninteractive bash mode
     # Otherwise cmsrel and cmsenv won't work
     - shopt -s expand_aliases
@@ -20,5 +16,13 @@ cmssw_setup:
     - set +u && source setup.sh set -u
     - cd docs
     - make html
-    - cp -r build/* /eos/home-j/jleonhol/www/testsphinx 
+      # - cp -r build/* /eos/home-j/jleonhol/www/testsphinx 
 
+docs:
+    image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
+    tags:
+      - docker-privileged
+    script:
+      - automount
+      - echo "$USERPASS" | kinit username
+      - eosfusebind
