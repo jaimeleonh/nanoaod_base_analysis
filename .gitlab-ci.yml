@@ -1,6 +1,6 @@
 cmssw_setup:
-  runs-on: centos7
   image: python:3.9
+  image: gitlab-registry.cern.ch/ci-tools/ci-worker:cc7
   tags:
     - cvmfs
   variables:
