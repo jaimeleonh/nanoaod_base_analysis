@@ -10,6 +10,7 @@ cmssw_setup:
     # IMPORTANT: Expand aliases in noninteractive bash mode
     # Otherwise cmsrel and cmsenv won't work
     - shopt -s expand_aliases
+    - yum install -y python3
     # access CVMFS
     - set +u && source ${CMS_PATH}/cmsset_default.sh; set -u
     - set +u && source setup.sh set -u
