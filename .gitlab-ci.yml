@@ -4,6 +4,7 @@ cmssw_setup:
   variables:
     # This is also set on LXPLUS
     CMS_PATH: /cvmfs/cms.cern.ch
+    CMT_CERN_USER: jleonhol
   script:
     # IMPORTANT: Expand aliases in noninteractive bash mode
     # Otherwise cmsrel and cmsenv won't work
