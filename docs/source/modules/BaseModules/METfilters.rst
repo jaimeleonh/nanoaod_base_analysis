@@ -1,12 +1,12 @@
-Base.Modules.METfilters
-============================
+METfilters
+==========
 
 .. currentmodule:: Base.Modules.METfilters
 
 .. contents::
 
-Class ``MetFilterRDF``
------------------------
+RDFModule ``MetFilterRDF``
+--------------------------
 
 .. autoclass:: MetFilterRDF
    :members:

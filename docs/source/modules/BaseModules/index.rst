@@ -6,4 +6,5 @@ BaseModules
 .. toctree::
     :maxdepth: 2
    
-    METfilters 
+    METfilters
+    smearing 
