@@ -153,7 +153,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
     :param skip_processing: whether to skip the preprocessing and categorization steps.
     :type skip_processing: bool
-    :param preplot_modules_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run.
+    :param preplot_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)
+        with the RDF modules to run.
     :type preplot_modules_file: str
     """
 
@@ -633,18 +634,20 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         if p.get_aux("llr_name", None) else p.name)
 
             from cmt.analysis.systReader import systReader
-            syst_folder = os.environ["CMT_BASE"] + "/cmt/files/systematics/"
-            syst = systReader(syst_folder + "systematics_{}.cfg".format(self.config.year),
-                all_signal_names, all_background_names, None)
+            syst_folder = "files/systematics/"
+            syst = systReader(self.retrieve_file(syst_folder + "systematics_{}.cfg".format(
+                self.config.year)), all_signal_names, all_background_names, None)
             syst.writeOutput(False)
             syst.verbose(False)
 
             channel = self.config.get_channel_from_region(self.region)
             if(channel == "mutau"):
-                syst.addSystFile(syst_folder + "systematics_mutau_%s.cfg" % self.config.year)
+                syst.addSystFile(self.retrieve_file(syst_folder
+                    + "systematics_mutau_%s.cfg" % self.config.year))
             elif(channel == "etau"):
-                syst.addSystFile(syst_folder + "systematics_etau_%s.cfg" % self.config.year)
-            syst.addSystFile(syst_folder + "syst_th.cfg")
+                syst.addSystFile(self.retrieve_file(syst_folder
+                    + "systematics_etau_%s.cfg" % self.config.year))
+            syst.addSystFile(self.retrieve_file(syst_folder + "syst_th.cfg"))
             syst.writeSystematics()
             for isy, syst_name in enumerate(syst.SystNames):
                 if "CMS_scale_t" in syst.SystNames[isy] or "CMS_scale_j" in syst.SystNames[isy]:

@@ -109,6 +109,16 @@ class Task(law.Task):
         else:
             return self.local_target(*args, **kwargs)
 
+    def retrieve_file(self, filename):
+        filenames = [
+            os.path.expandvars("$CMT_BASE/../{}".format(filename)),
+            os.path.expandvars("$CMT_BASE/cmt/{}".format(filename))
+        ]
+        for f in filenames:
+            if os.path.isfile(f):
+                return f
+        return ""
+
 
 class ConfigTask(Task):
 
@@ -119,8 +129,12 @@ class ConfigTask(Task):
         super(ConfigTask, self).__init__(*args, **kwargs)
 
         # load the config
-        cmt = __import__("cmt.config." + self.config_name)
-        self.config = getattr(cmt.config, self.config_name).config
+        try:
+            config = __import__("config." + self.config_name)
+            self.config = getattr(config, self.config_name).config
+        except:
+            cmt = __import__("cmt.config." + self.config_name)
+            self.config = getattr(cmt.config, self.config_name).config
 
     def store_parts(self):
         parts = super(ConfigTask, self).store_parts()
@@ -323,7 +337,9 @@ class RDFModuleTask():
         if filename:
             import yaml
             from cmt.utils.yaml_utils import ordered_load
-            with open(os.path.expandvars("$CMT_BASE/cmt/config/{}.yaml".format(filename))) as f:
+            tmp_file = self.retrieve_file("config/{}.yaml".format(filename))
+
+            with open(tmp_file) as f:
                 module_params = ordered_load(f, yaml.SafeLoader)
         else:
             return []
@@ -353,13 +369,12 @@ class RDFModuleTask():
         return modules
 
     def get_branches_to_save(self, branchNames, keep_and_drop_file):
-        if not os.path.isfile(
-                os.path.expandvars("$CMT_BASE/cmt/config/{}.txt".format(keep_and_drop_file))):
+        tmp_filename = self.retrieve_file("config/{}.txt".format(keep_and_drop_file))
+        if not os.path.isfile(tmp_filename):
             return branchNames
         comment = re.compile(r"#.*")
         ops = []
-        with open(
-                os.path.expandvars("$CMT_BASE/cmt/config/{}.txt".format(keep_and_drop_file))) as f:
+        with open(tmp_filename) as f:
             lines = f.readlines()
             for line in lines:
                 line = line.strip()

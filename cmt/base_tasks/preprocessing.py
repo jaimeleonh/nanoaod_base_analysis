@@ -183,11 +183,12 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 --config-name base_config --dataset-name ggf_sm --workflow htcondor \
 --modules-file modulesrdf --workers 10 --max-runtime 12h``
 
-    :param modules_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run
+    :param modules_file: filename inside ``cmt/config/`` or "../config/" (w/o extension)
+        with the RDF modules to run
     :type modules_file: str
 
-    :param keep_and_drop_file: filename inside ``cmt/config/`` (w/o extension) with the RDF columns
-        to save in the output file
+    :param keep_and_drop_file: filename inside ``cmt/config/`` or "../config/" (w/o extension)
+        with the RDF columns to save in the output file
     :type keep_and_drop_file: str
     """
 
@@ -374,7 +375,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
         if self.modules_file:
             import yaml
             from cmt.utils.yaml_utils import ordered_load
-            with open(os.path.expandvars("$CMT_BASE/cmt/config/{}.yaml".format(self.modules_file))) as f:
+            with open(self.retrieve_file("config/{}.yaml".format(self.modules_file))) as f:
                 module_params = ordered_load(f, yaml.SafeLoader)
         else:
             return []
@@ -487,7 +488,7 @@ class Categorization(PreprocessRDF):
     :param systematic_direction: systematic direction to use for categorization.
     :type systematic_direction: str
 
-    :param feature_modules_file: filename inside ``cmt/config/`` (w/o extension)
+    :param feature_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)
         with the RDF modules to run
     :type feature_modules_file: str
 
