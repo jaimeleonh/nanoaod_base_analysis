@@ -2,7 +2,6 @@ cmssw_setup:
   image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
   tags:
     - cvmfs
-    - docker-privileged
   variables:
     # This is also set on LXPLUS
     CMS_PATH: /cvmfs/cms.cern.ch
