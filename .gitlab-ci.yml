@@ -1,12 +1,17 @@
 cmssw_setup:
-  image: gitlab-registry.cern.ch/ci-tools/ci-worker:cc7
+  image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
   tags:
     - cvmfs
+    - docker-privileged
   variables:
     # This is also set on LXPLUS
     CMS_PATH: /cvmfs/cms.cern.ch
     CMT_CERN_USER: jleonhol
   script:
+    - automount
+    - echo "$USERPASS" | kinit jleonhol
+    - eosfusebind
+
     # IMPORTANT: Expand aliases in noninteractive bash mode
     # Otherwise cmsrel and cmsenv won't work
     - shopt -s expand_aliases
@@ -14,3 +19,7 @@ cmssw_setup:
     # access CVMFS
     - set +u && source ${CMS_PATH}/cmsset_default.sh; set -u
     - set +u && source setup.sh set -u
+    - cd docs
+    - make html
+    - cp -r build/* /eos/home-j/jleonhol/www/testsphinx 
+
