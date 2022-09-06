@@ -1,0 +1,13 @@
+cmssw_setup:
+  tags:
+    - cvmfs
+  variables:
+    # This is also set on LXPLUS
+    CMS_PATH: /cvmfs/cms.cern.ch
+  script:
+    # IMPORTANT: Expand aliases in noninteractive bash mode
+    # Otherwise cmsrel and cmsenv won't work
+    - shopt -s expand_aliases
+    # access CVMFS
+    - set +u && source ${CMS_PATH}/cmsset_default.sh; set -u
+    - source setup.sh
