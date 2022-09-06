@@ -1,6 +1,7 @@
 cmssw_setup:
   tags:
     - cvmfs
+    - python3
   variables:
     # This is also set on LXPLUS
     CMS_PATH: /cvmfs/cms.cern.ch
