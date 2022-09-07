@@ -16,12 +16,12 @@ cmssw_setup:
     - set +u && source setup.sh set -u
     - cd docs
     - make html
-    - cp -r build/* ../_readthedocs 
-    - cd ..
-    - git config --global user.email "ci@nanoaod_base_analysis.com"
-    - git config --global user.name "CI"
-    - git add _readthedocs/*
-    - git remote set-url origin https://oauth2:$ACCESS_TOKEN@gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git
-    - git branch
-    - git commit -m "Update readthedocs"
-    - git push origin $CI_BUILD_REF_NAME
+      #- cp -r build/* ../_readthedocs 
+      #- cd ..
+      #    - git config --global user.email "ci@nanoaod_base_analysis.com"
+      #    - git config --global user.name "CI"
+      #    - git add _readthedocs/*
+      #    - git remote set-url origin https://oauth2:$ACCESS_TOKEN@gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git
+      #    - git branch
+      #    - git commit -m "Update readthedocs"
+      #    - git push origin $CI_BUILD_REF_NAME
