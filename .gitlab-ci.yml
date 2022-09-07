@@ -16,7 +16,8 @@ cmssw_setup:
     - set +u && source setup.sh set -u
     - cd docs
     - make html
-    - cp -r build/* _readthedocs 
+    - cp -r build/* ../_readthedocs 
+    - cd ..
     - git add _readthedocs/*
     - git commit -m "Update readthedocs"
     - git push origin py3
