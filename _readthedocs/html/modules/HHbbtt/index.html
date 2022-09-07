@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BaseModules &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>HH-&gt;bbtt &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -19,8 +19,8 @@
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="METfilters" href="METfilters.html" />
-    <link rel="prev" title="Modules Reference" href="../index.html" /> 
+    <link rel="next" title="HHLepton" href="hhlepton.html" />
+    <link rel="prev" title="b-tagging" href="../BTV/btagging.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -45,17 +45,16 @@
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">Modules Reference</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">BaseModules</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-Base.Modules">RDFModules</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="METfilters.html">METfilters</a></li>
-<li class="toctree-l4"><a class="reference internal" href="smearing.html">Smearing</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="../BaseModules/index.html">BaseModules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../BTV/index.html">BTV</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../HHbbtt/index.html">HH-&gt;bbtt</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">HH-&gt;bbtt</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#rdfmodules">RDFModules</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hhlepton.html">HHLepton</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -75,9 +74,9 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
           <li><a href="../index.html">Modules Reference</a> &raquo;</li>
-      <li>BaseModules</li>
+      <li>HH-&gt;bbtt</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../../_sources/modules/BaseModules/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/modules/HHbbtt/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -85,24 +84,18 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="basemodules">
-<h1>BaseModules<a class="headerlink" href="#basemodules" title="Permalink to this heading"></a></h1>
+  <section id="hh-bbtt">
+<h1>HH-&gt;bbtt<a class="headerlink" href="#hh-bbtt" title="Permalink to this heading"></a></h1>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/jaimeleonh/cmt-base-modules.git</span> <span class="pre">Base/Modules</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/jaimeleonh/InferenceTools.git</span> <span class="pre">Tools/Tools</span></code></p>
 </section>
-<section id="module-Base.Modules">
-<span id="rdfmodules"></span><h2>RDFModules<a class="headerlink" href="#module-Base.Modules" title="Permalink to this heading"></a></h2>
+<section id="rdfmodules">
+<h2>RDFModules<a class="headerlink" href="#rdfmodules" title="Permalink to this heading"></a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="METfilters.html">METfilters</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="METfilters.html#rdfmodule-metfilterrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">MetFilterRDF</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="smearing.html">Smearing</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="smearing.html#rdfmodule-jetsmearerrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">jetSmearerRDF</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="smearing.html#rdfmodule-jetvarrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">jetVarRDF</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="smearing.html#rdfmodule-metsmearerrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">metSmearerRDF</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="hhlepton.html">HHLepton</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="hhlepton.html#hhleptonrdf"><code class="docutils literal notranslate"><span class="pre">HHLeptonRDF</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -114,8 +107,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../index.html" class="btn btn-neutral float-left" title="Modules Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="METfilters.html" class="btn btn-neutral float-right" title="METfilters" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../BTV/btagging.html" class="btn btn-neutral float-left" title="b-tagging" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="hhlepton.html" class="btn btn-neutral float-right" title="HHLepton" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

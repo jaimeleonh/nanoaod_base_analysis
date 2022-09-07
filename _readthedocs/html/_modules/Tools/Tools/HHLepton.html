@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tools.Tools.HHLepton &mdash; nanoaod-base-analysis 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>Tools.Tools.HHLepton</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Tools.Tools.HHLepton</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
+
+<span class="kn">from</span> <span class="nn">PhysicsTools.NanoAODTools.postprocessing.framework.datamodel</span> <span class="kn">import</span> <span class="n">Collection</span>
+<span class="kn">from</span> <span class="nn">Tools.Tools.tau_utils</span> <span class="kn">import</span> <span class="n">LeptonTauPair</span><span class="p">,</span> <span class="n">TriggerChecker</span><span class="p">,</span> <span class="n">lepton_veto</span>
+<span class="kn">from</span> <span class="nn">Base.Modules.baseModules</span> <span class="kn">import</span> <span class="n">JetLepMetSyst</span><span class="p">,</span> <span class="n">JetLepMetModule</span>
+
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">HHLeptonProducer</span><span class="p">(</span><span class="n">JetLepMetModule</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="p">,</span> <span class="n">year</span><span class="p">,</span> <span class="n">runPeriod</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHLeptonProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">isMC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">year</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runPeriod</span> <span class="o">=</span> <span class="n">runPeriod</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span> <span class="o">=</span> <span class="n">TriggerChecker</span><span class="p">(</span><span class="n">year</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2016</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">mutau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_IsoMu22&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu22_eta2p1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;HLT_IsoTkMu22&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoTkMu22_eta2p1&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">mutau_crosstriggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_IsoMu19_eta2p1_LooseIsoPFTau20&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">etau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_Ele25_eta2p1_WPTight_Gsf&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">etau_crosstriggers</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">runPeriod</span> <span class="o">!=</span> <span class="s2">&quot;H&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">tautau_triggers</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="s2">&quot;HLT_DoubleMediumIsoPFTau35_Trk1_eta2p1_Reg&quot;</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">tautau_triggers</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="s2">&quot;HLT_DoubleMediumCombinedIsoPFTau35_Trk1_eta2p1_Reg&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">tautau_triggers</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="s2">&quot;HLT_DoubleMediumIsoPFTau35_Trk1_eta2p1_Reg&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;HLT_DoubleMediumCombinedIsoPFTau35_Trk1_eta2p1_Reg&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">vbf_triggers</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2017</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">mutau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_IsoMu24&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu27&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">mutau_crosstriggers</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">etau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_Ele32_WPTight_Gsf_L1DoubleEG&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;HLT_Ele32_WPTight_Gsf&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_Ele35_WPTight_Gsf&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">etau_crosstriggers</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTau30_eta2p1_CrossL1&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">tautau_triggers</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;HLT_DoubleTightChargedIsoPFTau35_Trk1_TightID_eta2p1_Reg&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;HLT_DoubleMediumChargedIsoPFTau40_Trk1_TightID_eta2p1_Reg&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;HLT_DoubleTightChargedIsoPFTau40_Trk1_eta2p1_Reg&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">runPeriod</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;D&quot;</span><span class="p">,</span> <span class="s2">&quot;E&quot;</span><span class="p">,</span> <span class="s2">&quot;F&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">vbf_triggers</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTau20_Trk1_eta2p1_Reg&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">vbf_triggers</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">mutau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_IsoMu24&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu27&quot;</span><span class="p">]</span>
+            <span class="c1"># lista = lambda e: ([1, 1] if e == 0 else [2, 2])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">mutau_crosstriggers</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">run</span> <span class="o">&lt;</span> <span class="mi">317509</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="p">[</span><span class="s2">&quot;HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_CrossL1&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">etau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_Ele32_WPTight_Gsf&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_Ele35_WPTight_Gsf&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">etau_crosstriggers</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTau30_eta2p1_CrossL1&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">run</span> <span class="o">&lt;</span> <span class="mi">317509</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="p">[</span><span class="s2">&quot;HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTauHPS30_eta2p1_CrossL1&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">tautau_triggers</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;HLT_DoubleTightChargedIsoPFTau35_Trk1_TightID_eta2p1_Reg&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;HLT_DoubleMediumChargedIsoPFTau40_Trk1_TightID_eta2p1_Reg&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;HLT_DoubleTightChargedIsoPFTau40_Trk1_eta2p1_Reg&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">run</span> <span class="o">&lt;</span> <span class="mi">317509</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="p">[</span><span class="s2">&quot;HLT_DoubleMediumChargedIsoPFTauHPS35_Trk1_eta2p1_Reg&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">vbf_triggers</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTau20_Trk1_eta2p1&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">run</span> <span class="o">&lt;</span> <span class="mi">317509</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="p">[</span><span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTauHPS20_Trk1_eta2p1&quot;</span><span class="p">])</span>
+                
+        <span class="k">pass</span>
+
+    <span class="c1">#def beginJob(self):</span>
+    <span class="c1">#    pass</span>
+
+    <span class="c1">#def endJob(self):</span>
+    <span class="c1">#    pass</span>
+
+    <span class="k">def</span> <span class="nf">beginFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputFile</span><span class="p">,</span> <span class="n">outputFile</span><span class="p">,</span> <span class="n">inputTree</span><span class="p">,</span> <span class="n">wrappedOutputTree</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span> <span class="o">=</span> <span class="n">wrappedOutputTree</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;pairType&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_index&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_index&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;isVBFtrigger&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;isOS&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_eta&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_phi&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_dxy&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_dz&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_q&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_iso&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_decayMode&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_idDeepTau2017v2p1VSe&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_idDeepTau2017v2p1VSmu&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_idDeepTau2017v2p1VSjet&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_eta&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_phi&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_dxy&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_dz&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_q&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_iso&#39;</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_decayMode&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_idDeepTau2017v2p1VSe&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_idDeepTau2017v2p1VSmu&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_idDeepTau2017v2p1VSjet&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">histo</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TH1D</span><span class="p">(</span><span class="s2">&quot;InsideHHLepton&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">21</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="n">bins</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="s2">&quot;goodmuon events&quot;</span><span class="p">,</span> <span class="s2">&quot;muon-tau pairs&quot;</span><span class="p">,</span> <span class="s2">&quot;deltaR &gt; 0.5&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pass muon trigger&quot;</span><span class="p">,</span> <span class="s2">&quot;pass lepton veto&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;goodele events&quot;</span><span class="p">,</span> <span class="s2">&quot;ele-tau pairs&quot;</span><span class="p">,</span> <span class="s2">&quot;deltaR &gt; 0.5&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pass ele trigger&quot;</span><span class="p">,</span> <span class="s2">&quot;pass lepton veto&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;goodtau events&quot;</span><span class="p">,</span> <span class="s2">&quot;tau-tau pairs&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pass tau trigger&quot;</span><span class="p">,</span> <span class="s2">&quot;pass lepton veto&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">ibin</span><span class="p">,</span> <span class="n">binname</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bins</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">GetXaxis</span><span class="p">()</span><span class="o">.</span><span class="n">SetBinLabel</span><span class="p">(</span><span class="n">ibin</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">binname</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">endFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputFile</span><span class="p">,</span> <span class="n">outputFile</span><span class="p">,</span> <span class="n">inputTree</span><span class="p">,</span> <span class="n">wrappedOutputTree</span><span class="p">):</span>
+        <span class="n">prevdir</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gDirectory</span>
+        <span class="n">outputFile</span><span class="o">.</span><span class="n">cd</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s2">&quot;histos&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">GetName</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">outputFile</span><span class="o">.</span><span class="n">GetListOfKeys</span><span class="p">()]:</span>
+            <span class="n">outputFile</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s2">&quot;histos&quot;</span><span class="p">)</span>
+        <span class="n">outputFile</span><span class="o">.</span><span class="n">cd</span><span class="p">(</span><span class="s2">&quot;histos&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Write</span><span class="p">()</span>
+        <span class="n">prevdir</span><span class="o">.</span><span class="n">cd</span><span class="p">()</span>
+    
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
+        <span class="n">electrons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Electron&quot;</span><span class="p">)</span>
+        <span class="n">muons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Muon&quot;</span><span class="p">)</span>
+        <span class="n">taus</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Tau&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># muon-tau channels</span>
+        <span class="n">goodmuons</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">imuon</span><span class="p">,</span> <span class="n">muon</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">muons</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">muon</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">2.1</span> <span class="ow">or</span> <span class="n">muon</span><span class="o">.</span><span class="n">pfRelIso04_all</span> <span class="o">&gt;</span> <span class="mf">0.15</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">muon</span><span class="o">.</span><span class="n">dxy</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.045</span>
+                    <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">muon</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.2</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">muon</span><span class="o">.</span><span class="n">tightId</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">goodmuons</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">imuon</span><span class="p">,</span> <span class="n">muon</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">goodmuons</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">goodtaus</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">itau</span><span class="p">,</span> <span class="n">tau</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">taus</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSmu</span> <span class="o">&lt;</span> <span class="mi">15</span> <span class="ow">or</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSe</span> <span class="o">&lt;</span> <span class="mi">7</span>
+                        <span class="ow">or</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSjet</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.2</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">tau</span><span class="o">.</span><span class="n">decayMode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">]:</span>
+                    <span class="k">continue</span>
+                <span class="c1"># common tau pt req for both single and cross triggers</span>
+                <span class="k">if</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mf">20.</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">goodtaus</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">itau</span><span class="p">,</span> <span class="n">tau</span><span class="p">))</span>
+            <span class="n">muontaupairs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">imuon</span><span class="p">,</span> <span class="n">muon</span><span class="p">)</span> <span class="ow">in</span> <span class="n">goodmuons</span><span class="p">:</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">itau</span><span class="p">,</span> <span class="n">tau</span><span class="p">)</span> <span class="ow">in</span> <span class="n">goodtaus</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">tau</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">muon</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span> <span class="k">continue</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">check_mutau</span><span class="p">(</span><span class="n">event</span><span class="p">,</span>
+                            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;muon.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">),</span> <span class="n">muon</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">muon</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span>
+                            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="n">th1</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">th2</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+                        <span class="k">continue</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                    <span class="n">muontaupair</span> <span class="o">=</span> <span class="n">LeptonTauPair</span><span class="p">(</span>
+                        <span class="n">muon</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;muon.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">),</span> <span class="n">muon</span><span class="o">.</span><span class="n">pfRelIso04_all</span><span class="p">,</span>
+                        <span class="n">tau</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau</span><span class="o">.</span><span class="n">rawDeepTau2017v2p1VSjet</span><span class="p">)</span>
+                    <span class="c1"># if muontaupair.check_charge():</span>
+                    <span class="n">muontaupairs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">imuon</span><span class="p">,</span> <span class="n">itau</span><span class="p">,</span> <span class="n">muontaupair</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">muontaupairs</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">muontaupairs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">muon</span><span class="p">,</span> <span class="n">tau</span> <span class="o">=</span> <span class="n">muontaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">pair</span>
+
+                <span class="n">fail_lepton_veto</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">lepton_veto</span><span class="p">(</span><span class="n">electrons</span><span class="p">,</span> <span class="n">muons</span><span class="p">,</span> <span class="n">taus</span><span class="p">,</span> <span class="n">muon</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">fail_lepton_veto</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;pairType&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;isVBFtrigger&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;isOS&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">muontaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">check_charge</span><span class="p">()))</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_index&quot;</span><span class="p">,</span> <span class="n">muontaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_eta&quot;</span><span class="p">,</span> <span class="n">muon</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_phi&quot;</span><span class="p">,</span> <span class="n">muon</span><span class="o">.</span><span class="n">phi</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_dxy&quot;</span><span class="p">,</span> <span class="n">muon</span><span class="o">.</span><span class="n">dxy</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_dz&quot;</span><span class="p">,</span> <span class="n">muon</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_q&quot;</span><span class="p">,</span> <span class="n">muon</span><span class="o">.</span><span class="n">charge</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_iso&quot;</span><span class="p">,</span> <span class="n">muon</span><span class="o">.</span><span class="n">pfRelIso04_all</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_decayMode&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSe&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSmu&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSjet&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_index&quot;</span><span class="p">,</span> <span class="n">muontaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_eta&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_phi&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">phi</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_dxy&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">dxy</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_dz&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_q&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">charge</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_iso&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">rawIso</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_decayMode&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">decayMode</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSe&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSe</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSmu&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSmu</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSjet&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSjet</span><span class="p">)</span>
+                <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="c1"># electron-tau channels</span>
+        <span class="n">goodelectrons</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ielectron</span><span class="p">,</span> <span class="n">electron</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">electrons</span><span class="p">):</span>
+            <span class="c1"># if (not (electron.mvaFall17V2Iso_WP80 or electron.mvaFall17V2noIso_WP80)</span>
+            <span class="k">if</span> <span class="p">((</span><span class="ow">not</span> <span class="n">electron</span><span class="o">.</span><span class="n">mvaFall17V2Iso_WP80</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">electron</span><span class="o">.</span><span class="n">dxy</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.045</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">electron</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.2</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">goodelectrons</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ielectron</span><span class="p">,</span> <span class="n">electron</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">goodelectrons</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+            <span class="n">goodtaus</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">itau</span><span class="p">,</span> <span class="n">tau</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">taus</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSmu</span> <span class="o">&lt;</span> <span class="mi">15</span> <span class="ow">or</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSe</span> <span class="o">&lt;</span> <span class="mi">7</span>
+                        <span class="ow">or</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSjet</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.2</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">tau</span><span class="o">.</span><span class="n">decayMode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">]:</span>
+                    <span class="k">continue</span>
+                <span class="c1"># common tau pt req for both single and cross triggers</span>
+                <span class="k">if</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mf">20.</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">goodtaus</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">itau</span><span class="p">,</span> <span class="n">tau</span><span class="p">))</span>
+
+            <span class="n">electrontaupairs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">ielectron</span><span class="p">,</span> <span class="n">electron</span><span class="p">)</span> <span class="ow">in</span> <span class="n">goodelectrons</span><span class="p">:</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">itau</span><span class="p">,</span> <span class="n">tau</span><span class="p">)</span> <span class="ow">in</span> <span class="n">goodtaus</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">tau</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">electron</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span> <span class="k">continue</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">check_etau</span><span class="p">(</span><span class="n">event</span><span class="p">,</span>
+                            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;electron.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">),</span> <span class="n">electron</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">electron</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span>
+                            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="n">th1</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">th2</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+                        <span class="k">continue</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+                    <span class="n">electrontaupair</span> <span class="o">=</span> <span class="n">LeptonTauPair</span><span class="p">(</span>
+                        <span class="n">electron</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;electron.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">),</span> <span class="n">electron</span><span class="o">.</span><span class="n">pfRelIso03_all</span><span class="p">,</span>
+                        <span class="n">tau</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau</span><span class="o">.</span><span class="n">rawDeepTau2017v2p1VSjet</span><span class="p">)</span>
+                    <span class="c1"># if electrontaupair.check_charge():</span>
+                    <span class="n">electrontaupairs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ielectron</span><span class="p">,</span> <span class="n">itau</span><span class="p">,</span> <span class="n">electrontaupair</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">electrontaupairs</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">electrontaupairs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">electron</span><span class="p">,</span> <span class="n">tau</span> <span class="o">=</span> <span class="n">electrontaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">pair</span>
+
+                <span class="n">fail_lepton_veto</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">lepton_veto</span><span class="p">(</span><span class="n">electrons</span><span class="p">,</span> <span class="n">muons</span><span class="p">,</span> <span class="n">taus</span><span class="p">,</span> <span class="n">electron</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">fail_lepton_veto</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;pairType&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;isVBFtrigger&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;isOS&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">electrontaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">check_charge</span><span class="p">()))</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_index&quot;</span><span class="p">,</span> <span class="n">electrontaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_eta&quot;</span><span class="p">,</span> <span class="n">electron</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_phi&quot;</span><span class="p">,</span> <span class="n">electron</span><span class="o">.</span><span class="n">phi</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_dxy&quot;</span><span class="p">,</span> <span class="n">electron</span><span class="o">.</span><span class="n">dxy</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_dz&quot;</span><span class="p">,</span> <span class="n">electron</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_q&quot;</span><span class="p">,</span> <span class="n">electron</span><span class="o">.</span><span class="n">charge</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_iso&quot;</span><span class="p">,</span> <span class="n">electron</span><span class="o">.</span><span class="n">pfRelIso03_all</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_decayMode&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSe&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSmu&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSjet&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_index&quot;</span><span class="p">,</span> <span class="n">electrontaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_eta&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_phi&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">phi</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_dxy&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">dxy</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_dz&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_q&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">charge</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_iso&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">rawIso</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_decayMode&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">decayMode</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSe&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSe</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSmu&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSmu</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSjet&quot;</span><span class="p">,</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSjet</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="n">goodtaus</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">itau</span><span class="p">,</span> <span class="n">tau</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">taus</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSmu</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSe</span> <span class="o">&lt;</span> <span class="mi">3</span>
+                    <span class="ow">or</span> <span class="n">tau</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSjet</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.2</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">tau</span><span class="o">.</span><span class="n">decayMode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">]:</span>
+                <span class="k">continue</span>
+            <span class="n">goodtaus</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">itau</span><span class="p">,</span> <span class="n">tau</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">goodtaus</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">tautaupairs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">goodtaus</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">goodtaus</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">j</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span>
+                <span class="n">tau1_index</span> <span class="o">=</span> <span class="n">goodtaus</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">tau1</span> <span class="o">=</span> <span class="n">goodtaus</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">tau2_index</span> <span class="o">=</span> <span class="n">goodtaus</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">tau2</span> <span class="o">=</span> <span class="n">goodtaus</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">tau1</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">tau2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span> <span class="k">continue</span>
+
+                <span class="n">pass_ditau</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">check_tautau</span><span class="p">(</span><span class="n">event</span><span class="p">,</span>
+                    <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau1.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau1</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span>
+                    <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau2.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau2</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="n">abs_th1</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">abs_th2</span><span class="o">=</span><span class="mi">40</span><span class="p">)</span>
+                <span class="c1"># passing vbf trigger ONLY</span>
+                <span class="n">pass_vbf</span> <span class="o">=</span> <span class="p">(</span><span class="ow">not</span> <span class="n">pass_ditau</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger_checker</span><span class="o">.</span><span class="n">check_vbftautau</span><span class="p">(</span><span class="n">event</span><span class="p">,</span>
+                    <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau1.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau1</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span>
+                    <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau2.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau2</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="n">abs_th1</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">abs_th2</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">pass_ditau</span> <span class="ow">or</span> <span class="n">pass_vbf</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+                <span class="n">pass_vbf</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">pass_vbf</span><span class="p">)</span>
+                <span class="n">tautaupair</span> <span class="o">=</span> <span class="n">LeptonTauPair</span><span class="p">(</span>
+                    <span class="n">tau1</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau1.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau1</span><span class="o">.</span><span class="n">rawDeepTau2017v2p1VSjet</span><span class="p">,</span>
+                    <span class="n">tau2</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;tau2.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">),</span> <span class="n">tau2</span><span class="o">.</span><span class="n">rawDeepTau2017v2p1VSjet</span><span class="p">)</span>
+                <span class="c1"># if tautaupair.check_charge():</span>
+                <span class="n">tautaupairs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tau1_index</span><span class="p">,</span> <span class="n">tau2_index</span><span class="p">,</span> <span class="n">tautaupair</span><span class="p">,</span> <span class="n">pass_vbf</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tautaupairs</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">tautaupairs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">tau1</span><span class="p">,</span> <span class="n">tau2</span> <span class="o">=</span> <span class="n">tautaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">pair</span>
+
+            <span class="n">fail_lepton_veto</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">lepton_veto</span><span class="p">(</span><span class="n">electrons</span><span class="p">,</span> <span class="n">muons</span><span class="p">,</span> <span class="n">taus</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fail_lepton_veto</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">histo</span><span class="o">.</span><span class="n">Fill</span><span class="p">(</span><span class="mi">13</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;pairType&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;isVBFtrigger&quot;</span><span class="p">,</span> <span class="n">tautaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">3</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;isOS&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">tautaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">check_charge</span><span class="p">()))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_index&quot;</span><span class="p">,</span> <span class="n">tautaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_eta&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_phi&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">phi</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_dxy&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">dxy</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_dz&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_q&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">charge</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_iso&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">rawIso</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_decayMode&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">decayMode</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSe&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSe</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSmu&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSmu</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_idDeepTau2017v2p1VSjet&quot;</span><span class="p">,</span> <span class="n">tau1</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSjet</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_index&quot;</span><span class="p">,</span> <span class="n">tautaupairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_eta&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_phi&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">phi</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_dxy&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">dxy</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_dz&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">dz</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_q&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">charge</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_iso&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">rawIso</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_decayMode&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">decayMode</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSe&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSe</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSmu&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSmu</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_idDeepTau2017v2p1VSjet&quot;</span><span class="p">,</span> <span class="n">tau2</span><span class="o">.</span><span class="n">idDeepTau2017v2p1VSjet</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">class</span> <span class="nc">HHLeptonVariableProducer</span><span class="p">(</span><span class="n">JetLepMetModule</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHLeptonVariableProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">isMC</span>
+
+    <span class="k">def</span> <span class="nf">beginFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputFile</span><span class="p">,</span> <span class="n">outputFile</span><span class="p">,</span> <span class="n">inputTree</span><span class="p">,</span> <span class="n">wrappedOutputTree</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span> <span class="o">=</span> <span class="n">wrappedOutputTree</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_pt</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau1_mass</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_pt</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;dau2_mass</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">endFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputFile</span><span class="p">,</span> <span class="n">outputFile</span><span class="p">,</span> <span class="n">inputTree</span><span class="p">,</span> <span class="n">wrappedOutputTree</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
+        <span class="n">muons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Muon&quot;</span><span class="p">)</span>
+        <span class="n">electrons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Electron&quot;</span><span class="p">)</span>
+        <span class="n">taus</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Tau&quot;</span><span class="p">)</span>
+
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">dau1_tlv</span><span class="p">,</span> <span class="n">dau2_tlv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_daus</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">muons</span><span class="p">,</span> <span class="n">electrons</span><span class="p">,</span> <span class="n">taus</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="n">dau1_tlv</span><span class="o">.</span><span class="n">Pt</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau1_mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="n">dau1_tlv</span><span class="o">.</span><span class="n">M</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="n">dau2_tlv</span><span class="o">.</span><span class="n">Pt</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;dau2_mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="n">dau2_tlv</span><span class="o">.</span><span class="n">M</span><span class="p">())</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="k">def</span> <span class="nf">HHLepton</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHLeptonProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">HHLeptonVariable</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHLeptonVariableProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">HHLeptonRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="p">,</span> <span class="n">year</span><span class="p">,</span> <span class="n">runPeriod</span><span class="p">,</span> <span class="n">df_filter</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHLeptonRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">isMC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">year</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runPeriod</span> <span class="o">=</span> <span class="n">runPeriod</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span> <span class="o">=</span> <span class="n">df_filter</span>
+
+        <span class="k">if</span> <span class="s2">&quot;/libToolsTools.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libToolsTools.so&quot;</span><span class="p">)</span>
+
+        <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Tools/Tools&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+        <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/HHLeptonInterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+        <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            auto HHLepton = HHLeptonInterface();</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mutau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_IsoMu22&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu22_eta2p1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_IsoTkMu22&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoTkMu22_eta2p1&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu24&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu27&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_IsoMu19_eta2p1_LooseIsoPFTau20&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_CrossL1&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">etau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_Ele25_eta2p1_WPTight_Gsf&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_Ele32_WPTight_Gsf_L1DoubleEG&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_Ele32_WPTight_Gsf&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_Ele35_WPTight_Gsf&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTau30_eta2p1_CrossL1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTauHPS30_eta2p1_CrossL1&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tautau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_DoubleMediumIsoPFTau35_Trk1_eta2p1_Reg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_DoubleMediumCombinedIsoPFTau35_Trk1_eta2p1_Reg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_DoubleTightChargedIsoPFTau35_Trk1_TightID_eta2p1_Reg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_DoubleMediumChargedIsoPFTau40_Trk1_TightID_eta2p1_Reg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_DoubleTightChargedIsoPFTau40_Trk1_eta2p1_Reg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_DoubleMediumChargedIsoPFTauHPS35_Trk1_eta2p1_Reg&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTau20_Trk1_eta2p1_Reg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTau20_Trk1_eta2p1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTauHPS20_Trk1_eta2p1&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                using Vbool = const ROOT::RVec&lt;Bool_t&gt;&amp;;  </span>
+<span class="s2">                std::vector&lt;trig_req&gt; get_mutau_triggers(</span>
+<span class="s2">                        Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[4], 25, 2.1, 20, 2.3, {{2, 8}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[5], 28, 2.1, 20, 2.3, {{2, 8}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                    if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[8], 21, 2.1, 32, 2.1, {{64}, {1, 256}}}));</span>
+<span class="s2">                    else</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[9], 21, 2.1, 32, 2.1, {{4}, {1, 16}}}));</span>
+<span class="s2">                    return trigger_reqs;</span>
+<span class="s2">                }</span>
+<span class="s2">                std::vector&lt;trig_req&gt; get_etau_triggers(</span>
+<span class="s2">                        Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[2], 33, 2.1, 20, 2.3, {{2}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[3], 36, 2.1, 20, 2.3, {{2}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                    if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[4], 25, 2.1, 35, 2.1, {{64}, {1, 128}}}));</span>
+<span class="s2">                    else</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[5], 25, 2.1, 35, 2.1, {{8}, {1, 16}}}));</span>
+<span class="s2">                    return trigger_reqs;</span>
+<span class="s2">                }</span>
+<span class="s2">                std::vector&lt;trig_req&gt; get_tautau_triggers(</span>
+<span class="s2">                        Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[2], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[3], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                    if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[4], 40, 2.1, 40, 2.1, {{64, 4}, {64, 4}}}));</span>
+<span class="s2">                    else</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[5], 40, 2.1, 40, 2.1, {{2, 16}, {2, 16}}}));</span>
+<span class="s2">                    return trigger_reqs;</span>
+<span class="s2">                }</span>
+<span class="s2">                std::vector&lt;trig_req&gt; get_vbf_triggers(</span>
+<span class="s2">                        Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                    if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[1], 25, 2.1, 25, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                    else</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[2], 25, 2.1, 25, 2.1, {{512, 1, 16}, {512, 1, 16}}}));</span>
+<span class="s2">                    return trigger_reqs;</span>
+<span class="s2">                }</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;pairType&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_index&quot;</span><span class="p">,</span> <span class="s2">&quot;dau2_index&quot;</span><span class="p">,</span> <span class="s2">&quot;isVBFtrigger&quot;</span><span class="p">,</span> <span class="s2">&quot;isOS&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dau1_eta&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_phi&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_iso&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_decayMode&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dau1_idDeepTau2017v2p1VSe&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_idDeepTau2017v2p1VSmu&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dau1_idDeepTau2017v2p1VSjet&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dau2_eta&quot;</span><span class="p">,</span> <span class="s2">&quot;dau2_phi&quot;</span><span class="p">,</span> <span class="s2">&quot;dau2_decayMode&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dau2_idDeepTau2017v2p1VSe&quot;</span><span class="p">,</span> <span class="s2">&quot;dau2_idDeepTau2017v2p1VSmu&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dau2_idDeepTau2017v2p1VSjet&quot;</span>
+        <span class="p">]</span>
+
+        <span class="n">all_branches</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mutau_triggers</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mutau_triggers</span><span class="p">[</span><span class="n">ib</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;false&quot;</span>
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">etau_triggers</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">etau_triggers</span><span class="p">[</span><span class="n">ib</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;false&quot;</span>
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tautau_triggers</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tautau_triggers</span><span class="p">[</span><span class="n">ib</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;false&quot;</span>
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span><span class="p">[</span><span class="n">ib</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;false&quot;</span>
+
+        <span class="n">runPeriods</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;dum&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;D&quot;</span><span class="p">,</span> <span class="s2">&quot;E&quot;</span><span class="p">,</span> <span class="s2">&quot;F&quot;</span><span class="p">,</span> <span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;H&quot;</span><span class="p">]</span>
+        <span class="n">runPeriod</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">irun</span><span class="p">,</span> <span class="n">runPeriod</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">runPeriods</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">runPeriod</span> <span class="o">==</span> <span class="n">runPeriod</span><span class="p">:</span>
+                <span class="n">runPeriod</span> <span class="o">=</span> <span class="n">irun</span>
+                <span class="k">break</span>
+        <span class="k">assert</span> <span class="n">runPeriod</span> <span class="o">!=</span> <span class="kc">None</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;mutau_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_mutau_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mutau_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;etau_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_etau_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">etau_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;tautau_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_tautau_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tautau_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;vbf_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_vbf_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;hh_lepton_results&quot;</span><span class="p">,</span> <span class="s2">&quot;HHLepton.get_dau_indexes(&quot;</span>
+            <span class="s2">&quot;Muon_pt</span><span class="si">{0}</span><span class="s2">, Muon_eta, Muon_phi, Muon_mass</span><span class="si">{0}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Muon_pfRelIso04_all, Muon_dxy, Muon_dz, Muon_mediumId, Muon_tightId, Muon_charge, &quot;</span>
+            <span class="s2">&quot;Electron_pt</span><span class="si">{1}</span><span class="s2">, Electron_eta, Electron_phi, Electron_mass</span><span class="si">{1}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Electron_mvaFall17V2Iso_WP80, Electron_mvaFall17V2noIso_WP90, &quot;</span>
+            <span class="s2">&quot;Electron_mvaFall17V2Iso_WP90, Electron_pfRelIso03_all, &quot;</span>
+            <span class="s2">&quot;Electron_dxy, Electron_dz, Electron_charge, &quot;</span>
+            <span class="s2">&quot;Tau_pt</span><span class="si">{2}</span><span class="s2">, Tau_eta, Tau_phi, Tau_mass</span><span class="si">{2}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Tau_idDeepTau2017v2p1VSmu, Tau_idDeepTau2017v2p1VSe, &quot;</span>
+            <span class="s2">&quot;Tau_idDeepTau2017v2p1VSjet, Tau_rawDeepTau2017v2p1VSjet, &quot;</span>
+            <span class="s2">&quot;Tau_dz, Tau_decayMode, Tau_charge, &quot;</span>
+            <span class="s2">&quot;TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi, &quot;</span>
+            <span class="s2">&quot;mutau_triggers, etau_triggers, tautau_triggers, vbf_triggers&quot;</span>
+        <span class="s2">&quot;)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">branch</span> <span class="ow">in</span> <span class="n">branches</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch</span><span class="p">,</span> <span class="s2">&quot;hh_lepton_results.</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">branch</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;pairType &gt;= 0&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
+        <span class="c1"># return df, []</span>
+
+
+<div class="viewcode-block" id="HHLeptonRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/hhlepton.html#Tools.Tools.HHLepton.HHLeptonRDF">[docs]</a><span class="k">def</span> <span class="nf">HHLeptonRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">df_filter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;filter&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHLeptonRDFProducer</span><span class="p">(</span><span class="n">df_filter</span><span class="o">=</span><span class="n">df_filter</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">HHLeptonVarRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHLeptonVarRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">            using VInt = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">            std::vector&lt;float&gt; get_lepton_values (</span>
+<span class="s2">                int pairType, int dau1_index, int dau2_index,</span>
+<span class="s2">                Vfloat muon_pt, Vfloat muon_mass,</span>
+<span class="s2">                Vfloat electron_pt, Vfloat electron_mass,</span>
+<span class="s2">                Vfloat tau_pt, Vfloat tau_mass</span>
+<span class="s2">            )</span>
+<span class="s2">            {</span>
+<span class="s2">                float dau1_pt, dau1_mass, dau2_pt, dau2_mass;</span>
+<span class="s2">                if (pairType == 0) {</span>
+<span class="s2">                    dau1_pt = muon_pt.at(dau1_index);</span>
+<span class="s2">                    dau1_mass = muon_mass.at(dau1_index);</span>
+<span class="s2">                } else if (pairType == 1) {</span>
+<span class="s2">                    dau1_pt = electron_pt.at(dau1_index);</span>
+<span class="s2">                    dau1_mass = electron_mass.at(dau1_index);</span>
+<span class="s2">                } else if (pairType == 2) {</span>
+<span class="s2">                    dau1_pt = tau_pt.at(dau1_index);</span>
+<span class="s2">                    dau1_mass = tau_mass.at(dau1_index);</span>
+<span class="s2">                } else {</span>
+<span class="s2">                    return {-999., -999., -999., -999.};</span>
+<span class="s2">                }</span>
+<span class="s2">                dau2_pt = tau_pt.at(dau2_index);</span>
+<span class="s2">                dau2_mass = tau_mass.at(dau2_index);</span>
+<span class="s2">                return {dau1_pt, dau1_mass, dau2_pt, dau2_mass};</span>
+<span class="s2">            }</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="s2">&quot;dau1_pt</span><span class="si">{0}</span><span class="s2">, dau1_mass</span><span class="si">{0}</span><span class="s2">, dau2_pt</span><span class="si">{0}</span><span class="s2">, dau2_mass</span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">)</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="n">branches</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;lepton_values</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="s2">&quot;get_lepton_values(&quot;</span>
+            <span class="s2">&quot;pairType, dau1_index, dau2_index, &quot;</span>
+            <span class="s2">&quot;Muon_pt</span><span class="si">{0}</span><span class="s2">, Muon_mass</span><span class="si">{0}</span><span class="s2">, Electron_pt</span><span class="si">{1}</span><span class="s2">, Electron_mass</span><span class="si">{1}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Tau_pt</span><span class="si">{2}</span><span class="s2">, Tau_mass</span><span class="si">{2}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">branches</span><span class="p">):</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch</span><span class="p">,</span> <span class="s2">&quot;lepton_values</span><span class="si">%s</span><span class="s2">[</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="n">ib</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
+
+
+<span class="k">def</span> <span class="nf">HHLeptonVarRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHLeptonVarRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

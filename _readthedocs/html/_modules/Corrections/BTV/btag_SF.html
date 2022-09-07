@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corrections.BTV.btag_SF &mdash; nanoaod-base-analysis 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>Corrections.BTV.btag_SF</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Corrections.BTV.btag_SF</h1><div class="highlight"><pre>
+<span></span><span class="c1"># based on https://github.com/LLRCMS/KLUBAnalysis/blob/VBF_legacy/src/PuJetIdSF.cc</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span> <span class="k">as</span> <span class="n">copy</span>
+
+<span class="kn">from</span> <span class="nn">PhysicsTools.NanoAODTools.postprocessing.framework.datamodel</span> <span class="kn">import</span> <span class="n">Collection</span>
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span><span class="p">,</span> <span class="n">getContentHisto2D</span>
+<span class="kn">from</span> <span class="nn">Base.Modules.baseModules</span> <span class="kn">import</span> <span class="n">JetLepMetModule</span><span class="p">,</span> <span class="n">DummyModule</span><span class="p">,</span> <span class="n">JetLepMetSyst</span>
+
+<span class="kn">import</span> <span class="nn">correctionlib</span>
+<span class="n">correctionlib</span><span class="o">.</span><span class="n">register_pyroot_binding</span><span class="p">()</span>
+
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">btag_SFRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">year</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">btag_SFRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">year</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
+        <span class="c1"># self.incl_uncertainties = kwargs.pop(&quot;incl_uncertainties&quot;, [&quot;central&quot;])</span>
+        <span class="c1"># self.comb_uncertainties = kwargs.pop(&quot;comb_uncertainties&quot;, [&quot;central&quot;])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reshape_uncertainties</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;reshape_uncertainties&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;central&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span><span class="p">:</span>
+            <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Corrections/BTV&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="s2">&quot;/libCorrectionsBTV.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libCorrectionsBTV.so&quot;</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/btag_SFinterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+            <span class="n">json_path</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/&quot;</span>
+                <span class="s2">&quot;POG/BTV/</span><span class="si">{0}</span><span class="s2">/btagging.json.gz&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;2018_UL&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;2016 and 2017 not yet implemented&quot;</span><span class="p">)</span>
+
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                auto btag_SF = btag_SFinterface(</span><span class="si">%s</span><span class="s2">, &quot;</span><span class="si">%s</span><span class="s2">&quot;);</span>
+<span class="s2">            &quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">),</span> <span class="n">filename</span><span class="p">))</span>
+
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">                using Vint = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">                std::vector&lt;double&gt; get_btag_sf (</span>
+<span class="s2">                    Vfloat Jet_pt, Vfloat Jet_eta, Vfloat Jet_phi, Vfloat Jet_mass,</span>
+<span class="s2">                    Vint Jet_puId, Vfloat Jet_jetId,</span>
+<span class="s2">                    Vint Jet_hadronFlavour, Vfloat Jet_btagDeepFlavB,</span>
+<span class="s2">                    int pairType, int dau1_index, int dau2_index,</span>
+<span class="s2">                    Vfloat muon_pt, Vfloat muon_eta, Vfloat muon_phi, Vfloat muon_mass,</span>
+<span class="s2">                    Vfloat electron_pt, Vfloat electron_eta,</span>
+<span class="s2">                    Vfloat electron_phi, Vfloat electron_mass,</span>
+<span class="s2">                    Vfloat tau_pt, Vfloat tau_eta, Vfloat tau_phi, Vfloat tau_mass,</span>
+<span class="s2">                    std::string incl_uncertainty, std::string comb_uncertainty,</span>
+<span class="s2">                    std::string reshape_uncertainty</span>
+<span class="s2">                )</span>
+<span class="s2">                {</span>
+<span class="s2">                    float dau1_pt, dau1_eta, dau1_phi, dau1_mass;</span>
+<span class="s2">                    float dau2_pt, dau2_eta, dau2_phi, dau2_mass;</span>
+<span class="s2">                    if (pairType == 0) {</span>
+<span class="s2">                        dau1_pt = muon_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_eta = muon_eta.at(dau1_index);</span>
+<span class="s2">                        dau1_phi = muon_phi.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = muon_mass.at(dau1_index);</span>
+<span class="s2">                    } else if (pairType == 1) {</span>
+<span class="s2">                        dau1_pt = electron_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_eta = electron_eta.at(dau1_index);</span>
+<span class="s2">                        dau1_phi = electron_phi.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = electron_mass.at(dau1_index);</span>
+<span class="s2">                    } else if (pairType == 2) {</span>
+<span class="s2">                        dau1_pt = tau_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_eta = tau_eta.at(dau1_index);</span>
+<span class="s2">                        dau1_phi = tau_phi.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = tau_mass.at(dau1_index);</span>
+<span class="s2">                    } else {</span>
+<span class="s2">                        dau1_pt = -999.;</span>
+<span class="s2">                        dau1_eta = -999.;</span>
+<span class="s2">                        dau1_phi = -999.;</span>
+<span class="s2">                        dau1_mass = -999.;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    dau2_pt = tau_pt.at(dau2_index);</span>
+<span class="s2">                    dau2_eta = tau_eta.at(dau2_index);</span>
+<span class="s2">                    dau2_phi = tau_phi.at(dau2_index);</span>
+<span class="s2">                    dau2_mass = tau_mass.at(dau2_index);</span>
+
+<span class="s2">                    return btag_SF.get_btag_sf(</span>
+<span class="s2">                       Jet_pt, Jet_eta, Jet_phi, Jet_mass, Jet_jetId, Jet_puId,</span>
+<span class="s2">                       Jet_hadronFlavour, Jet_btagDeepFlavB,</span>
+<span class="s2">                       {dau1_pt, dau2_pt}, {dau1_eta, dau2_eta},</span>
+<span class="s2">                       {dau1_phi, dau2_phi}, {dau1_mass, dau2_mass}, incl_uncertainty,</span>
+<span class="s2">                       comb_uncertainty, reshape_uncertainty);</span>
+<span class="s2">                }</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="n">branches_to_save</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches_to_save</span>
+        <span class="c1"># branches = [&#39;bTagweightL{}&#39;, &#39;bTagweightM{}&#39;, &#39;bTagweightT{}&#39;, &#39;bTagweightReshape{}&#39;]</span>
+        <span class="n">branch</span> <span class="o">=</span> <span class="s1">&#39;bTagweightReshape</span><span class="si">{}</span><span class="s1">&#39;</span>
+        <span class="k">for</span> <span class="n">uncertainty</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshape_uncertainties</span><span class="p">:</span>
+            <span class="n">postfix</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">uncertainty</span><span class="p">)</span> <span class="k">if</span> <span class="n">uncertainty</span> <span class="o">!=</span> <span class="s2">&quot;central&quot;</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;btagweight_results</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">postfix</span><span class="p">,</span> <span class="s2">&quot;get_btag_sf(&quot;</span>
+                <span class="s2">&quot;Jet_pt</span><span class="si">{3}</span><span class="s2">, Jet_eta, Jet_phi, Jet_mass</span><span class="si">{3}</span><span class="s2">, &quot;</span>
+                <span class="s2">&quot;Jet_puId, Jet_jetId, Jet_hadronFlavour, Jet_btagDeepFlavB, &quot;</span>
+                <span class="s2">&quot;pairType, dau1_index, dau2_index, &quot;</span>
+                <span class="s2">&quot;Muon_pt</span><span class="si">{0}</span><span class="s2">, Muon_eta, Muon_phi, Muon_mass</span><span class="si">{0}</span><span class="s2">, &quot;</span>
+                <span class="s2">&quot;Electron_pt</span><span class="si">{1}</span><span class="s2">, Electron_eta, Electron_phi, Electron_mass</span><span class="si">{1}</span><span class="s2">, &quot;</span>
+                <span class="s2">&quot;Tau_pt</span><span class="si">{2}</span><span class="s2">, Tau_eta, Tau_phi, Tau_mass</span><span class="si">{2}</span><span class="s2">,&quot;</span>
+                <span class="s2">&quot;</span><span class="se">\&quot;</span><span class="s2">central</span><span class="se">\&quot;</span><span class="s2">, </span><span class="se">\&quot;</span><span class="s2">central</span><span class="se">\&quot;</span><span class="s2">, </span><span class="se">\&quot;</span><span class="si">{4}</span><span class="se">\&quot;</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">,</span> <span class="n">uncertainty</span><span class="p">))</span>
+
+            <span class="c1"># for ib, branch in enumerate(branches):</span>
+                <span class="c1"># df = df.Define(branch.format(postfix), &quot;btagweight_results%s[%s]&quot; % (postfix, ib))</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">postfix</span><span class="p">),</span> <span class="s2">&quot;btagweight_results</span><span class="si">%s</span><span class="s2">[3]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">postfix</span><span class="p">))</span>
+            <span class="n">branches_to_save</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">branch</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">postfix</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches_to_save</span>
+
+
+<div class="viewcode-block" id="btag_SFRDF"><a class="viewcode-back" href="../../../modules/BTV/btagging.html#Corrections.BTV.btag_SF.btag_SFRDF">[docs]</a><span class="k">def</span> <span class="nf">btag_SFRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Module to obtain btagging deepJet SFs with their uncertainties.</span>
+
+<span class="sd">    Required RDFModules: :ref:`HHLepton_HHLeptonRDF`.</span>
+<span class="sd">    </span>
+<span class="sd">    :param: reshape_uncertainties: name of the systematic to consider among ``central`` (default),</span>
+<span class="sd">        ``down_cferr1``, ``down_cferr2``, ``down_hf``, ``down_hfstats1``, ``down_hfstats2``, ``down_jes``,</span>
+<span class="sd">        ``down_jesAbsoluteMPFBias``, ``down_jesAbsoluteScale``, ``down_jesAbsoluteStat``, ``down_jesFlavorQCD``,</span>
+<span class="sd">        ``down_jesFragmentation``, ``down_jesPileUpDataMC``, ``down_jesPileUpPtBB``, ``down_jesPileUpPtEC1``,</span>
+<span class="sd">        ``down_jesPileUpPtEC2``, ``down_jesPileUpPtHF``, ``down_jesPileUpPtRef``, ``down_jesRelativeBal``,</span>
+<span class="sd">        ``down_jesRelativeFSR``, ``down_jesRelativeJEREC1``, ``down_jesRelativeJEREC2``, ``down_jesRelativeJERHF``,</span>
+<span class="sd">        ``down_jesRelativePtBB``, ``down_jesRelativePtEC1``, ``down_jesRelativePtEC2``, ``down_jesRelativePtHF``,</span>
+<span class="sd">        ``down_jesRelativeSample``, ``down_jesRelativeStatEC``, ``down_jesRelativeStatFSR``,</span>
+<span class="sd">        ``down_jesRelativeStatHF``, ``down_jesSinglePionECAL``, ``down_jesSinglePionHCAL``, ``down_jesTimePtEta``,</span>
+<span class="sd">        ``down_lf``, ``down_lfstats1``, ``down_lfstats2``, ``up_cferr1``, ``up_cferr2``, ``up_hf``, ``up_hfstats1``,</span>
+<span class="sd">        ``up_hfstats2``, ``up_jes``, ``up_jesAbsoluteMPFBias``, ``up_jesAbsoluteScale``, ``up_jesAbsoluteStat``,</span>
+<span class="sd">        ``up_jesFlavorQCD``, ``up_jesFragmentation``, ``up_jesPileUpDataMC``, ``up_jesPileUpPtBB``,</span>
+<span class="sd">        ``up_jesPileUpPtEC1``, ``up_jesPileUpPtEC2``, ``up_jesPileUpPtHF``, ``up_jesPileUpPtRef``,</span>
+<span class="sd">        ``up_jesRelativeBal``, ``up_jesRelativeFSR``, ``up_jesRelativeJEREC1``, ``up_jesRelativeJEREC2``,</span>
+<span class="sd">        ``up_jesRelativeJERHF``, ``up_jesRelativePtBB``, ``up_jesRelativePtEC1``, ``up_jesRelativePtEC2``,</span>
+<span class="sd">        ``up_jesRelativePtHF``, ``up_jesRelativeSample``, ``up_jesRelativeStatEC``, ``up_jesRelativeStatFSR``,</span>
+<span class="sd">        ``up_jesRelativeStatHF``, ``up_jesSinglePionECAL``, ``up_jesSinglePionHCAL``, ``up_jesTimePtEta``, ``up_lf``,</span>
+<span class="sd">        ``up_lfstats1``, ``up_lfstats2``.</span>
+<span class="sd">    :type reshape_uncertainties: list of str</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: btag_SFRDF</span>
+<span class="sd">            path: Corrections.BTV.btag_SF</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+<span class="sd">                year: self.config.year</span>
+<span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
+<span class="sd">                reshape_uncertainties: [central, ...]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">btag_SFRDFProducer</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

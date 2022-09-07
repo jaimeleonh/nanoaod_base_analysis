@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cmt.base_tasks.preprocessing &mdash; nanoaod-base-analysis 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>cmt.base_tasks.preprocessing</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cmt.base_tasks.preprocessing</h1><div class="highlight"><pre>
+<span></span><span class="c1"># coding: utf-8</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Preprocessing tasks.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[]</span>
+
+
+<span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">import</span> <span class="nn">contextlib</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">import</span> <span class="nn">law</span>
+<span class="kn">import</span> <span class="nn">luigi</span>
+
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">join_root_selection</span> <span class="k">as</span> <span class="n">jrs</span>
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span><span class="p">,</span> <span class="n">create_file_dir</span>
+
+<span class="kn">from</span> <span class="nn">cmt.base_tasks.base</span> <span class="kn">import</span> <span class="p">(</span> 
+    <span class="n">DatasetTaskWithCategory</span><span class="p">,</span> <span class="n">DatasetWrapperTask</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">InputData</span><span class="p">,</span>
+    <span class="n">ConfigTaskWithCategory</span><span class="p">,</span> <span class="n">SplittedTask</span><span class="p">,</span> <span class="n">DatasetTask</span><span class="p">,</span> <span class="n">RDFModuleTask</span>
+<span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DatasetSuperWrapperTask</span><span class="p">(</span><span class="n">DatasetWrapperTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">WrapperTask</span><span class="p">):</span>
+
+    <span class="n">exclude_index</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">atomic_requires</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DatasetCategoryWrapperTask</span><span class="p">(</span><span class="n">DatasetWrapperTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">WrapperTask</span><span class="p">):</span>
+    <span class="n">category_names</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;baseline_even&quot;</span><span class="p">,),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;names of categories &quot;</span>
+        <span class="s2">&quot;to run, default: (baseline_even,)&quot;</span><span class="p">)</span>
+
+    <span class="n">exclude_index</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># tasks wrapped by this class do not allow composite categories, so split them here</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">categories</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">category_names</span><span class="p">:</span>
+            <span class="n">category</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">category</span><span class="o">.</span><span class="n">subcategories</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">category</span><span class="o">.</span><span class="n">subcategories</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">category</span><span class="p">)</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
+            <span class="p">((</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">atomic_requires</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="p">)</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="PreCounter"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter">[docs]</a><span class="k">class</span> <span class="nc">PreCounter</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">LocalWorkflow</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">SplittedTask</span><span class="p">,</span> <span class="n">RDFModuleTask</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs a counting of the events with and without applying the necessary weights.</span>
+<span class="sd">    Weights are read from the config file.</span>
+<span class="sd">    In case they have to be computed, RDF modules can be run.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run PreCounter --version test  --config-name base_config --dataset-name ggf_sm \</span>
+<span class="sd">--workflow htcondor --weights-file weight_file``</span>
+
+<span class="sd">    :param weights_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run</span>
+<span class="sd">    :type weights_file: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">weights_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with modules to run RDataFrame&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="c1"># regions not supported</span>
+    <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">default_store</span> <span class="o">=</span> <span class="s2">&quot;$CMT_STORE_EOS_CATEGORIZATION&quot;</span>
+    <span class="n">default_wlcg_fs</span> <span class="o">=</span> <span class="s2">&quot;wlcg_fs_categorization&quot;</span>
+
+    <span class="n">tree_name</span> <span class="o">=</span> <span class="s2">&quot;Events&quot;</span>
+
+<div class="viewcode-block" id="PreCounter.create_branch_map"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.create_branch_map">[docs]</a>    <span class="k">def</span> <span class="nf">create_branch_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: number of files for the selected dataset</span>
+<span class="sd">        :rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="PreCounter.workflow_requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.workflow_requires">[docs]</a>    <span class="k">def</span> <span class="nf">workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">)}</span></div>
+
+<div class="viewcode-block" id="PreCounter.requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.requires">[docs]</a>    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Each branch requires one input file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PreCounter.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: One file per input file</span>
+<span class="sd">        :rtype: `.json`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span>  <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PreCounter.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
+    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates one RDataFrame per input file, runs the desired RDFModules</span>
+<span class="sd">        and counts the number of events w/ and w/o additional weights</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="kn">from</span> <span class="nn">shutil</span> <span class="kn">import</span> <span class="n">copy</span>
+        <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+        <span class="c1"># prepare inputs and outputs</span>
+        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
+        <span class="n">weight_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">weight_modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">weight_modules</span><span class="p">:</span>
+                <span class="n">df</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">total_events_weights</span>
+        <span class="n">hmodel</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">histo_noweight</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span><span class="n">hmodel</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">isData</span><span class="p">:</span>
+            <span class="n">histo_weight</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="s2">&quot; * &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">weights</span><span class="p">))</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span>
+                <span class="n">hmodel</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;weight&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">histo_weight</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span><span class="n">hmodel</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">)</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;nevents&quot;</span><span class="p">:</span> <span class="n">histo_noweight</span><span class="o">.</span><span class="n">Integral</span><span class="p">(),</span> <span class="s2">&quot;nweightedevents&quot;</span><span class="p">:</span> <span class="n">histo_weight</span><span class="o">.</span><span class="n">Integral</span><span class="p">()}</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="PreCounterWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounterWrapper">[docs]</a><span class="k">class</span> <span class="nc">PreCounterWrapper</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper task to run the PreCounter task over several datasets in parallel.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run PreCounterWrapper --version test  --config-name base_config \</span>
+<span class="sd">--dataset-names tt_dl,tt_sl --PreCounter-weights-file weight_file --workers 2``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PreCounter</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PreprocessRDF"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF">[docs]</a><span class="k">class</span> <span class="nc">PreprocessRDF</span><span class="p">(</span><span class="n">PreCounter</span><span class="p">,</span> <span class="n">DatasetTaskWithCategory</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs the preprocessing step applying a preselection + running RDF modules</span>
+
+<span class="sd">    See requirements in :class:`.PreCounter`.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run PreprocessRDF --version test  --category-name base_selection \</span>
+<span class="sd">--config-name base_config --dataset-name ggf_sm --workflow htcondor \</span>
+<span class="sd">--modules-file modulesrdf --workers 10 --max-runtime 12h``</span>
+
+<span class="sd">    :param modules_file: filename inside ``cmt/config/`` or &quot;../config/&quot; (w/o extension)</span>
+<span class="sd">        with the RDF modules to run</span>
+<span class="sd">    :type modules_file: str</span>
+
+<span class="sd">    :param keep_and_drop_file: filename inside ``cmt/config/`` or &quot;../config/&quot; (w/o extension)</span>
+<span class="sd">        with the RDF columns to save in the output file</span>
+<span class="sd">    :type keep_and_drop_file: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">modules_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with RDF modules&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">keep_and_drop_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with branches to save, empty: all&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">weights_file</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="PreprocessRDF.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: One file per input file with the tree + additional branches</span>
+<span class="sd">        :rtype: `.root`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.root&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PreprocessRDF.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
+    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates one RDataFrame per input file, applies a preselection</span>
+<span class="sd">        and runs the desired RDFModules</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">shutil</span> <span class="kn">import</span> <span class="n">copy</span>
+        <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+        <span class="c1"># ROOT.ROOT.EnableImplicitMT()</span>
+
+        <span class="c1"># prepare inputs and outputs</span>
+        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+        <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
+
+        <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">selection</span>
+        <span class="c1"># dataset_selection = self.dataset.get_aux(&quot;selection&quot;)</span>
+        <span class="c1"># if dataset_selection and dataset_selection != &quot;1&quot;:</span>
+            <span class="c1"># selection = jrs(dataset_selection, selection, op=&quot;and&quot;)</span>
+
+        <span class="k">if</span> <span class="n">selection</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span>
+
+        <span class="c1"># filtered_df = filtered_df.Filter(&quot;event == 83362796&quot;)</span>
+
+        <span class="n">modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modules_file</span><span class="p">)</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">())</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">modules</span><span class="p">:</span>
+                <span class="n">filtered_df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">filtered_df</span><span class="p">)</span>
+                <span class="n">branches</span> <span class="o">+=</span> <span class="n">add_branches</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_branches_to_save</span><span class="p">(</span><span class="n">branches</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">)</span>
+        <span class="n">branch_list</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)()</span>
+        <span class="k">for</span> <span class="n">branch_name</span> <span class="ow">in</span> <span class="n">branches</span><span class="p">:</span>
+            <span class="n">branch_list</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">branch_name</span><span class="p">)</span>
+        <span class="n">filtered_df</span><span class="o">.</span><span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">create_file_dir</span><span class="p">(</span><span class="n">outp</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">branch_list</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="PreprocessRDFWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDFWrapper">[docs]</a><span class="k">class</span> <span class="nc">PreprocessRDFWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper task to run the PreprocessRDF task over several datasets in parallel.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run PreprocessRDFWrapper --version test  --category-name base_selection \</span>
+<span class="sd">--config-name ul_2018 --dataset-names tt_dl,tt_sl --PreprocessRDF-workflow htcondor \</span>
+<span class="sd">--PreprocessRDF-max-runtime 48h --PreprocessRDF-modules-file modulesrdf  --workers 10``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">Preprocess</span><span class="p">(</span><span class="n">DatasetTaskWithCategory</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">LocalWorkflow</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">SplittedTask</span><span class="p">):</span>
+
+    <span class="n">modules</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">DictParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">modules_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with modules to run on nanoAOD tools&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">max_events</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">IntParameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;maximum number of input events per file, &quot;</span>
+        <span class="s2">&quot; -1 for all events&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+    <span class="n">keep_and_drop_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with output branches to &quot;</span>
+        <span class="s2">&quot;keep and drop&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;$CMT_BASE/cmt/files/keep_and_drop_branches.txt&quot;</span><span class="p">)</span>
+
+    <span class="c1"># regions not supported</span>
+    <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">tree_name</span> <span class="o">=</span> <span class="s2">&quot;Events&quot;</span>
+
+    <span class="n">default_store</span> <span class="o">=</span> <span class="s2">&quot;$CMT_STORE_EOS_CATEGORIZATION&quot;</span>
+    <span class="n">default_wlcg_fs</span> <span class="o">=</span> <span class="s2">&quot;wlcg_fs_categorization&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Preprocess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;$&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;splitting&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;splitting&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;splitted_branches&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_workflow</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_splitted_branches</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;splitted_branches&quot;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_splitted_branches</span>
+
+    <span class="k">def</span> <span class="nf">get_n_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fil</span><span class="p">):</span>
+        <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span> 
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">fil</span><span class="p">)</span>
+                <span class="n">tree</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">)</span>
+                <span class="n">nevents</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">GetEntries</span><span class="p">()</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">nevents</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed opening </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">/10 trials&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fil</span><span class="p">,</span> <span class="n">trial</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Failed opening </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">fil</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">build_splitted_branches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;splitting&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;splitting&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/splitted_branches_</span><span class="si">%s</span><span class="s2">/</span><span class="si">%s</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">))):</span>
+            <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">ifil</span><span class="p">,</span> <span class="n">fil</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
+                <span class="n">nevents</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="n">fil</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">ifil</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Analyzing file </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">fil</span><span class="p">)</span>
+                <span class="n">nevents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_n_events</span><span class="p">(</span><span class="n">fil</span><span class="p">)</span>
+                <span class="n">initial_event</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">isplit</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">initial_event</span> <span class="o">&lt;</span> <span class="n">nevents</span><span class="p">:</span>
+                    <span class="n">max_events</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">initial_event</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nevents</span><span class="p">))</span>
+                    <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                        <span class="s2">&quot;filenumber&quot;</span><span class="p">:</span> <span class="n">ifil</span><span class="p">,</span>
+                        <span class="s2">&quot;split&quot;</span><span class="p">:</span> <span class="n">isplit</span><span class="p">,</span>
+                        <span class="s2">&quot;initial_event&quot;</span><span class="p">:</span> <span class="n">initial_event</span><span class="p">,</span>
+                        <span class="s2">&quot;max_events&quot;</span><span class="p">:</span> <span class="n">max_events</span><span class="p">,</span>
+                    <span class="p">})</span>
+                    <span class="n">initial_event</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span>
+                    <span class="n">isplit</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span>
+                    <span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/splitted_branches_</span><span class="si">%s</span><span class="s2">/</span><span class="si">%s</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">))),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">branches</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span>
+                    <span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/splitted_branches_</span><span class="si">%s</span><span class="s2">/</span><span class="si">%s</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">))))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">branches</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">branches</span>
+
+    <span class="nd">@law</span><span class="o">.</span><span class="n">workflow_property</span>
+    <span class="k">def</span> <span class="nf">get_splitted_branches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span>
+
+    <span class="k">def</span> <span class="nf">create_branch_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">)}</span>
+
+    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">][</span><span class="s2">&quot;filenumber&quot;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.root&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">),</span>
+            <span class="s2">&quot;stats&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)}</span>
+        <span class="c1"># return self.local_target(&quot;{}&quot;.format(self.input()[&quot;data&quot;].path.split(&quot;/&quot;)[-1]))</span>
+
+    <span class="k">def</span> <span class="nf">get_modules</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">module_params</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules_file</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">yaml</span>
+            <span class="kn">from</span> <span class="nn">cmt.utils.yaml_utils</span> <span class="kn">import</span> <span class="n">ordered_load</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retrieve_file</span><span class="p">(</span><span class="s2">&quot;config/</span><span class="si">{}</span><span class="s2">.yaml&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modules_file</span><span class="p">)))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">module_params</span> <span class="o">=</span> <span class="n">ordered_load</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">yaml</span><span class="o">.</span><span class="n">SafeLoader</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">def</span> <span class="nf">_args</span><span class="p">(</span><span class="o">*</span><span class="n">_nargs</span><span class="p">,</span> <span class="o">**</span><span class="n">_kwargs</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">_nargs</span><span class="p">,</span> <span class="n">_kwargs</span>
+
+        <span class="n">modules</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">module_params</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">modules</span>
+        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">module_params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">parameter_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">assert</span> <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">module_params</span><span class="p">[</span><span class="n">tag</span><span class="p">]</span> <span class="ow">and</span> <span class="s2">&quot;path&quot;</span> <span class="ow">in</span> <span class="n">module_params</span><span class="p">[</span><span class="n">tag</span><span class="p">]</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">module_params</span><span class="p">[</span><span class="n">tag</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;parameters&quot;</span> <span class="ow">in</span> <span class="n">module_params</span><span class="p">[</span><span class="n">tag</span><span class="p">]:</span>
+                <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">module_params</span><span class="p">[</span><span class="n">tag</span><span class="p">][</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="s2">&quot;self&quot;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                            <span class="n">value</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                        <span class="n">parameter_str</span> <span class="o">+=</span> <span class="n">param</span> <span class="o">+</span> <span class="s2">&quot; = &#39;</span><span class="si">{}</span><span class="s2">&#39;, &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">parameter_str</span> <span class="o">+=</span> <span class="n">param</span> <span class="o">+</span> <span class="s2">&quot; = </span><span class="si">{}</span><span class="s2">, &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">mod</span> <span class="o">=</span> <span class="n">module_params</span><span class="p">[</span><span class="n">tag</span><span class="p">][</span><span class="s2">&quot;path&quot;</span><span class="p">]</span>
+            <span class="n">mod</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">fromlist</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            <span class="n">nargs</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="s1">&#39;_args(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">parameter_str</span><span class="p">)</span>
+            <span class="n">modules</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">name</span><span class="p">)(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)())</span>      
+        <span class="k">return</span> <span class="n">modules</span>
+
+    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
+    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">shutil</span> <span class="kn">import</span> <span class="n">move</span>
+        <span class="kn">from</span> <span class="nn">PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor</span> <span class="kn">import</span> <span class="n">PostProcessor</span>
+        <span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
+
+        <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+        <span class="c1"># prepare inputs and outputs</span>
+        <span class="c1"># inp = self.input()[&quot;data&quot;].path</span>
+        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># count events</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s2">&quot;nevents&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_n_events</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s2">&quot;nevents&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">][</span><span class="s2">&quot;max_events&quot;</span><span class="p">]</span>
+                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">][</span><span class="s2">&quot;initial_event&quot;</span><span class="p">])</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">outp</span><span class="p">[</span><span class="s2">&quot;stats&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+
+        <span class="c1"># build the full selection</span>
+        <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;nt_selection&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">selection</span><span class="p">)</span>
+        <span class="c1"># dataset_selection = self.dataset.get_aux(&quot;selection&quot;)</span>
+        <span class="c1"># if dataset_selection and dataset_selection != &quot;1&quot;:</span>
+            <span class="c1"># selection = jrs(dataset_selection, selection, op=&quot;and&quot;)</span>
+        <span class="c1"># selection = &quot;Jet_pt &gt; 500&quot; # hard-coded to reduce the number of events for testing</span>
+        <span class="c1"># selection = &quot;(event == 265939)&quot;</span>
+        <span class="n">modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_modules</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">maxEntries</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">firstEntry</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">postfix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">output_file</span> <span class="o">=</span> <span class="n">inp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">maxEntries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span>
+            <span class="c1"># maxEntries = 1</span>
+            <span class="c1"># firstEntry = 228</span>
+            <span class="n">firstEntry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">][</span><span class="s2">&quot;initial_event&quot;</span><span class="p">]</span>
+            <span class="n">postfix</span> <span class="o">=</span> <span class="s2">&quot;_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">][</span><span class="s2">&quot;split&quot;</span><span class="p">]</span>
+            <span class="n">output_file</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="n">postfix</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">))</span>
+
+        <span class="n">p</span> <span class="o">=</span> <span class="n">PostProcessor</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">inp</span><span class="p">],</span>
+                      <span class="n">cut</span><span class="o">=</span><span class="n">selection</span><span class="p">,</span>
+                      <span class="n">modules</span><span class="o">=</span><span class="n">modules</span><span class="p">,</span>
+                      <span class="n">postfix</span><span class="o">=</span><span class="n">postfix</span><span class="p">,</span>
+                      <span class="n">outputbranchsel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">,</span>
+                      <span class="n">maxEntries</span><span class="o">=</span><span class="n">maxEntries</span><span class="p">,</span>
+                      <span class="n">firstEntry</span><span class="o">=</span><span class="n">firstEntry</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="n">move</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">PreprocessWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Preprocess</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+
+<span class="c1"># class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):</span>
+<div class="viewcode-block" id="Categorization"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization">[docs]</a><span class="k">class</span> <span class="nc">Categorization</span><span class="p">(</span><span class="n">PreprocessRDF</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs the categorization step running RDF modules and applying a post-selection</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run Categorization --version test --category-name etau --config-name base_config \</span>
+<span class="sd">--dataset-name tt_dl --workflow local --base-category-name base_selection \</span>
+<span class="sd">--workers 10 --feature-modules-file features``</span>
+
+<span class="sd">    :param base_category_name: category name from the PreprocessRDF requirements.</span>
+<span class="sd">    :type base_category_name: str</span>
+
+<span class="sd">    :param systematic: systematic to use for categorization.</span>
+<span class="sd">    :type systematic: str</span>
+
+<span class="sd">    :param systematic_direction: systematic direction to use for categorization.</span>
+<span class="sd">    :type systematic_direction: str</span>
+
+<span class="sd">    :param feature_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)</span>
+<span class="sd">        with the RDF modules to run</span>
+<span class="sd">    :type feature_modules_file: str</span>
+
+<span class="sd">    :param from_rdf: whether preprocessing was performed with PreprocessRDF</span>
+<span class="sd">    :type from_rdf: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">base_category_name</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;base_selection&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;the name of the &quot;</span>
+        <span class="s2">&quot;base category with the initial selection, default: base&quot;</span><span class="p">)</span>
+    <span class="n">systematic</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic to use for categorization, &quot;</span>
+        <span class="s2">&quot;default: None&quot;</span><span class="p">)</span>
+    <span class="n">systematic_direction</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic direction to use &quot;</span>
+        <span class="s2">&quot;for categorization, default: None&quot;</span><span class="p">)</span>
+    <span class="n">feature_modules_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with modules to run RDataFrame&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">from_rdf</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether preprocessing was performed &quot;</span>
+        <span class="s2">&quot;with PreprocessRDF, default: True&quot;</span><span class="p">)</span>
+
+    <span class="c1"># regions not supported</span>
+    <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">default_store</span> <span class="o">=</span> <span class="s2">&quot;$CMT_STORE_EOS_CATEGORIZATION&quot;</span>
+    <span class="n">default_wlcg_fs</span> <span class="o">=</span> <span class="s2">&quot;wlcg_fs_categorization&quot;</span>
+
+    <span class="n">tree_name</span> <span class="o">=</span> <span class="s2">&quot;Events&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># if self.from_rdf:</span>
+            <span class="c1"># self.max_events = -1</span>
+        <span class="c1"># print(self.max_events)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Categorization</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Categorization.create_branch_map"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.create_branch_map">[docs]</a>    <span class="k">def</span> <span class="nf">create_branch_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># if self.max_events != -1 and not self.from_rdf:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_rdf</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Categorization.workflow_requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.workflow_requires">[docs]</a>    <span class="k">def</span> <span class="nf">workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_rdf</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">Preprocess</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">)}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">)}</span></div>
+
+<div class="viewcode-block" id="Categorization.requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.requires">[docs]</a>    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_rdf</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Preprocess</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">,</span>
+                <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">,</span>
+                <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Categorization.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.root&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">),</span>
+            <span class="c1"># &quot;stats&quot;: self.local_target(&quot;data_%s.json&quot; % self.branch)</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="Categorization.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
+    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates one RDataFrame per input file, runs the desired RDFModules and applies a</span>
+<span class="sd">        post-selection</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">shutil</span> <span class="kn">import</span> <span class="n">copy</span>
+        <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+        <span class="c1"># prepare inputs and outputs</span>
+        <span class="c1"># inp = self.input()[&quot;data&quot;].path</span>
+        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">tree</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">tree</span><span class="o">.</span><span class="n">GetEntries</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># build the full selection</span>
+                <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_object_expression</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">isMC</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic_direction</span><span class="p">)</span>
+                <span class="n">dataset_selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">dataset_selection</span> <span class="ow">and</span> <span class="n">dataset_selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+                    <span class="n">selection</span> <span class="o">=</span> <span class="n">jrs</span><span class="p">(</span><span class="n">dataset_selection</span><span class="p">,</span> <span class="n">selection</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;and&quot;</span><span class="p">)</span>
+
+                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
+                <span class="n">branches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">())</span>
+                <span class="n">feature_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_modules_file</span><span class="p">)</span>
+
+                <span class="c1"># df = df.Filter(&quot;event == 265939&quot;)</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">feature_modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">feature_modules</span><span class="p">:</span>
+                        <span class="n">df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+                        <span class="n">branches</span> <span class="o">+=</span> <span class="n">add_branches</span>
+                <span class="n">branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_branches_to_save</span><span class="p">(</span><span class="n">branches</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">)</span>
+                <span class="n">branch_list</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)()</span>
+                <span class="k">for</span> <span class="n">branch_name</span> <span class="ow">in</span> <span class="n">branches</span><span class="p">:</span>
+                    <span class="n">branch_list</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">branch_name</span><span class="p">)</span>
+                <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
+                <span class="n">filtered_df</span><span class="o">.</span><span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">create_file_dir</span><span class="p">(</span><span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">branch_list</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+                <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">ReferenceError</span><span class="p">:</span>  <span class="c1"># empty input file</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+            <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span></div></div>
+        <span class="c1">#copy(self.input()[&quot;stats&quot;].path, outp[&quot;stats&quot;].path)</span>
+
+
+<div class="viewcode-block" id="CategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.CategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">CategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper task to run the Categorization task over several datasets in parallel.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run CategorizationWrapper --version test --category-names etau --config-name base_config \</span>
+<span class="sd">--dataset-names tt_dl,tt_sl --Categorization-workflow htcondor --workers 20 \</span>
+<span class="sd">--Categorization-base-category-name base_selection``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MergeCategorization"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorization">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorization</span><span class="p">(</span><span class="n">DatasetTaskWithCategory</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">ForestMerge</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Merges the output from the Categorization or PreprocessRDF tasks in order to reduce the</span>
+<span class="sd">    parallelization entering the plotting tasks. By default it merges into one output file,</span>
+<span class="sd">    although a bigger number can be set with the `merging` parameter inside the dataset</span>
+<span class="sd">    definition.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run MergeCategorization --version test --category-name etau \</span>
+<span class="sd">--config-name base_config --dataset-name tt_sl --workflow local --workers 4``</span>
+
+<span class="sd">    :param from_preprocess: wheter it merges the output from the PreprocessRDF task (True)</span>
+<span class="sd">        or Categorization (False, default)</span>
+<span class="sd">    :type from_preprocess: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">from_preprocess</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether to use as input &quot;</span>
+        <span class="s2">&quot;PreprocessRDF, default: False&quot;</span><span class="p">)</span>
+
+    <span class="c1"># regions not supported</span>
+    <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">tree_name</span> <span class="o">=</span> <span class="s2">&quot;Events&quot;</span>
+    <span class="n">merge_factor</span> <span class="o">=</span> <span class="mi">10</span>
+
+    <span class="n">default_store</span> <span class="o">=</span> <span class="s2">&quot;$CMT_STORE_EOS_CATEGORIZATION&quot;</span>
+    <span class="n">default_wlcg_fs</span> <span class="o">=</span> <span class="s2">&quot;wlcg_fs_categorization&quot;</span>
+
+    <span class="k">def</span> <span class="nf">merge_workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_preprocess</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_prefer_cli</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;workflow&quot;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_prefer_cli</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;workflow&quot;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">merge_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_leaf</span><span class="p">,</span> <span class="n">end_leaf</span><span class="p">):</span>
+        <span class="c1"># the requirement is a workflow, so start_leaf and end_leaf correspond to branches</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_preprocess</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">branch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">start_branch</span><span class="o">=</span><span class="n">start_leaf</span><span class="p">,</span>
+                <span class="n">end_branch</span><span class="o">=</span><span class="n">end_leaf</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">branch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">start_branch</span><span class="o">=</span><span class="n">start_leaf</span><span class="p">,</span>
+                <span class="n">end_branch</span><span class="o">=</span><span class="n">end_leaf</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">trace_merge_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_preprocess</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">inp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;collection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">inp</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;collection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+
+    <span class="k">def</span> <span class="nf">merge_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">law</span><span class="o">.</span><span class="n">SiblingFileCollection</span><span class="p">([</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">{}</span><span class="s2">.root&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_files_after_merging</span><span class="p">)</span>
+        <span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+        <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">output</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp_out</span><span class="p">:</span>
+            <span class="c1"># law.root.hadd_task(self, [inp.path for inp in inputs], tmp_out, local=True)</span>
+            <span class="n">good_inputs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+                <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">tree</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">tree</span><span class="o">.</span><span class="n">GetEntries</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">good_inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;File </span><span class="si">%s</span><span class="s2"> not used&quot;</span> <span class="o">%</span> <span class="n">inp</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+            <span class="c1">#if good_inputs:</span>
+            <span class="n">law</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">hadd_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">good_inputs</span><span class="p">,</span> <span class="n">tmp_out</span><span class="p">,</span> <span class="n">local</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+            <span class="c1">#else:</span>
+            <span class="c1">#    raise Exception(&quot;No good files were found&quot;)</span>
+
+
+<div class="viewcode-block" id="MergeCategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper task to run the MergeCategorizationWrapper task over several datasets in parallel.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run MergeCategorizationWrapper --version test --category-names etau \</span>
+<span class="sd">--config-name base_config --dataset-names tt_dl,tt_sl --workers 10``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">MergeCategorization</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MergeCategorizationStats"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStats">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationStats</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">ForestMerge</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Merges the output from the PreCounter task in order to reduce the </span>
+<span class="sd">    parallelization entering the plotting tasks.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run MergeCategorizationStats --version test --config-name base_config \</span>
+<span class="sd">--dataset-name dy_high --workers 10``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># regions not supported</span>
+    <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">merge_factor</span> <span class="o">=</span> <span class="mi">16</span>
+
+    <span class="n">default_store</span> <span class="o">=</span> <span class="s2">&quot;$CMT_STORE_EOS_CATEGORIZATION&quot;</span>
+    <span class="n">default_wlcg_fs</span> <span class="o">=</span> <span class="s2">&quot;wlcg_fs_categorization&quot;</span>
+
+    <span class="k">def</span> <span class="nf">merge_workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PreCounter</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_prefer_cli</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;workflow&quot;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">merge_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_leaf</span><span class="p">,</span> <span class="n">end_leaf</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PreCounter</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">branch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">start_branch</span><span class="o">=</span><span class="n">start_leaf</span><span class="p">,</span>
+            <span class="n">end_branch</span><span class="o">=</span><span class="n">end_leaf</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">trace_merge_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="c1"># return [inp[&quot;data&quot;] for inp in inputs[&quot;collection&quot;].targets.values()]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">inp</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;collection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+
+    <span class="k">def</span> <span class="nf">merge_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;stats.json&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+        <span class="c1"># output content</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">nevents</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nweightedevents</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># merge</span>
+        <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s2">&quot;json&quot;</span> <span class="ow">in</span> <span class="n">inp</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+                    <span class="n">_stats</span> <span class="o">=</span> <span class="n">inp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">formatter</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="s2">&quot;root&quot;</span> <span class="ow">in</span> <span class="n">inp</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+                    <span class="n">_stats</span> <span class="o">=</span> <span class="n">inp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">formatter</span><span class="o">=</span><span class="s2">&quot;root&quot;</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;error leading input target </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+                <span class="k">raise</span>
+
+            <span class="c1"># add nevents</span>
+            <span class="k">if</span> <span class="s2">&quot;json&quot;</span> <span class="ow">in</span> <span class="n">inp</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+                <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;nevents&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">_stats</span><span class="p">[</span><span class="s2">&quot;nevents&quot;</span><span class="p">]</span>
+                <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;nweightedevents&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">_stats</span><span class="p">[</span><span class="s2">&quot;nweightedevents&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">histo</span> <span class="o">=</span> <span class="n">_stats</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="s2">&quot;histos/events&quot;</span><span class="p">)</span>
+                    <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;nevents&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">histo</span><span class="o">.</span><span class="n">GetBinContent</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;nweightedevents&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">histo</span><span class="o">.</span><span class="n">GetBinContent</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;nevents&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">0</span>
+                    <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;nweightedevents&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">0</span>
+
+        <span class="n">output</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">touch</span><span class="p">()</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">stats</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">formatter</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MergeCategorizationStatsWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationStatsWrapper</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper task to run the MergeCategorizationStatsWrapper task over several datasets in parallel.</span>
+
+<span class="sd">    Example command:</span>
+
+<span class="sd">    ``law run MergeCategorizationStatsWrapper --version test --config-name base_config \</span>
+<span class="sd">--dataset-names tt_dl,tt_sl --workers 10``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">MergeCategorizationStats</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
