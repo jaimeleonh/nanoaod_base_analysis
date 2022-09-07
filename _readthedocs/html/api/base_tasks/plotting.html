@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cmt.base_tasks.plotting &mdash; nanoaod-base-analysis 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Modules Reference" href="../../modules/index.html" />
+    <link rel="prev" title="cmt.base_tasks.preprocessing" href="preprocessing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">cmt.base_tasks</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="preprocessing.html">cmt.base_tasks.preprocessing</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">cmt.base_tasks.plotting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#class-baseplottask">Class <code class="docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-preplot">Class <code class="docutils literal notranslate"><span class="pre">PrePlot</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-featureplot">Class <code class="docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/index.html">Modules Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">nanoaod-base-analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">API Reference</a> &raquo;</li>
+          <li><a href="index.html">cmt.base_tasks</a> &raquo;</li>
+      <li>cmt.base_tasks.plotting</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/api/base_tasks/plotting.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-cmt.base_tasks.plotting">
+<span id="cmt-base-tasks-plotting"></span><h1><a class="toc-backref" href="#id1">cmt.base_tasks.plotting</a><a class="headerlink" href="#module-cmt.base_tasks.plotting" title="Permalink to this heading"></a></h1>
+<p>Plotting tasks.</p>
+<div class="contents topic" id="contents">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#module-cmt.base_tasks.plotting" id="id1">cmt.base_tasks.plotting</a></p>
+<ul>
+<li><p><a class="reference internal" href="#class-baseplottask" id="id2">Class <code class="docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-preplot" id="id3">Class <code class="docutils literal notranslate"><span class="pre">PrePlot</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-featureplot" id="id4">Class <code class="docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a></p></li>
+</ul>
+</li>
+</ul>
+</div>
+<section id="class-baseplottask">
+<h2><a class="toc-backref" href="#id2">Class <code class="docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a><a class="headerlink" href="#class-baseplottask" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.BasePlotTask">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.plotting.</span></span><span class="sig-name descname"><span class="pre">BasePlotTask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.BasePlotTask" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ConfigTaskWithCategory</span></code></p>
+<p>Task that wraps parameters used in all plotting tasks. Can’t be run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>feature_names</strong> (<em>csv string</em>) – names of features to plot. Uses all features when empty.</p></li>
+<li><p><strong>feature_tags</strong> (<em>csv string</em>) – list of tags for filtering features selected via feature names.</p></li>
+<li><p><strong>skip_feature_names</strong> (<em>csv string</em>) – names or name pattern of features to skip</p></li>
+<li><p><strong>skip_feature_tags</strong> (<em>csv string</em>) – list of tags of features to skip</p></li>
+<li><p><strong>apply_weights</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to apply weights and scaling to all histograms.</p></li>
+<li><p><strong>n_bins</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – NOT YET IMPLEMENTED. Custom number of bins for plotting,
+defaults to the value configured by the feature when empty.</p></li>
+<li><p><strong>systematics</strong> (<em>csv list</em>) – NOT YET IMPLEMENTED. List of custom systematics to be considered.</p></li>
+<li><p><strong>shape_region</strong> (<em>str from choice list</em>) – shape region used for QCD computation.</p></li>
+<li><p><strong>remove_horns</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – NOT YET IMPLEMENTED. Whether to remove the eta horns present in 2017</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="class-preplot">
+<h2><a class="toc-backref" href="#id3">Class <code class="docutils literal notranslate"><span class="pre">PrePlot</span></code></a><a class="headerlink" href="#class-preplot" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.plotting.</span></span><span class="sig-name descname"><span class="pre">PrePlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetTaskWithCategory</span></code>, <a class="reference internal" href="#cmt.base_tasks.plotting.BasePlotTask" title="cmt.base_tasks.plotting.BasePlotTask"><code class="xref py py-class docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">LocalWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">HTCondorWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">RDFModuleTask</span></code></p>
+<p>Performs the filling of histograms for all features considered. If systematics are considered,
+it also produces the same histograms after applying those.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>skip_processing</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to skip the preprocessing and categorization steps.</p></li>
+<li><p><strong>preplot_modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or <code class="docutils literal notranslate"><span class="pre">../config/</span></code> (w/o extension)
+with the RDF modules to run.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot.create_branch_map">
+<span class="sig-name descname"><span class="pre">create_branch_map</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot.create_branch_map" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>number of files after merging (usually 1) unless skip_processing == True</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot.workflow_requires">
+<span class="sig-name descname"><span class="pre">workflow_requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot.workflow_requires" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Each branch requires one input file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot.output" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>One file per input file with all histograms to be plotted for each feature</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><cite>.root</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot.get_weight">
+<span class="sig-name descname"><span class="pre">get_weight</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">category</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot.get_weight" title="Permalink to this definition"></a></dt>
+<dd><p>Obtains the product of all weights depending on the category/channel applied.
+Returns “1” if it’s a data sample or the apply_weights parameter is set to False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Product of all weights to be applied</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot.run" title="Permalink to this definition"></a></dt>
+<dd><p>Creates one RDataFrame per input file, runs the desired RDFModules
+and produces a set of plots per each feature, one for the nominal value
+and others (if available) for all systematics.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-featureplot">
+<h2><a class="toc-backref" href="#id4">Class <code class="docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a><a class="headerlink" href="#class-featureplot" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.plotting.</span></span><span class="sig-name descname"><span class="pre">FeaturePlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.plotting.BasePlotTask" title="cmt.base_tasks.plotting.BasePlotTask"><code class="xref py py-class docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetWrapperTask</span></code></p>
+<p>Performs the actual histogram plotting: loads the histograms obtained in the PrePlot tasks,
+rescales them if needed and plots and saves them.</p>
+<p>Example command:</p>
+<p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">FeaturePlot</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--category-name</span> <span class="pre">etau</span> <span class="pre">--config-name</span> <span class="pre">ul_2018</span> <span class="pre">--process-group-name</span> <span class="pre">etau</span> <span class="pre">--feature-names</span> <span class="pre">Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta</span> <span class="pre">--workers</span> <span class="pre">20</span> <span class="pre">--PrePlot-workflow</span> <span class="pre">local</span> <span class="pre">--stack</span> <span class="pre">--hide-data</span> <span class="pre">False</span> <span class="pre">--do-qcd</span> <span class="pre">--region-name</span> <span class="pre">etau_os_iso--dataset-names</span> <span class="pre">tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d</span> <span class="pre">--MergeCategorizationStats-version</span> <span class="pre">test_old</span> <span class="pre">--PrePlot-workflow</span> <span class="pre">htcondor</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>stack</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to show all backgrounds stacked (True) or normalized to 1 (False)</p></li>
+<li><p><strong>do_qcd</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to estimate QCD using the ABCD method</p></li>
+<li><p><strong>qcd_wp</strong> (<em>str from choice list</em>) – working point to use for QCD estimation</p></li>
+<li><p><strong>qcd_signal_region_wp</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – region to use as signal region for QCD estimation</p></li>
+<li><p><strong>shape_region</strong> (<em>str from choice list</em>) – region to use as shape region for QCD estimation</p></li>
+<li><p><strong>qcd_sym_shape</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to symmetrise the shape coming from both possible shape regions</p></li>
+<li><p><strong>qcd_category_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – category name used for the same sign regions in QCD estimation</p></li>
+<li><p><strong>hide_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to show (False) or hide (True) the data histograms</p></li>
+<li><p><strong>normalize_signals</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to normalize signals to the
+total background yield (True) or not (False)</p></li>
+<li><p><strong>blinded</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to blind data in specified regions</p></li>
+<li><p><strong>save_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to save plots in png</p></li>
+<li><p><strong>save_pdf</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to save plots in pdf</p></li>
+<li><p><strong>save_root</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to write plots in a root file</p></li>
+<li><p><strong>save_yields</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to save histogram yields in a json file</p></li>
+<li><p><strong>process_group_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – name of the process grouping name</p></li>
+<li><p><strong>bins_in_x_axis</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to plot histograms with the bin numbers
+in the x axis instead of the actual values</p></li>
+<li><p><strong>plot_systematics</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET FULLY IMPLEMENTED) whether to plot histograms
+with their uncertainties</p></li>
+<li><p><strong>fixed_colors</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to plot histograms with their defined colors (False) or fixed colors
+(True) starting from <code class="docutils literal notranslate"><span class="pre">ROOT</span></code> color <code class="docutils literal notranslate"><span class="pre">2</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.requires" title="Permalink to this definition"></a></dt>
+<dd><p>All requirements needed:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Histograms coming from the PrePlot task.</p></li>
+<li><p>Number of total events coming from the MergeCategorizationStats task               (to normalize MC histograms).</p></li>
+<li><p>If estimating QCD, FeaturePlot for the three additional QCD regions needed.</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.get_output_postfix">
+<span class="sig-name descname"><span class="pre">get_output_postfix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">feature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pdf'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.get_output_postfix" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>string to be included in the output filenames</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.output" title="Permalink to this definition"></a></dt>
+<dd><p>Output files to be filled: pdf, png, root or json</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.complete">
+<span class="sig-name descname"><span class="pre">complete</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.complete" title="Permalink to this definition"></a></dt>
+<dd><p>Task is completed when all output are present</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.setup_signal_hist">
+<span class="sig-name descname"><span class="pre">setup_signal_hist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.setup_signal_hist" title="Permalink to this definition"></a></dt>
+<dd><p>Method to apply signal format to an histogram</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.setup_background_hist">
+<span class="sig-name descname"><span class="pre">setup_background_hist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.setup_background_hist" title="Permalink to this definition"></a></dt>
+<dd><p>Method to apply background format to an histogram</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.setup_data_hist">
+<span class="sig-name descname"><span class="pre">setup_data_hist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.setup_data_hist" title="Permalink to this definition"></a></dt>
+<dd><p>Method to apply data format to an histogram</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.get_systematics">
+<span class="sig-name descname"><span class="pre">get_systematics</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.get_systematics" title="Permalink to this definition"></a></dt>
+<dd><p>Method to extract all normalization systematics from the KLUB files.
+It considers the processes given by the process_group_name and their parents.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.plot" title="Permalink to this definition"></a></dt>
+<dd><p>Performs the actual plotting.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.plotting.FeaturePlot.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cmt.base_tasks.plotting.FeaturePlot.run" title="Permalink to this definition"></a></dt>
+<dd><p>Splits processes into data, signal and background. Creates histograms from each process
+loading them from the input files. Scales the histograms and applies the correct format
+to them.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="preprocessing.html" class="btn btn-neutral float-left" title="cmt.base_tasks.preprocessing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../../modules/index.html" class="btn btn-neutral float-right" title="Modules Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
