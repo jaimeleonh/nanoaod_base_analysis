@@ -21,5 +21,7 @@ cmssw_setup:
     - git config --global user.email "ci@nanoaod_base_analysis.com"
     - git config --global user.name "CI"
     - git add _readthedocs/*
+    - git remote -v
+    - git branch
     - git commit -m "Update readthedocs"
     - git push origin py3
