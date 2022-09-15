@@ -67,6 +67,7 @@ action() {
     if [ -n "$CMT_CIEMAT_USER" ]; then
       [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/nfs/cms/$CMT_CIEMAT_USER/cmt"
     elif [ -n "$CMT_CERN_USER" ]; then
+#      [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/eos/user/${CMT_CERN_USER:0:1}/$CMT_CERN_USER/GEMethod"
       [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/eos/user/${CMT_CERN_USER:0:1}/$CMT_CERN_USER/cmt"
     fi
     [ -z "$CMT_STORE" ] && export CMT_STORE="$CMT_STORE_EOS"
@@ -232,6 +233,12 @@ action() {
           git clone https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections.git Corrections/MUO
           git clone https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections.git Corrections/EGM
           git clone https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections.git Corrections/BTV
+          compile="1"
+        fi
+
+	export GEMMODULES_PATH="GEM/Modules"
+        if [ ! -d "$GEMMODULES_PATH" ]; then
+          git clone https://gitlab.cern.ch/diegof/gem-modules.git GEM/Modules
           compile="1"
         fi
 

@@ -85,15 +85,15 @@ class BasePlotTask(ConfigTaskWithCategory):
         "selected via feature_names, default: ()")
     skip_feature_names = law.CSVParameter(default=(), description="names or name pattern of "
         "features to skip, default: ()")
-    skip_feature_tags = law.CSVParameter(default=("multiclass_dnn",), description="list of tags of "
-        "features to skip, default: (multiclass_dnn,)")
+    skip_feature_tags = law.CSVParameter(default=(), description="list of tags of "
+        "features to skip, default: ()")
     apply_weights = luigi.BoolParameter(default=True, description="whether to apply "
         "mc weights to histograms, default: True")
     n_bins = luigi.IntParameter(default=law.NO_INT, description="custom number of bins for "
         "plotting, defaults to the value configured by the feature when empty, default: empty")
     systematics = law.CSVParameter(default=(), description="list of systematics, default: empty")
     shape_region = luigi.ChoiceParameter(default="os_inviso", choices=("os_inviso", "ss_iso"),
-        significant=False, description="shape region default: os_inviso")
+        significant=False, description="shape region default: os_inviso") # BORRAR?
     remove_horns = luigi.BoolParameter(default=False, description="whether to remove horns "
         "from distributions, default: False")
 
@@ -358,6 +358,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     """
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
         "them with dataset and category weights, and normalize afterwards, default: False")
+    logY = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
+        "default: False")
     do_qcd = luigi.BoolParameter(default=False, description="whether to compute the QCD shape, "
         "default: False")
     qcd_wp = luigi.ChoiceParameter(default=law.NO_STR,
@@ -845,13 +847,19 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 dummy_hist.GetXaxis().SetLabelOffset(100)
                 dummy_hist.GetXaxis().SetTitleOffset(100)
                 c.get_pad(1).cd()
+                if self.logY:
+                    c.get_pad(1).SetLogy()
 
             # r.setup_hist(dummy_hist, pad=c.get_pad(1))
             r.setup_hist(dummy_hist)
             dummy_hist.GetYaxis().SetMaxDigits(4)
             maximum = max([hist.GetMaximum() for hist in draw_hists])
-            dummy_hist.SetMaximum(1.1 * maximum)
-            dummy_hist.SetMinimum(0.001)  # FIXME in case of log scale
+            if self.logY:
+                dummy_hist.SetMaximum(100 * maximum)
+                dummy_hist.SetMinimum(0.0011)
+            else:
+                dummy_hist.SetMaximum(1.1 * maximum)
+                dummy_hist.SetMinimum(0.001)
             draw_labels = get_labels(upper_right="")
 
             dummy_hist.Draw()
@@ -881,7 +889,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
                 ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
                 mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                r.setup_graph(ratio_graph)
+                r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
                 r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
                 if self.plot_systematics:
@@ -1060,8 +1068,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
                 if self.fixed_colors:
                     color = colors[iproc]
-                else:
+                elif type(process.color) == tuple:
                     color = ROOT.TColor.GetColor(*process.color)
+                else:
+                    color = process.color
 
                 if process.isSignal:
                     self.setup_signal_hist(process_histo, color)
