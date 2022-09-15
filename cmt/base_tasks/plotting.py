@@ -209,9 +209,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         else:
             #print self.config.join_selection_channels(self.config.weights.channels_mult)
             # return self.config.weights.channels_mult["tautau"]
-            if category in self.config.weights.channels:
+            return " * ".join(self.config.weights[category])
+            # if category in self.config.weights.channels:
             # for channel in self.config.channels:
-                return " * ".join(self.config.weights.channels[category])
+                # return " * ".join(self.config.weights.channels[category])
         return self.config.weights.default
 
     @law.decorator.notify
@@ -234,17 +235,32 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
         df = ROOT.RDataFrame(self.tree_name, inp)
 
-        dataset_selection = self.dataset.get_aux("selection")
-        if dataset_selection and dataset_selection != "1":
-            df = df.Filter(dataset_selection)
-        if self.region_name != law.NO_STR:
-            sel = self.config.regions.get(self.region_name).selection
-            df = df.Filter(sel)
-
         modules = self.get_feature_modules(self.preplot_modules_file)
         if len(modules) > 0:
             for module in modules:
                 df, _ = module.run(df)
+
+        selection = "1"
+        dataset_selection = self.dataset.get_aux("selection")
+
+        if self.skip_processing:
+            selection = self.config.get_object_expression(self.category, self.dataset.process.isMC)
+
+        if dataset_selection and dataset_selection != "1":
+            if selection != "1":
+                selection = join_root_selection(dataset_selection, selection, op="and")
+            else:
+                selection = dataset_selection
+
+        if self.region_name != law.NO_STR:
+            region_selection = self.config.regions.get(self.region_name).selection
+            if selection != "1":
+                selection = join_root_selection(region_selection, selection, op="and")
+            else:
+                selection = region_selection
+
+        if selection != "1":
+            df = df.Define("selection", selection).Filter("selection")
 
         # df = df.Filter("dau1_pt > 25")  # FIXME, temporary fix
 

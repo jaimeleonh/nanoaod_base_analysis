@@ -7,4 +7,5 @@ Modules Reference
     BaseModules/index
     BTV/index
     EGM/index
+    TAU/index
     HHbbtt/index
