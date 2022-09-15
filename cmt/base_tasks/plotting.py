@@ -281,10 +281,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
             # loop over systematics and up/down variations
             for syst_name, direction in systs_directions:
-                # if syst_name != "central":
-                    # syst = self.config.systematics.get(syst_name)
-                # else:
-                    # syst = self.config.systematics.get(feature.central)
                 # define tag just for histograms's name
                 if syst_name != "central" and isMC:
                     tag = "_%s" % syst_name
@@ -423,6 +419,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "default: True")
     fixed_colors = luigi.BoolParameter(default=False, description="whether to use fixed colors "
         "for plotting, default: False")
+    log_y = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
+        "default: False")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
         # "optimization task to use, not used when empty, default: empty")
@@ -873,18 +871,27 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             # Draw
             if self.hide_data or len(data_hists) == 0 or not self.stack:
                 c = Canvas()
+                if self.log_y:
+                    c.SetLogy()
             else:
                 c = RatioCanvas()
                 dummy_hist.GetXaxis().SetLabelOffset(100)
                 dummy_hist.GetXaxis().SetTitleOffset(100)
                 c.get_pad(1).cd()
+                if self.log_y:
+                    c.get_pad(1).SetLogy()
 
             # r.setup_hist(dummy_hist, pad=c.get_pad(1))
             r.setup_hist(dummy_hist)
             dummy_hist.GetYaxis().SetMaxDigits(4)
             maximum = max([hist.GetMaximum() for hist in draw_hists])
-            dummy_hist.SetMaximum(1.1 * maximum)
-            dummy_hist.SetMinimum(0.001)  # FIXME in case of log scale
+            if self.log_y:
+                dummy_hist.SetMaximum(100 * maximum)
+                dummy_hist.SetMinimum(0.0011)
+            else:
+                dummy_hist.SetMaximum(1.1 * maximum)
+                dummy_hist.SetMinimum(0.001)
+
             draw_labels = get_labels(upper_right="")
 
             dummy_hist.Draw()
@@ -914,7 +921,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
                 ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
                 mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                r.setup_graph(ratio_graph)
+                r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
                 r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
                 if self.plot_systematics:
@@ -1093,8 +1100,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
                 if self.fixed_colors:
                     color = colors[iproc]
-                else:
+                elif type(process.color) == tuple:
                     color = ROOT.TColor.GetColor(*process.color)
+                else:
+                    color = process.color
 
                 if process.isSignal:
                     self.setup_signal_hist(process_histo, color)
