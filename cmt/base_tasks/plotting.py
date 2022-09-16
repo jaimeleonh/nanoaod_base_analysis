@@ -279,6 +279,12 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             if isMC:
                 systs_directions += list(itertools.product(systs, directions))
 
+            # apply selection if needed
+            if feature.selection:
+                feat_df = df.Define("feat_selection", feature.selection).Filter("feat_selection")
+            else:
+                feat_df = df
+
             # loop over systematics and up/down variations
             for syst_name, direction in systs_directions:
                 # define tag just for histograms's name
@@ -295,7 +301,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 if nentries > 0:
                     hmodel = ROOT.RDF.TH1DModel(hist_base)
                     histos.append(
-                        df.Define(
+                        feat_df.Define(
                             "weight", "{}".format(self.get_weight(self.category.name))
                         ).Define(
                             "var", feature_expression).Histo1D(hmodel, "var", "weight")

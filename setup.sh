@@ -198,6 +198,12 @@ action() {
           compile="1"
         fi
 
+        export GEM_PATH="GEM-modules"
+        if [ ! -d "$SVFIT_PATH" ]; then
+            git clone https://gitlab.cern.ch/diegof/gem-modules.git GEM/Modules
+            compile="1"
+        fi
+
         export HTT_PATH="HTT-utilities"
         if [ ! -d "$HTT_PATH" ]; then
           git clone https://github.com/CMS-HTT/LeptonEff-interface.git HTT-utilities
