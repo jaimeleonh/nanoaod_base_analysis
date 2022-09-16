@@ -196,7 +196,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         return self.local_target("data{}_{}.root".format(
             self.get_output_postfix(), self.branch))
 
-    def get_weight(self, category, **kwargs):
+    def get_weight(self, category, syst_name, syst_direction, **kwargs):
         """
         Obtains the product of all weights depending on the category/channel applied.
         Returns "1" if it's a data sample or the apply_weights parameter is set to False.
@@ -207,12 +207,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         if self.config.processes.get(self.dataset.process.name).isData or not self.apply_weights:
             return "1"
         else:
-            #print self.config.join_selection_channels(self.config.weights.channels_mult)
-            # return self.config.weights.channels_mult["tautau"]
-            return " * ".join(self.config.weights[category])
-            # if category in self.config.weights.channels:
-            # for channel in self.config.channels:
-                # return " * ".join(self.config.weights.channels[category])
+            return self.config.get_weights_expression(
+                self.config.weights[category], syst_name, syst_direction)
         return self.config.weights.default
 
     @law.decorator.notify
@@ -262,8 +258,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         if selection != "1":
             df = df.Define("selection", selection).Filter("selection")
 
-        # df = df.Filter("dau1_pt > 25")  # FIXME, temporary fix
-
         tf = ROOT.TFile.Open(inp)
         tree = tf.Get(self.tree_name)
         nentries = tree.GetEntries()
@@ -274,7 +268,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = "Events" + y_axis_adendum
             title = "; %s; %s" % (x_title, y_title)
-            systs = self.get_systs(feature, isMC)
+            systs = self.get_systs(feature, isMC) \
+                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC)
             systs_directions = [("central", "")]
             if isMC:
                 systs_directions += list(itertools.product(systs, directions))
@@ -302,7 +297,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                     hmodel = ROOT.RDF.TH1DModel(hist_base)
                     histos.append(
                         feat_df.Define(
-                            "weight", "{}".format(self.get_weight(self.category.name))
+                            "weight", "{}".format(self.get_weight(
+                                self.category.name, syst_name, direction))
                         ).Define(
                             "var", feature_expression).Histo1D(hmodel, "var", "weight")
                     )

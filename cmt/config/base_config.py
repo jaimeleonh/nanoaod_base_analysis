@@ -360,10 +360,10 @@ class Config():
                 return feat_expression + tag
 
         feature_expression = get_expression(feature)
-        if "[" in feature_expression:  # derived expression
-            while "[" in feature_expression:
-                initial = feature_expression.find("[")
-                final = feature_expression.find("]")
+        if "{" in feature_expression:  # derived expression
+            while "{" in feature_expression:
+                initial = feature_expression.find("{")
+                final = feature_expression.find("}")
                 feature_name_to_look = feature_expression[initial + 1: final]
                 feature_to_look = self.features.get(feature_name_to_look)
 
@@ -384,18 +384,38 @@ class Config():
             return feature_expression
 
         elif isinstance(feature, Feature):  # not derived expression and not a category
-            if not isMC:
-                tag = ""
-            elif syst_name == "central":
+            tag = ""
+            if isMC and syst_name == "central":
                 if feature.central != "":
                     tag = "%s" % self.systematics.get(feature.central).expression
-                else:
-                    tag = ""
+
             elif isMC and syst_name in feature.systematics:
                 syst = self.systematics.get(syst_name)
                 tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
-
             return add_systematic_tag(feature.expression, tag)
         else:
             return get_expression(feature)
 
+    def get_weights_systematics(self, list_of_weights, isMC=False):
+        systematics = []
+        if isMC:
+            for weight in list_of_weights:
+                try:
+                    feature = self.features.get(weight)
+                    for syst in feature.systematics:
+                        if syst not in systematics:
+                            systematics.append(syst)
+                except ValueError:
+                    continue
+        return systematics
+
+    def get_weights_expression(self, list_of_weights, syst_name="central", systematic_direction=""):
+        weights = []
+        for weight in list_of_weights:
+            try:
+                feature = self.features.get(weight)
+                weights.append(self.get_object_expression(
+                    feature, True, syst_name, systematic_direction))
+            except ValueError:
+                weights.append(weight)
+        return "*".join(weights)
