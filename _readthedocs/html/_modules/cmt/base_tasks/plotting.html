@@ -267,7 +267,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="s2">.root&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">get_output_postfix</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="PrePlot.get_weight"><a class="viewcode-back" href="../../../api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.get_weight">[docs]</a>    <span class="k">def</span> <span class="nf">get_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="PrePlot.get_weight"><a class="viewcode-back" href="../../../api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.get_weight">[docs]</a>    <span class="k">def</span> <span class="nf">get_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">syst_direction</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Obtains the product of all weights depending on the category/channel applied.</span>
 <span class="sd">        Returns &quot;1&quot; if it&#39;s a data sample or the apply_weights parameter is set to False.</span>
@@ -278,11 +278,8 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">isData</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_weights</span><span class="p">:</span>
             <span class="k">return</span> <span class="s2">&quot;1&quot;</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1">#print self.config.join_selection_channels(self.config.weights.channels_mult)</span>
-            <span class="c1"># return self.config.weights.channels_mult[&quot;tautau&quot;]</span>
-            <span class="k">if</span> <span class="n">category</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
-            <span class="c1"># for channel in self.config.channels:</span>
-                <span class="k">return</span> <span class="s2">&quot; * &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">category</span><span class="p">])</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_weights_expression</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="n">category</span><span class="p">],</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">syst_direction</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">default</span></div>
 
 <div class="viewcode-block" id="PrePlot.run"><a class="viewcode-back" href="../../../api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
@@ -305,26 +302,32 @@
 
         <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
 
-        <span class="n">dataset_selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">dataset_selection</span> <span class="ow">and</span> <span class="n">dataset_selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="n">dataset_selection</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">region_name</span> <span class="o">!=</span> <span class="n">law</span><span class="o">.</span><span class="n">NO_STR</span><span class="p">:</span>
-            <span class="n">sel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">regions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">region_name</span><span class="p">)</span><span class="o">.</span><span class="n">selection</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
-
         <span class="n">modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">preplot_modules_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">modules</span><span class="p">:</span>
                 <span class="n">df</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 
+        <span class="n">selection</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+        <span class="n">dataset_selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_processing</span><span class="p">:</span>
             <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_object_expression</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">isMC</span><span class="p">)</span>
-            <span class="n">dataset_selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">dataset_selection</span> <span class="ow">and</span> <span class="n">dataset_selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
-                <span class="n">selection</span> <span class="o">=</span> <span class="n">jrs</span><span class="p">(</span><span class="n">dataset_selection</span><span class="p">,</span> <span class="n">selection</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;and&quot;</span><span class="p">)</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
 
-        <span class="c1"># df = df.Filter(&quot;dau1_pt &gt; 25&quot;)  # FIXME, temporary fix</span>
+        <span class="k">if</span> <span class="n">dataset_selection</span> <span class="ow">and</span> <span class="n">dataset_selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+                <span class="n">selection</span> <span class="o">=</span> <span class="n">join_root_selection</span><span class="p">(</span><span class="n">dataset_selection</span><span class="p">,</span> <span class="n">selection</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;and&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">selection</span> <span class="o">=</span> <span class="n">dataset_selection</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">region_name</span> <span class="o">!=</span> <span class="n">law</span><span class="o">.</span><span class="n">NO_STR</span><span class="p">:</span>
+            <span class="n">region_selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">regions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">region_name</span><span class="p">)</span><span class="o">.</span><span class="n">selection</span>
+            <span class="k">if</span> <span class="n">selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+                <span class="n">selection</span> <span class="o">=</span> <span class="n">join_root_selection</span><span class="p">(</span><span class="n">region_selection</span><span class="p">,</span> <span class="n">selection</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;and&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">selection</span> <span class="o">=</span> <span class="n">region_selection</span>
+
+        <span class="k">if</span> <span class="n">selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
 
         <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
         <span class="n">tree</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">)</span>
@@ -336,17 +339,20 @@
                 <span class="o">+</span> <span class="p">(</span><span class="s2">&quot; [</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="n">feature</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;units&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">feature</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;units&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
             <span class="n">y_title</span> <span class="o">=</span> <span class="s2">&quot;Events&quot;</span> <span class="o">+</span> <span class="n">y_axis_adendum</span>
             <span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;; </span><span class="si">%s</span><span class="s2">; </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">x_title</span><span class="p">,</span> <span class="n">y_title</span><span class="p">)</span>
-            <span class="n">systs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_systs</span><span class="p">(</span><span class="n">feature</span><span class="p">,</span> <span class="n">isMC</span><span class="p">)</span>
+            <span class="n">systs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_systs</span><span class="p">(</span><span class="n">feature</span><span class="p">,</span> <span class="n">isMC</span><span class="p">)</span> \
+                <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_weights_systematics</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">isMC</span><span class="p">)</span>
             <span class="n">systs_directions</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;central&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span>
             <span class="k">if</span> <span class="n">isMC</span><span class="p">:</span>
                 <span class="n">systs_directions</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">systs</span><span class="p">,</span> <span class="n">directions</span><span class="p">))</span>
 
+            <span class="c1"># apply selection if needed</span>
+            <span class="k">if</span> <span class="n">feature</span><span class="o">.</span><span class="n">selection</span><span class="p">:</span>
+                <span class="n">feat_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;feat_selection&quot;</span><span class="p">,</span> <span class="n">feature</span><span class="o">.</span><span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;feat_selection&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">feat_df</span> <span class="o">=</span> <span class="n">df</span>
+
             <span class="c1"># loop over systematics and up/down variations</span>
             <span class="k">for</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">direction</span> <span class="ow">in</span> <span class="n">systs_directions</span><span class="p">:</span>
-                <span class="c1"># if syst_name != &quot;central&quot;:</span>
-                    <span class="c1"># syst = self.config.systematics.get(syst_name)</span>
-                <span class="c1"># else:</span>
-                    <span class="c1"># syst = self.config.systematics.get(feature.central)</span>
                 <span class="c1"># define tag just for histograms&#39;s name</span>
                 <span class="k">if</span> <span class="n">syst_name</span> <span class="o">!=</span> <span class="s2">&quot;central&quot;</span> <span class="ow">and</span> <span class="n">isMC</span><span class="p">:</span>
                     <span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">syst_name</span>
@@ -361,8 +367,9 @@
                 <span class="k">if</span> <span class="n">nentries</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="n">hmodel</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDF</span><span class="o">.</span><span class="n">TH1DModel</span><span class="p">(</span><span class="n">hist_base</span><span class="p">)</span>
                     <span class="n">histos</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
-                            <span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_weight</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                        <span class="n">feat_df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
+                            <span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_weight</span><span class="p">(</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">direction</span><span class="p">))</span>
                         <span class="p">)</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
                             <span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="n">feature_expression</span><span class="p">)</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span><span class="n">hmodel</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;weight&quot;</span><span class="p">)</span>
                     <span class="p">)</span>
@@ -485,6 +492,8 @@
         <span class="s2">&quot;default: True&quot;</span><span class="p">)</span>
     <span class="n">fixed_colors</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether to use fixed colors &quot;</span>
         <span class="s2">&quot;for plotting, default: False&quot;</span><span class="p">)</span>
+    <span class="n">log_y</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;set logarithmic scale for Y axis, &quot;</span>
+        <span class="s2">&quot;default: False&quot;</span><span class="p">)</span>
     <span class="c1"># # optimization parameters</span>
     <span class="c1"># bin_opt_version = luigi.Parameter(default=law.NO_STR, description=&quot;version of the binning &quot;</span>
         <span class="c1"># &quot;optimization task to use, not used when empty, default: empty&quot;)</span>
@@ -935,18 +944,27 @@
             <span class="c1"># Draw</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hide_data</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_hists</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">stack</span><span class="p">:</span>
                 <span class="n">c</span> <span class="o">=</span> <span class="n">Canvas</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_y</span><span class="p">:</span>
+                    <span class="n">c</span><span class="o">.</span><span class="n">SetLogy</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">c</span> <span class="o">=</span> <span class="n">RatioCanvas</span><span class="p">()</span>
                 <span class="n">dummy_hist</span><span class="o">.</span><span class="n">GetXaxis</span><span class="p">()</span><span class="o">.</span><span class="n">SetLabelOffset</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
                 <span class="n">dummy_hist</span><span class="o">.</span><span class="n">GetXaxis</span><span class="p">()</span><span class="o">.</span><span class="n">SetTitleOffset</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
                 <span class="n">c</span><span class="o">.</span><span class="n">get_pad</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cd</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_y</span><span class="p">:</span>
+                    <span class="n">c</span><span class="o">.</span><span class="n">get_pad</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">SetLogy</span><span class="p">()</span>
 
             <span class="c1"># r.setup_hist(dummy_hist, pad=c.get_pad(1))</span>
             <span class="n">r</span><span class="o">.</span><span class="n">setup_hist</span><span class="p">(</span><span class="n">dummy_hist</span><span class="p">)</span>
             <span class="n">dummy_hist</span><span class="o">.</span><span class="n">GetYaxis</span><span class="p">()</span><span class="o">.</span><span class="n">SetMaxDigits</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
             <span class="n">maximum</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">hist</span><span class="o">.</span><span class="n">GetMaximum</span><span class="p">()</span> <span class="k">for</span> <span class="n">hist</span> <span class="ow">in</span> <span class="n">draw_hists</span><span class="p">])</span>
-            <span class="n">dummy_hist</span><span class="o">.</span><span class="n">SetMaximum</span><span class="p">(</span><span class="mf">1.1</span> <span class="o">*</span> <span class="n">maximum</span><span class="p">)</span>
-            <span class="n">dummy_hist</span><span class="o">.</span><span class="n">SetMinimum</span><span class="p">(</span><span class="mf">0.001</span><span class="p">)</span>  <span class="c1"># FIXME in case of log scale</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_y</span><span class="p">:</span>
+                <span class="n">dummy_hist</span><span class="o">.</span><span class="n">SetMaximum</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">maximum</span><span class="p">)</span>
+                <span class="n">dummy_hist</span><span class="o">.</span><span class="n">SetMinimum</span><span class="p">(</span><span class="mf">0.0011</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dummy_hist</span><span class="o">.</span><span class="n">SetMaximum</span><span class="p">(</span><span class="mf">1.1</span> <span class="o">*</span> <span class="n">maximum</span><span class="p">)</span>
+                <span class="n">dummy_hist</span><span class="o">.</span><span class="n">SetMinimum</span><span class="p">(</span><span class="mf">0.001</span><span class="p">)</span>
+
             <span class="n">draw_labels</span> <span class="o">=</span> <span class="n">get_labels</span><span class="p">(</span><span class="n">upper_right</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
 
             <span class="n">dummy_hist</span><span class="o">.</span><span class="n">Draw</span><span class="p">()</span>
@@ -976,7 +994,7 @@
 
                 <span class="n">ratio_graph</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TGraphAsymmErrors</span><span class="p">(</span><span class="n">binning_args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="n">mc_unc_graph</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TGraphErrors</span><span class="p">(</span><span class="n">binning_args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="n">r</span><span class="o">.</span><span class="n">setup_graph</span><span class="p">(</span><span class="n">ratio_graph</span><span class="p">)</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">setup_graph</span><span class="p">(</span><span class="n">ratio_graph</span><span class="p">,</span> <span class="n">props</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;MarkerStyle&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;MarkerSize&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">})</span>
                 <span class="n">r</span><span class="o">.</span><span class="n">setup_graph</span><span class="p">(</span><span class="n">mc_unc_graph</span><span class="p">,</span> <span class="n">props</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;FillStyle&quot;</span><span class="p">:</span> <span class="mi">3004</span><span class="p">,</span> <span class="s2">&quot;LineColor&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
                     <span class="s2">&quot;MarkerColor&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;MarkerSize&quot;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">,</span> <span class="s2">&quot;FillColor&quot;</span><span class="p">:</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">kGray</span> <span class="o">+</span> <span class="mi">2</span><span class="p">})</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_systematics</span><span class="p">:</span>
@@ -1155,8 +1173,10 @@
 
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fixed_colors</span><span class="p">:</span>
                     <span class="n">color</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="n">iproc</span><span class="p">]</span>
-                <span class="k">else</span><span class="p">:</span>
+                <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">process</span><span class="o">.</span><span class="n">color</span><span class="p">)</span> <span class="o">==</span> <span class="nb">tuple</span><span class="p">:</span>
                     <span class="n">color</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TColor</span><span class="o">.</span><span class="n">GetColor</span><span class="p">(</span><span class="o">*</span><span class="n">process</span><span class="o">.</span><span class="n">color</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">color</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">color</span>
 
                 <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">isSignal</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">setup_signal_hist</span><span class="p">(</span><span class="n">process_histo</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>

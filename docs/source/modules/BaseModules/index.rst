@@ -14,5 +14,7 @@ RDFModules
 .. toctree::
     :maxdepth: 2
    
+    baseModules
     METfilters
-    smearing 
+    smearing
+    jec 

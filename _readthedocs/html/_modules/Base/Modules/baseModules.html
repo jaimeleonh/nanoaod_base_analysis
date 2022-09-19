@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base.Modules.baseModules &mdash; nanoaod-base-analysis 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>Base.Modules.baseModules</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Base.Modules.baseModules</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">PhysicsTools.NanoAODTools.postprocessing.framework.eventloop</span> <span class="kn">import</span> <span class="n">Module</span>
+<span class="kn">from</span> <span class="nn">PhysicsTools.NanoAODTools.postprocessing.framework.datamodel</span> <span class="kn">import</span> <span class="n">Collection</span><span class="p">,</span> <span class="n">Object</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sin</span><span class="p">,</span> <span class="n">cos</span>
+
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
+
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">DummyModule</span><span class="p">(</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">beginFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputFile</span><span class="p">,</span> <span class="n">outputFile</span><span class="p">,</span> <span class="n">inputTree</span><span class="p">,</span> <span class="n">wrappedOutputTree</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">def</span> <span class="nf">endFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputFile</span><span class="p">,</span> <span class="n">outputFile</span><span class="p">,</span> <span class="n">inputTree</span><span class="p">,</span> <span class="n">wrappedOutputTree</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">def</span> <span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="k">class</span> <span class="nc">Syst</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">systs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">isMC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_systs</span><span class="p">(</span><span class="n">systs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_systs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">systs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">systs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">systname</span><span class="p">,</span> <span class="n">systvalue</span> <span class="ow">in</span> <span class="n">systs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">systname</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span>
+                <span class="k">else</span> <span class="p">(</span><span class="s2">&quot;_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">systvalue</span> <span class="k">if</span> <span class="n">systvalue</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">systname</span> <span class="o">==</span> <span class="s2">&quot;met_smear_tag&quot;</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;self.</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">systname</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">systs</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">JetLepMetSyst</span><span class="p">(</span><span class="n">Syst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;jet_syst&quot;</span><span class="p">,</span> <span class="s2">&quot;nom&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;muon_syst&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;electron_syst&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;photon_syst&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;tau_syst&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;met_syst&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;met_smear_tag&quot;</span><span class="p">,</span> <span class="s2">&quot;T1Smear&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="nb">sum</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span>
+
+
+<span class="k">class</span> <span class="nc">JetLepMetModule</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">,</span> <span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_daus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">muons</span><span class="p">,</span> <span class="n">electrons</span><span class="p">,</span> <span class="n">taus</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">pairType</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">dau1</span> <span class="o">=</span> <span class="n">muons</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">dau1_index</span><span class="p">]</span>
+            <span class="n">dau2</span> <span class="o">=</span> <span class="n">taus</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">dau2_index</span><span class="p">]</span>
+            <span class="n">dau1_syst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span>
+        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">pairType</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">dau1</span> <span class="o">=</span> <span class="n">electrons</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">dau1_index</span><span class="p">]</span>
+            <span class="n">dau2</span> <span class="o">=</span> <span class="n">taus</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">dau2_index</span><span class="p">]</span>
+            <span class="n">dau1_syst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span>
+        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">pairType</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">dau1</span> <span class="o">=</span> <span class="n">taus</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">dau1_index</span><span class="p">]</span>
+            <span class="n">dau2</span> <span class="o">=</span> <span class="n">taus</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">dau2_index</span><span class="p">]</span>
+            <span class="n">dau1_syst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;pairType </span><span class="si">%s</span><span class="s2"> is not implemented&quot;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">pairType</span><span class="p">)</span>
+        <span class="n">dau2_syst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span>
+
+        <span class="c1"># build TLorentzVectors</span>
+        <span class="n">dau1_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+        <span class="n">dau2_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+        <span class="n">dau1_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span>
+            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;dau1.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">dau1_syst</span><span class="p">),</span> <span class="n">dau1</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">dau1</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;dau1.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">dau1_syst</span><span class="p">))</span>
+        <span class="n">dau2_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span>
+            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;dau2.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">dau2_syst</span><span class="p">),</span> <span class="n">dau2</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">dau2</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;dau2.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">dau2_syst</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">dau1</span><span class="p">,</span> <span class="n">dau2</span><span class="p">,</span> <span class="n">dau1_tlv</span><span class="p">,</span> <span class="n">dau2_tlv</span>
+
+    <span class="k">def</span> <span class="nf">get_bjets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">jets</span><span class="p">):</span>
+        <span class="n">bjet1</span> <span class="o">=</span> <span class="n">jets</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">bjet1_JetIdx</span><span class="p">]</span>
+        <span class="n">bjet2</span> <span class="o">=</span> <span class="n">jets</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">bjet2_JetIdx</span><span class="p">]</span>
+
+        <span class="c1"># build TLorentzVectors</span>
+        <span class="n">bjet1_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+        <span class="n">bjet2_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+        <span class="n">bjet1_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;bjet1.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">),</span> <span class="n">bjet1</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+            <span class="n">bjet1</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;bjet1.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span>
+        <span class="n">bjet2_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;bjet2.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">),</span> <span class="n">bjet2</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+            <span class="n">bjet2</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;bjet2.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">bjet1</span><span class="p">,</span> <span class="n">bjet2</span><span class="p">,</span> <span class="n">bjet1_tlv</span><span class="p">,</span> <span class="n">bjet2_tlv</span>
+
+    <span class="k">def</span> <span class="nf">get_vbfjets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">jets</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">VBFjet1_JetIdx</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">VBFjet2_JetIdx</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">vbfjet1</span> <span class="o">=</span> <span class="n">jets</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">VBFjet1_JetIdx</span><span class="p">]</span>
+            <span class="n">vbfjet2</span> <span class="o">=</span> <span class="n">jets</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">VBFjet2_JetIdx</span><span class="p">]</span>
+
+            <span class="c1"># build TLorentzVectors</span>
+            <span class="n">vbfjet1_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+            <span class="n">vbfjet2_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+            <span class="n">vbfjet1_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;vbfjet1.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">),</span> <span class="n">vbfjet1</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+                <span class="n">vbfjet1</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;vbfjet1.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span>
+            <span class="n">vbfjet2_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;vbfjet2.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">),</span> <span class="n">vbfjet2</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+                <span class="n">vbfjet2</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;vbfjet2.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">vbfjet1</span><span class="p">,</span> <span class="n">vbfjet2</span><span class="p">,</span> <span class="n">vbfjet1_tlv</span><span class="p">,</span> <span class="n">vbfjet2_tlv</span>
+
+    <span class="k">def</span> <span class="nf">get_met</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">met</span> <span class="o">=</span> <span class="n">Object</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;MET&quot;</span><span class="p">)</span>
+        <span class="n">met_bis</span> <span class="o">=</span> <span class="n">Object</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;MET</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_smear_tag</span><span class="p">)</span>
+
+        <span class="n">met_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+        <span class="n">met_tlv</span><span class="o">.</span><span class="n">SetPxPyPzE</span><span class="p">(</span>
+            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;met_bis.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_syst</span><span class="p">)</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;met_bis.phi</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_syst</span><span class="p">)),</span>
+            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;met_bis.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_syst</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;met_bis.phi</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_syst</span><span class="p">)),</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;met_bis.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_syst</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">met</span><span class="p">,</span> <span class="n">met_tlv</span>
+
+
+<span class="k">class</span> <span class="nc">VarFromVectorRDFProducer</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;variables&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_prefix</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;input_prefix&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_prefix</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;output_prefix&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+            <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_prefix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_prefix</span><span class="p">))</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.at(</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
+
+
+<div class="viewcode-block" id="VarFromVectorRDF"><a class="viewcode-back" href="../../../modules/BaseModules/baseModules.html#Base.Modules.baseModules.VarFromVectorRDF">[docs]</a><span class="k">def</span> <span class="nf">VarFromVectorRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the element `index` of whatever input vectors</span>
+
+<span class="sd">    :param variables: input vectors</span>
+<span class="sd">    :type variables: list of str</span>
+
+<span class="sd">    :param index: index to get the element from the vectors</span>
+<span class="sd">    :type index: str</span>
+
+<span class="sd">    :param input_prefix: prefix common to all vectors to be substituted</span>
+<span class="sd">    :type input_prefix: str</span>
+
+<span class="sd">    :param output_prefix: prefix to use as output for all vectors</span>
+<span class="sd">    :type output_prefix: str</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: VarFromVectorRDF</span>
+<span class="sd">            path: Base.Modules.BaseModules</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                variables: [Jet_pt, Jet_eta]</span>
+<span class="sd">                index: bjet_index</span>
+<span class="sd">                input_prefix = Jet</span>
+<span class="sd">                output_prefix = bjet</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">VarFromVectorRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

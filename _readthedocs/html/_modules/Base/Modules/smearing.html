@@ -188,13 +188,19 @@
 <span class="k">class</span> <span class="nc">jetVarRDFProducer</span><span class="p">():</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
-    
+
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Jet_pt_nom&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_pt * jet_smear_factor&quot;</span><span class="p">)</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Jet_mass_nom&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_mass * jet_smear_factor&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;Jet_pt_nom&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_mass_nom&quot;</span><span class="p">]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Jet_pt_smeared_up&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_pt * jet_smear_factor_up&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Jet_mass_smeared_up&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_mass * jet_smear_factor_up&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Jet_pt_smeared_down&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_pt * jet_smear_factor_down&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Jet_mass_smeared_down&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_mass * jet_smear_factor_down&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;Jet_pt_nom&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_mass_nom&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Jet_pt_smeared_up&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_mass_smeared_up&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Jet_pt_smeared_down&quot;</span><span class="p">,</span> <span class="s2">&quot;Jet_mass_smeared_down&quot;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="jetVarRDF"><a class="viewcode-back" href="../../../modules/BaseModules/smearing.html#Base.Modules.smearing.jetVarRDF">[docs]</a><span class="k">def</span> <span class="nf">jetVarRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>

@@ -80,7 +80,7 @@
 <span class="n">json_path</span> <span class="o">=</span> <span class="s2">&quot;/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/EGM/</span><span class="si">{}</span><span class="s2">/electron.json.gz&quot;</span>
 
 
-<div class="viewcode-block" id="eleSFRDFProducer"><a class="viewcode-back" href="../../../modules/EGM/electron.html#Corrections.EGM.eleCorrections.eleSFRDFProducer">[docs]</a><span class="k">class</span> <span class="nc">eleSFRDFProducer</span><span class="p">():</span>
+<span class="k">class</span> <span class="nc">eleSFRDFProducer</span><span class="p">():</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
@@ -128,10 +128,10 @@
                     <span class="s1">&#39;get_ele_sf(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, Electron_eta, Electron_pt)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">syst</span><span class="p">,</span> <span class="n">wp</span><span class="p">))</span>
                 <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;elesf_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">))</span>
 
-        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span></div>
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
 
 
-<span class="k">def</span> <span class="nf">eleSFRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="eleSFRDF"><a class="viewcode-back" href="../../../modules/EGM/electron.html#Corrections.EGM.eleCorrections.eleSFRDF">[docs]</a><span class="k">def</span> <span class="nf">eleSFRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Module to obtain electron SFs with their uncertainties.</span>
 
@@ -153,8 +153,8 @@
 <span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
 <span class="sd">                wps: [wp80iso, ...]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
-    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">eleSFRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">eleSFRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 </pre></div>
 
