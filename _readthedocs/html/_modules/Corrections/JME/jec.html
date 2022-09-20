@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corrections.JME.jec &mdash; nanoaod-base-analysis 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>Corrections.JME.jec</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Corrections.JME.jec</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">tarfile</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="kn">from</span> <span class="nn">Base.Modules.baseModules</span> <span class="kn">import</span> <span class="n">JetLepMetSyst</span>
+
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span><span class="p">,</span> <span class="n">randomize</span>
+
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">jecProviderRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="p">,</span>
+            <span class="n">jerInputFileName</span><span class="o">=</span><span class="s2">&quot;Spring16_25nsV10_MC_PtResolution_AK4PFchs.txt&quot;</span><span class="p">,</span>
+            <span class="n">jec_sources</span><span class="o">=</span><span class="p">[],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">isMC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;pt&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;eta&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;mass&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;JEC_PATH&quot;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">jerInputArchivePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CMSSW_BASE&#39;</span><span class="p">]</span> <span class="o">+</span> \
+                    <span class="s2">&quot;/src/PhysicsTools/NanoAODTools/data/jme/&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">jerTag</span> <span class="o">=</span> <span class="n">jerInputFileName</span><span class="p">[:</span><span class="n">jerInputFileName</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;_MC_&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="s1">&#39;_MC&#39;</span><span class="p">)]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">jerArchive</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">jerInputArchivePath</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerTag</span> <span class="o">+</span> <span class="s2">&quot;.tgz&quot;</span><span class="p">,</span> <span class="s2">&quot;r:gz&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">jerArchive</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span> <span class="o">=</span> <span class="s2">&quot;RegroupedV2_</span><span class="si">%s</span><span class="s2">_UncertaintySources_AK4PFchs.txt&quot;</span>\
+                    <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerTag</span>
+                <span class="k">assert</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span><span class="p">)))</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;JEC_PATH&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s2">&quot;/libBaseModules.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libBaseModules.so&quot;</span><span class="p">)</span>
+            <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Base/Modules&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">jecProvider</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/jecProvider.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">jec_sources</span> <span class="o">=</span> <span class="n">jec_sources</span>
+            <span class="n">jec_sources_str</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">jec_source</span> <span class="k">for</span> <span class="n">jec_source</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jec_sources</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">jec_provider</span> <span class="o">=</span> <span class="n">randomize</span><span class="p">(</span><span class="s2">&quot;jec_provider&quot;</span><span class="p">)</span>
+
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span>
+                <span class="s1">&#39;auto </span><span class="si">%s</span><span class="s1"> = jecProvider(&quot;</span><span class="si">%s</span><span class="s1">&quot;, {</span><span class="si">%s</span><span class="s1">});&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">jec_provider</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;JEC_PATH&quot;</span><span class="p">),</span> <span class="n">jec_sources_str</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">jecProviderRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
+
+        <span class="n">jecs</span> <span class="o">=</span> <span class="n">randomize</span><span class="p">(</span><span class="s2">&quot;jec_uncertainties&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">pt</span><span class="p">:</span>
+            <span class="n">branches</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;up&quot;</span><span class="p">,</span> <span class="s2">&quot;down&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;jec_factor_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">jec_source</span> <span class="k">for</span> <span class="n">jec_source</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jec_sources</span><span class="p">])]</span>
+
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">jecs</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.get_jec_uncertainties(&quot;</span>
+                <span class="s2">&quot;nJet, Jet_pt</span><span class="si">%s</span><span class="s2">, Jet_eta)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jec_provider</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_up&quot;</span> <span class="o">%</span> <span class="n">jecs</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">[0]&quot;</span> <span class="o">%</span> <span class="n">jecs</span><span class="p">)</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_down&quot;</span> <span class="o">%</span> <span class="n">jecs</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">[1]&quot;</span> <span class="o">%</span> <span class="n">jecs</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">branches</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">ib</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jec_sources</span><span class="p">):</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_up[</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">jecs</span><span class="p">,</span> <span class="n">ib</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_down[</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">jecs</span><span class="p">,</span> <span class="n">ib</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jec_sources</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">pt</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pt</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">pt</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;pt&quot;</span><span class="p">)]</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">jecs</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.get_single_jec_uncertainties(&quot;</span>
+                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jec_provider</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span><span class="p">))</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_up&quot;</span> <span class="o">%</span> <span class="n">jecs</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">[0]&quot;</span> <span class="o">%</span> <span class="n">jecs</span><span class="p">)</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_down&quot;</span> <span class="o">%</span> <span class="n">jecs</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">[1]&quot;</span> <span class="o">%</span> <span class="n">jecs</span><span class="p">)</span>
+
+            <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;up&quot;</span><span class="p">,</span> <span class="s2">&quot;down&quot;</span><span class="p">]:</span>
+                <span class="k">for</span> <span class="n">isource</span><span class="p">,</span> <span class="n">jec_source</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jec_sources</span><span class="p">):</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">pt_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">jec_source</span><span class="p">,</span> <span class="n">d</span><span class="p">),</span>
+                        <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> * </span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">[</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pt</span><span class="p">,</span> <span class="n">jecs</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">isource</span><span class="p">))</span>
+                    <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">pt_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">jec_source</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">:</span>
+                        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">mass_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">jec_source</span><span class="p">,</span> <span class="n">d</span><span class="p">),</span>
+                            <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> * </span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">[</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span> <span class="n">jecs</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">isource</span><span class="p">))</span>
+                        <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">mass_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">jec_source</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>            
+
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
+
+
+<div class="viewcode-block" id="jecProviderRDF"><a class="viewcode-back" href="../../../modules/JME/jec.html#Corrections.JME.jec.jecProviderRDF">[docs]</a><span class="k">def</span> <span class="nf">jecProviderRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Module to compute jec uncertainty factors. If parameters `pt` and `eta` are included,</span>
+<span class="sd">    the module will output the pt (and mass if it&#39;s included as a parameter) of the object</span>
+<span class="sd">    after applying the uncertainties.</span>
+
+<span class="sd">    Note: UL2016_preVFP is not implemented</span>
+
+<span class="sd">    :param: jec_sources: names of the systematic sources to consider. They depend on the year:</span>
+
+<span class="sd">        - 2016: ``FlavorQCD``, ``RelativeBal``, ``HF``, ``BBEC1``, ``EC2``, ``Absolute``,\</span>
+<span class="sd">        ``BBEC1_2016``, ``EC2_2016``, ``Absolute_2016``, ``HF_2016``, ``RelativeSample_2016``,\</span>
+<span class="sd">        ``Total``</span>
+
+<span class="sd">        - 2017: ``FlavorQCD``, ``RelativeBal``, ``HF``, ``BBEC1``, ``EC2``, ``Absolute``,\</span>
+<span class="sd">        ``BBEC1_2017``, ``EC2_2017``, ``Absolute_2017``, ``HF_2017``, ``RelativeSample_2017``,\</span>
+<span class="sd">        ``Total``</span>
+
+<span class="sd">        - 2018: ``FlavorQCD``, ``RelativeBal``, ``HF``, ``BBEC1``, ``EC2``, ``Absolute``,\</span>
+<span class="sd">        ``BBEC1_2018``, ``EC2_2018``, ``Absolute_2018``, ``HF_2018``, ``RelativeSample_2018``,\</span>
+<span class="sd">        ``Total``</span>
+
+<span class="sd">        Note: probably more are available, to be checked.</span>
+
+<span class="sd">    :type jec_sources: list of str</span>
+
+<span class="sd">    :param: pt: pt of the object to shift</span>
+<span class="sd">    :type pt: str</span>
+
+<span class="sd">    :param: eta: pt of the object to shift</span>
+<span class="sd">    :type eta: str</span>
+
+<span class="sd">    :param: mass: mass of the object to shift</span>
+<span class="sd">    :type mass: str</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: jecProviderRDF</span>
+<span class="sd">            path: Base.Modules.jec</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                year: self.config.year</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+<span class="sd">                jerTag: self.config.year</span>
+<span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
+<span class="sd">                jec_sources: []</span>
+<span class="sd">                (pt: bjet1_pt_nom)</span>
+<span class="sd">                (eta: bjet1_eta)</span>
+<span class="sd">                (mass: bjet1_mass)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
+    <span class="n">isUL</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
+    <span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
+    <span class="n">jetType</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;jetType&quot;</span><span class="p">,</span> <span class="s2">&quot;AK4PFchs&quot;</span><span class="p">)</span>
+    <span class="c1"># jerTag = kwargs.pop(&quot;jerTag&quot;, &quot;&quot;)</span>
+    <span class="n">jec_sources</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;jec_sources&quot;</span><span class="p">,</span> <span class="p">[])</span>
+
+    <span class="n">jerTagsMC</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;2016&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer16_07Aug2017_V11_MC&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;2017&#39;</span><span class="p">:</span> <span class="s1">&#39;Fall17_17Nov2017_V32_MC&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;2018&#39;</span><span class="p">:</span> <span class="s1">&#39;Autumn18_V19_MC&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;UL2016_preVFP&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer20UL16APV_JRV3_MC&#39;</span><span class="p">,</span> <span class="c1"># dummy</span>
+        <span class="s1">&#39;UL2016&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer20UL16_JRV3_MC&#39;</span><span class="p">,</span> <span class="c1"># dummy</span>
+        <span class="s1">&#39;UL2017&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer19UL17_V5_MC&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;UL2018&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer19UL18_V5_MC&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">isUL</span> <span class="ow">and</span> <span class="n">year</span> <span class="o">==</span> <span class="mi">2016</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;UL 2016 needs a further check&quot;</span><span class="p">)</span>
+
+    <span class="c1"># if jerTag != &quot;&quot;:</span>
+    <span class="n">jerTag</span> <span class="o">=</span> <span class="n">jerTagsMC</span><span class="p">[</span><span class="s2">&quot;</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">((</span><span class="s2">&quot;UL&quot;</span> <span class="k">if</span> <span class="n">isUL</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">),</span> <span class="n">year</span><span class="p">)]</span>
+    <span class="n">jerInputFileName</span> <span class="o">=</span> <span class="n">jerTag</span> <span class="o">+</span> <span class="s2">&quot;_PtResolution_&quot;</span> <span class="o">+</span> <span class="n">jetType</span> <span class="o">+</span> <span class="s2">&quot;.txt&quot;</span>
+
+    <span class="n">jec_sources_per_year</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">2016</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;FlavorQCD&quot;</span><span class="p">,</span> <span class="s2">&quot;RelativeBal&quot;</span><span class="p">,</span> <span class="s2">&quot;HF&quot;</span><span class="p">,</span> <span class="s2">&quot;BBEC1&quot;</span><span class="p">,</span> <span class="s2">&quot;EC2&quot;</span><span class="p">,</span> <span class="s2">&quot;Absolute&quot;</span><span class="p">,</span> <span class="s2">&quot;BBEC1_2016&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;EC2_2016&quot;</span><span class="p">,</span> <span class="s2">&quot;Absolute_2016&quot;</span><span class="p">,</span> <span class="s2">&quot;HF_2016&quot;</span><span class="p">,</span> <span class="s2">&quot;RelativeSample_2016&quot;</span><span class="p">,</span> <span class="s2">&quot;Total&quot;</span><span class="p">],</span>
+        <span class="mi">2017</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;FlavorQCD&quot;</span><span class="p">,</span> <span class="s2">&quot;RelativeBal&quot;</span><span class="p">,</span> <span class="s2">&quot;HF&quot;</span><span class="p">,</span> <span class="s2">&quot;BBEC1&quot;</span><span class="p">,</span> <span class="s2">&quot;EC2&quot;</span><span class="p">,</span> <span class="s2">&quot;Absolute&quot;</span><span class="p">,</span> <span class="s2">&quot;BBEC1_2017&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;EC2_2017&quot;</span><span class="p">,</span> <span class="s2">&quot;Absolute_2017&quot;</span><span class="p">,</span> <span class="s2">&quot;HF_2017&quot;</span><span class="p">,</span> <span class="s2">&quot;RelativeSample_2017&quot;</span><span class="p">,</span> <span class="s2">&quot;Total&quot;</span><span class="p">],</span>
+        <span class="mi">2018</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;FlavorQCD&quot;</span><span class="p">,</span> <span class="s2">&quot;RelativeBal&quot;</span><span class="p">,</span> <span class="s2">&quot;HF&quot;</span><span class="p">,</span> <span class="s2">&quot;BBEC1&quot;</span><span class="p">,</span> <span class="s2">&quot;EC2&quot;</span><span class="p">,</span> <span class="s2">&quot;Absolute&quot;</span><span class="p">,</span> <span class="s2">&quot;BBEC1_2018&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;EC2_2018&quot;</span><span class="p">,</span> <span class="s2">&quot;Absolute_2018&quot;</span><span class="p">,</span> <span class="s2">&quot;HF_2018&quot;</span><span class="p">,</span> <span class="s2">&quot;RelativeSample_2018&quot;</span><span class="p">,</span> <span class="s2">&quot;Total&quot;</span><span class="p">]</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">jec_sources</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">jec_sources</span> <span class="o">=</span> <span class="n">jec_sources_per_year</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">year</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">jec_source</span> <span class="ow">in</span> <span class="n">jec_sources</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">jec_source</span> <span class="ow">in</span> <span class="n">jec_sources_per_year</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">year</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">jecProviderRDFProducer</span><span class="p">(</span><span class="n">isMC</span><span class="p">,</span> <span class="n">jerInputFileName</span><span class="p">,</span> <span class="n">jec_sources</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

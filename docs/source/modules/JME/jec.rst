@@ -1,7 +1,7 @@
 Jet Energy Corrections
 ======================
 
-.. currentmodule:: Base.Modules.jec
+.. currentmodule:: Corrections.JME.jec
 
 .. contents::
 

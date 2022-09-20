@@ -4,7 +4,7 @@ BaseModules
 Installation
 ------------
 
-``git clone https://github.com/jaimeleonh/cmt-base-modules.git Base/Modules``
+``git clone https://gitlab.cern.ch/cms-phys-ciemat/cmt-base-modules.git Base/Modules``
 
 RDFModules
 ----------
@@ -16,5 +16,3 @@ RDFModules
    
     baseModules
     METfilters
-    smearing
-    jec 

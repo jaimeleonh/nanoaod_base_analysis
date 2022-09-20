@@ -1,7 +1,7 @@
 Smearing
 ==========
 
-.. currentmodule:: Base.Modules.smearing
+.. currentmodule:: Corrections.JME.smearing
 
 .. contents::
 
