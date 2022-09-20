@@ -125,14 +125,14 @@ class BasePlotTask(ConfigTaskWithCategory):
                 feature.get_aux("units")) if feature.get_aux("units") else "")
         return feature.binning, y_axis_adendum
 
-    def get_systematics(self, feature):
+    def get_feature_systematics(self, feature):
         return feature.systematics
 
     def get_systs(self, feature, isMC):
         systs = []
         if not isMC:
             return systs
-        for syst in self.get_systematics(feature):
+        for syst in self.get_feature_systematics(feature):
             systs.append(syst)
         return systs
 
@@ -689,7 +689,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     for x in systematics[dataset_name]]))
         return systematics
 
-    def plot(self):
+    def plot(self, feature):
         """
         Performs the actual plotting.
         """
@@ -727,285 +727,289 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             # compatible = True if integral - error <= 0 else False
             return integral, error, compatible
 
-        for feature in self.features:
-            background_hists = self.histos[feature.name]["background"]
-            signal_hists = self.histos[feature.name]["signal"]
-            data_hists = self.histos[feature.name]["data"]
-            all_hists = self.histos[feature.name]["all"]         
-            if self.plot_systematics:
-                bkg_histo_syst = self.histos[feature.name]["bkg_histo_syst"]
+        background_hists = self.histos["background"]
+        signal_hists = self.histos["signal"]
+        data_hists = self.histos["data"]
+        all_hists = self.histos["all"]
+        if self.plot_systematics:
+            bkg_histo_syst = self.histos["bkg_histo_syst"]
 
-            binning_args, y_axis_adendum = self.get_binning(feature)
-            x_title = (str(feature.get_aux("x_title"))
-                + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
-            y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
-            hist_title = "; %s; %s" % (x_title, y_title)
+        binning_args, y_axis_adendum = self.get_binning(feature)
+        x_title = (str(feature.get_aux("x_title"))
+            + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
+        y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
+        hist_title = "; %s; %s" % (x_title, y_title)
 
-            # qcd shape files
-            qcd_shape_files = None
-            if self.do_qcd:
-                qcd_shape_files = {}
-                for key, region in self.qcd_regions.items():
-                    if self.qcd_category_name != "default":
-                        my_feature = (feature.name if "shape" in key or key == "os_inviso"
-                            else self.qcd_feature)
-                    else:
-                        my_feature = feature.name
-                    qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
-
-                # do the qcd extrapolation
-                if "shape" in qcd_shape_files:
-                    qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
-                    qcd_hist.Scale(1. / qcd_hist.Integral())
-                else:  #sym shape
-                    qcd_hist = get_qcd("shape1", qcd_shape_files).Clone(randomize("qcd"))
-                    qcd_hist2 = get_qcd("shape2", qcd_shape_files).Clone(randomize("qcd"))
-                    qcd_hist.Scale(1. / qcd_hist.Integral())
-                    qcd_hist2.Scale(1. / qcd_hist2.Integral())
-                    qcd_hist.Add(qcd_hist2)
-                    qcd_hist.Scale(0.5)
-
-                n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
-                    get_qcd("os_inviso", qcd_shape_files, -999))
-                n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
-                    get_qcd("ss_iso", qcd_shape_files, -999))
-                n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
-                    get_qcd("ss_inviso", qcd_shape_files, -999))
-                # if not n_ss_iso or not n_ss_inviso:
-                if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
-                    print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")
-                    qcd_scaling = 0.
-                    qcd_inviso = 0.
-                    qcd_inviso_error = 0.
-                    qcd_hist.Scale(qcd_scaling)
+        # qcd shape files
+        qcd_shape_files = None
+        if self.do_qcd:
+            qcd_shape_files = {}
+            for key, region in self.qcd_regions.items():
+                if self.qcd_category_name != "default":
+                    my_feature = (feature.name if "shape" in key or key == "os_inviso"
+                        else self.qcd_feature)
                 else:
-                    qcd_inviso = n_os_inviso / n_ss_inviso
-                    qcd_inviso_error = qcd_inviso * math.sqrt(
-                        (n_os_inviso_error / n_os_inviso) * (n_os_inviso_error / n_os_inviso)
-                        + (n_ss_inviso_error / n_ss_inviso) * (n_ss_inviso_error / n_ss_inviso)
-                    )
-                    qcd_scaling = n_os_inviso * n_ss_iso / n_ss_inviso
-                    os_inviso_rel_error = n_os_inviso_error / n_os_inviso
-                    ss_iso_rel_error = n_ss_iso_error / n_ss_iso
-                    ss_inviso_rel_error = n_ss_inviso_error / n_ss_inviso
-                    new_errors_sq = []
-                    for ib in range(1, qcd_hist.GetNbinsX() + 1):
-                        if qcd_hist.GetBinContent(ib) > 0:
-                            bin_rel_error = qcd_hist.GetBinError(ib) / qcd_hist.GetBinContent(ib)
-                        else:
-                            bin_rel_error = 0
-                        new_errors_sq.append(bin_rel_error * bin_rel_error
-                            + os_inviso_rel_error * os_inviso_rel_error
-                            + ss_iso_rel_error * ss_iso_rel_error
-                            + ss_inviso_rel_error * ss_inviso_rel_error)
-                    qcd_hist.Scale(qcd_scaling)
-                    # fix errors
-                    for ib in range(1, qcd_hist.GetNbinsX() + 1):
-                        qcd_hist.SetBinError(ib, qcd_hist.GetBinContent(ib)
-                            * math.sqrt(new_errors_sq[ib - 1]))
+                    my_feature = feature.name
+                qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
 
-                # store and style
-                yield_error = c_double(0.)
-                qcd_hist.cmt_yield = qcd_hist.IntegralAndError(
-                    0, qcd_hist.GetNbinsX() + 1, yield_error)
-                qcd_hist.cmt_yield_error = yield_error.value
-                qcd_hist.cmt_scale = 1.
-                qcd_hist.cmt_process_name = "qcd"
-                qcd_hist.process_label = "QCD"
-                qcd_hist.SetTitle("QCD")
-                self.setup_background_hist(qcd_hist, ROOT.kYellow)
-                background_hists.append(qcd_hist)
-                all_hists.append(qcd_hist)
+            # do the qcd extrapolation
+            if "shape" in qcd_shape_files:
+                qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
+                qcd_hist.Scale(1. / qcd_hist.Integral())
+            else:  #sym shape
+                qcd_hist = get_qcd("shape1", qcd_shape_files).Clone(randomize("qcd"))
+                qcd_hist2 = get_qcd("shape2", qcd_shape_files).Clone(randomize("qcd"))
+                qcd_hist.Scale(1. / qcd_hist.Integral())
+                qcd_hist2.Scale(1. / qcd_hist2.Integral())
+                qcd_hist.Add(qcd_hist2)
+                qcd_hist.Scale(0.5)
 
+            n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
+                get_qcd("os_inviso", qcd_shape_files, -999))
+            n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
+                get_qcd("ss_iso", qcd_shape_files, -999))
+            n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
+                get_qcd("ss_inviso", qcd_shape_files, -999))
+            # if not n_ss_iso or not n_ss_inviso:
+            if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
+                print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")
+                qcd_scaling = 0.
+                qcd_inviso = 0.
+                qcd_inviso_error = 0.
+                qcd_hist.Scale(qcd_scaling)
+            else:
+                qcd_inviso = n_os_inviso / n_ss_inviso
+                qcd_inviso_error = qcd_inviso * math.sqrt(
+                    (n_os_inviso_error / n_os_inviso) * (n_os_inviso_error / n_os_inviso)
+                    + (n_ss_inviso_error / n_ss_inviso) * (n_ss_inviso_error / n_ss_inviso)
+                )
+                qcd_scaling = n_os_inviso * n_ss_iso / n_ss_inviso
+                os_inviso_rel_error = n_os_inviso_error / n_os_inviso
+                ss_iso_rel_error = n_ss_iso_error / n_ss_iso
+                ss_inviso_rel_error = n_ss_inviso_error / n_ss_inviso
+                new_errors_sq = []
+                for ib in range(1, qcd_hist.GetNbinsX() + 1):
+                    if qcd_hist.GetBinContent(ib) > 0:
+                        bin_rel_error = qcd_hist.GetBinError(ib) / qcd_hist.GetBinContent(ib)
+                    else:
+                        bin_rel_error = 0
+                    new_errors_sq.append(bin_rel_error * bin_rel_error
+                        + os_inviso_rel_error * os_inviso_rel_error
+                        + ss_iso_rel_error * ss_iso_rel_error
+                        + ss_inviso_rel_error * ss_inviso_rel_error)
+                qcd_hist.Scale(qcd_scaling)
+                # fix errors
+                for ib in range(1, qcd_hist.GetNbinsX() + 1):
+                    qcd_hist.SetBinError(ib, qcd_hist.GetBinContent(ib)
+                        * math.sqrt(new_errors_sq[ib - 1]))
+
+            # store and style
+            yield_error = c_double(0.)
+            qcd_hist.cmt_yield = qcd_hist.IntegralAndError(
+                0, qcd_hist.GetNbinsX() + 1, yield_error)
+            qcd_hist.cmt_yield_error = yield_error.value
+            qcd_hist.cmt_scale = 1.
+            qcd_hist.cmt_process_name = "qcd"
+            qcd_hist.process_label = "QCD"
+            qcd_hist.SetTitle("QCD")
+            self.setup_background_hist(qcd_hist, ROOT.kYellow)
+            background_hists.append(qcd_hist)
+            all_hists.append(qcd_hist)
+
+        if not self.hide_data:
+            all_hists += data_hists
+
+        bkg_histo = None
+        data_histo = None
+        if not self.stack:
+            for hist in all_hists:
+                scale = 1. / (hist.Integral() or 1.)
+                hist.Scale(scale)
+                hist.scale = scale
+            draw_hists = all_hists[::-1]
+        else:
+            background_stack = ROOT.THStack(randomize("stack"), "")
+            for hist in background_hists[::-1]:
+                # hist.SetFillColor(ROOT.kRed)
+                background_stack.Add(hist)
+                if not bkg_histo:
+                    bkg_histo = hist.Clone()
+                else:
+                    bkg_histo.Add(hist.Clone())
+            background_stack.hist_type = "background"
+            draw_hists = [background_stack] + signal_hists[::-1]
             if not self.hide_data:
-                all_hists += data_hists
-
-            bkg_histo = None
-            data_histo = None
-            if not self.stack:
-                for hist in all_hists:
-                    scale = 1. / (hist.Integral() or 1.)
-                    hist.Scale(scale)
-                    hist.scale = scale
-                draw_hists = all_hists[::-1]
-            else:
-                background_stack = ROOT.THStack(randomize("stack"), "")
-                for hist in background_hists[::-1]:
-                    # hist.SetFillColor(ROOT.kRed)
-                    background_stack.Add(hist)
-                    if not bkg_histo:
-                        bkg_histo = hist.Clone()
+                draw_hists.extend(data_hists[::-1])
+                for hist in data_hists:
+                    if not data_histo:
+                        data_histo = hist.Clone()
                     else:
-                        bkg_histo.Add(hist.Clone())
-                background_stack.hist_type = "background"
-                draw_hists = [background_stack] + signal_hists[::-1]
-                if not self.hide_data:
-                    draw_hists.extend(data_hists[::-1])
-                    for hist in data_hists:
-                        if not data_histo:
-                            data_histo = hist.Clone()
-                        else:
-                            data_histo.Add(hist.Clone())
+                        data_histo.Add(hist.Clone())
 
-            entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
-            n_entries = len(entries)
-            if n_entries <= 4:
-                n_cols = 1
-            elif n_entries <= 8:
-                n_cols = 2
-            else:
-                n_cols = 3
-            col_width = 0.125
-            n_rows = math.ceil(n_entries / float(n_cols))
-            row_width = 0.06
-            legend_x2 = 0.88
-            legend_x1 = legend_x2 - n_cols * col_width
-            legend_y2 = 0.88
-            legend_y1 = legend_y2 - n_rows * row_width
+        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
+        n_entries = len(entries)
+        if n_entries <= 4:
+            n_cols = 1
+        elif n_entries <= 8:
+            n_cols = 2
+        else:
+            n_cols = 3
+        col_width = 0.125
+        n_rows = math.ceil(n_entries / float(n_cols))
+        row_width = 0.06
+        legend_x2 = 0.88
+        legend_x1 = legend_x2 - n_cols * col_width
+        legend_y2 = 0.88
+        legend_y1 = legend_y2 - n_rows * row_width
 
-            legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
-            legend.SetBorderSize(0)
-            legend.SetNColumns(n_cols)
-            for entry in entries:
-                legend.AddEntry(*entry)
+        legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
+        legend.SetBorderSize(0)
+        legend.SetNColumns(n_cols)
+        for entry in entries:
+            legend.AddEntry(*entry)
 
-            dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
-            # Draw
-            if self.hide_data or len(data_hists) == 0 or not self.stack:
-                c = Canvas()
-                if self.log_y:
-                    c.SetLogy()
-            else:
-                c = RatioCanvas()
-                dummy_hist.GetXaxis().SetLabelOffset(100)
-                dummy_hist.GetXaxis().SetTitleOffset(100)
-                c.get_pad(1).cd()
-                if self.log_y:
-                    c.get_pad(1).SetLogy()
-
-            # r.setup_hist(dummy_hist, pad=c.get_pad(1))
-            r.setup_hist(dummy_hist)
-            dummy_hist.GetYaxis().SetMaxDigits(4)
-            maximum = max([hist.GetMaximum() for hist in draw_hists])
+        dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
+        # Draw
+        if self.hide_data or len(data_hists) == 0 or not self.stack:
+            c = Canvas()
             if self.log_y:
-                dummy_hist.SetMaximum(100 * maximum)
-                dummy_hist.SetMinimum(0.0011)
-            else:
-                dummy_hist.SetMaximum(1.1 * maximum)
-                dummy_hist.SetMinimum(0.001)
+                c.SetLogy()
+        else:
+            c = RatioCanvas()
+            dummy_hist.GetXaxis().SetLabelOffset(100)
+            dummy_hist.GetXaxis().SetTitleOffset(100)
+            c.get_pad(1).cd()
+            if self.log_y:
+                c.get_pad(1).SetLogy()
 
-            draw_labels = get_labels(upper_right="")
+        # r.setup_hist(dummy_hist, pad=c.get_pad(1))
+        r.setup_hist(dummy_hist)
+        dummy_hist.GetYaxis().SetMaxDigits(4)
+        maximum = max([hist.GetMaximum() for hist in draw_hists])
+        if self.log_y:
+            dummy_hist.SetMaximum(100 * maximum)
+            dummy_hist.SetMinimum(0.0011)
+        else:
+            dummy_hist.SetMaximum(1.1 * maximum)
+            dummy_hist.SetMinimum(0.001)
 
-            dummy_hist.Draw()
-            for ih, hist in enumerate(draw_hists):
-                option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
-                hist.Draw(option)
+        draw_labels = get_labels(upper_right="")
 
-            for label in draw_labels:
-                label.Draw("same")
-            legend.Draw("same")
-            if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack):
-                dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
-                r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
-                    props={"Minimum": 0.25, "Maximum": 1.75})
-                r.setup_y_axis(dummy_ratio_hist.GetYaxis(), pad=c.get_pad(2),
-                    props={"Ndivisions": 3})
-                dummy_ratio_hist.GetYaxis().SetTitle("Data / MC")
-                dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
-                dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
+        dummy_hist.Draw()
+        for ih, hist in enumerate(draw_hists):
+            option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
+            hist.Draw(option)
 
-                data_graph = hist_to_graph(data_histo, remove_zeros=False, errors=True,
+        for label in draw_labels:
+            label.Draw("same")
+        legend.Draw("same")
+        if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack):
+            dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
+            r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
+                props={"Minimum": 0.25, "Maximum": 1.75})
+            r.setup_y_axis(dummy_ratio_hist.GetYaxis(), pad=c.get_pad(2),
+                props={"Ndivisions": 3})
+            dummy_ratio_hist.GetYaxis().SetTitle("Data / MC")
+            dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
+            dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
+
+            data_graph = hist_to_graph(data_histo, remove_zeros=False, errors=True,
+                asymm=True, overflow=False, underflow=False,
+                attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
+            bkg_graph = hist_to_graph(bkg_histo, remove_zeros=False, errors=True,
+                asymm=True, overflow=False, underflow=False,
+                attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
+
+            ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
+            mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
+            r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
+            r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
+                "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+            if self.plot_systematics:
+                syst_graph = hist_to_graph(bkg_histo_syst, remove_zeros=False, errors=True,
                     asymm=True, overflow=False, underflow=False,
                     attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
-                bkg_graph = hist_to_graph(bkg_histo, remove_zeros=False, errors=True,
-                    asymm=True, overflow=False, underflow=False,
-                    attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
+                syst_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
+                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
+                all_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                r.setup_graph(all_unc_graph, props={"FillStyle": 3007, "LineColor": 0,
+                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
 
-                ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
-                mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
-                r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
-                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
-                if self.plot_systematics:
-                    syst_graph = hist_to_graph(bkg_histo_syst, remove_zeros=False, errors=True,
-                        asymm=True, overflow=False, underflow=False,
-                        attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
-                    syst_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                    r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
-                        "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
-                    all_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                    r.setup_graph(all_unc_graph, props={"FillStyle": 3007, "LineColor": 0,
-                        "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
+            for i in range(binning_args[0]):
+                x, d, b = c_double(0.), c_double(0.), c_double(0.)
+                data_graph.GetPoint(i, x, d)
+                bkg_graph.GetPoint(i, x, b)
+                d = d.value
+                b = b.value
+                if d == EMPTY or b == 0:
+                    ratio_graph.SetPoint(i, x, EMPTY)
+                else:
+                    ratio_graph.SetPoint(i, x, d / b)
+                    ratio_graph.SetPointEYhigh(i, data_graph.GetErrorYhigh(i) / b)
+                    ratio_graph.SetPointEYlow(i, data_graph.GetErrorYlow(i) / b)
+                # set the mc uncertainty
+                if b == 0:
+                    mc_unc_graph.SetPoint(i, x, EMPTY)
+                else:
+                    mc_unc_graph.SetPoint(i, x, 1.)
+                    mc_error = bkg_graph.GetErrorYhigh(i) / b
+                    mc_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                        mc_error)
+                    if self.plot_systematics:
+                    # syst only
+                        syst_unc_graph.SetPoint(i, x, 1.)
+                        syst_error = syst_graph.GetErrorYhigh(i) / b
+                        syst_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                            syst_error)
+                        # syst + stat
+                        all_unc_graph.SetPoint(i, x, 1.)
+                        tot_unc = math.sqrt(mc_error ** 2 + syst_error ** 2)
+                        all_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                            tot_unc)
 
-                for i in range(binning_args[0]):
-                    x, d, b = c_double(0.), c_double(0.), c_double(0.)
-                    data_graph.GetPoint(i, x, d)
-                    bkg_graph.GetPoint(i, x, b)
-                    d = d.value
-                    b = b.value
-                    if d == EMPTY or b == 0:
-                        ratio_graph.SetPoint(i, x, EMPTY)
-                    else:
-                        ratio_graph.SetPoint(i, x, d / b)
-                        ratio_graph.SetPointEYhigh(i, data_graph.GetErrorYhigh(i) / b)
-                        ratio_graph.SetPointEYlow(i, data_graph.GetErrorYlow(i) / b)
-                    # set the mc uncertainty
-                    if b == 0:
-                        mc_unc_graph.SetPoint(i, x, EMPTY)
-                    else:
-                        mc_unc_graph.SetPoint(i, x, 1.)
-                        mc_error = bkg_graph.GetErrorYhigh(i) / b
-                        mc_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
-                            mc_error)
-                        if self.plot_systematics:
-                        # syst only
-                            syst_unc_graph.SetPoint(i, x, 1.)
-                            syst_error = syst_graph.GetErrorYhigh(i) / b
-                            syst_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
-                                syst_error)
-                            # syst + stat
-                            all_unc_graph.SetPoint(i, x, 1.)
-                            tot_unc = math.sqrt(mc_error ** 2 + syst_error ** 2)
-                            all_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
-                                tot_unc)
+            c.get_pad(2).cd()
+            dummy_ratio_hist.Draw()
+            mc_unc_graph.Draw("2,SAME")
+            if not self.hide_data:
+                ratio_graph.Draw("PEZ,SAME")
+            if self.plot_systematics:
+                # syst_unc_graph.Draw("2,SAME")
+                all_unc_graph.Draw("2,SAME")
 
-                c.get_pad(2).cd()
-                dummy_ratio_hist.Draw()
-                mc_unc_graph.Draw("2,SAME")
-                if not self.hide_data:
-                    ratio_graph.Draw("PEZ,SAME")
-                if self.plot_systematics:
-                    # syst_unc_graph.Draw("2,SAME")
-                    all_unc_graph.Draw("2,SAME")
+            lines = []
+            for y in [0.5, 1.0, 1.5]:
+                l = ROOT.TLine(binning_args[1], y, binning_args[2], y)
+                r.setup_line(l, props={"NDC": False, "LineStyle": 3, "LineWidth": 1,
+                    "LineColor": 1})
+                lines.append(l)
+            for line in lines:
+                line.Draw("same")
 
-                lines = []
-                for y in [0.5, 1.0, 1.5]:
-                    l = ROOT.TLine(binning_args[1], y, binning_args[2], y)
-                    r.setup_line(l, props={"NDC": False, "LineStyle": 3, "LineWidth": 1,
-                        "LineColor": 1})
-                    lines.append(l)
-                for line in lines:
-                    line.Draw("same")
+        outputs = []
+        if self.save_png:
+            outputs.append(self.output()["png"].targets[feature.name].path)
+        if self.save_pdf:
+            outputs.append(self.output()["pdf"].targets[feature.name].path)
+        for output in outputs:
+            c.SaveAs(create_file_dir(output))
 
-            outputs = []
-            if self.save_png:
-                outputs.append(self.output()["png"].targets[feature.name].path)
-            if self.save_pdf:
-                outputs.append(self.output()["pdf"].targets[feature.name].path)
-            for output in outputs:
-                c.SaveAs(create_file_dir(output))
+        if self.save_root:
+            f = ROOT.TFile.Open(create_file_dir(
+                self.output()["root"].targets[feature.name].path), "RECREATE")
+            f.cd()
+            # c.Write("canvas") #FIXME
 
-            if self.save_root:
-                f = ROOT.TFile.Open(create_file_dir(
-                    self.output()["root"].targets[feature.name].path), "RECREATE")
-                f.cd()
-                # c.Write("canvas") #FIXME
+            hist_dir = f.mkdir("histograms")
+            hist_dir.cd()
+            for hist in all_hists:
+                hist.Write(hist.cmt_process_name)
 
-                hist_dir = f.mkdir("histograms")
-                hist_dir.cd()
-                for hist in all_hists:
-                    hist.Write(hist.cmt_process_name)
-                f.Close()
+            if self.plot_systematics:
+                for syst_dir, shape_hists in self.histos["shape"].items():
+                    for hist in shape_hists:
+                        hist.Write("%s_%s" % (hist.cmt_process_name, syst_dir))
+            f.Close()
 
     @law.decorator.notify
     @law.decorator.safe_output
@@ -1033,9 +1037,18 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.fixed_colors:
             colors = list(range(2, 2 + len(self.processes_datasets.keys())))
 
-        self.histos = {}
+        nevents = {}
+        for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+            if not process.isData and self.apply_weights:
+                for dataset in datasets:
+                    inp = inputs["stats"][dataset.name]
+                    with open(inp.path) as f:
+                        stats = json.load(f)
+                        # nevents += stats["nevents"]
+                        nevents[dataset.name] = stats["nweightedevents"]
+
         for feature in self.features:
-            self.histos[feature.name] = {"background": [], "signal": [], "data": [], "all": []}
+            self.histos = {"background": [], "signal": [], "data": [], "all": []}
 
             binning_args, y_axis_adendum = self.get_binning(feature)
             x_title = (str(feature.get_aux("x_title"))
@@ -1043,79 +1056,95 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
             hist_title = "; %s; %s" % (x_title, y_title)
 
+            systs_directions = [("central", "")]
             if self.plot_systematics:
-                self.histos[feature.name]["bkg_histo_syst"] = ROOT.TH1D(
+                self.histos["bkg_histo_syst"] = ROOT.TH1D(
                     randomize("syst"), hist_title, *binning_args)
+                self.histos["shape"] = {}
+                shape_systematics = self.get_systs(feature, True) \
+                    + self.config.get_weights_systematics(self.config.weights[self.category.name], True)
 
-            for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
-                feature_name = feature.name  # FIXME: What about systs?
-                process_histo = ROOT.TH1D(randomize(process.name), hist_title, *binning_args)
-                process_histo.process_label = str(process.label)
-                process_histo.cmt_process_name = process.name
-                process_histo.Sumw2()
-                for dataset in datasets:
-                    dataset_histo = ROOT.TH1D(randomize("tmp"), hist_title, *binning_args)
-                    dataset_histo.Sumw2()
-                    for category in self.expand_category():
-                        inp = inputs["data"][
-                            (dataset.name, category.name)].collection.targets.values()
-                        for elem in inp:
-                            rootfile = ROOT.TFile.Open(elem.path)
-                            histo = copy(rootfile.Get(feature_name))
-                            rootfile.Close()
-                            dataset_histo.Add(histo)
-                    if not process.isData and self.apply_weights:
-                        nevents = 0
-                        inp = inputs["stats"][dataset.name]
-                        with open(inp.path) as f:
-                            stats = json.load(f)
-                            # nevents += stats["nevents"]
-                            nevents += stats["nweightedevents"]
-                        if nevents != 0:
-                            dataset_histo.Scale(dataset.xs * lumi / nevents)
-                            scaling = dataset.get_aux("scaling", None)
-                            if scaling:
-                                print("Scaling {} histo by {} +- {}".format(dataset.name, scaling[0], scaling[1]))
-                                old_errors = [dataset_histo.GetBinError(ibin) / dataset_histo.GetBinContent(ibin)
-                                    if dataset_histo.GetBinContent(ibin) != 0 else 0
-                                    for ibin in range(1, dataset_histo.GetNbinsX() + 1)]
-                                new_errors = [math.sqrt(elem ** 2 + (scaling[1] / scaling[0]) ** 2)
-                                    for elem in old_errors]
-                                dataset_histo.Scale(scaling[0])
-                                for ibin in range(1, dataset_histo.GetNbinsX() + 1):
-                                    dataset_histo.SetBinError(ibin, dataset_histo.GetBinContent(ibin)
-                                        * new_errors[ibin - 1])
+                directions = ["up", "down"]
+                systs_directions += list(itertools.product(shape_systematics, directions))
 
-                    process_histo.Add(dataset_histo)
-                    if self.plot_systematics and not process.isData and not process.isSignal:
-                        dataset_histo_syst = dataset_histo.Clone()
-                        for ibin in range(1, dataset_histo_syst.GetNbinsX() + 1):
-                            dataset_histo_syst.SetBinError(ibin,
-                                float(dataset_histo.GetBinContent(ibin)) * systematics[dataset.name]
-                            )
-                        self.histos[feature.name]["bkg_histo_syst"].Add(dataset_histo_syst)
+            for (syst, d) in systs_directions:
+                feature_name = feature.name if syst == "central" else "%s_%s_%s" % (
+                    feature.name, syst, d)
+                if syst != "central":
+                    self.histos["shape"]["%s_%s" % (syst, d)] = []
+                for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+                    if syst != "central" and process.isData:
+                        continue
+                    process_histo = ROOT.TH1D(randomize(process.name), hist_title, *binning_args)
+                    process_histo.process_label = str(process.label)
+                    process_histo.cmt_process_name = process.name
+                    process_histo.Sumw2()
+                    for dataset in datasets:
+                        dataset_histo = ROOT.TH1D(randomize("tmp"), hist_title, *binning_args)
+                        dataset_histo.Sumw2()
+                        for category in self.expand_category():
+                            inp = inputs["data"][
+                                (dataset.name, category.name)].collection.targets.values()
+                            for elem in inp:
+                                rootfile = ROOT.TFile.Open(elem.path)
+                                histo = copy(rootfile.Get(feature_name))
+                                rootfile.Close()
+                                dataset_histo.Add(histo)
+                            if not process.isData and self.apply_weights:
+                                if nevents[dataset.name] != 0:
+                                    dataset_histo.Scale(dataset.xs * lumi / nevents[dataset.name])
+                                    scaling = dataset.get_aux("scaling", None)
+                                    if scaling:
+                                        print("Scaling {} histo by {} +- {}".format(
+                                            dataset.name, scaling[0], scaling[1]))
+                                        old_errors = [dataset_histo.GetBinError(ibin)\
+                                            / dataset_histo.GetBinContent(ibin)
+                                            if dataset_histo.GetBinContent(ibin) != 0 else 0
+                                            for ibin in range(1, dataset_histo.GetNbinsX() + 1)]
+                                        new_errors = [
+                                            math.sqrt(elem ** 2 + (scaling[1] / scaling[0]) ** 2)
+                                            for elem in old_errors]
+                                        dataset_histo.Scale(scaling[0])
+                                        for ibin in range(1, dataset_histo.GetNbinsX() + 1):
+                                            dataset_histo.SetBinError(
+                                                ibin, dataset_histo.GetBinContent(ibin)
+                                                    * new_errors[ibin - 1])
 
-                yield_error = c_double(0.)
-                process_histo.cmt_yield = process_histo.IntegralAndError(0,
-                    process_histo.GetNbinsX() + 1, yield_error)
-                process_histo.cmt_yield_error = yield_error.value
+                        process_histo.Add(dataset_histo)
+                        if self.plot_systematics and not process.isData and not process.isSignal \
+                                and syst == "central":
+                            dataset_histo_syst = dataset_histo.Clone()
+                            for ibin in range(1, dataset_histo_syst.GetNbinsX() + 1):
+                                dataset_histo_syst.SetBinError(ibin,
+                                    float(dataset_histo.GetBinContent(ibin))\
+                                        * systematics[dataset.name]
+                                )
+                            self.histos["bkg_histo_syst"].Add(dataset_histo_syst)
 
-                if self.fixed_colors:
-                    color = colors[iproc]
-                elif type(process.color) == tuple:
-                    color = ROOT.TColor.GetColor(*process.color)
-                else:
-                    color = process.color
+                    yield_error = c_double(0.)
+                    process_histo.cmt_yield = process_histo.IntegralAndError(0,
+                        process_histo.GetNbinsX() + 1, yield_error)
+                    process_histo.cmt_yield_error = yield_error.value
 
-                if process.isSignal:
-                    self.setup_signal_hist(process_histo, color)
-                    self.histos[feature.name]["signal"].append(process_histo)
-                elif process.isData:
-                    self.setup_data_hist(process_histo, color)
-                    self.histos[feature.name]["data"].append(process_histo)
-                else:
-                    self.setup_background_hist(process_histo, color)
-                    self.histos[feature.name]["background"].append(process_histo)
-                if not process.isData: #or not self.hide_data:
-                   self.histos[feature.name]["all"].append(process_histo)
-        self.plot()
+                    if syst == "central":
+                        if self.fixed_colors:
+                            color = colors[iproc]
+                        elif type(process.color) == tuple:
+                            color = ROOT.TColor.GetColor(*process.color)
+                        else:
+                            color = process.color
+
+                        if process.isSignal:
+                            self.setup_signal_hist(process_histo, color)
+                            self.histos["signal"].append(process_histo)
+                        elif process.isData:
+                            self.setup_data_hist(process_histo, color)
+                            self.histos["data"].append(process_histo)
+                        else:
+                            self.setup_background_hist(process_histo, color)
+                            self.histos["background"].append(process_histo)
+                        if not process.isData: #or not self.hide_data:
+                           self.histos["all"].append(process_histo)
+                    else:
+                        self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
+            self.plot(feature)
