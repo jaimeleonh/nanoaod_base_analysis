@@ -369,14 +369,14 @@ class Config():
 
                 if not isMC:
                     tag = ""
-                elif syst_name == "central":
+                elif syst_name in feature_to_look.systematics:
+                    syst = self.systematics.get(syst_name)
+                    tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
+                else:
                     if feature_to_look.central != "":
                         tag = ""
                     else:
                         tag = "%s" % self.systematics.get(feature_to_look.central).expression
-                elif isMC and syst_name in feature_to_look.systematics:
-                    syst = self.systematics.get(syst_name)
-                    tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
 
                 feature_to_look_expression = add_systematic_tag(feature_to_look.expression, tag)
                 feature_expression = feature_expression.replace(feature_expression[initial: final + 1],
@@ -384,14 +384,16 @@ class Config():
             return feature_expression
 
         elif isinstance(feature, Feature):  # not derived expression and not a category
+            if not isMC:
+                return add_systematic_tag(feature.expression, "")
             tag = ""
-            if isMC and syst_name == "central":
+            if syst_name in feature.systematics:
+                syst = self.systematics.get(syst_name)
+                tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
+            else:
                 if feature.central != "":
                     tag = "%s" % self.systematics.get(feature.central).expression
 
-            elif isMC and syst_name in feature.systematics:
-                syst = self.systematics.get(syst_name)
-                tag = "%s%s" % (syst.expression, eval("syst.%s" % systematic_direction))
             return add_systematic_tag(feature.expression, tag)
         else:
             return get_expression(feature)

@@ -654,34 +654,36 @@
 <span class="k">class</span> <span class="nc">HHLeptonVarRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">HHLeptonVarRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">            using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
-<span class="s2">            using VInt = const ROOT::RVec&lt;int&gt;&amp;;</span>
-<span class="s2">            std::vector&lt;float&gt; get_lepton_values (</span>
-<span class="s2">                int pairType, int dau1_index, int dau2_index,</span>
-<span class="s2">                Vfloat muon_pt, Vfloat muon_mass,</span>
-<span class="s2">                Vfloat electron_pt, Vfloat electron_mass,</span>
-<span class="s2">                Vfloat tau_pt, Vfloat tau_mass</span>
-<span class="s2">            )</span>
-<span class="s2">            {</span>
-<span class="s2">                float dau1_pt, dau1_mass, dau2_pt, dau2_mass;</span>
-<span class="s2">                if (pairType == 0) {</span>
-<span class="s2">                    dau1_pt = muon_pt.at(dau1_index);</span>
-<span class="s2">                    dau1_mass = muon_mass.at(dau1_index);</span>
-<span class="s2">                } else if (pairType == 1) {</span>
-<span class="s2">                    dau1_pt = electron_pt.at(dau1_index);</span>
-<span class="s2">                    dau1_mass = electron_mass.at(dau1_index);</span>
-<span class="s2">                } else if (pairType == 2) {</span>
-<span class="s2">                    dau1_pt = tau_pt.at(dau1_index);</span>
-<span class="s2">                    dau1_mass = tau_mass.at(dau1_index);</span>
-<span class="s2">                } else {</span>
-<span class="s2">                    return {-999., -999., -999., -999.};</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;DAU_VAR&quot;</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;DAU_VAR&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;true&quot;</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">                using VInt = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">                std::vector&lt;float&gt; get_lepton_values (</span>
+<span class="s2">                    int pairType, int dau1_index, int dau2_index,</span>
+<span class="s2">                    Vfloat muon_pt, Vfloat muon_mass,</span>
+<span class="s2">                    Vfloat electron_pt, Vfloat electron_mass,</span>
+<span class="s2">                    Vfloat tau_pt, Vfloat tau_mass</span>
+<span class="s2">                )</span>
+<span class="s2">                {</span>
+<span class="s2">                    float dau1_pt, dau1_mass, dau2_pt, dau2_mass;</span>
+<span class="s2">                    if (pairType == 0) {</span>
+<span class="s2">                        dau1_pt = muon_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = muon_mass.at(dau1_index);</span>
+<span class="s2">                    } else if (pairType == 1) {</span>
+<span class="s2">                        dau1_pt = electron_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = electron_mass.at(dau1_index);</span>
+<span class="s2">                    } else if (pairType == 2) {</span>
+<span class="s2">                        dau1_pt = tau_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = tau_mass.at(dau1_index);</span>
+<span class="s2">                    } else {</span>
+<span class="s2">                        return {-999., -999., -999., -999.};</span>
+<span class="s2">                    }</span>
+<span class="s2">                    dau2_pt = tau_pt.at(dau2_index);</span>
+<span class="s2">                    dau2_mass = tau_mass.at(dau2_index);</span>
+<span class="s2">                    return {dau1_pt, dau1_mass, dau2_pt, dau2_mass};</span>
 <span class="s2">                }</span>
-<span class="s2">                dau2_pt = tau_pt.at(dau2_index);</span>
-<span class="s2">                dau2_mass = tau_mass.at(dau2_index);</span>
-<span class="s2">                return {dau1_pt, dau1_mass, dau2_pt, dau2_mass};</span>
-<span class="s2">            }</span>
-<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
 
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>

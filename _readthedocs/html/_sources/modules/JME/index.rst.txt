@@ -9,8 +9,6 @@ Installation
 RDFModules
 ----------
 
-.. automodule:: Corrections/JME 
-
 .. toctree::
     :maxdepth: 2
    

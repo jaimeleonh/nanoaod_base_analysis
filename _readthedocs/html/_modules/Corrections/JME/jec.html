@@ -104,9 +104,9 @@
                 <span class="k">assert</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span><span class="p">)))</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;JEC_PATH&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="s2">&quot;/libBaseModules.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
-                <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libBaseModules.so&quot;</span><span class="p">)</span>
-            <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Base/Modules&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="k">if</span> <span class="s2">&quot;/libCorrectionsJME.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libCorrectionsJME.so&quot;</span><span class="p">)</span>
+            <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Corrections/JME&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
 
             <span class="k">try</span><span class="p">:</span>
@@ -173,7 +173,7 @@
 
 <span class="sd">    Note: UL2016_preVFP is not implemented</span>
 
-<span class="sd">    :param: jec_sources: names of the systematic sources to consider. They depend on the year:</span>
+<span class="sd">    :param jec_sources: names of the systematic sources to consider. They depend on the year:</span>
 
 <span class="sd">        - 2016: ``FlavorQCD``, ``RelativeBal``, ``HF``, ``BBEC1``, ``EC2``, ``Absolute``,\</span>
 <span class="sd">        ``BBEC1_2016``, ``EC2_2016``, ``Absolute_2016``, ``HF_2016``, ``RelativeSample_2016``,\</span>

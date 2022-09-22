@@ -48,6 +48,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../BaseModules/index.html">BaseModules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../BTV/index.html">BTV</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../EGM/index.html">EGM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../JME/index.html">JME</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="index.html">TAU</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="index.html#installation">Installation</a></li>
 <li class="toctree-l3 current"><a class="reference internal" href="index.html#rdfmodules">RDFModules</a><ul class="current">
@@ -105,7 +106,16 @@
 <dt class="sig sig-object py" id="Corrections.TAU.tauCorrections.tauSFRDF">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Corrections.TAU.tauCorrections.</span></span><span class="sig-name descname"><span class="pre">tauSFRDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/Corrections/TAU/tauCorrections.html#tauSFRDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Corrections.TAU.tauCorrections.tauSFRDF" title="Permalink to this definition"></a></dt>
 <dd><p>Bases:</p>
-<p>Module to obtain deepTauId SFs and TES with their up/down uncertainties.</p>
+<p>Module to obtain DeepTau2017v2p1 SFs and TES with their up/down uncertainties.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vsjet_wps</strong> (<em>list of str</em>) – DeepTau2017v2p1VSjet WPs to consider. Default: <cite>[Medium, Tight]</cite></p></li>
+<li><p><strong>vse_wps</strong> (<em>list of str</em>) – DeepTau2017v2p1VSe WPs to consider.  Default: <cite>[VVLoose, Tight]</cite></p></li>
+<li><p><strong>vsmu_wps</strong> (<em>list of str</em>) – DeepTau2017v2p1VSmu WPs to consider. Default: <cite>[VLoose, Tight]</cite></p></li>
+</ul>
+</dd>
+</dl>
 <p>YAML sintaxis:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
 <span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tauSFRDF</span><span class="w"></span>
@@ -114,6 +124,9 @@
 <span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
 <span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
 <span class="w">        </span><span class="nt">isUL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&#39;ul&#39;)</span><span class="w"></span>
+<span class="w">        </span><span class="nt">vsjet_wps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Medium</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Tight</span><span class="p p-Indicator">]</span><span class="w"></span>
+<span class="w">        </span><span class="nt">vse_wps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">VVLoose</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Tight</span><span class="p p-Indicator">]</span><span class="w"></span>
+<span class="w">        </span><span class="nt">vsmu_wps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">VLoose</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Tight</span><span class="p p-Indicator">]</span><span class="w"></span>
 </pre></div>
 </div>
 </dd></dl>
