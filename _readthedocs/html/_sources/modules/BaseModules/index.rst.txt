@@ -16,3 +16,4 @@ RDFModules
    
     baseModules
     METfilters
+    lumiFilter
