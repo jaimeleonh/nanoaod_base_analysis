@@ -5,8 +5,10 @@ TAU Corrections
 
 .. contents::
 
-RDFModule ``tauSFRDF``
----------------------------
+.. _Tau_tauSFRDF:
+
+``tauSFRDF``
+------------
 
 .. autoclass:: tauSFRDF
    :members:

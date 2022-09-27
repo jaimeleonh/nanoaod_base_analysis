@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BTV &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>MUO &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -19,8 +19,8 @@
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="b-tagging" href="btagging.html" />
-    <link rel="prev" title="Luminosity json filter" href="../BaseModules/lumiFilter.html" /> 
+    <link rel="next" title="muon SF" href="muon.html" />
+    <link rel="prev" title="Jet Energy Corrections" href="../JME/jec.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,17 +46,17 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">Modules Reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../BaseModules/index.html">BaseModules</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">BTV</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#rdfmodules">RDFModules</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="btagging.html">b-tagging</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="../BTV/index.html">BTV</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../EGM/index.html">EGM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../JME/index.html">JME</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../MUO/index.html">MUO</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">MUO</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#rdfmodules">RDFModules</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="muon.html">muon SF</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../TAU/index.html">TAU</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../HHbbtt/index.html">HH-&gt;bbtt</a></li>
 </ul>
@@ -78,9 +78,9 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
           <li><a href="../index.html">Modules Reference</a> &raquo;</li>
-      <li>BTV</li>
+      <li>MUO</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../../_sources/modules/BTV/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/modules/MUO/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -88,18 +88,18 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="btv">
-<h1>BTV<a class="headerlink" href="#btv" title="Permalink to this heading"></a></h1>
+  <section id="muo">
+<h1>MUO<a class="headerlink" href="#muo" title="Permalink to this heading"></a></h1>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections.git</span> <span class="pre">Corrections/BTV</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections.git</span> <span class="pre">Corrections/MUO</span></code></p>
 </section>
 <section id="rdfmodules">
 <h2>RDFModules<a class="headerlink" href="#rdfmodules" title="Permalink to this heading"></a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="btagging.html">b-tagging</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="btagging.html#rdfmodule-btag-sfrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">btag_SFRDF</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="muon.html">muon SF</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="muon.html#rdfmodule-musfrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">muSFRDF</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -111,8 +111,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../BaseModules/lumiFilter.html" class="btn btn-neutral float-left" title="Luminosity json filter" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="btagging.html" class="btn btn-neutral float-right" title="b-tagging" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../JME/jec.html" class="btn btn-neutral float-left" title="Jet Energy Corrections" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="muon.html" class="btn btn-neutral float-right" title="muon SF" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

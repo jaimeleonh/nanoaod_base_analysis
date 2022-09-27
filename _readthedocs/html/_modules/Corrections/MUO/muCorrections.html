@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Corrections.EGM.eleCorrections &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>Corrections.MUO.muCorrections &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -59,7 +59,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
           <li><a href="../../index.html">Module code</a> &raquo;</li>
-      <li>Corrections.EGM.eleCorrections</li>
+      <li>Corrections.MUO.muCorrections</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -68,7 +68,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for Corrections.EGM.eleCorrections</h1><div class="highlight"><pre>
+  <h1>Source code for Corrections.MUO.muCorrections</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os</span>
 
 <span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
@@ -77,22 +77,22 @@
 <span class="kn">import</span> <span class="nn">correctionlib</span>
 <span class="n">correctionlib</span><span class="o">.</span><span class="n">register_pyroot_binding</span><span class="p">()</span>
 
-<span class="n">json_path</span> <span class="o">=</span> <span class="s2">&quot;/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/EGM/</span><span class="si">{}</span><span class="s2">/electron.json.gz&quot;</span>
+<span class="n">json_path</span> <span class="o">=</span> <span class="s2">&quot;/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/MUO/</span><span class="si">{}</span><span class="s2">/muon_Z.json.gz&quot;</span>
 
 
-<span class="k">class</span> <span class="nc">eleSFRDFProducer</span><span class="p">():</span>
+<span class="k">class</span> <span class="nc">muSFRDFProducer</span><span class="p">():</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">wps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;wps&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;wp80iso&quot;</span><span class="p">])</span>
-        
+        <span class="bp">self</span><span class="o">.</span><span class="n">wps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;wps&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;tight_id&quot;</span><span class="p">,</span> <span class="s2">&quot;tight_reliso&quot;</span><span class="p">])</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only implemented for UL datasets&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2018&quot;</span>
-                <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_UL&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2018_UL&quot;</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;2016 and 2017 not yet implemented&quot;</span><span class="p">)</span>
 
@@ -100,44 +100,60 @@
                 <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libCorrectionsWrapper.so&quot;</span><span class="p">)</span>
             <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span>
                 <span class="s1">&#39;#include &quot;$CMSSW_BASE/src/Corrections/Wrapper/interface/custom_sf.h&quot;&#39;</span><span class="p">))</span>
+
+            <span class="c1"># Declaring two objects, one for tightID and the other for tightRelIso.</span>
+            <span class="c1"># Of course this should be changed if more WPs are needed, maybe looping over </span>
+            <span class="c1"># an input parameter.</span>
             <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span>
-                <span class="s1">&#39;auto corr = MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;UL-Electron-ID-SF&quot;);&#39;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
-                
+                <span class="s1">&#39;auto corr_tightid = &#39;</span>
+                    <span class="s1">&#39;MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;NUM_TightID_DEN_TrackerMuons&quot;);&#39;</span>
+                <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span>
+                <span class="s1">&#39;auto corr_tightreliso = &#39;</span>
+                    <span class="s1">&#39;MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;NUM_TightRelIso_DEN_TightIDandIPCut&quot;);&#39;</span>
+                <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+
             <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">                using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
 <span class="s2">                using Vint = const ROOT::RVec&lt;int&gt;&amp;;</span>
-<span class="s2">                ROOT::RVec&lt;double&gt; get_ele_sf(</span>
-<span class="s2">                        std::string syst, std::string wp, Vfloat eta, Vfloat pt) {</span>
+<span class="s2">                ROOT::RVec&lt;double&gt; get_mu_tight_id_sf(std::string syst, Vfloat eta, Vfloat pt) {</span>
 <span class="s2">                    ROOT::RVec&lt;double&gt; sf;</span>
 <span class="s2">                    for (size_t i = 0; i &lt; pt.size(); i++) {</span>
-<span class="s2">                        if (pt[i] &lt; 10.) sf.push_back(1.);</span>
-<span class="s2">                        else sf.push_back(corr.eval({&quot;</span><span class="si">%s</span><span class="s2">&quot;, syst, wp, eta[i], pt[i]}));</span>
+<span class="s2">                        if (pt[i] &lt; 15. || fabs(eta[i]) &gt; 2.4) sf.push_back(1.);</span>
+<span class="s2">                        else sf.push_back(corr_tightid.eval({&quot;</span><span class="si">%s</span><span class="s2">&quot;, fabs(eta[i]), pt[i], syst}));</span>
 <span class="s2">                    }</span>
 <span class="s2">                    return sf;</span>
 <span class="s2">                }</span>
-<span class="s2">            &quot;&quot;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+<span class="s2">                ROOT::RVec&lt;double&gt; get_mu_tight_reliso_sf(std::string syst, Vfloat eta, Vfloat pt) {</span>
+<span class="s2">                    ROOT::RVec&lt;double&gt; sf;</span>
+<span class="s2">                    for (size_t i = 0; i &lt; pt.size(); i++) {</span>
+<span class="s2">                        if (pt[i] &lt; 15. || fabs(eta[i]) &gt; 2.4) sf.push_back(1.);</span>
+<span class="s2">                        else sf.push_back(corr_tightreliso.eval({&quot;</span><span class="si">%s</span><span class="s2">&quot;, fabs(eta[i]), pt[i], syst}));</span>
+<span class="s2">                    }</span>
+<span class="s2">                    return sf;</span>
+<span class="s2">                }</span>
+<span class="s2">            &quot;&quot;&quot;</span>  <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
 
         <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">syst</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;sf&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;_up&quot;</span><span class="p">,</span> <span class="s2">&quot;sfup&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;_down&quot;</span><span class="p">,</span> <span class="s2">&quot;sfdown&quot;</span><span class="p">)]:</span>
-            <span class="k">for</span> <span class="n">wp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wps</span><span class="p">:</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;elesf_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
-                    <span class="s1">&#39;get_ele_sf(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, Electron_eta, Electron_pt)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">syst</span><span class="p">,</span> <span class="n">wp</span><span class="p">))</span>
-                <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;elesf_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">corr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wps</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">syst</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;sf&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;_up&quot;</span><span class="p">,</span> <span class="s2">&quot;systup&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;_down&quot;</span><span class="p">,</span> <span class="s2">&quot;systdown&quot;</span><span class="p">)]:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;musf_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">corr</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
+                    <span class="s1">&#39;get_mu_</span><span class="si">%s</span><span class="s1">_sf(&quot;</span><span class="si">%s</span><span class="s1">&quot;, Muon_eta, Muon_pt)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">corr</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
+                <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;musf_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">corr</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">))</span>
 
         <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
 
 
-<div class="viewcode-block" id="eleSFRDF"><a class="viewcode-back" href="../../../modules/EGM/electron.html#Corrections.EGM.eleCorrections.eleSFRDF">[docs]</a><span class="k">def</span> <span class="nf">eleSFRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="muSFRDF"><a class="viewcode-back" href="../../../modules/MUO/muon.html#Corrections.MUO.muCorrections.muSFRDF">[docs]</a><span class="k">def</span> <span class="nf">muSFRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Module to obtain electron SFs with their uncertainties.</span>
+<span class="sd">    Module to obtain muon SFs with their uncertainties.</span>
 
-<span class="sd">    :param wps: name of the wps to consider among ``Loose``, ``Medium``,</span>
-<span class="sd">        ``RecoAbove20``, ``RecoBelow20``, ``Tight``, ``Veto``, ``wp80iso`` (default),</span>
-<span class="sd">        ``wp80noiso``, ``wp90iso,`` ``wp90noiso``.</span>
+<span class="sd">    :param wps: name of the wps to consider among ``tight_id``, ``tight_reliso``.</span>
+<span class="sd">        Note: probably more can be considered.</span>
 <span class="sd">    :type wps: list of str</span>
 
 <span class="sd">    YAML sintaxis:</span>
@@ -145,16 +161,15 @@
 <span class="sd">    .. code-block:: yaml</span>
 
 <span class="sd">        codename:</span>
-<span class="sd">            name: eleSFRDF</span>
-<span class="sd">            path: Corrections.EGM.eleCorrections</span>
+<span class="sd">            name: muSFRDF</span>
+<span class="sd">            path: Corrections.MUO.muCorrections</span>
 <span class="sd">            parameters:</span>
 <span class="sd">                isMC: self.dataset.process.isMC</span>
 <span class="sd">                year: self.config.year</span>
 <span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
-<span class="sd">                wps: [wp80iso, ...]</span>
+<span class="sd">                wps: [tight_id, tight_reliso]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">eleSFRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">muSFRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 </pre></div>
 

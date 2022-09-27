@@ -12,4 +12,5 @@ RDFModules
 .. toctree::
     :maxdepth: 3
 
-    hhlepton 
+    hhlepton
+    idiso 

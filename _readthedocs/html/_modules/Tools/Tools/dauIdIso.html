@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tools.Tools.dauIdIso &mdash; nanoaod-base-analysis 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>Tools.Tools.dauIdIso</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Tools.Tools.dauIdIso</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span> <span class="k">as</span> <span class="n">copy</span>
+
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
+
+<span class="kn">from</span> <span class="nn">Base.Modules.baseModules</span> <span class="kn">import</span> <span class="n">JetLepMetSyst</span>
+
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">dauIdIsoSFRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">dauIdIsoSFRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+            <span class="n">default_systs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;muon_id&quot;</span><span class="p">,</span> <span class="s2">&quot;muon_iso&quot;</span><span class="p">,</span> <span class="s2">&quot;ele_iso&quot;</span><span class="p">,</span> <span class="s2">&quot;tau_vsjet&quot;</span><span class="p">,</span> <span class="s2">&quot;tau_vse&quot;</span><span class="p">,</span> <span class="s2">&quot;tau_vsmu&quot;</span><span class="p">]</span>
+            <span class="n">systnames</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;systs&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;central&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">default_systs</span><span class="p">)</span>
+            <span class="n">template</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">default_systs</span><span class="p">))]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">syst_names</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">systs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">systnames</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;central&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">syst_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">ind</span> <span class="o">=</span> <span class="n">default_systs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;_up&quot;</span><span class="p">,</span> <span class="s2">&quot;_down&quot;</span><span class="p">]:</span>
+                        <span class="n">tmp</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">syst_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
+                        <span class="n">tmp</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Systematic </span><span class="si">%s</span><span class="s2"> not available&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">                double get_dauIdIso_sf(</span>
+<span class="s2">                        int pairType, int dau1_index, int dau2_index, Vfloat Tau_pt,</span>
+<span class="s2">                        Vfloat musf_id, Vfloat musf_reliso, Vfloat elesf, </span>
+<span class="s2">                        Vfloat Tau_sfDeepTau2017v2p1VSjet_pt, Vfloat Tau_sfDeepTau2017v2p1VSjet_dm,</span>
+<span class="s2">                        Vfloat Tau_sfDeepTau2017v2p1VSe, Vfloat Tau_sfDeepTau2017v2p1VSmu) {</span>
+<span class="s2">                    double idAndIsoSF_leg1 = 1.;</span>
+<span class="s2">                    if (pairType == 0) {</span>
+<span class="s2">                        idAndIsoSF_leg1 = musf_id.at(dau1_index) * musf_reliso.at(dau1_index);</span>
+<span class="s2">                    } else if (pairType == 1) {</span>
+<span class="s2">                        idAndIsoSF_leg1 = elesf.at(dau1_index);</span>
+<span class="s2">                    } else if (pairType == 2) {</span>
+<span class="s2">                        if (Tau_pt[dau1_index] &lt; 40)</span>
+<span class="s2">                            idAndIsoSF_leg1 = Tau_sfDeepTau2017v2p1VSjet_pt.at(dau1_index);</span>
+<span class="s2">                        else idAndIsoSF_leg1 = Tau_sfDeepTau2017v2p1VSjet_dm.at(dau1_index);</span>
+
+<span class="s2">                        idAndIsoSF_leg1 *= Tau_sfDeepTau2017v2p1VSe.at(dau1_index) *</span>
+<span class="s2">                            Tau_sfDeepTau2017v2p1VSmu.at(dau1_index);</span>
+<span class="s2">                    }</span>
+<span class="s2">                    double idAndIsoSF_leg2 = 1.;</span>
+<span class="s2">                    if (pairType == 2 &amp;&amp; Tau_pt[dau1_index] &gt; 40)</span>
+<span class="s2">                        idAndIsoSF_leg2 = Tau_sfDeepTau2017v2p1VSjet_dm.at(dau2_index);</span>
+<span class="s2">                    else</span>
+<span class="s2">                        idAndIsoSF_leg2 = Tau_sfDeepTau2017v2p1VSjet_pt.at(dau2_index);</span>
+<span class="s2">                    idAndIsoSF_leg2 *= Tau_sfDeepTau2017v2p1VSe.at(dau2_index) *</span>
+<span class="s2">                        Tau_sfDeepTau2017v2p1VSmu.at(dau2_index);</span>
+<span class="s2">                    return idAndIsoSF_leg1 * idAndIsoSF_leg2;</span>
+<span class="s2">                }</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">syst_dir</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">syst_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">syst_dir</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;idAndIsoAndFakeSF</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span>
+                <span class="s2">&quot;get_dauIdIso_sf(pairType, dau1_index, dau2_index, Tau_pt</span><span class="si">{0}</span><span class="s2">, &quot;</span>
+                    <span class="s2">&quot;musf_tight_id</span><span class="si">{1[0]}</span><span class="s2">, musf_tight_reliso</span><span class="si">{1[1]}</span><span class="s2">, &quot;</span>
+                    <span class="s2">&quot;elesf_wp80iso</span><span class="si">{1[2]}</span><span class="s2">, Tau_sfDeepTau2017v2p1VSjet_pt_binned_Medium</span><span class="si">{1[3]}</span><span class="s2">, &quot;</span>
+                    <span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_dm_binned_Medium</span><span class="si">{1[3]}</span><span class="s2">, &quot;</span>
+                    <span class="s2">&quot;Tau_sfDeepTau2017v2p1VSe_VVLoose</span><span class="si">{1[4]}</span><span class="s2">,&quot;</span>
+                    <span class="s2">&quot;Tau_sfDeepTau2017v2p1VSmu_VLoose</span><span class="si">{1[5]}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">,</span> <span class="n">syst_dir</span><span class="p">))</span>
+            <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;idAndIsoAndFakeSF</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
+
+
+<div class="viewcode-block" id="dauIdIsoSFRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/idiso.html#Tools.Tools.dauIdIso.dauIdIsoSFRDF">[docs]</a><span class="k">def</span> <span class="nf">dauIdIsoSFRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the ID and Isolation SF applied to the two leptons with the desired systematics.</span>
+
+<span class="sd">    :param systs: Systematics to be considered. Default: [``central``, ``muon_id``, ``muon_iso``,</span>
+<span class="sd">        ``ele_iso``, ``tau_vsjet``, ``tau_vse``, ``tau_vsmu``]. </span>
+<span class="sd">    :type systs: list of str</span>
+
+<span class="sd">    Required RDFModules: :ref:`HHLepton_HHLeptonRDF`, :ref:`Electron_eleSFRDF`,</span>
+<span class="sd">        :ref:`Muon_muSFRDF`, :ref:`Tau_tauSFRDF`</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: dauIdIsoSFRDF</span>
+<span class="sd">            path: Tools.Tools.dauIdIso</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+<span class="sd">                systs: [central, ...]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">dauIdIsoSFRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+       
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

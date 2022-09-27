@@ -5,8 +5,10 @@ electron SF
 
 .. contents::
 
-RDFModule ``eleSFRDF``
-------------------------------
+.. _Electron_eleSFRDF:
+
+``eleSFRDF``
+------------
 
 .. autoclass:: eleSFRDF
    :members:
