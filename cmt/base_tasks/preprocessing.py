@@ -833,7 +833,7 @@ class EventCounterDAS(DatasetTask):
             }
         with open(create_file_dir(self.output().path), "w+") as f:
             json.dump(output_d, f, indent=4)
-
+        os.remove(tmpname)
 
 class EventCounterDASWrapper(DatasetSuperWrapperTask):
     """
