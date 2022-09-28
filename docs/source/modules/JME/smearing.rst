@@ -5,20 +5,20 @@ Smearing
 
 .. contents::
 
-RDFModule ``jetSmearerRDF``
----------------------------
+``jetSmearerRDF``
+-----------------
 
 .. autoclass:: jetSmearerRDF
    :members:
 
-RDFModule ``jetVarRDF``
----------------------------
+``jetVarRDF``
+-------------
 
 .. autoclass:: jetVarRDF
    :members:
 
-RDFModule ``metSmearerRDF``
----------------------------
+``metSmearerRDF``
+-----------------
 
 .. autoclass:: metSmearerRDF
    :members:

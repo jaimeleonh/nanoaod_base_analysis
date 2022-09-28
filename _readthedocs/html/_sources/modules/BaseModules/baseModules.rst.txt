@@ -5,9 +5,18 @@ Basic modules
 
 .. contents::
 
-RDFModule ``VarFromVectorRDF``
-------------------------------
+
+``VarFromVectorRDF``
+--------------------
 
 .. autoclass:: VarFromVectorRDF
+   :members:
+
+.. _BaseModules_JetLepMetSyst:
+
+``JetLepMetSyst``
+------------------------------
+
+.. autoclass:: JetLepMetSyst
    :members:
 

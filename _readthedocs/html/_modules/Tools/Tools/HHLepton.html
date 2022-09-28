@@ -6,6 +6,7 @@
   <title>Tools.Tools.HHLepton &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -15,6 +16,8 @@
         <script src="../../../_static/underscore.js"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/design-tabs.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -42,6 +45,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
 </ul>
 
         </div>
@@ -503,6 +507,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">year</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">runPeriod</span> <span class="o">=</span> <span class="n">runPeriod</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span> <span class="o">=</span> <span class="n">df_filter</span>
+        <span class="n">vvvl_vsjet</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vvvl_vsjet&quot;</span><span class="p">)</span>
+        <span class="n">vl_vse</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vl_vse&quot;</span><span class="p">)</span>
+        <span class="n">vvl_vse</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vvl_vse&quot;</span><span class="p">)</span>
+        <span class="n">t_vsmu</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;t_vsmu&quot;</span><span class="p">)</span>
+        <span class="n">vl_vsmu</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vl_vsmu&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="s2">&quot;/libToolsTools.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
             <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libToolsTools.so&quot;</span><span class="p">)</span>
@@ -511,8 +520,8 @@
             <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
         <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/HHLeptonInterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
         <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">            auto HHLepton = HHLeptonInterface();</span>
-<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+<span class="s2">            auto HHLepton = HHLeptonInterface(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">);</span>
+<span class="s2">        &quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">vvvl_vsjet</span><span class="p">,</span> <span class="n">vl_vse</span><span class="p">,</span> <span class="n">vvl_vse</span><span class="p">,</span> <span class="n">t_vsmu</span><span class="p">,</span> <span class="n">vl_vsmu</span><span class="p">))</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mutau_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_IsoMu22&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu22_eta2p1&quot;</span><span class="p">,</span>
             <span class="s2">&quot;HLT_IsoTkMu22&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoTkMu22_eta2p1&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu24&quot;</span><span class="p">,</span> <span class="s2">&quot;HLT_IsoMu27&quot;</span><span class="p">,</span>
@@ -647,6 +656,53 @@
 
 
 <div class="viewcode-block" id="HHLeptonRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/hhlepton.html#Tools.Tools.HHLepton.HHLeptonRDF">[docs]</a><span class="k">def</span> <span class="nf">HHLeptonRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the index of the two selected taus + several of their variables not affected by</span>
+<span class="sd">    systematics.</span>
+
+<span class="sd">    Lepton systematics (used for pt and mass variables) can be modified using the parameters from </span>
+<span class="sd">    :ref:`BaseModules_JetLepMetSyst`.</span>
+
+<span class="sd">    :param runPeriod: run period in caps (data only)</span>
+<span class="sd">    :type runPeriod: str</span>
+
+<span class="sd">    :param vvvl_vsjet: VVVLoose DeepTauVSjet WP value</span>
+<span class="sd">    :type vvvl_vsjet: int</span>
+
+<span class="sd">    :param vl_vse: VLoose DeepTauVSe WP value</span>
+<span class="sd">    :type vl_vse: int</span>
+
+<span class="sd">    :param vvl_vse: VVLoose DeepTaVSe WP value</span>
+<span class="sd">    :type vvl_vse: int</span>
+
+<span class="sd">    :param t_vsmu: Tight DeepTauVSmu WP value</span>
+<span class="sd">    :type t_vsmu: int</span>
+
+<span class="sd">    :param vl_vsmu: VLoose DeepTauVSmu WP value</span>
+<span class="sd">    :type vl_vsmu: int</span>
+
+<span class="sd">    :param filter: whether to filter out output events if they don&#39;t have 2 lepton candidates</span>
+<span class="sd">    :type filter: bool</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: HHLeptonRDF</span>
+<span class="sd">            path: Tools.Tools.HHLepton</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+<span class="sd">                year: self.config.year</span>
+<span class="sd">                runPeriod: self.dataset.runPeriod</span>
+<span class="sd">                vvvl_vsjet: self.config.deeptau.vsjet.VVVLoose</span>
+<span class="sd">                vl_vse: self.config.deeptau.vse.VLoose</span>
+<span class="sd">                vvl_vse: self.config.deeptau.vse.VVLoose</span>
+<span class="sd">                t_vsmu: self.config.deeptau.vsmu.Tight</span>
+<span class="sd">                vl_vsmu: self.config.deeptau.vsmu.VLoose</span>
+<span class="sd">                filter: True</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">df_filter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;filter&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHLeptonRDFProducer</span><span class="p">(</span><span class="n">df_filter</span><span class="o">=</span><span class="n">df_filter</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
@@ -701,8 +757,27 @@
         <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
 
 
-<span class="k">def</span> <span class="nf">HHLeptonVarRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHLeptonVarRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<div class="viewcode-block" id="HHLeptonVarRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/hhlepton.html#Tools.Tools.HHLepton.HHLeptonVarRDF">[docs]</a><span class="k">def</span> <span class="nf">HHLeptonVarRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the pt and mass of the selected taus possibly including systematics</span>
+
+<span class="sd">    Lepton systematics (used for pt and mass variables) can be modified using the parameters from </span>
+<span class="sd">    :ref:`BaseModules_JetLepMetSyst`.</span>
+
+<span class="sd">    Required RDFModules: :ref:`HHLepton_HHLeptonRDF`.</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: HHLeptonVarRDF</span>
+<span class="sd">            path: Tools.Tools.HHLepton</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHLeptonVarRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

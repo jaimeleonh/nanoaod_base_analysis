@@ -5,8 +5,8 @@ b-tagging
 
 .. contents::
 
-RDFModule ``btag_SFRDF``
----------------------------
+``btag_SFRDF``
+--------------
 
 .. autoclass:: btag_SFRDF
    :members:

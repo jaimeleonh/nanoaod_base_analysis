@@ -102,6 +102,7 @@
 <li><p><a class="reference internal" href="#hhlepton" id="id1">HHLepton</a></p>
 <ul>
 <li><p><a class="reference internal" href="#hhleptonrdf" id="id2"><code class="docutils literal notranslate"><span class="pre">HHLeptonRDF</span></code></a></p></li>
+<li><p><a class="reference internal" href="#hhleptonvarrdf" id="id3"><code class="docutils literal notranslate"><span class="pre">HHLeptonVarRDF</span></code></a></p></li>
 </ul>
 </li>
 </ul>
@@ -112,6 +113,60 @@
 <dt class="sig sig-object py" id="Tools.Tools.HHLepton.HHLeptonRDF">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Tools.Tools.HHLepton.</span></span><span class="sig-name descname"><span class="pre">HHLeptonRDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/Tools/Tools/HHLepton.html#HHLeptonRDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Tools.Tools.HHLepton.HHLeptonRDF" title="Permalink to this definition"></a></dt>
 <dd><p>Bases:</p>
+<p>Returns the index of the two selected taus + several of their variables not affected by
+systematics.</p>
+<p>Lepton systematics (used for pt and mass variables) can be modified using the parameters from 
+<a class="reference internal" href="../BaseModules/baseModules.html#basemodules-jetlepmetsyst"><span class="std std-ref">JetLepMetSyst</span></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>runPeriod</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – run period in caps (data only)</p></li>
+<li><p><strong>vvvl_vsjet</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – VVVLoose DeepTauVSjet WP value</p></li>
+<li><p><strong>vl_vse</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – VLoose DeepTauVSe WP value</p></li>
+<li><p><strong>vvl_vse</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – VVLoose DeepTaVSe WP value</p></li>
+<li><p><strong>t_vsmu</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – Tight DeepTauVSmu WP value</p></li>
+<li><p><strong>vl_vsmu</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – VLoose DeepTauVSmu WP value</p></li>
+<li><p><strong>filter</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to filter out output events if they don’t have 2 lepton candidates</p></li>
+</ul>
+</dd>
+</dl>
+<p>YAML sintaxis:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HHLeptonRDF</span><span class="w"></span>
+<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.HHLepton</span><span class="w"></span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
+<span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
+<span class="w">        </span><span class="nt">runPeriod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.runPeriod</span><span class="w"></span>
+<span class="w">        </span><span class="nt">vvvl_vsjet</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsjet.VVVLoose</span><span class="w"></span>
+<span class="w">        </span><span class="nt">vl_vse</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vse.VLoose</span><span class="w"></span>
+<span class="w">        </span><span class="nt">vvl_vse</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vse.VVLoose</span><span class="w"></span>
+<span class="w">        </span><span class="nt">t_vsmu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsmu.Tight</span><span class="w"></span>
+<span class="w">        </span><span class="nt">vl_vsmu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsmu.VLoose</span><span class="w"></span>
+<span class="w">        </span><span class="nt">filter</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span><span class="w"></span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="hhleptonvarrdf">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">HHLeptonVarRDF</span></code></a><a class="headerlink" href="#hhleptonvarrdf" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="Tools.Tools.HHLepton.HHLeptonVarRDF">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Tools.Tools.HHLepton.</span></span><span class="sig-name descname"><span class="pre">HHLeptonVarRDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/Tools/Tools/HHLepton.html#HHLeptonVarRDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Tools.Tools.HHLepton.HHLeptonVarRDF" title="Permalink to this definition"></a></dt>
+<dd><p>Bases:</p>
+<p>Returns the pt and mass of the selected taus possibly including systematics</p>
+<p>Lepton systematics (used for pt and mass variables) can be modified using the parameters from 
+<a class="reference internal" href="../BaseModules/baseModules.html#basemodules-jetlepmetsyst"><span class="std std-ref">JetLepMetSyst</span></a>.</p>
+<p>Required RDFModules: <a class="reference internal" href="#hhlepton-hhleptonrdf"><span class="std std-ref">HHLeptonRDF</span></a>.</p>
+<p>YAML sintaxis:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HHLeptonVarRDF</span><span class="w"></span>
+<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.HHLepton</span><span class="w"></span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

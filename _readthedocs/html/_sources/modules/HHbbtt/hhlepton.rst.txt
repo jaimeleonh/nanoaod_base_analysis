@@ -13,3 +13,8 @@ HHLepton
 .. autoclass:: HHLeptonRDF
    :members:
 
+``HHLeptonVarRDF``
+------------------
+
+.. autoclass:: HHLeptonVarRDF
+   :members:

@@ -5,8 +5,8 @@ Luminosity json filter
 
 .. contents::
 
-RDFModule ``lumiFilterRDF``
-------------------------------
+``lumiFilterRDF``
+-----------------
 
 .. autoclass:: lumiFilterRDF
    :members:

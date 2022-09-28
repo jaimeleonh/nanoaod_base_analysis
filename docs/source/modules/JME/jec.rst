@@ -5,8 +5,8 @@ Jet Energy Corrections
 
 .. contents::
 
-RDFModule ``jecProviderRDF``
-----------------------------
+``jecProviderRDF``
+------------------
 
 .. autoclass:: jecProviderRDF
    :members:

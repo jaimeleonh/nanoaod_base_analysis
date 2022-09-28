@@ -5,8 +5,8 @@ METfilters
 
 .. contents::
 
-RDFModule ``MetFilterRDF``
---------------------------
+``MetFilterRDF``
+----------------
 
 .. autoclass:: MetFilterRDF
    :members:
