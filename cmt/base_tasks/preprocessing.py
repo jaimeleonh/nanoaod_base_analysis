@@ -777,3 +777,73 @@ class MergeCategorizationStatsWrapper(DatasetSuperWrapperTask):
     """
     def atomic_requires(self, dataset):
         return MergeCategorizationStats.req(self, dataset_name=dataset.name)
+
+
+class EventCounterDAS(DatasetTask):
+    """
+    Performs a counting of the events with and without applying the necessary weights.
+    Weights are read from the config file.
+    In case they have to be computed, RDF modules can be run.
+
+    Example command:
+
+    ``law run EventCounterDAS --version test  --config-name base_config --dataset-name ggf_sm``
+
+    :param use_secondary_dataset: whether to use the dataset included in the secondary_dataset
+        parameter from the dataset instead of the actual dataset
+    :type use_secondary_dataset: bool
+    """
+    use_secondary_dataset = luigi.BoolParameter(default=False, description="whether to use "
+        "secondary_dataset instead of the actual dataset or folder, default: False")
+
+    def requires(self):
+        """
+        No requirements needed
+        """
+        return {}
+
+    def output(self):
+        """
+        :return: One file for the whole dataset
+        :rtype: `.json`
+        """
+        return self.local_target("stats.json")
+
+    def run(self):
+        """
+        Asks for the numbers of events using dasgoclient and stores them in the output json file
+        """
+        from analysis_tools.utils import randomize
+        from subprocess import call
+
+        tmpname = randomize("tmp")
+        cmd = 'dasgoclient --query=="summary dataset={}" > {}'
+        if not self.use_secondary_dataset:
+            assert self.dataset.dataset
+            rc = call(cmd.format(self.dataset.dataset, tmpname), shell = True)
+        else:
+            assert self.dataset.get_aux("secondary_dataset", None)
+            rc = call(cmd.format(self.dataset.get_aux("secondary_dataset"), tmpname), shell = True)
+        if rc == 0:
+            with open(tmpname) as f:
+                d = json.load(f)
+            output_d = {
+                "nevents": d[0]["nevents"],
+                "nweightedevents": d[0]["nevents"],
+            }
+        with open(create_file_dir(self.output().path), "w+") as f:
+            json.dump(output_d, f, indent=4)
+
+
+class EventCounterDASWrapper(DatasetSuperWrapperTask):
+    """
+    Wrapper task to run the EventCounterDAS task over several datasets in parallel.
+
+    Example command:
+
+    ``law run EventCounterDASWrapper --version test  --config-name base_config \
+--dataset-names tt_dl,tt_sl --workers 2``
+    """
+
+    def atomic_requires(self, dataset):
+        return EventCounterDAS.req(self, dataset_name=dataset.name)

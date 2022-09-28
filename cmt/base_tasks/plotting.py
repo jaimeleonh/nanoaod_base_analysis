@@ -32,7 +32,9 @@ from cmt.base_tasks.base import (
     RDFModuleTask, InputData
 )
 
-from cmt.base_tasks.preprocessing import Preprocess, MergeCategorization, MergeCategorizationStats
+from cmt.base_tasks.preprocessing import (
+    Preprocess, MergeCategorization, MergeCategorizationStats, EventCounterDAS
+)
 
 cmt_style = r.styles.copy("default", "cmt_style")
 cmt_style.style.ErrorX = 0
@@ -513,10 +515,16 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             for dataset, category in itertools.product(
                 self.datasets_to_run, self.expand_category())
         )
-        reqs["stats"] = OrderedDict(
-            (dataset.name, MergeCategorizationStats.vreq(self, dataset_name=dataset.name))
-            for dataset in self.datasets_to_run if not dataset.process.isData and self.apply_weights
-        )
+        reqs["stats"] = OrderedDict()
+        for dataset in self.datasets_to_run:
+            if dataset.process.isData or not self.apply_weights:
+                continue
+            if dataset.get_aux("secondary_dataset", None):
+                reqs["stats"][dataset.name] = EventCounterDAS.vreq(self, dataset_name=dataset.name,
+                    use_secondary_dataset=True)
+            else:
+                reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
+                    dataset_name=dataset.name)
 
         if self.do_qcd:
             reqs["qcd"] = {

@@ -7,7 +7,7 @@ muon SF
 
 .. _Muon_muSFRDF:
 
-RDFModule ``muSFRDF``
+``muSFRDF``
 ------------------------------
 
 .. autoclass:: muSFRDF

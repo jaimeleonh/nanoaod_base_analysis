@@ -66,3 +66,14 @@ Class ``MergeCategorizationStatsWrapper``
 .. autoclass:: MergeCategorizationStatsWrapper
    :members:
 
+Class ``EventCounterDAS``
+-------------------------
+
+.. autoclass:: EventCounterDAS
+   :members:
+
+Class ``EventCounterDASWrapper``
+--------------------------------
+
+.. autoclass:: EventCounterDASWrapper
+   :members:
