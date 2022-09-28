@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Welcome to nanoaod-base-analysis’s documentation! &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -16,6 +17,8 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/design-tabs.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -44,6 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq/index.html">FAQ</a></li>
 </ul>
 
         </div>
@@ -90,24 +94,117 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/base_tasks/index.html">cmt.base_tasks</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/base_tasks/preprocessing.html">cmt.base_tasks.preprocessing</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-precounter">Class <code class="docutils literal notranslate"><span class="pre">PreCounter</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-precounterwrapper">Class <code class="docutils literal notranslate"><span class="pre">PreCounterWrapper</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-preprocessrdf">Class <code class="docutils literal notranslate"><span class="pre">PreprocessRDF</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-preprocessrdfwrapper">Class <code class="docutils literal notranslate"><span class="pre">PreprocessRDFWrapper</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-categorization">Class <code class="docutils literal notranslate"><span class="pre">Categorization</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-categorizationwrapper">Class <code class="docutils literal notranslate"><span class="pre">CategorizationWrapper</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-mergecategorization">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorization</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-mergecategorizationwrapper">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationWrapper</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-mergecategorizationstats">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationStats</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-mergecategorizationstatswrapper">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationStatsWrapper</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-eventcounterdas">Class <code class="docutils literal notranslate"><span class="pre">EventCounterDAS</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-eventcounterdaswrapper">Class <code class="docutils literal notranslate"><span class="pre">EventCounterDASWrapper</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-precounter">Class <code class="docutils literal notranslate"><span class="pre">PreCounter</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter"><code class="docutils literal notranslate"><span class="pre">PreCounter</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.create_branch_map"><code class="docutils literal notranslate"><span class="pre">PreCounter.create_branch_map()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.workflow_requires"><code class="docutils literal notranslate"><span class="pre">PreCounter.workflow_requires()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.requires"><code class="docutils literal notranslate"><span class="pre">PreCounter.requires()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.output"><code class="docutils literal notranslate"><span class="pre">PreCounter.output()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.run"><code class="docutils literal notranslate"><span class="pre">PreCounter.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-precounterwrapper">Class <code class="docutils literal notranslate"><span class="pre">PreCounterWrapper</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounterWrapper"><code class="docutils literal notranslate"><span class="pre">PreCounterWrapper</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-preprocessrdf">Class <code class="docutils literal notranslate"><span class="pre">PreprocessRDF</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF"><code class="docutils literal notranslate"><span class="pre">PreprocessRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.weights_file"><code class="docutils literal notranslate"><span class="pre">PreprocessRDF.weights_file</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.output"><code class="docutils literal notranslate"><span class="pre">PreprocessRDF.output()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.run"><code class="docutils literal notranslate"><span class="pre">PreprocessRDF.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-preprocessrdfwrapper">Class <code class="docutils literal notranslate"><span class="pre">PreprocessRDFWrapper</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDFWrapper"><code class="docutils literal notranslate"><span class="pre">PreprocessRDFWrapper</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-categorization">Class <code class="docutils literal notranslate"><span class="pre">Categorization</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization"><code class="docutils literal notranslate"><span class="pre">Categorization</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.region_name"><code class="docutils literal notranslate"><span class="pre">Categorization.region_name</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.create_branch_map"><code class="docutils literal notranslate"><span class="pre">Categorization.create_branch_map()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.workflow_requires"><code class="docutils literal notranslate"><span class="pre">Categorization.workflow_requires()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.requires"><code class="docutils literal notranslate"><span class="pre">Categorization.requires()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.output"><code class="docutils literal notranslate"><span class="pre">Categorization.output()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.run"><code class="docutils literal notranslate"><span class="pre">Categorization.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-categorizationwrapper">Class <code class="docutils literal notranslate"><span class="pre">CategorizationWrapper</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.CategorizationWrapper"><code class="docutils literal notranslate"><span class="pre">CategorizationWrapper</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-mergecategorization">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorization</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorization"><code class="docutils literal notranslate"><span class="pre">MergeCategorization</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorization.region_name"><code class="docutils literal notranslate"><span class="pre">MergeCategorization.region_name</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-mergecategorizationwrapper">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationWrapper</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationWrapper"><code class="docutils literal notranslate"><span class="pre">MergeCategorizationWrapper</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-mergecategorizationstats">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationStats</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStats"><code class="docutils literal notranslate"><span class="pre">MergeCategorizationStats</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-mergecategorizationstatswrapper">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationStatsWrapper</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper"><code class="docutils literal notranslate"><span class="pre">MergeCategorizationStatsWrapper</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-eventcounterdas">Class <code class="docutils literal notranslate"><span class="pre">EventCounterDAS</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS"><code class="docutils literal notranslate"><span class="pre">EventCounterDAS</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS.requires"><code class="docutils literal notranslate"><span class="pre">EventCounterDAS.requires()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS.output"><code class="docutils literal notranslate"><span class="pre">EventCounterDAS.output()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS.run"><code class="docutils literal notranslate"><span class="pre">EventCounterDAS.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/preprocessing.html#class-eventcounterdaswrapper">Class <code class="docutils literal notranslate"><span class="pre">EventCounterDASWrapper</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDASWrapper"><code class="docutils literal notranslate"><span class="pre">EventCounterDASWrapper</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/base_tasks/plotting.html">cmt.base_tasks.plotting</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/plotting.html#class-baseplottask">Class <code class="docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/plotting.html#class-preplot">Class <code class="docutils literal notranslate"><span class="pre">PrePlot</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/plotting.html#class-featureplot">Class <code class="docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/plotting.html#class-baseplottask">Class <code class="docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.BasePlotTask"><code class="docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/plotting.html#class-preplot">Class <code class="docutils literal notranslate"><span class="pre">PrePlot</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot"><code class="docutils literal notranslate"><span class="pre">PrePlot</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.create_branch_map"><code class="docutils literal notranslate"><span class="pre">PrePlot.create_branch_map()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.workflow_requires"><code class="docutils literal notranslate"><span class="pre">PrePlot.workflow_requires()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.requires"><code class="docutils literal notranslate"><span class="pre">PrePlot.requires()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.output"><code class="docutils literal notranslate"><span class="pre">PrePlot.output()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.get_weight"><code class="docutils literal notranslate"><span class="pre">PrePlot.get_weight()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.run"><code class="docutils literal notranslate"><span class="pre">PrePlot.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/base_tasks/plotting.html#class-featureplot">Class <code class="docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot"><code class="docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.requires"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.requires()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.get_output_postfix"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.get_output_postfix()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.output"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.output()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.complete"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.complete()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.setup_signal_hist"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.setup_signal_hist()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.setup_background_hist"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.setup_background_hist()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.setup_data_hist"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.setup_data_hist()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.get_systematics"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.get_systematics()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.plot"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.plot()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/base_tasks/plotting.html#cmt.base_tasks.plotting.FeaturePlot.run"><code class="docutils literal notranslate"><span class="pre">FeaturePlot.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -119,15 +216,24 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l3"><a class="reference internal" href="modules/BaseModules/index.html#installation">Installation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/BaseModules/index.html#module-Base.Modules">RDFModules</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="modules/BaseModules/baseModules.html">Basic modules</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/BaseModules/baseModules.html#rdfmodule-varfromvectorrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">VarFromVectorRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/BaseModules/baseModules.html#rdfmodule-varfromvectorrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">VarFromVectorRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/BaseModules/baseModules.html#Base.Modules.baseModules.VarFromVectorRDF"><code class="docutils literal notranslate"><span class="pre">VarFromVectorRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="modules/BaseModules/METfilters.html">METfilters</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/BaseModules/METfilters.html#rdfmodule-metfilterrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">MetFilterRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/BaseModules/METfilters.html#rdfmodule-metfilterrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">MetFilterRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/BaseModules/METfilters.html#Base.Modules.METfilters.MetFilterRDF"><code class="docutils literal notranslate"><span class="pre">MetFilterRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="modules/BaseModules/lumiFilter.html">Luminosity json filter</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/BaseModules/lumiFilter.html#rdfmodule-lumifilterrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">lumiFilterRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/BaseModules/lumiFilter.html#rdfmodule-lumifilterrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">lumiFilterRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/BaseModules/lumiFilter.html#Base.Modules.lumiFilter.lumiFilterRDF"><code class="docutils literal notranslate"><span class="pre">lumiFilterRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -138,7 +244,10 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l3"><a class="reference internal" href="modules/BTV/index.html#installation">Installation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/BTV/index.html#rdfmodules">RDFModules</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="modules/BTV/btagging.html">b-tagging</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/BTV/btagging.html#rdfmodule-btag-sfrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">btag_SFRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/BTV/btagging.html#rdfmodule-btag-sfrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">btag_SFRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/BTV/btagging.html#Corrections.BTV.btag_SF.btag_SFRDF"><code class="docutils literal notranslate"><span class="pre">btag_SFRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -149,7 +258,10 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l3"><a class="reference internal" href="modules/EGM/index.html#installation">Installation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/EGM/index.html#rdfmodules">RDFModules</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="modules/EGM/electron.html">electron SF</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/EGM/electron.html#elesfrdf"><code class="docutils literal notranslate"><span class="pre">eleSFRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/EGM/electron.html#elesfrdf"><code class="docutils literal notranslate"><span class="pre">eleSFRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/EGM/electron.html#Corrections.EGM.eleCorrections.eleSFRDF"><code class="docutils literal notranslate"><span class="pre">eleSFRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -160,13 +272,25 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l3"><a class="reference internal" href="modules/JME/index.html#installation">Installation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/JME/index.html#rdfmodules">RDFModules</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="modules/JME/smearing.html">Smearing</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/JME/smearing.html#rdfmodule-jetsmearerrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">jetSmearerRDF</span></code></a></li>
-<li class="toctree-l5"><a class="reference internal" href="modules/JME/smearing.html#rdfmodule-jetvarrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">jetVarRDF</span></code></a></li>
-<li class="toctree-l5"><a class="reference internal" href="modules/JME/smearing.html#rdfmodule-metsmearerrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">metSmearerRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/JME/smearing.html#rdfmodule-jetsmearerrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">jetSmearerRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/JME/smearing.html#Corrections.JME.smearing.jetSmearerRDF"><code class="docutils literal notranslate"><span class="pre">jetSmearerRDF</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="modules/JME/smearing.html#rdfmodule-jetvarrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">jetVarRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/JME/smearing.html#Corrections.JME.smearing.jetVarRDF"><code class="docutils literal notranslate"><span class="pre">jetVarRDF</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="modules/JME/smearing.html#rdfmodule-metsmearerrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">metSmearerRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/JME/smearing.html#Corrections.JME.smearing.metSmearerRDF"><code class="docutils literal notranslate"><span class="pre">metSmearerRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="modules/JME/jec.html">Jet Energy Corrections</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/JME/jec.html#rdfmodule-jecproviderrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">jecProviderRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/JME/jec.html#rdfmodule-jecproviderrdf">RDFModule <code class="docutils literal notranslate"><span class="pre">jecProviderRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/JME/jec.html#Corrections.JME.jec.jecProviderRDF"><code class="docutils literal notranslate"><span class="pre">jecProviderRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -177,7 +301,10 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l3"><a class="reference internal" href="modules/MUO/index.html#installation">Installation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/MUO/index.html#rdfmodules">RDFModules</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="modules/MUO/muon.html">muon SF</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/MUO/muon.html#musfrdf"><code class="docutils literal notranslate"><span class="pre">muSFRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/MUO/muon.html#musfrdf"><code class="docutils literal notranslate"><span class="pre">muSFRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/MUO/muon.html#Corrections.MUO.muCorrections.muSFRDF"><code class="docutils literal notranslate"><span class="pre">muSFRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -188,7 +315,10 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l3"><a class="reference internal" href="modules/TAU/index.html#installation">Installation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/TAU/index.html#rdfmodules">RDFModules</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="modules/TAU/tau.html">TAU Corrections</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/TAU/tau.html#tausfrdf"><code class="docutils literal notranslate"><span class="pre">tauSFRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/TAU/tau.html#tausfrdf"><code class="docutils literal notranslate"><span class="pre">tauSFRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/TAU/tau.html#Corrections.TAU.tauCorrections.tauSFRDF"><code class="docutils literal notranslate"><span class="pre">tauSFRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -199,17 +329,28 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l3"><a class="reference internal" href="modules/HHbbtt/index.html#installation">Installation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/HHbbtt/index.html#rdfmodules">RDFModules</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="modules/HHbbtt/hhlepton.html">HHLepton</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/HHbbtt/hhlepton.html#hhleptonrdf"><code class="docutils literal notranslate"><span class="pre">HHLeptonRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/HHbbtt/hhlepton.html#hhleptonrdf"><code class="docutils literal notranslate"><span class="pre">HHLeptonRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/HHbbtt/hhlepton.html#Tools.Tools.HHLepton.HHLeptonRDF"><code class="docutils literal notranslate"><span class="pre">HHLeptonRDF</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="modules/HHbbtt/idiso.html">Id and isolation SF</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/HHbbtt/idiso.html#dauidisosfrdf"><code class="docutils literal notranslate"><span class="pre">dauIdIsoSFRDF</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/HHbbtt/idiso.html#dauidisosfrdf"><code class="docutils literal notranslate"><span class="pre">dauIdIsoSFRDF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="modules/HHbbtt/idiso.html#Tools.Tools.dauIdIso.dauIdIsoSFRDF"><code class="docutils literal notranslate"><span class="pre">dauIdIsoSFRDF</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
 </ul>
 </li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq/index.html">FAQ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="faq/usage.html">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq/plotting.html">Plotting</a></li>
 </ul>
 </li>
 </ul>

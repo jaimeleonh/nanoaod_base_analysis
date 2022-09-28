@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>electron SF &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -16,6 +17,8 @@
         <script src="../../_static/underscore.js"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script src="../../_static/design-tabs.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -61,6 +64,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../HHbbtt/index.html">HH-&gt;bbtt</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq/index.html">FAQ</a></li>
 </ul>
 
         </div>
@@ -90,8 +94,8 @@
            <div itemprop="articleBody">
              
   <section id="electron-sf">
-<h1><a class="toc-backref" href="#id1">electron SF</a><a class="headerlink" href="#electron-sf" title="Permalink to this heading"></a></h1>
-<div class="contents topic" id="contents">
+<h1><a class="toc-backref" href="#id1" role="doc-backlink">electron SF</a><a class="headerlink" href="#electron-sf" title="Permalink to this heading"></a></h1>
+<nav class="contents" id="contents">
 <p class="topic-title">Contents</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="#electron-sf" id="id1">electron SF</a></p>
@@ -100,17 +104,17 @@
 </ul>
 </li>
 </ul>
-</div>
+</nav>
 <section id="elesfrdf">
-<span id="electron-elesfrdf"></span><h2><a class="toc-backref" href="#id2"><code class="docutils literal notranslate"><span class="pre">eleSFRDF</span></code></a><a class="headerlink" href="#elesfrdf" title="Permalink to this heading"></a></h2>
+<span id="electron-elesfrdf"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">eleSFRDF</span></code></a><a class="headerlink" href="#elesfrdf" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="Corrections.EGM.eleCorrections.eleSFRDF">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Corrections.EGM.eleCorrections.</span></span><span class="sig-name descname"><span class="pre">eleSFRDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/Corrections/EGM/eleCorrections.html#eleSFRDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Corrections.EGM.eleCorrections.eleSFRDF" title="Permalink to this definition"></a></dt>
 <dd><p>Bases:</p>
 <p>Module to obtain electron SFs with their uncertainties.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>wps</strong> (<em>list of str</em>) – name of the wps to consider among <code class="docutils literal notranslate"><span class="pre">Loose</span></code>, <code class="docutils literal notranslate"><span class="pre">Medium</span></code>,
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>wps</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – name of the wps to consider among <code class="docutils literal notranslate"><span class="pre">Loose</span></code>, <code class="docutils literal notranslate"><span class="pre">Medium</span></code>,
 <code class="docutils literal notranslate"><span class="pre">RecoAbove20</span></code>, <code class="docutils literal notranslate"><span class="pre">RecoBelow20</span></code>, <code class="docutils literal notranslate"><span class="pre">Tight</span></code>, <code class="docutils literal notranslate"><span class="pre">Veto</span></code>, <code class="docutils literal notranslate"><span class="pre">wp80iso</span></code> (default),
 <code class="docutils literal notranslate"><span class="pre">wp80noiso</span></code>, <code class="docutils literal notranslate"><span class="pre">wp90iso,</span></code> <code class="docutils literal notranslate"><span class="pre">wp90noiso</span></code>.</p>
 </dd>

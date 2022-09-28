@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>cmt.base_tasks.preprocessing &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -16,6 +17,8 @@
         <script src="../../_static/underscore.js"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script src="../../_static/design-tabs.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -66,6 +69,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq/index.html">FAQ</a></li>
 </ul>
 
         </div>
@@ -95,9 +99,9 @@
            <div itemprop="articleBody">
              
   <section id="module-cmt.base_tasks.preprocessing">
-<span id="cmt-base-tasks-preprocessing"></span><h1><a class="toc-backref" href="#id1">cmt.base_tasks.preprocessing</a><a class="headerlink" href="#module-cmt.base_tasks.preprocessing" title="Permalink to this heading"></a></h1>
+<span id="cmt-base-tasks-preprocessing"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">cmt.base_tasks.preprocessing</a><a class="headerlink" href="#module-cmt.base_tasks.preprocessing" title="Permalink to this heading"></a></h1>
 <p>Preprocessing tasks.</p>
-<div class="contents topic" id="contents">
+<nav class="contents" id="contents">
 <p class="topic-title">Contents</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="#module-cmt.base_tasks.preprocessing" id="id1">cmt.base_tasks.preprocessing</a></p>
@@ -117,9 +121,9 @@
 </ul>
 </li>
 </ul>
-</div>
+</nav>
 <section id="class-precounter">
-<h2><a class="toc-backref" href="#id2">Class <code class="docutils literal notranslate"><span class="pre">PreCounter</span></code></a><a class="headerlink" href="#class-precounter" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id2" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">PreCounter</span></code></a><a class="headerlink" href="#class-precounter" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreCounter">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">PreCounter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreCounter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreCounter" title="Permalink to this definition"></a></dt>
@@ -130,7 +134,7 @@ In case they have to be computed, RDF modules can be run.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">PreCounter</span> <span class="pre">--version</span> <span class="pre">test</span>&#160; <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">ggf_sm</span> <span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--weights-file</span> <span class="pre">weight_file</span></code></p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>weights_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> (w/o extension) with the RDF modules to run</p>
 </dd>
 </dl>
@@ -138,10 +142,10 @@ In case they have to be computed, RDF modules can be run.</p>
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreCounter.create_branch_map">
 <span class="sig-name descname"><span class="pre">create_branch_map</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreCounter.create_branch_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreCounter.create_branch_map" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>number of files for the selected dataset</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
@@ -162,10 +166,10 @@ In case they have to be computed, RDF modules can be run.</p>
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreCounter.output">
 <span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreCounter.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreCounter.output" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>One file per input file</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><cite>.json</cite></p>
 </dd>
 </dl>
@@ -182,7 +186,7 @@ and counts the number of events w/ and w/o additional weights</p>
 
 </section>
 <section id="class-precounterwrapper">
-<h2><a class="toc-backref" href="#id3">Class <code class="docutils literal notranslate"><span class="pre">PreCounterWrapper</span></code></a><a class="headerlink" href="#class-precounterwrapper" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">PreCounterWrapper</span></code></a><a class="headerlink" href="#class-precounterwrapper" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreCounterWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">PreCounterWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreCounterWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreCounterWrapper" title="Permalink to this definition"></a></dt>
@@ -194,7 +198,7 @@ and counts the number of events w/ and w/o additional weights</p>
 
 </section>
 <section id="class-preprocessrdf">
-<h2><a class="toc-backref" href="#id4">Class <code class="docutils literal notranslate"><span class="pre">PreprocessRDF</span></code></a><a class="headerlink" href="#class-preprocessrdf" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id4" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">PreprocessRDF</span></code></a><a class="headerlink" href="#class-preprocessrdf" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreprocessRDF">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">PreprocessRDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreprocessRDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreprocessRDF" title="Permalink to this definition"></a></dt>
@@ -204,7 +208,7 @@ and counts the number of events w/ and w/o additional weights</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">PreprocessRDF</span> <span class="pre">--version</span> <span class="pre">test</span>&#160; <span class="pre">--category-name</span> <span class="pre">base_selection</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">ggf_sm</span> <span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--modules-file</span> <span class="pre">modulesrdf</span> <span class="pre">--workers</span> <span class="pre">10</span> <span class="pre">--max-runtime</span> <span class="pre">12h</span></code></p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or “../config/” (w/o extension)
 with the RDF modules to run</p></li>
@@ -222,10 +226,10 @@ with the RDF columns to save in the output file</p></li>
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreprocessRDF.output">
 <span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreprocessRDF.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreprocessRDF.output" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>One file per input file with the tree + additional branches</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><cite>.root</cite></p>
 </dd>
 </dl>
@@ -242,7 +246,7 @@ and runs the desired RDFModules</p>
 
 </section>
 <section id="class-preprocessrdfwrapper">
-<h2><a class="toc-backref" href="#id5">Class <code class="docutils literal notranslate"><span class="pre">PreprocessRDFWrapper</span></code></a><a class="headerlink" href="#class-preprocessrdfwrapper" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id5" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">PreprocessRDFWrapper</span></code></a><a class="headerlink" href="#class-preprocessrdfwrapper" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreprocessRDFWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">PreprocessRDFWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreprocessRDFWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreprocessRDFWrapper" title="Permalink to this definition"></a></dt>
@@ -254,7 +258,7 @@ and runs the desired RDFModules</p>
 
 </section>
 <section id="class-categorization">
-<h2><a class="toc-backref" href="#id6">Class <code class="docutils literal notranslate"><span class="pre">Categorization</span></code></a><a class="headerlink" href="#class-categorization" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id6" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">Categorization</span></code></a><a class="headerlink" href="#class-categorization" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.Categorization">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">Categorization</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#Categorization"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.Categorization" title="Permalink to this definition"></a></dt>
@@ -263,7 +267,7 @@ and runs the desired RDFModules</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">Categorization</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--category-name</span> <span class="pre">etau</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">tt_dl</span> <span class="pre">--workflow</span> <span class="pre">local</span> <span class="pre">--base-category-name</span> <span class="pre">base_selection</span> <span class="pre">--workers</span> <span class="pre">10</span> <span class="pre">--feature-modules-file</span> <span class="pre">features</span></code></p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>base_category_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – category name from the PreprocessRDF requirements.</p></li>
 <li><p><strong>systematic</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – systematic to use for categorization.</p></li>
@@ -283,10 +287,10 @@ with the RDF modules to run</p></li>
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.Categorization.create_branch_map">
 <span class="sig-name descname"><span class="pre">create_branch_map</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#Categorization.create_branch_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.Categorization.create_branch_map" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>number of files for the selected dataset</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
@@ -307,10 +311,10 @@ with the RDF modules to run</p></li>
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.Categorization.output">
 <span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#Categorization.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.Categorization.output" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>One file per input file with the tree + additional branches</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><cite>.root</cite></p>
 </dd>
 </dl>
@@ -327,7 +331,7 @@ post-selection</p>
 
 </section>
 <section id="class-categorizationwrapper">
-<h2><a class="toc-backref" href="#id7">Class <code class="docutils literal notranslate"><span class="pre">CategorizationWrapper</span></code></a><a class="headerlink" href="#class-categorizationwrapper" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id7" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">CategorizationWrapper</span></code></a><a class="headerlink" href="#class-categorizationwrapper" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.CategorizationWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">CategorizationWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#CategorizationWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.CategorizationWrapper" title="Permalink to this definition"></a></dt>
@@ -339,7 +343,7 @@ post-selection</p>
 
 </section>
 <section id="class-mergecategorization">
-<h2><a class="toc-backref" href="#id8">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorization</span></code></a><a class="headerlink" href="#class-mergecategorization" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id8" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorization</span></code></a><a class="headerlink" href="#class-mergecategorization" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.MergeCategorization">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">MergeCategorization</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#MergeCategorization"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.MergeCategorization" title="Permalink to this definition"></a></dt>
@@ -351,7 +355,7 @@ definition.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">MergeCategorization</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--category-name</span> <span class="pre">etau</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">tt_sl</span> <span class="pre">--workflow</span> <span class="pre">local</span> <span class="pre">--workers</span> <span class="pre">4</span></code></p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>from_preprocess</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – wheter it merges the output from the PreprocessRDF task (True)
 or Categorization (False, default)</p>
 </dd>
@@ -365,7 +369,7 @@ or Categorization (False, default)</p>
 
 </section>
 <section id="class-mergecategorizationwrapper">
-<h2><a class="toc-backref" href="#id9">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationWrapper</span></code></a><a class="headerlink" href="#class-mergecategorizationwrapper" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id9" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationWrapper</span></code></a><a class="headerlink" href="#class-mergecategorizationwrapper" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.MergeCategorizationWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">MergeCategorizationWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#MergeCategorizationWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.MergeCategorizationWrapper" title="Permalink to this definition"></a></dt>
@@ -377,7 +381,7 @@ or Categorization (False, default)</p>
 
 </section>
 <section id="class-mergecategorizationstats">
-<h2><a class="toc-backref" href="#id10">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationStats</span></code></a><a class="headerlink" href="#class-mergecategorizationstats" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id10" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationStats</span></code></a><a class="headerlink" href="#class-mergecategorizationstats" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.MergeCategorizationStats">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">MergeCategorizationStats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#MergeCategorizationStats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.MergeCategorizationStats" title="Permalink to this definition"></a></dt>
@@ -390,7 +394,7 @@ parallelization entering the plotting tasks.</p>
 
 </section>
 <section id="class-mergecategorizationstatswrapper">
-<h2><a class="toc-backref" href="#id11">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationStatsWrapper</span></code></a><a class="headerlink" href="#class-mergecategorizationstatswrapper" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id11" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">MergeCategorizationStatsWrapper</span></code></a><a class="headerlink" href="#class-mergecategorizationstatswrapper" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">MergeCategorizationStatsWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#MergeCategorizationStatsWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper" title="Permalink to this definition"></a></dt>
@@ -402,7 +406,7 @@ parallelization entering the plotting tasks.</p>
 
 </section>
 <section id="class-eventcounterdas">
-<h2><a class="toc-backref" href="#id12">Class <code class="docutils literal notranslate"><span class="pre">EventCounterDAS</span></code></a><a class="headerlink" href="#class-eventcounterdas" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id12" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">EventCounterDAS</span></code></a><a class="headerlink" href="#class-eventcounterdas" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.EventCounterDAS">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">EventCounterDAS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#EventCounterDAS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.EventCounterDAS" title="Permalink to this definition"></a></dt>
@@ -413,7 +417,7 @@ In case they have to be computed, RDF modules can be run.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">EventCounterDAS</span> <span class="pre">--version</span> <span class="pre">test</span>&#160; <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">ggf_sm</span></code></p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>use_secondary_dataset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to use the dataset included in the secondary_dataset
 parameter from the dataset instead of the actual dataset</p>
 </dd>
@@ -428,10 +432,10 @@ parameter from the dataset instead of the actual dataset</p>
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.EventCounterDAS.output">
 <span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#EventCounterDAS.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.EventCounterDAS.output" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>One file for the whole dataset</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><cite>.json</cite></p>
 </dd>
 </dl>
@@ -447,7 +451,7 @@ parameter from the dataset instead of the actual dataset</p>
 
 </section>
 <section id="class-eventcounterdaswrapper">
-<h2><a class="toc-backref" href="#id13">Class <code class="docutils literal notranslate"><span class="pre">EventCounterDASWrapper</span></code></a><a class="headerlink" href="#class-eventcounterdaswrapper" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id13" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">EventCounterDASWrapper</span></code></a><a class="headerlink" href="#class-eventcounterdaswrapper" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.EventCounterDASWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">EventCounterDASWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#EventCounterDASWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.EventCounterDASWrapper" title="Permalink to this definition"></a></dt>

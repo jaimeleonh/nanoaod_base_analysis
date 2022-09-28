@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>b-tagging &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -16,6 +17,8 @@
         <script src="../../_static/underscore.js"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script src="../../_static/design-tabs.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -61,6 +64,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../HHbbtt/index.html">HH-&gt;bbtt</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq/index.html">FAQ</a></li>
 </ul>
 
         </div>
@@ -90,8 +94,8 @@
            <div itemprop="articleBody">
              
   <section id="b-tagging">
-<h1><a class="toc-backref" href="#id1">b-tagging</a><a class="headerlink" href="#b-tagging" title="Permalink to this heading"></a></h1>
-<div class="contents topic" id="contents">
+<h1><a class="toc-backref" href="#id1" role="doc-backlink">b-tagging</a><a class="headerlink" href="#b-tagging" title="Permalink to this heading"></a></h1>
+<nav class="contents" id="contents">
 <p class="topic-title">Contents</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="#b-tagging" id="id1">b-tagging</a></p>
@@ -100,9 +104,9 @@
 </ul>
 </li>
 </ul>
-</div>
+</nav>
 <section id="rdfmodule-btag-sfrdf">
-<h2><a class="toc-backref" href="#id2">RDFModule <code class="docutils literal notranslate"><span class="pre">btag_SFRDF</span></code></a><a class="headerlink" href="#rdfmodule-btag-sfrdf" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id2" role="doc-backlink">RDFModule <code class="docutils literal notranslate"><span class="pre">btag_SFRDF</span></code></a><a class="headerlink" href="#rdfmodule-btag-sfrdf" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="Corrections.BTV.btag_SF.btag_SFRDF">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Corrections.BTV.btag_SF.</span></span><span class="sig-name descname"><span class="pre">btag_SFRDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/Corrections/BTV/btag_SF.html#btag_SFRDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Corrections.BTV.btag_SF.btag_SFRDF" title="Permalink to this definition"></a></dt>
@@ -110,7 +114,7 @@
 <p>Module to obtain btagging deepJet SFs with their uncertainties.</p>
 <p>Required RDFModules: <a class="reference internal" href="../HHbbtt/hhlepton.html#hhlepton-hhleptonrdf"><span class="std std-ref">HHLeptonRDF</span></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Param</dt>
+<dt class="field-odd">Param<span class="colon">:</span></dt>
 <dd class="field-odd"><p>reshape_uncertainties: name of the systematic to consider among <code class="docutils literal notranslate"><span class="pre">central</span></code> (default),
 <code class="docutils literal notranslate"><span class="pre">down_cferr1</span></code>, <code class="docutils literal notranslate"><span class="pre">down_cferr2</span></code>, <code class="docutils literal notranslate"><span class="pre">down_hf</span></code>, <code class="docutils literal notranslate"><span class="pre">down_hfstats1</span></code>, <code class="docutils literal notranslate"><span class="pre">down_hfstats2</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jes</span></code>,
 <code class="docutils literal notranslate"><span class="pre">down_jesAbsoluteMPFBias</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesAbsoluteScale</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesAbsoluteStat</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesFlavorQCD</span></code>,

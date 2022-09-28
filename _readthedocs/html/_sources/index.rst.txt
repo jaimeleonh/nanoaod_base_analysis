@@ -19,3 +19,4 @@ Contents
    usage
    api/index
    modules/index
+   faq/index
