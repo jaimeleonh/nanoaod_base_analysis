@@ -132,7 +132,7 @@ class ConfigTask(Task):
         try:
             config = __import__("config." + self.config_name)
             self.config = getattr(config, self.config_name).config
-        except:
+        except ModuleNotFoundError:
             cmt = __import__("cmt.config." + self.config_name)
             self.config = getattr(cmt.config, self.config_name).config
 
