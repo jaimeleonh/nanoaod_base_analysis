@@ -225,6 +225,18 @@ action() {
         if [ ! -d "$HHBTAG_PATH" ]; then
           git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
           git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
+          git clone git@github.com:GilesStrong/cms_hh_proc_interface.git
+          cd cms_hh_proc_interface
+          git checkout tags/V4.0
+          cd -
+          git clone git@github.com:GilesStrong/cms_hh_tf_inference.git
+          cd cms_hh_tf_inference/inference
+          echo '<use name="boost_filesystem"/>' | cat - BuildFile.xml > temp && mv temp BuildFile.xml
+          cd -
+          git clone git@github.com:GilesStrong/cms_runII_dnn_models.git
+          cd cms_runII_dnn_models/models/test/
+          mv test.cc test.cc_x
+          cd -
           compile="1"
         fi
 
