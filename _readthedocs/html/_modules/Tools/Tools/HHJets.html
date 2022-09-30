@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tools.Tools.HHJets &mdash; nanoaod-base-analysis 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/design-tabs.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>Tools.Tools.HHJets</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Tools.Tools.HHJets</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">array</span> <span class="kn">import</span> <span class="n">array</span>
+
+<span class="kn">from</span> <span class="nn">PhysicsTools.NanoAODTools.postprocessing.framework.datamodel</span> <span class="kn">import</span> <span class="n">Collection</span><span class="p">,</span> <span class="n">Object</span>
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
+<span class="kn">from</span> <span class="nn">Tools.Tools.jet_utils</span> <span class="kn">import</span> <span class="n">JetPair</span>
+<span class="kn">from</span> <span class="nn">Base.Modules.baseModules</span> <span class="kn">import</span> <span class="n">JetLepMetModule</span><span class="p">,</span> <span class="n">JetLepMetSyst</span>
+
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">HHJetsProducer</span><span class="p">(</span><span class="n">JetLepMetModule</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">isUL</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHJetsProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;/libToolsTools.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libToolsTools.so&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc10&quot;</span><span class="p">:</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/&quot;</span>
+                <span class="s2">&quot;external/eigen/d812f411c3f9-cms/include/&quot;</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/&quot;</span>
+                <span class="s2">&quot;external/tensorflow/2.5.0/include/&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc820&quot;</span><span class="p">:</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
+                <span class="s2">&quot;external/eigen/d812f411c3f9-bcolbf/include/eigen3&quot;</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
+                <span class="s2">&quot;external/tensorflow/2.1.0-bcolbf/include&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Architecture not considered&quot;</span><span class="p">)</span>
+
+        <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Tools/Tools&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+
+        <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/HHJetsInterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
+        <span class="n">base_hhbtag</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/HHTools/HHbtag&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">base_hhbtag</span> <span class="o">+</span> <span class="s2">&quot;/models/HHbtag_v1_par_</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">HHJets</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">HHJetsInterface</span><span class="p">(</span><span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">models</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">,</span> <span class="n">isUL</span><span class="p">)</span>
+
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">beginFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputFile</span><span class="p">,</span> <span class="n">outputFile</span><span class="p">,</span> <span class="n">inputTree</span><span class="p">,</span> <span class="n">wrappedOutputTree</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span> <span class="o">=</span> <span class="n">wrappedOutputTree</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;bjet1_JetIdx&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;bjet2_JetIdx&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;VBFjet1_JetIdx&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;VBFjet2_JetIdx&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;Jet_HHbtag&#39;</span><span class="p">,</span> <span class="s2">&quot;F&quot;</span><span class="p">,</span> <span class="n">lenVar</span><span class="o">=</span><span class="s1">&#39;nJet&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s1">&#39;isBoosted&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">)</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">endFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputFile</span><span class="p">,</span> <span class="n">outputFile</span><span class="p">,</span> <span class="n">inputTree</span><span class="p">,</span> <span class="n">wrappedOutputTree</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
+        <span class="n">jets</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Jet&quot;</span><span class="p">)</span>
+        <span class="n">fatjets</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;FatJet&quot;</span><span class="p">)</span>
+        <span class="n">subjets</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;SubJet&quot;</span><span class="p">)</span>
+        <span class="n">muons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Muon&quot;</span><span class="p">)</span>
+        <span class="n">electrons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Electron&quot;</span><span class="p">)</span>
+        <span class="n">taus</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Tau&quot;</span><span class="p">)</span>
+
+        <span class="n">dau1</span><span class="p">,</span> <span class="n">dau2</span><span class="p">,</span> <span class="n">dau1_tlv</span><span class="p">,</span> <span class="n">dau2_tlv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_daus</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">muons</span><span class="p">,</span> <span class="n">electrons</span><span class="p">,</span> <span class="n">taus</span><span class="p">)</span>
+        <span class="n">met</span><span class="p">,</span> <span class="n">met_tlv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_met</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+        <span class="n">bjets</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">all_jet_indexes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ijet</span><span class="p">,</span> <span class="n">jet</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">jets</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">jet</span><span class="o">.</span><span class="n">puId</span> <span class="o">&lt;</span> <span class="mi">4</span> <span class="ow">and</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jet.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">50</span><span class="p">)</span> <span class="ow">or</span> <span class="n">jet</span><span class="o">.</span><span class="n">jetId</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">jet_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+            <span class="n">jet_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span>
+                <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jet.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">),</span>
+                <span class="n">jet</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+                <span class="n">jet</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span>
+                <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jet.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">jet_tlv</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">dau1_tlv</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">0.5</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">jet</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">dau2_tlv</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jet.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">20</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">jet</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">2.4</span><span class="p">:</span>
+                <span class="n">bjets</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ijet</span><span class="p">,</span> <span class="n">jet</span><span class="p">))</span>
+            <span class="c1"># store also jets w/ eta &lt; 4.7 for vbf analysis</span>
+            <span class="k">if</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jet.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">20</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">jet</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">4.7</span><span class="p">:</span>
+                <span class="n">all_jet_indexes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ijet</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bjets</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">bjets</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">btagDeepFlavB</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">htt_tlv</span> <span class="o">=</span> <span class="n">dau1_tlv</span> <span class="o">+</span> <span class="n">dau2_tlv</span>
+
+        <span class="n">HHbtag_jet_pt_</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="nb">float</span><span class="p">)()</span>
+        <span class="n">HHbtag_jet_eta_</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="nb">float</span><span class="p">)()</span>
+        <span class="n">HHbtag_rel_jet_M_pt_</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="nb">float</span><span class="p">)()</span>
+        <span class="n">HHbtag_rel_jet_E_pt_</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="nb">float</span><span class="p">)()</span>
+        <span class="n">HHbtag_jet_htt_deta_</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="nb">float</span><span class="p">)()</span>
+        <span class="n">HHbtag_jet_htt_dphi_</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="nb">float</span><span class="p">)()</span>
+        <span class="n">HHbtag_jet_deepFlavour_</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="nb">float</span><span class="p">)()</span>
+
+        <span class="k">for</span> <span class="n">jet</span> <span class="ow">in</span> <span class="n">bjets</span><span class="p">:</span>
+            <span class="n">jet_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+            <span class="n">jet_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span>
+                <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jet[1].pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">),</span>
+                <span class="n">jet</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+                <span class="n">jet</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span>
+                <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jet[1].mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="n">HHbtag_jet_pt_</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">jet_tlv</span><span class="o">.</span><span class="n">Pt</span><span class="p">())</span>
+            <span class="n">HHbtag_jet_eta_</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">jet_tlv</span><span class="o">.</span><span class="n">Eta</span><span class="p">())</span>
+            <span class="n">HHbtag_rel_jet_M_pt_</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">jet_tlv</span><span class="o">.</span><span class="n">M</span><span class="p">()</span> <span class="o">/</span> <span class="n">jet_tlv</span><span class="o">.</span><span class="n">Pt</span><span class="p">())</span>
+            <span class="n">HHbtag_rel_jet_E_pt_</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">jet_tlv</span><span class="o">.</span><span class="n">E</span><span class="p">()</span> <span class="o">/</span> <span class="n">jet_tlv</span><span class="o">.</span><span class="n">Pt</span><span class="p">())</span>
+            <span class="n">HHbtag_jet_htt_deta_</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">htt_tlv</span><span class="o">.</span><span class="n">Eta</span><span class="p">()</span> <span class="o">-</span> <span class="n">jet_tlv</span><span class="o">.</span><span class="n">Eta</span><span class="p">())</span>
+            <span class="n">HHbtag_jet_htt_dphi_</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">ROOT</span><span class="o">.</span><span class="n">Math</span><span class="o">.</span><span class="n">VectorUtil</span><span class="o">.</span><span class="n">DeltaPhi</span><span class="p">(</span><span class="n">htt_tlv</span><span class="p">,</span> <span class="n">jet_tlv</span><span class="p">))</span>
+            <span class="n">HHbtag_jet_deepFlavour_</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">jet</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">btagDeepFlavB</span><span class="p">)</span>
+
+        <span class="n">HHbtag_htt_met_dphi_</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">Math</span><span class="o">.</span><span class="n">VectorUtil</span><span class="o">.</span><span class="n">DeltaPhi</span><span class="p">(</span><span class="n">htt_tlv</span><span class="p">,</span> <span class="n">met_tlv</span><span class="p">)</span>
+        <span class="n">HHbtag_htt_scalar_pt_</span> <span class="o">=</span> <span class="n">dau1</span><span class="o">.</span><span class="n">pt</span> <span class="o">+</span> <span class="n">dau2</span><span class="o">.</span><span class="n">pt</span>
+        <span class="n">HHbtag_rel_met_pt_htt_pt_</span> <span class="o">=</span> <span class="n">met_tlv</span><span class="o">.</span><span class="n">Pt</span><span class="p">()</span> <span class="o">/</span> <span class="n">HHbtag_htt_scalar_pt_</span>
+        <span class="n">HHbtag_htt_pt_</span> <span class="o">=</span> <span class="n">htt_tlv</span><span class="o">.</span><span class="n">Pt</span><span class="p">()</span>
+        <span class="n">HHbtag_htt_eta_</span> <span class="o">=</span> <span class="n">htt_tlv</span><span class="o">.</span><span class="n">Eta</span><span class="p">()</span>
+
+        <span class="n">HHbtag_evt_</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">event</span>
+        <span class="n">HHbtag_year_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">pairType</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">HHbtag_channel_</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">pairType</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">HHbtag_channel_</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">pairType</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">HHbtag_channel_</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Pairtype </span><span class="si">{}</span><span class="s2"> is not supported for HHbtag computation&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">event</span><span class="o">.</span><span class="n">pairType</span><span class="p">))</span>
+
+        <span class="n">HHbtag_scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HHJets</span><span class="o">.</span><span class="n">GetScore</span><span class="p">(</span><span class="n">HHbtag_jet_pt_</span><span class="p">,</span> <span class="n">HHbtag_jet_eta_</span><span class="p">,</span>
+            <span class="n">HHbtag_rel_jet_M_pt_</span><span class="p">,</span> <span class="n">HHbtag_rel_jet_E_pt_</span><span class="p">,</span> <span class="n">HHbtag_jet_htt_deta_</span><span class="p">,</span>
+            <span class="n">HHbtag_jet_deepFlavour_</span><span class="p">,</span> <span class="n">HHbtag_jet_htt_dphi_</span><span class="p">,</span> <span class="n">HHbtag_year_</span><span class="p">,</span> <span class="n">HHbtag_channel_</span><span class="p">,</span>
+            <span class="n">HHbtag_htt_pt_</span><span class="p">,</span> <span class="n">HHbtag_htt_eta_</span><span class="p">,</span> <span class="n">HHbtag_htt_met_dphi_</span><span class="p">,</span>
+            <span class="n">HHbtag_rel_met_pt_htt_pt_</span><span class="p">,</span> <span class="n">HHbtag_htt_scalar_pt_</span><span class="p">,</span> <span class="n">HHbtag_evt_</span><span class="p">)</span>
+
+        <span class="n">HHbtag_scores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">([</span><span class="n">bjet</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">bjet</span> <span class="ow">in</span> <span class="n">bjets</span><span class="p">],</span> <span class="n">HHbtag_scores</span><span class="p">))</span>
+        <span class="n">HHbtag_scores</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># sort by the obtained HHbtag score</span>
+
+        <span class="c1"># 2 &quot;bjets&quot; with the higher HHbtag score are the selected H(bb) candidates</span>
+        <span class="n">bjet1_JetIdx</span> <span class="o">=</span> <span class="n">HHbtag_scores</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">bjet2_JetIdx</span> <span class="o">=</span> <span class="n">HHbtag_scores</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jets[bjet1_JetIdx].pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)</span> <span class="o">&lt;</span>
+                <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jets[bjet2_JetIdx].pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)):</span>
+            <span class="n">bjet1_JetIdx</span> <span class="o">=</span> <span class="n">HHbtag_scores</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">bjet2_JetIdx</span> <span class="o">=</span> <span class="n">HHbtag_scores</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># let&#39;s get the H(bb) object and tlv for the boosted analysis (later)</span>
+        <span class="n">bjet1_obj</span> <span class="o">=</span> <span class="n">jets</span><span class="p">[</span><span class="n">bjet1_JetIdx</span><span class="p">]</span>
+        <span class="n">bjet2_obj</span> <span class="o">=</span> <span class="n">jets</span><span class="p">[</span><span class="n">bjet2_JetIdx</span><span class="p">]</span>
+        <span class="n">bjet1_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+        <span class="n">bjet2_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+        <span class="n">bjet1_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;bjet1_obj.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">),</span> <span class="n">bjet1_obj</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+            <span class="n">bjet1_obj</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;bjet1_obj.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span>
+        <span class="n">bjet2_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;bjet2_obj.pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">),</span> <span class="n">bjet2_obj</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+            <span class="n">bjet2_obj</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;bjet2_obj.mass</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span>
+
+        <span class="n">vbf_jet_pairs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_jet_indexes</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_jet_indexes</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">all_jet_indexes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="n">bjet1_JetIdx</span><span class="p">,</span> <span class="n">bjet2_JetIdx</span><span class="p">]:</span>
+                    <span class="k">continue</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_jet_indexes</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="n">all_jet_indexes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="n">bjet1_JetIdx</span><span class="p">,</span> <span class="n">bjet2_JetIdx</span><span class="p">]:</span>
+                        <span class="k">continue</span>
+
+                    <span class="n">jet1_idx</span> <span class="o">=</span> <span class="n">all_jet_indexes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">jet2_idx</span> <span class="o">=</span> <span class="n">all_jet_indexes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jets[jet1_idx].pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">30</span>
+                            <span class="ow">or</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;jets[jet2_idx].pt</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">30</span>
+                            <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">jets</span><span class="p">[</span><span class="n">jet1_idx</span><span class="p">]</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">4.7</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">jets</span><span class="p">[</span><span class="n">jet2_idx</span><span class="p">]</span><span class="o">.</span><span class="n">eta</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">4.7</span><span class="p">):</span>
+                        <span class="k">continue</span>
+                    <span class="n">vbf_jet_pairs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">JetPair</span><span class="p">(</span><span class="n">jets</span><span class="p">[</span><span class="n">jet1_idx</span><span class="p">],</span> <span class="n">jets</span><span class="p">[</span><span class="n">jet2_idx</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">,</span>
+                        <span class="n">index1</span><span class="o">=</span><span class="n">jet1_idx</span><span class="p">,</span> <span class="n">index2</span><span class="o">=</span><span class="n">jet2_idx</span><span class="p">))</span>
+                    <span class="c1"># print eval(&quot;vbf_jet_pairs[-1].obj1.pt%s&quot; % self.jet_syst), eval(&quot;vbf_jet_pairs[-1].obj2.pt%s&quot; % self.jet_syst), vbf_jet_pairs[-1].inv_mass</span>
+
+            <span class="k">if</span> <span class="n">vbf_jet_pairs</span><span class="p">:</span>
+                <span class="n">vbf_pair</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">vbf_jet_pairs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;bjet1_JetIdx&quot;</span><span class="p">,</span> <span class="n">bjet1_JetIdx</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;bjet2_JetIdx&quot;</span><span class="p">,</span> <span class="n">bjet2_JetIdx</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">vbf_jet_pairs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">vbf_pair</span><span class="o">.</span><span class="n">obj1</span><span class="o">.</span><span class="n">pt</span> <span class="o">&gt;</span> <span class="n">vbf_pair</span><span class="o">.</span><span class="n">obj2</span><span class="o">.</span><span class="n">pt</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;VBFjet1_JetIdx&quot;</span><span class="p">,</span> <span class="n">vbf_pair</span><span class="o">.</span><span class="n">obj1_index</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;VBFjet2_JetIdx&quot;</span><span class="p">,</span> <span class="n">vbf_pair</span><span class="o">.</span><span class="n">obj2_index</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;VBFjet1_JetIdx&quot;</span><span class="p">,</span> <span class="n">vbf_pair</span><span class="o">.</span><span class="n">obj2_index</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;VBFjet2_JetIdx&quot;</span><span class="p">,</span> <span class="n">vbf_pair</span><span class="o">.</span><span class="n">obj1_index</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;VBFjet1_JetIdx&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;VBFjet2_JetIdx&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">Jet_HHbtag</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">HHbtag_scores</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">HHbtag_scores</span><span class="p">)</span>  <span class="c1"># so it&#39;s easier to check the index from the good jets</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">nJet</span><span class="p">):</span>
+            <span class="n">Jet_HHbtag</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HHbtag_scores</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">HHbtag_scores</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">else</span> <span class="o">-</span><span class="mf">999.</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;Jet_HHbtag&quot;</span><span class="p">,</span> <span class="n">Jet_HHbtag</span><span class="p">)</span>
+
+        <span class="c1"># is the event boosted?</span>
+        <span class="c1"># we loop over the fat AK8 jets, apply a mass cut and verify that its subjets match</span>
+        <span class="c1"># the jets we selected before.</span>
+        <span class="n">is_boosted</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">ifatjet</span><span class="p">,</span> <span class="n">fatjet</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fatjets</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">fatjet</span><span class="o">.</span><span class="n">msoftdrop</span> <span class="o">&lt;</span> <span class="mi">30</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">fatjet</span><span class="o">.</span><span class="n">subJetIdx1</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">fatjet</span><span class="o">.</span><span class="n">subJetIdx2</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">subj1</span> <span class="o">=</span> <span class="n">subjets</span><span class="p">[</span><span class="n">fatjet</span><span class="o">.</span><span class="n">subJetIdx1</span><span class="p">]</span>
+            <span class="n">subj2</span> <span class="o">=</span> <span class="n">subjets</span><span class="p">[</span><span class="n">fatjet</span><span class="o">.</span><span class="n">subJetIdx2</span><span class="p">]</span>
+            <span class="n">subj1_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+            <span class="n">subj2_tlv</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TLorentzVector</span><span class="p">()</span>
+            <span class="n">subj1_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span><span class="n">subj1</span><span class="o">.</span><span class="n">pt</span><span class="p">,</span> <span class="n">subj1</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">subj1</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="n">subj1</span><span class="o">.</span><span class="n">mass</span><span class="p">)</span>
+            <span class="n">subj2_tlv</span><span class="o">.</span><span class="n">SetPtEtaPhiM</span><span class="p">(</span><span class="n">subj2</span><span class="o">.</span><span class="n">pt</span><span class="p">,</span> <span class="n">subj2</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="n">subj2</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="n">subj2</span><span class="o">.</span><span class="n">mass</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">((</span><span class="nb">abs</span><span class="p">(</span><span class="n">bjet1_tlv</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">subj1_tlv</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mf">0.4</span>
+                    <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">bjet2_tlv</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">subj2_tlv</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mf">0.4</span><span class="p">)</span>
+                <span class="ow">and</span>
+                <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">bjet1_tlv</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">subj2_tlv</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mf">0.4</span>
+                    <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">bjet2_tlv</span><span class="o">.</span><span class="n">DeltaR</span><span class="p">(</span><span class="n">subj1_tlv</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mf">0.4</span><span class="p">)):</span>
+                <span class="k">continue</span>
+            <span class="n">is_boosted</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">fillBranch</span><span class="p">(</span><span class="s2">&quot;isBoosted&quot;</span><span class="p">,</span> <span class="n">is_boosted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="k">def</span> <span class="nf">HHJets</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHJetsProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">HHJetsRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df_filter</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">isUL</span> <span class="o">=</span> <span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHJetsRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span> <span class="o">=</span> <span class="n">df_filter</span>
+
+        <span class="k">if</span> <span class="s2">&quot;/libToolsTools.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libToolsTools.so&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc10&quot;</span><span class="p">:</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/&quot;</span>
+                <span class="s2">&quot;external/eigen/d812f411c3f9-cms/include/&quot;</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/external/&quot;</span>
+                <span class="s2">&quot;tensorflow/2.5.0/include/&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">s</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc820&quot;</span><span class="p">:</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
+                <span class="s2">&quot;external/eigen/d812f411c3f9-bcolbf/include/eigen3&quot;</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
+                <span class="s2">&quot;external/tensorflow/2.1.0-bcolbf/include&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Architecture not considered&quot;</span><span class="p">)</span>
+
+        <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Tools/Tools&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+
+        <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/HHJetsInterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
+        <span class="n">base_hhbtag</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/HHTools/HHbtag&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">base_hhbtag</span> <span class="o">+</span> <span class="s2">&quot;/models/HHbtag_v1_par_</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+
+        <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            auto HHJets = HHJetsInterface(&quot;</span><span class="si">%s</span><span class="s2">&quot;, &quot;</span><span class="si">%s</span><span class="s2">&quot;, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">);</span>
+<span class="s2">        &quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">models</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">),</span> <span class="n">isUL</span><span class="p">))</span>
+
+        <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">            using VInt = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">            output get_hh_jets (</span>
+<span class="s2">                unsigned long long int event,</span>
+<span class="s2">                Vfloat Jet_pt, Vfloat Jet_eta, Vfloat Jet_phi, Vfloat Jet_mass,</span>
+<span class="s2">                VInt Jet_puId, Vfloat Jet_jetId, Vfloat Jet_btagDeepFlavB,</span>
+<span class="s2">                Vfloat SubJet_pt, Vfloat SubJet_eta, Vfloat SubJet_phi, Vfloat SubJet_mass,</span>
+<span class="s2">                Vfloat FatJet_msoftdrop, VInt FatJet_subJetIdx1, VInt FatJet_subJetIdx2,</span>
+<span class="s2">                int pairType, int dau1_index, int dau2_index,</span>
+<span class="s2">                Vfloat muon_pt, Vfloat muon_eta, Vfloat muon_phi, Vfloat muon_mass,</span>
+<span class="s2">                Vfloat electron_pt, Vfloat electron_eta, Vfloat electron_phi, Vfloat electron_mass,</span>
+<span class="s2">                Vfloat tau_pt, Vfloat tau_eta, Vfloat tau_phi, Vfloat tau_mass,</span>
+<span class="s2">                float met_pt, float met_phi</span>
+<span class="s2">            )</span>
+<span class="s2">            {</span>
+<span class="s2">                float dau1_pt, dau1_eta, dau1_phi, dau1_mass, dau2_pt, dau2_eta, dau2_phi, dau2_mass;</span>
+<span class="s2">                if (pairType == 0) {</span>
+<span class="s2">                    dau1_pt = muon_pt.at(dau1_index);</span>
+<span class="s2">                    dau1_eta = muon_eta.at(dau1_index);</span>
+<span class="s2">                    dau1_phi = muon_phi.at(dau1_index);</span>
+<span class="s2">                    dau1_mass = muon_mass.at(dau1_index);</span>
+<span class="s2">                } else if (pairType == 1) {</span>
+<span class="s2">                    dau1_pt = electron_pt.at(dau1_index);</span>
+<span class="s2">                    dau1_eta = electron_eta.at(dau1_index);</span>
+<span class="s2">                    dau1_phi = electron_phi.at(dau1_index);</span>
+<span class="s2">                    dau1_mass = electron_mass.at(dau1_index);</span>
+<span class="s2">                } else if (pairType == 2) {</span>
+<span class="s2">                    dau1_pt = tau_pt.at(dau1_index);</span>
+<span class="s2">                    dau1_eta = tau_eta.at(dau1_index);</span>
+<span class="s2">                    dau1_phi = tau_phi.at(dau1_index);</span>
+<span class="s2">                    dau1_mass = tau_mass.at(dau1_index);</span>
+<span class="s2">                } else {</span>
+<span class="s2">                    dau1_pt = -999.;</span>
+<span class="s2">                    dau1_eta = -999.;</span>
+<span class="s2">                    dau1_phi = -999.;</span>
+<span class="s2">                    dau1_mass = -999.;</span>
+<span class="s2">                }</span>
+<span class="s2">                dau2_pt = tau_pt.at(dau2_index);</span>
+<span class="s2">                dau2_eta = tau_eta.at(dau2_index);</span>
+<span class="s2">                dau2_phi = tau_phi.at(dau2_index);</span>
+<span class="s2">                dau2_mass = tau_mass.at(dau2_index);</span>
+
+<span class="s2">                return HHJets.GetHHJets(event, pairType,</span>
+<span class="s2">                    Jet_pt, Jet_eta, Jet_phi, Jet_mass,</span>
+<span class="s2">                    Jet_puId, Jet_jetId, Jet_btagDeepFlavB,</span>
+<span class="s2">                    SubJet_pt, SubJet_eta, SubJet_phi, SubJet_mass,</span>
+<span class="s2">                    FatJet_msoftdrop, FatJet_subJetIdx1, FatJet_subJetIdx2,</span>
+<span class="s2">                    dau1_pt, dau1_eta, dau1_phi, dau1_mass,</span>
+<span class="s2">                    dau2_pt, dau2_eta, dau2_phi, dau2_mass,</span>
+<span class="s2">                    met_pt, met_phi);</span>
+<span class="s2">            }</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;HHJets&quot;</span><span class="p">,</span> <span class="s2">&quot;get_hh_jets(event, &quot;</span>
+            <span class="s2">&quot;Jet_pt</span><span class="si">{5}</span><span class="s2">, Jet_eta, Jet_phi, Jet_mass</span><span class="si">{5}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Jet_puId, Jet_jetId, Jet_btagDeepFlavB, &quot;</span>
+            <span class="s2">&quot;SubJet_pt, SubJet_eta, SubJet_phi, SubJet_mass, &quot;</span>
+            <span class="s2">&quot;FatJet_msoftdrop, FatJet_subJetIdx1, FatJet_subJetIdx2, &quot;</span>
+            <span class="s2">&quot;pairType, dau1_index, dau2_index, &quot;</span>
+            <span class="s2">&quot;Muon_pt</span><span class="si">{0}</span><span class="s2">, Muon_eta, Muon_phi, Muon_mass</span><span class="si">{0}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Electron_pt</span><span class="si">{1}</span><span class="s2">, Electron_eta, Electron_phi, Electron_mass</span><span class="si">{1}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Tau_pt</span><span class="si">{2}</span><span class="s2">, Tau_eta, Tau_phi, Tau_mass</span><span class="si">{2}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;MET</span><span class="si">{4}</span><span class="s2">_pt</span><span class="si">{3}</span><span class="s2">, MET</span><span class="si">{4}</span><span class="s2">_phi</span><span class="si">{3}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_syst</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">met_smear_tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Jet_HHbtag&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.hhbtag&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;bjet1_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.bjet_idx1&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;bjet2_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.bjet_idx2&quot;</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;VBFjet1_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.vbfjet_idx1&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;VBFjet2_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.vbfjet_idx2&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;isBoosted&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.isBoosted&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;bjet1_JetIdx &gt;= 0&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;Jet_HHbtag&quot;</span><span class="p">,</span> <span class="s2">&quot;bjet1_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;bjet2_JetIdx&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;VBFjet1_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;VBFjet2_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;isBoosted&quot;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="HHJetsRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/hhjets.html#Tools.Tools.HHJets.HHJetsRDF">[docs]</a><span class="k">def</span> <span class="nf">HHJetsRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the HHbtag output, the indexes from the 2 bjets and 2 vbfjets (if existing) and if the</span>
+<span class="sd">    event is boosted.</span>
+
+<span class="sd">    Lepton and jet systematics (used for pt and mass variables) can be modified using the parameters</span>
+<span class="sd">    from :ref:`BaseModules_JetLepMetSyst`.</span>
+
+<span class="sd">    :param filter: whether to filter out output events if they don&#39;t have 2 bjet candidates</span>
+<span class="sd">    :type filter: bool</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: HHJetsRDF</span>
+<span class="sd">            path: Tools.Tools.HHJets</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                year: self.config.year</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+<span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
+<span class="sd">                filter: True</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df_filter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;filter&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHJetsRDFProducer</span><span class="p">(</span><span class="n">df_filter</span><span class="o">=</span><span class="n">df_filter</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

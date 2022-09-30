@@ -13,4 +13,6 @@ RDFModules
     :maxdepth: 3
 
     hhlepton
+    hhjets
+    hhdnn
     idiso 

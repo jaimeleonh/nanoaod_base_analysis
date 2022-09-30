@@ -136,20 +136,20 @@
 
 <span class="sd">    :param electron_syst: systematic appendix for the electrons. Default: ``&quot;&quot;``.</span>
 <span class="sd">    :type electron_syst: str</span>
-<span class="sd">    </span>
+
 <span class="sd">    :param tau_central: central appendix for the taus. Default: ``corr`` (tes).</span>
 <span class="sd">    :type tau_central: str</span>
 
 <span class="sd">    :param tau_syst: systematic appendix for the taus. Default: ``corr`` (tes).</span>
 <span class="sd">    :type tau_syst: str</span>
-<span class="sd">    </span>
+
 <span class="sd">    :param met_central: central appendix for the met. Default: ``&quot;&quot;``.</span>
 <span class="sd">    :type met_central: str</span>
 
 <span class="sd">    :param met_syst: systematic appendix for the met. Default: ``&quot;&quot;``.</span>
 <span class="sd">    :type met_syst: str</span>
 
-<span class="sd">    :param met_smear_tag: smearing tag used for the met. Default: ``T1Smear``</span>
+<span class="sd">    :param met_smear_tag: smearing tag used for the met. Default: ``smeared``</span>
 <span class="sd">    :type met_smear_tag: str</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -166,7 +166,7 @@
         <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;tau_central&quot;</span><span class="p">,</span> <span class="s2">&quot;corr&quot;</span><span class="p">)</span>
         <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;met_syst&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
         <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;met_central&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;met_smear_tag&quot;</span><span class="p">,</span> <span class="s2">&quot;T1Smear&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;met_smear_tag&quot;</span><span class="p">,</span> <span class="s2">&quot;smeared&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">kwargs</span><span class="p">)</span>
 
         <span class="k">assert</span> <span class="nb">sum</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">muon_central</span><span class="p">,</span>
