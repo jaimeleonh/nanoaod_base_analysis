@@ -649,13 +649,12 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
             return PreprocessRDF.req(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        # the requirement is a workflow, so start_leaf and end_leaf correspond to branches
         if not self.from_preprocess:
-            return Categorization.req(self, branch=-1, workflow="local", start_branch=start_leaf,
-                end_branch=end_leaf)
+            return Categorization.req(self, workflow="local", branches=range(start_leaf, end_leaf),
+                _exclude={"branch"})
         else:
-            return PreprocessRDF.req(self, branch=-1, workflow="local", start_branch=start_leaf,
-                end_branch=end_leaf)
+            return PreprocessRDF.req(self, workflow="local", branches=range(start_leaf, end_leaf),
+                _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
         if not self.from_preprocess:
@@ -724,8 +723,8 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
         return PreCounter.req(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return PreCounter.req(self, branch=-1, workflow="local", start_branch=start_leaf,
-            end_branch=end_leaf)
+        return PreCounter.req(self, workflow="local", branches=range(start_leaf, end_leaf),
+            _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
         # return [inp["data"] for inp in inputs["collection"].targets.values()]
