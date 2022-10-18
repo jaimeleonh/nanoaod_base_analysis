@@ -22,6 +22,8 @@ class Config():
         self.categories = self.add_categories()
         self.processes, self.process_group_names, self.process_training_names = self.add_processes()
         self.datasets = self.add_datasets()
+        if 'xrd_redir' in kwargs:
+            self.prefix_datasets(self.datasets, kwargs['xrd_redir'])
         self.features = self.add_features()
         self.versions = self.add_versions()
         self.weights = self.add_weights()
@@ -45,6 +47,13 @@ class Config():
         }
 
         return ObjectCollection(processes), process_group_names, process_training_names
+
+
+    def prefix_datasets(self, datasets, prefix):
+
+        for dataset in datasets:
+            dataset.prefix = prefix + '//'
+
 
     def add_datasets(self):
         datasets = [
