@@ -502,12 +502,13 @@
 
 <span class="k">class</span> <span class="nc">HHLeptonRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="p">,</span> <span class="n">year</span><span class="p">,</span> <span class="n">runPeriod</span><span class="p">,</span> <span class="n">df_filter</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">HHLeptonRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHLeptonRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">isMC</span><span class="o">=</span><span class="n">isMC</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">isMC</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">year</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">runPeriod</span> <span class="o">=</span> <span class="n">runPeriod</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span> <span class="o">=</span> <span class="n">df_filter</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">deeptau_version</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;deeptau_version&quot;</span><span class="p">,</span> <span class="s2">&quot;2017v2p1&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isV10</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isV10&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="n">vvvl_vsjet</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vvvl_vsjet&quot;</span><span class="p">)</span>
         <span class="n">vl_vse</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vl_vse&quot;</span><span class="p">)</span>
         <span class="n">vvl_vse</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vvl_vse&quot;</span><span class="p">)</span>
@@ -544,51 +545,98 @@
             <span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTauHPS20_Trk1_eta2p1&quot;</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">                using Vbool = const ROOT::RVec&lt;Bool_t&gt;&amp;;  </span>
-<span class="s2">                std::vector&lt;trig_req&gt; get_mutau_triggers(</span>
-<span class="s2">                        Vbool triggers, bool isMC, int run, int runPeriod) {</span>
-<span class="s2">                    std::vector&lt;trig_req&gt; trigger_reqs;</span>
-<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[4], 25, 2.1, 20, 2.3, {{2, 8}, </span><span class="si">{}</span><span class="s2">}}));</span>
-<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[5], 28, 2.1, 20, 2.3, {{2, 8}, </span><span class="si">{}</span><span class="s2">}}));</span>
-<span class="s2">                    if (!isMC &amp;&amp; run &lt; 317509)</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[8], 21, 2.1, 32, 2.1, {{64}, {1, 256}}}));</span>
-<span class="s2">                    else</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[9], 21, 2.1, 32, 2.1, {{4}, {1, 16}}}));</span>
-<span class="s2">                    return trigger_reqs;</span>
-<span class="s2">                }</span>
-<span class="s2">                std::vector&lt;trig_req&gt; get_etau_triggers(</span>
-<span class="s2">                        Vbool triggers, bool isMC, int run, int runPeriod) {</span>
-<span class="s2">                    std::vector&lt;trig_req&gt; trigger_reqs;</span>
-<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[2], 33, 2.1, 20, 2.3, {{2}, </span><span class="si">{}</span><span class="s2">}}));</span>
-<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[3], 36, 2.1, 20, 2.3, {{2}, </span><span class="si">{}</span><span class="s2">}}));</span>
-<span class="s2">                    if (!isMC &amp;&amp; run &lt; 317509)</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[4], 25, 2.1, 35, 2.1, {{64}, {1, 128}}}));</span>
-<span class="s2">                    else</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[5], 25, 2.1, 35, 2.1, {{8}, {1, 16}}}));</span>
-<span class="s2">                    return trigger_reqs;</span>
-<span class="s2">                }</span>
-<span class="s2">                std::vector&lt;trig_req&gt; get_tautau_triggers(</span>
-<span class="s2">                        Vbool triggers, bool isMC, int run, int runPeriod) {</span>
-<span class="s2">                    std::vector&lt;trig_req&gt; trigger_reqs;</span>
-<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[2], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
-<span class="s2">                    trigger_reqs.push_back(trig_req({triggers[3], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
-<span class="s2">                    if (!isMC &amp;&amp; run &lt; 317509)</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[4], 40, 2.1, 40, 2.1, {{64, 4}, {64, 4}}}));</span>
-<span class="s2">                    else</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[5], 40, 2.1, 40, 2.1, {{2, 16}, {2, 16}}}));</span>
-<span class="s2">                    return trigger_reqs;</span>
-<span class="s2">                }</span>
-<span class="s2">                std::vector&lt;trig_req&gt; get_vbf_triggers(</span>
-<span class="s2">                        Vbool triggers, bool isMC, int run, int runPeriod) {</span>
-<span class="s2">                    std::vector&lt;trig_req&gt; trigger_reqs;</span>
-<span class="s2">                    if (!isMC &amp;&amp; run &lt; 317509)</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[1], 25, 2.1, 25, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
-<span class="s2">                    else</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[2], 25, 2.1, 25, 2.1, {{512, 1, 16}, {512, 1, 16}}}));</span>
-<span class="s2">                    return trigger_reqs;</span>
-<span class="s2">                }</span>
-<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isV10</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    using Vbool = const ROOT::RVec&lt;Bool_t&gt;&amp;;  </span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_mutau_triggers(</span>
+<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[4], 25, 2.1, 20, 2.3, {{2, 8}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[5], 28, 2.1, 20, 2.3, {{2, 8}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[8], 21, 2.1, 32, 2.1, {{64}, {1, 256}}}));</span>
+<span class="s2">                        else</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[9], 21, 2.1, 32, 2.1, {{4}, {1, 16}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_etau_triggers(</span>
+<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[2], 33, 2.1, 20, 2.3, {{2}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[3], 36, 2.1, 20, 2.3, {{2}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[4], 25, 2.1, 35, 2.1, {{64}, {1, 128}}}));</span>
+<span class="s2">                        else</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[5], 25, 2.1, 35, 2.1, {{8}, {1, 16}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_tautau_triggers(</span>
+<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[2], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[3], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[4], 40, 2.1, 40, 2.1, {{64, 4}, {64, 4}}}));</span>
+<span class="s2">                        else</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[5], 40, 2.1, 40, 2.1, {{2, 16}, {2, 16}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_vbf_triggers(</span>
+<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[1], 25, 2.1, 25, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                        else</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[2], 25, 2.1, 25, 2.1, {{512, 1, 16}, {512, 1, 16}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    using Vbool = const ROOT::RVec&lt;Bool_t&gt;&amp;;  </span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_mutau_triggers(</span>
+<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[4], 25, 2.1, 20, 2.3, {{2, 8}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[5], 28, 2.1, 20, 2.3, {{2, 8}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[8], 21, 2.1, 32, 2.1, {{64}, {1, 512}}}));</span>
+<span class="s2">                        else</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[9], 21, 2.1, 32, 2.1, {{4}, {1, 32}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_etau_triggers(</span>
+<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[2], 33, 2.1, 20, 2.3, {{2}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[3], 36, 2.1, 20, 2.3, {{2}, </span><span class="si">{}</span><span class="s2">}}));</span>
+<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[4], 25, 2.1, 35, 2.1, {{64}, {1, 256}}}));</span>
+<span class="s2">                        else</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[5], 25, 2.1, 35, 2.1, {{8}, {1, 32}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_tautau_triggers(</span>
+<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[2], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[3], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[4], 40, 2.1, 40, 2.1, {{64, 4}, {64, 4}}}));</span>
+<span class="s2">                        else</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[5], 40, 2.1, 40, 2.1, {{2, 32}, {2, 32}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_vbf_triggers(</span>
+<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[1], 25, 2.1, 25, 2.1, {{64, 4, 16}, {64, 4, 16}}}));</span>
+<span class="s2">                        else</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[2], 25, 2.1, 25, 2.1, {{2048, 1, 32}, {2048, 1, 32}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;pairType&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_index&quot;</span><span class="p">,</span> <span class="s2">&quot;dau2_index&quot;</span><span class="p">,</span> <span class="s2">&quot;isVBFtrigger&quot;</span><span class="p">,</span> <span class="s2">&quot;isOS&quot;</span><span class="p">,</span>
@@ -631,20 +679,31 @@
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;vbf_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_vbf_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
             <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
 
+        <span class="n">Electron_mvaIso_WP80</span> <span class="o">=</span> <span class="s2">&quot;Electron_mvaIso_WP80&quot;</span>
+        <span class="k">if</span> <span class="n">Electron_mvaIso_WP80</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+            <span class="n">Electron_mvaIso_WP80</span> <span class="o">=</span> <span class="s2">&quot;Electron_mvaFall17V2Iso_WP80&quot;</span>
+        <span class="n">Electron_mvaIso_WP90</span> <span class="o">=</span> <span class="s2">&quot;Electron_mvaIso_WP90&quot;</span>
+        <span class="k">if</span> <span class="n">Electron_mvaIso_WP90</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+            <span class="n">Electron_mvaIso_WP90</span> <span class="o">=</span> <span class="s2">&quot;Electron_mvaFall17V2Iso_WP90&quot;</span>
+        <span class="n">Electron_mvaNoIso_WP90</span> <span class="o">=</span> <span class="s2">&quot;Electron_mvaNoIso_WP90&quot;</span>
+        <span class="k">if</span> <span class="n">Electron_mvaNoIso_WP90</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+            <span class="n">Electron_mvaNoIso_WP90</span> <span class="o">=</span> <span class="s2">&quot;Electron_mvaFall17V2noIso_WP90&quot;</span>
+
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;hh_lepton_results&quot;</span><span class="p">,</span> <span class="s2">&quot;HHLepton.get_dau_indexes(&quot;</span>
             <span class="s2">&quot;Muon_pt</span><span class="si">{0}</span><span class="s2">, Muon_eta, Muon_phi, Muon_mass</span><span class="si">{0}</span><span class="s2">, &quot;</span>
             <span class="s2">&quot;Muon_pfRelIso04_all, Muon_dxy, Muon_dz, Muon_mediumId, Muon_tightId, Muon_charge, &quot;</span>
             <span class="s2">&quot;Electron_pt</span><span class="si">{1}</span><span class="s2">, Electron_eta, Electron_phi, Electron_mass</span><span class="si">{1}</span><span class="s2">, &quot;</span>
-            <span class="s2">&quot;Electron_mvaFall17V2Iso_WP80, Electron_mvaFall17V2noIso_WP90, &quot;</span>
-            <span class="s2">&quot;Electron_mvaFall17V2Iso_WP90, Electron_pfRelIso03_all, &quot;</span>
+            <span class="s2">&quot;</span><span class="si">{3}</span><span class="s2">, </span><span class="si">{4}</span><span class="s2">, </span><span class="si">{5}</span><span class="s2">, Electron_pfRelIso03_all, &quot;</span>
             <span class="s2">&quot;Electron_dxy, Electron_dz, Electron_charge, &quot;</span>
             <span class="s2">&quot;Tau_pt</span><span class="si">{2}</span><span class="s2">, Tau_eta, Tau_phi, Tau_mass</span><span class="si">{2}</span><span class="s2">, &quot;</span>
-            <span class="s2">&quot;Tau_idDeepTau2017v2p1VSmu, Tau_idDeepTau2017v2p1VSe, &quot;</span>
-            <span class="s2">&quot;Tau_idDeepTau2017v2p1VSjet, Tau_rawDeepTau2017v2p1VSjet, &quot;</span>
+            <span class="s2">&quot;Tau_idDeepTau</span><span class="si">{6}</span><span class="s2">VSmu, Tau_idDeepTau</span><span class="si">{6}</span><span class="s2">VSe, &quot;</span>
+            <span class="s2">&quot;Tau_idDeepTau</span><span class="si">{6}</span><span class="s2">VSjet, Tau_rawDeepTau</span><span class="si">{6}</span><span class="s2">VSjet, &quot;</span>
             <span class="s2">&quot;Tau_dz, Tau_decayMode, Tau_charge, &quot;</span>
             <span class="s2">&quot;TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi, &quot;</span>
             <span class="s2">&quot;mutau_triggers, etau_triggers, tautau_triggers, vbf_triggers&quot;</span>
-        <span class="s2">&quot;)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">))</span>
+        <span class="s2">&quot;)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">,</span>
+            <span class="n">Electron_mvaIso_WP80</span><span class="p">,</span> <span class="n">Electron_mvaNoIso_WP90</span><span class="p">,</span> <span class="n">Electron_mvaIso_WP90</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">deeptau_version</span><span class="p">))</span>
 
         <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
@@ -671,6 +730,9 @@
 
 <span class="sd">    :param runPeriod: run period in caps (data only)</span>
 <span class="sd">    :type runPeriod: str</span>
+
+<span class="sd">    :param isV10: whether using nanoaodV10 (default: ``False``)</span>
+<span class="sd">    :type isV10: bool</span>
 
 <span class="sd">    :param deeptau_version: version of the DeepTau discriminator (default: ``2017v2p1``)</span>
 <span class="sd">    :type deeptau_version: str</span>
@@ -702,6 +764,7 @@
 <span class="sd">            path: Tools.Tools.HHLepton</span>
 <span class="sd">            parameters:</span>
 <span class="sd">                isMC: self.dataset.process.isMC</span>
+<span class="sd">                isV10: self.dataset.has_tag(&quot;nanoV10&quot;)</span>
 <span class="sd">                year: self.config.year</span>
 <span class="sd">                runPeriod: self.dataset.runPeriod</span>
 <span class="sd">                vvvl_vsjet: self.config.deeptau.vsjet.VVVLoose</span>
@@ -750,10 +813,13 @@
 <span class="s2">                }</span>
 <span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
 
-
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="n">branches</span> <span class="o">=</span> <span class="s2">&quot;dau1_pt</span><span class="si">{0}</span><span class="s2">, dau1_mass</span><span class="si">{0}</span><span class="s2">, dau2_pt</span><span class="si">{0}</span><span class="s2">, dau2_mass</span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">)</span>
         <span class="n">branches</span> <span class="o">=</span> <span class="n">branches</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="p">)</span>
+
+        <span class="n">all_branches</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">branches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
 
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;lepton_values</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lep_syst</span><span class="p">,</span> <span class="s2">&quot;get_lepton_values(&quot;</span>
             <span class="s2">&quot;pairType, dau1_index, dau2_index, &quot;</span>

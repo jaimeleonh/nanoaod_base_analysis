@@ -182,7 +182,7 @@
             <span class="n">channel</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;pairType </span><span class="si">%s</span><span class="s2"> is not implemented&quot;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">pairType</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">hhdnn</span><span class="o">.</span><span class="n">SetEventInputs</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">isBoosted</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span> <span class="k">if</span> <span class="n">vbfjet1</span> <span class="k">else</span> <span class="mi">0</span><span class="p">),</span> <span class="n">event</span><span class="o">.</span><span class="n">event</span><span class="p">,</span>
             <span class="n">bjet1_tlv</span><span class="p">,</span> <span class="n">bjet2_tlv</span><span class="p">,</span> <span class="n">dau1_tlv</span><span class="p">,</span> <span class="n">dau2_tlv</span><span class="p">,</span> <span class="n">vbfjet1_tlv</span><span class="p">,</span> <span class="n">vbfjet2_tlv</span><span class="p">,</span> <span class="n">met_tlv</span><span class="p">,</span>
             <span class="n">htt_svfit_tlv</span><span class="p">,</span> <span class="n">HHKinFit</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span> <span class="n">HHKinFit</span><span class="o">.</span><span class="n">chi2</span><span class="p">,</span> <span class="p">(</span><span class="n">HHKinFit</span><span class="o">.</span><span class="n">chi2</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">),</span>
@@ -208,11 +208,11 @@
 
 <span class="k">class</span> <span class="nc">HHDNNRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">,</span> <span class="mi">2018</span><span class="p">)</span>
+        <span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">HHDNNRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HHbbttDNN&quot;</span><span class="p">):</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;HHbbttDNN&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;HHbbttDNN&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;_HHbbttDNN&quot;</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;_HHbbttDNN&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;HHbbttDNN&quot;</span>
 
             <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc10&quot;</span><span class="p">:</span>
                 <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/&quot;</span>
@@ -381,6 +381,10 @@
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="n">branches</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;dnn_hhbbtt_kl_1</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="p">]</span>
+        <span class="n">all_branches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">branches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
+
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;dnn_output</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="p">,</span> <span class="s2">&quot;get_dnn_outputs(&quot;</span>
             <span class="s2">&quot;pairType, isBoosted, event, &quot;</span>
             <span class="s2">&quot;dau1_index, dau2_index, bjet1_JetIdx, bjet2_JetIdx,VBFjet1_JetIdx, VBFjet2_JetIdx, &quot;</span>
@@ -414,7 +418,6 @@
 <span class="sd">            parameters:</span>
 <span class="sd">                isMC: self.dataset.process.isMC</span>
 <span class="sd">                year: self.config.year</span>
-
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHDNNRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>

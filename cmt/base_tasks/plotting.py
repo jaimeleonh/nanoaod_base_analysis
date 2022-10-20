@@ -155,6 +155,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
     :param skip_processing: whether to skip the preprocessing and categorization steps.
     :type skip_processing: bool
+    :param skip_merging: whether to skip the MergeCategorization task.
+    :type skip_processing: bool
     :param preplot_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)
         with the RDF modules to run.
     :type preplot_modules_file: str
@@ -162,6 +164,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
     skip_processing = luigi.BoolParameter(default=False, description="whether to skip"
         " preprocessing and categorization steps, default: False")
+    skip_merging = luigi.BoolParameter(default=False, description="whether to skip"
+        " MergeCategorization task, default: False")
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
 
@@ -170,7 +174,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         :return: number of files after merging (usually 1) unless skip_processing == True
         :rtype: int
         """
-        if self.skip_processing:
+        if self.skip_processing or self.skip_merging:
             return len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
         return self.n_files_after_merging
@@ -178,6 +182,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     def workflow_requires(self):
         """
         """
+        if self.skip_merging:
+            return {"data": Categorization.vreq(self, workflow="local")}
         if self.skip_processing:
             return {"data": InputData.req(self)}
         return {"data": MergeCategorization.vreq(self, workflow="local")}
@@ -186,6 +192,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         """
         Each branch requires one input file
         """
+        if self.skip_merging:
+            return {"data": Categorization.vreq(self, workflow="local", file_index=self.branch)}
         if self.skip_processing:
             return InputData.req(self, file_index=self.branch)
         return MergeCategorization.vreq(self, workflow="local", branch=self.branch)
@@ -520,8 +528,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if dataset.process.isData or not self.apply_weights:
                 continue
             if dataset.get_aux("secondary_dataset", None):
-                reqs["stats"][dataset.name] = EventCounterDAS.vreq(self, dataset_name=dataset.name,
-                    use_secondary_dataset=True)
+                reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
+                    dataset_name=dataset.get_aux("secondary_dataset"))
             else:
                 reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
                     dataset_name=dataset.name)

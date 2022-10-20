@@ -6,6 +6,7 @@
   <title>cmt.base_tasks.plotting &mdash; nanoaod-base-analysis 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -15,6 +16,8 @@
         <script src="../../../_static/underscore.js"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/design-tabs.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -42,6 +45,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
 </ul>
 
         </div>
@@ -226,6 +230,8 @@
 
 <span class="sd">    :param skip_processing: whether to skip the preprocessing and categorization steps.</span>
 <span class="sd">    :type skip_processing: bool</span>
+<span class="sd">    :param skip_merging: whether to skip the MergeCategorization task.</span>
+<span class="sd">    :type skip_processing: bool</span>
 <span class="sd">    :param preplot_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)</span>
 <span class="sd">        with the RDF modules to run.</span>
 <span class="sd">    :type preplot_modules_file: str</span>
@@ -233,6 +239,8 @@
 
     <span class="n">skip_processing</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether to skip&quot;</span>
         <span class="s2">&quot; preprocessing and categorization steps, default: False&quot;</span><span class="p">)</span>
+    <span class="n">skip_merging</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether to skip&quot;</span>
+        <span class="s2">&quot; MergeCategorization task, default: False&quot;</span><span class="p">)</span>
     <span class="n">preplot_modules_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with modules to run RDataFrame&quot;</span><span class="p">,</span>
         <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
 
@@ -241,7 +249,7 @@
 <span class="sd">        :return: number of files after merging (usually 1) unless skip_processing == True</span>
 <span class="sd">        :rtype: int</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_processing</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_processing</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_merging</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_files_after_merging</span></div>
@@ -249,6 +257,8 @@
 <div class="viewcode-block" id="PrePlot.workflow_requires"><a class="viewcode-back" href="../../../api/base_tasks/plotting.html#cmt.base_tasks.plotting.PrePlot.workflow_requires">[docs]</a>    <span class="k">def</span> <span class="nf">workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_merging</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">)}</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_processing</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">)}</span>
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">MergeCategorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">)}</span></div>
@@ -257,6 +267,8 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Each branch requires one input file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_merging</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)}</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_processing</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">MergeCategorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
@@ -591,8 +603,8 @@
             <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">isData</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_weights</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;secondary_dataset&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-                <span class="n">reqs</span><span class="p">[</span><span class="s2">&quot;stats&quot;</span><span class="p">][</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">EventCounterDAS</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                    <span class="n">use_secondary_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">reqs</span><span class="p">[</span><span class="s2">&quot;stats&quot;</span><span class="p">][</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">MergeCategorizationStats</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;secondary_dataset&quot;</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">reqs</span><span class="p">[</span><span class="s2">&quot;stats&quot;</span><span class="p">][</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">MergeCategorizationStats</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>

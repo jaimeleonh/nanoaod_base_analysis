@@ -13,4 +13,5 @@ RDFModules
     :maxdepth: 2
    
     smearing
-    jec 
+    jec
+    pujetid_sf 

@@ -323,88 +323,97 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span> <span class="o">=</span> <span class="n">df_filter</span>
 
-        <span class="k">if</span> <span class="s2">&quot;/libToolsTools.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libToolsTools.so&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc10&quot;</span><span class="p">:</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/&quot;</span>
-                <span class="s2">&quot;external/eigen/d812f411c3f9-cms/include/&quot;</span><span class="p">)</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/external/&quot;</span>
-                <span class="s2">&quot;tensorflow/2.5.0/include/&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">s</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc820&quot;</span><span class="p">:</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
-                <span class="s2">&quot;external/eigen/d812f411c3f9-bcolbf/include/eigen3&quot;</span><span class="p">)</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
-                <span class="s2">&quot;external/tensorflow/2.1.0-bcolbf/include&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Architecture not considered&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;_HHJets&quot;</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;_HHJets&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;HHJets&quot;</span>
 
-        <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Tools/Tools&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="s2">&quot;/libToolsTools.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libToolsTools.so&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc10&quot;</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/&quot;</span>
+                    <span class="s2">&quot;external/eigen/d812f411c3f9-cms/include/&quot;</span><span class="p">)</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/external/&quot;</span>
+                    <span class="s2">&quot;tensorflow/2.5.0/include/&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">s</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc820&quot;</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
+                    <span class="s2">&quot;external/eigen/d812f411c3f9-bcolbf/include/eigen3&quot;</span><span class="p">)</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
+                    <span class="s2">&quot;external/tensorflow/2.1.0-bcolbf/include&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Architecture not considered&quot;</span><span class="p">)</span>
 
-        <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/HHJetsInterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+            <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Tools/Tools&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
-        <span class="n">base_hhbtag</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/HHTools/HHbtag&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
-        <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">base_hhbtag</span> <span class="o">+</span> <span class="s2">&quot;/models/HHbtag_v1_par_</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/HHJetsInterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
 
-        <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">            auto HHJets = HHJetsInterface(&quot;</span><span class="si">%s</span><span class="s2">&quot;, &quot;</span><span class="si">%s</span><span class="s2">&quot;, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">);</span>
-<span class="s2">        &quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">models</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">),</span> <span class="n">isUL</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
+            <span class="n">base_hhbtag</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/HHTools/HHbtag&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+            <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">base_hhbtag</span> <span class="o">+</span> <span class="s2">&quot;/models/HHbtag_v1_par_</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
 
-        <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">            using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
-<span class="s2">            using VInt = const ROOT::RVec&lt;int&gt;&amp;;</span>
-<span class="s2">            output get_hh_jets (</span>
-<span class="s2">                unsigned long long int event,</span>
-<span class="s2">                Vfloat Jet_pt, Vfloat Jet_eta, Vfloat Jet_phi, Vfloat Jet_mass,</span>
-<span class="s2">                VInt Jet_puId, Vfloat Jet_jetId, Vfloat Jet_btagDeepFlavB,</span>
-<span class="s2">                Vfloat SubJet_pt, Vfloat SubJet_eta, Vfloat SubJet_phi, Vfloat SubJet_mass,</span>
-<span class="s2">                Vfloat FatJet_msoftdrop, VInt FatJet_subJetIdx1, VInt FatJet_subJetIdx2,</span>
-<span class="s2">                int pairType, int dau1_index, int dau2_index,</span>
-<span class="s2">                Vfloat muon_pt, Vfloat muon_eta, Vfloat muon_phi, Vfloat muon_mass,</span>
-<span class="s2">                Vfloat electron_pt, Vfloat electron_eta, Vfloat electron_phi, Vfloat electron_mass,</span>
-<span class="s2">                Vfloat tau_pt, Vfloat tau_eta, Vfloat tau_phi, Vfloat tau_mass,</span>
-<span class="s2">                float met_pt, float met_phi</span>
-<span class="s2">            )</span>
-<span class="s2">            {</span>
-<span class="s2">                float dau1_pt, dau1_eta, dau1_phi, dau1_mass, dau2_pt, dau2_eta, dau2_phi, dau2_mass;</span>
-<span class="s2">                if (pairType == 0) {</span>
-<span class="s2">                    dau1_pt = muon_pt.at(dau1_index);</span>
-<span class="s2">                    dau1_eta = muon_eta.at(dau1_index);</span>
-<span class="s2">                    dau1_phi = muon_phi.at(dau1_index);</span>
-<span class="s2">                    dau1_mass = muon_mass.at(dau1_index);</span>
-<span class="s2">                } else if (pairType == 1) {</span>
-<span class="s2">                    dau1_pt = electron_pt.at(dau1_index);</span>
-<span class="s2">                    dau1_eta = electron_eta.at(dau1_index);</span>
-<span class="s2">                    dau1_phi = electron_phi.at(dau1_index);</span>
-<span class="s2">                    dau1_mass = electron_mass.at(dau1_index);</span>
-<span class="s2">                } else if (pairType == 2) {</span>
-<span class="s2">                    dau1_pt = tau_pt.at(dau1_index);</span>
-<span class="s2">                    dau1_eta = tau_eta.at(dau1_index);</span>
-<span class="s2">                    dau1_phi = tau_phi.at(dau1_index);</span>
-<span class="s2">                    dau1_mass = tau_mass.at(dau1_index);</span>
-<span class="s2">                } else {</span>
-<span class="s2">                    dau1_pt = -999.;</span>
-<span class="s2">                    dau1_eta = -999.;</span>
-<span class="s2">                    dau1_phi = -999.;</span>
-<span class="s2">                    dau1_mass = -999.;</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                auto HHJets = HHJetsInterface(&quot;</span><span class="si">%s</span><span class="s2">&quot;, &quot;</span><span class="si">%s</span><span class="s2">&quot;, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">);</span>
+<span class="s2">            &quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">models</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">),</span> <span class="n">isUL</span><span class="p">))</span>
+
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">                using VInt = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">                output get_hh_jets (</span>
+<span class="s2">                    unsigned long long int event,</span>
+<span class="s2">                    Vfloat Jet_pt, Vfloat Jet_eta, Vfloat Jet_phi, Vfloat Jet_mass,</span>
+<span class="s2">                    VInt Jet_puId, Vfloat Jet_jetId, Vfloat Jet_btagDeepFlavB,</span>
+<span class="s2">                    Vfloat SubJet_pt, Vfloat SubJet_eta, Vfloat SubJet_phi, Vfloat SubJet_mass,</span>
+<span class="s2">                    Vfloat FatJet_msoftdrop, VInt FatJet_subJetIdx1, VInt FatJet_subJetIdx2,</span>
+<span class="s2">                    int pairType, int dau1_index, int dau2_index,</span>
+<span class="s2">                    Vfloat muon_pt, Vfloat muon_eta, Vfloat muon_phi, Vfloat muon_mass,</span>
+<span class="s2">                    Vfloat electron_pt, Vfloat electron_eta, Vfloat electron_phi, Vfloat electron_mass,</span>
+<span class="s2">                    Vfloat tau_pt, Vfloat tau_eta, Vfloat tau_phi, Vfloat tau_mass,</span>
+<span class="s2">                    float met_pt, float met_phi</span>
+<span class="s2">                )</span>
+<span class="s2">                {</span>
+<span class="s2">                    float dau1_pt, dau1_eta, dau1_phi, dau1_mass, dau2_pt, dau2_eta, dau2_phi, dau2_mass;</span>
+<span class="s2">                    if (pairType == 0) {</span>
+<span class="s2">                        dau1_pt = muon_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_eta = muon_eta.at(dau1_index);</span>
+<span class="s2">                        dau1_phi = muon_phi.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = muon_mass.at(dau1_index);</span>
+<span class="s2">                    } else if (pairType == 1) {</span>
+<span class="s2">                        dau1_pt = electron_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_eta = electron_eta.at(dau1_index);</span>
+<span class="s2">                        dau1_phi = electron_phi.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = electron_mass.at(dau1_index);</span>
+<span class="s2">                    } else if (pairType == 2) {</span>
+<span class="s2">                        dau1_pt = tau_pt.at(dau1_index);</span>
+<span class="s2">                        dau1_eta = tau_eta.at(dau1_index);</span>
+<span class="s2">                        dau1_phi = tau_phi.at(dau1_index);</span>
+<span class="s2">                        dau1_mass = tau_mass.at(dau1_index);</span>
+<span class="s2">                    } else {</span>
+<span class="s2">                        dau1_pt = -999.;</span>
+<span class="s2">                        dau1_eta = -999.;</span>
+<span class="s2">                        dau1_phi = -999.;</span>
+<span class="s2">                        dau1_mass = -999.;</span>
+<span class="s2">                        dau2_pt = -999.;</span>
+<span class="s2">                        dau2_eta = -999.;</span>
+<span class="s2">                        dau2_phi = -999.;</span>
+<span class="s2">                        dau2_mass = -999.;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    if (pairType &gt;= 0) {</span>
+<span class="s2">                        dau2_pt = tau_pt.at(dau2_index);</span>
+<span class="s2">                        dau2_eta = tau_eta.at(dau2_index);</span>
+<span class="s2">                        dau2_phi = tau_phi.at(dau2_index);</span>
+<span class="s2">                        dau2_mass = tau_mass.at(dau2_index);</span>
+<span class="s2">                    }</span>
+
+<span class="s2">                    return HHJets.GetHHJets(event, pairType,</span>
+<span class="s2">                        Jet_pt, Jet_eta, Jet_phi, Jet_mass,</span>
+<span class="s2">                        Jet_puId, Jet_jetId, Jet_btagDeepFlavB,</span>
+<span class="s2">                        SubJet_pt, SubJet_eta, SubJet_phi, SubJet_mass,</span>
+<span class="s2">                        FatJet_msoftdrop, FatJet_subJetIdx1, FatJet_subJetIdx2,</span>
+<span class="s2">                        dau1_pt, dau1_eta, dau1_phi, dau1_mass,</span>
+<span class="s2">                        dau2_pt, dau2_eta, dau2_phi, dau2_mass,</span>
+<span class="s2">                        met_pt, met_phi);</span>
 <span class="s2">                }</span>
-<span class="s2">                dau2_pt = tau_pt.at(dau2_index);</span>
-<span class="s2">                dau2_eta = tau_eta.at(dau2_index);</span>
-<span class="s2">                dau2_phi = tau_phi.at(dau2_index);</span>
-<span class="s2">                dau2_mass = tau_mass.at(dau2_index);</span>
-
-<span class="s2">                return HHJets.GetHHJets(event, pairType,</span>
-<span class="s2">                    Jet_pt, Jet_eta, Jet_phi, Jet_mass,</span>
-<span class="s2">                    Jet_puId, Jet_jetId, Jet_btagDeepFlavB,</span>
-<span class="s2">                    SubJet_pt, SubJet_eta, SubJet_phi, SubJet_mass,</span>
-<span class="s2">                    FatJet_msoftdrop, FatJet_subJetIdx1, FatJet_subJetIdx2,</span>
-<span class="s2">                    dau1_pt, dau1_eta, dau1_phi, dau1_mass,</span>
-<span class="s2">                    dau2_pt, dau2_eta, dau2_phi, dau2_mass,</span>
-<span class="s2">                    met_pt, met_phi);</span>
-<span class="s2">            }</span>
-<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;HHJets&quot;</span><span class="p">,</span> <span class="s2">&quot;get_hh_jets(event, &quot;</span>

@@ -56,6 +56,7 @@
 <li class="toctree-l3 current"><a class="reference internal" href="index.html#rdfmodules">RDFModules</a><ul class="current">
 <li class="toctree-l4 current"><a class="current reference internal" href="#">Smearing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="jec.html">Jet Energy Corrections</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pujetid_sf.html">PUJet Id SF</a></li>
 </ul>
 </li>
 </ul>
@@ -114,12 +115,12 @@
 <dt class="sig sig-object py" id="Corrections.JME.smearing.jetSmearerRDF">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Corrections.JME.smearing.</span></span><span class="sig-name descname"><span class="pre">jetSmearerRDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/Corrections/JME/smearing.html#jetSmearerRDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Corrections.JME.smearing.jetSmearerRDF" title="Permalink to this definition"></a></dt>
 <dd><p>Bases:</p>
-<p>Module to compute jet smearing factors
+<p>Module to compute jet smearing factors (nom, up, down) and jet_pt_resolution
 Note: UL2016_preVFP is not implemented</p>
 <p>YAML sintaxis:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
 <span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">jetSmearerRDF</span><span class="w"></span>
-<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Base.Modules.smearing</span><span class="w"></span>
+<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Corrections.JME.smearing</span><span class="w"></span>
 <span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
 <span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
 <span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
