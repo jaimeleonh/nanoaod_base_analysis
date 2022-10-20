@@ -114,8 +114,9 @@
 <p>Module to obtain btagging deepJet SFs with their uncertainties.</p>
 <p>Required RDFModules: <a class="reference internal" href="../HHbbtt/hhlepton.html#hhlepton-hhleptonrdf"><span class="std std-ref">HHLeptonRDF</span></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Param<span class="colon">:</span></dt>
-<dd class="field-odd"><p>reshape_uncertainties: name of the systematic to consider among <code class="docutils literal notranslate"><span class="pre">central</span></code> (default),
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reshape_uncertainties</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – name of the systematic to consider among <code class="docutils literal notranslate"><span class="pre">central</span></code> (default),
 <code class="docutils literal notranslate"><span class="pre">down_cferr1</span></code>, <code class="docutils literal notranslate"><span class="pre">down_cferr2</span></code>, <code class="docutils literal notranslate"><span class="pre">down_hf</span></code>, <code class="docutils literal notranslate"><span class="pre">down_hfstats1</span></code>, <code class="docutils literal notranslate"><span class="pre">down_hfstats2</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jes</span></code>,
 <code class="docutils literal notranslate"><span class="pre">down_jesAbsoluteMPFBias</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesAbsoluteScale</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesAbsoluteStat</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesFlavorQCD</span></code>,
 <code class="docutils literal notranslate"><span class="pre">down_jesFragmentation</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesPileUpDataMC</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesPileUpPtBB</span></code>, <code class="docutils literal notranslate"><span class="pre">down_jesPileUpPtEC1</span></code>,
@@ -132,7 +133,20 @@
 <code class="docutils literal notranslate"><span class="pre">up_jesRelativeJERHF</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesRelativePtBB</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesRelativePtEC1</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesRelativePtEC2</span></code>,
 <code class="docutils literal notranslate"><span class="pre">up_jesRelativePtHF</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesRelativeSample</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesRelativeStatEC</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesRelativeStatFSR</span></code>,
 <code class="docutils literal notranslate"><span class="pre">up_jesRelativeStatHF</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesSinglePionECAL</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesSinglePionHCAL</span></code>, <code class="docutils literal notranslate"><span class="pre">up_jesTimePtEta</span></code>, <code class="docutils literal notranslate"><span class="pre">up_lf</span></code>,
-<code class="docutils literal notranslate"><span class="pre">up_lfstats1</span></code>, <code class="docutils literal notranslate"><span class="pre">up_lfstats2</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">up_lfstats1</span></code>, <code class="docutils literal notranslate"><span class="pre">up_lfstats2</span></code>.</p></li>
+<li><p><strong>lep_pt</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – pt of the leptons to remove from the Jet collection. Can be included as a
+straight vector from the RDataFrame or as vector made out of floats available in the
+RDataFrame (e.g. “{lep1_pt, lep2_pt}”). Default: none.</p></li>
+<li><p><strong>lep_eta</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – eta of the leptons to remove from the Jet collection. Can be included as a
+straight vector from the RDataFrame or as vector made out of floats available in the
+RDataFrame (e.g. “{lep1_eta, lep2_eta}”). Default: none.</p></li>
+<li><p><strong>lep_phi</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – phi of the leptons to remove from the Jet collection. Can be included as a
+straight vector from the RDataFrame or as vector made out of floats available in the
+RDataFrame (e.g. “{lep1_phi, lep2_phi}”). Default: none.</p></li>
+<li><p><strong>lep_mass</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – mass of the leptons to remove from the Jet collection. Can be included as a
+straight vector from the RDataFrame or as vector made out of floats available in the
+RDataFrame (e.g. “{lep1_mass, lep2_mass}”). Default: none.</p></li>
+</ul>
 </dd>
 </dl>
 <p>YAML sintaxis:</p>
@@ -144,6 +158,10 @@
 <span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
 <span class="w">        </span><span class="nt">isUL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&#39;ul&#39;)</span><span class="w"></span>
 <span class="w">        </span><span class="nt">reshape_uncertainties</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">central</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]</span><span class="w"></span>
+<span class="w">        </span><span class="nt">lep_pt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
+<span class="w">        </span><span class="nt">lep_eta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
+<span class="w">        </span><span class="nt">lep_phi</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
+<span class="w">        </span><span class="nt">lep_mass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
 </pre></div>
 </div>
 </dd></dl>
