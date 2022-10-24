@@ -153,7 +153,11 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         else:
             histo_weight = df.Define("var", "1.").Histo1D(hmodel, "var")
 
-        d = {"nevents": histo_noweight.Integral(), "nweightedevents": histo_weight.Integral()}
+        d = {
+            "nevents": histo_noweight.Integral(),
+            "nweightedevents": histo_weight.Integral(),
+            "filenames": [inp]
+        }
         with open(create_file_dir(self.output().path), "w+") as f:
             json.dump(d, f, indent=4)
 
@@ -735,7 +739,7 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
 
     def merge(self, inputs, output):
         # output content
-        stats = dict(nevents=0, nweightedevents=0)
+        stats = dict(nevents=0, nweightedevents=0, filenames=[])
 
         # merge
         for inp in inputs:
@@ -752,6 +756,7 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
             if "json" in inp.path:
                 stats["nevents"] += _stats["nevents"]
                 stats["nweightedevents"] += _stats["nweightedevents"]
+                stats["filenames"] += _stats["filenames"]
             else:
                 try:
                     histo = _stats.Get("histos/events")
