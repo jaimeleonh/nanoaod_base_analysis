@@ -33,7 +33,7 @@ from cmt.base_tasks.base import (
 )
 
 from cmt.base_tasks.preprocessing import (
-    Preprocess, MergeCategorization, MergeCategorizationStats, EventCounterDAS
+    Categorization, MergeCategorization, MergeCategorizationStats, EventCounterDAS
 )
 
 cmt_style = r.styles.copy("default", "cmt_style")
@@ -156,7 +156,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     :param skip_processing: whether to skip the preprocessing and categorization steps.
     :type skip_processing: bool
     :param skip_merging: whether to skip the MergeCategorization task.
-    :type skip_processing: bool
+    :type skip_merging: bool
     :param preplot_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)
         with the RDF modules to run.
     :type preplot_modules_file: str
@@ -193,7 +193,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         Each branch requires one input file
         """
         if self.skip_merging:
-            return {"data": Categorization.vreq(self, workflow="local", file_index=self.branch)}
+            return Categorization.vreq(self, workflow="local", branch=self.branch)
         if self.skip_processing:
             return InputData.req(self, file_index=self.branch)
         return MergeCategorization.vreq(self, workflow="local", branch=self.branch)
@@ -235,6 +235,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         # prepare inputs and outputs
         if self.skip_processing:
             inp = self.input().path
+        elif self.skip_merging:
+            inp = self.input()["data"].path
         else:
             inp = self.input().targets[self.branch].path
         outp = self.output().path
@@ -264,7 +266,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 selection = join_root_selection(region_selection, selection, op="and")
             else:
                 selection = region_selection
-
         if selection != "1":
             df = df.Define("selection", selection).Filter("selection")
 

@@ -228,7 +228,11 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">histo_weight</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span><span class="n">hmodel</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">)</span>
 
-        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;nevents&quot;</span><span class="p">:</span> <span class="n">histo_noweight</span><span class="o">.</span><span class="n">Integral</span><span class="p">(),</span> <span class="s2">&quot;nweightedevents&quot;</span><span class="p">:</span> <span class="n">histo_weight</span><span class="o">.</span><span class="n">Integral</span><span class="p">()}</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;nevents&quot;</span><span class="p">:</span> <span class="n">histo_noweight</span><span class="o">.</span><span class="n">Integral</span><span class="p">(),</span>
+            <span class="s2">&quot;nweightedevents&quot;</span><span class="p">:</span> <span class="n">histo_weight</span><span class="o">.</span><span class="n">Integral</span><span class="p">(),</span>
+            <span class="s2">&quot;filenames&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">inp</span><span class="p">]</span>
+        <span class="p">}</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span></div></div>
 
@@ -810,7 +814,7 @@
 
     <span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
         <span class="c1"># output content</span>
-        <span class="n">stats</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">nevents</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nweightedevents</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">nevents</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nweightedevents</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">filenames</span><span class="o">=</span><span class="p">[])</span>
 
         <span class="c1"># merge</span>
         <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
@@ -827,6 +831,7 @@
             <span class="k">if</span> <span class="s2">&quot;json&quot;</span> <span class="ow">in</span> <span class="n">inp</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
                 <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;nevents&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">_stats</span><span class="p">[</span><span class="s2">&quot;nevents&quot;</span><span class="p">]</span>
                 <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;nweightedevents&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">_stats</span><span class="p">[</span><span class="s2">&quot;nweightedevents&quot;</span><span class="p">]</span>
+                <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;filenames&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">_stats</span><span class="p">[</span><span class="s2">&quot;filenames&quot;</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">histo</span> <span class="o">=</span> <span class="n">_stats</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="s2">&quot;histos/events&quot;</span><span class="p">)</span>

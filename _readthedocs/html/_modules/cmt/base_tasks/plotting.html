@@ -108,7 +108,7 @@
 <span class="p">)</span>
 
 <span class="kn">from</span> <span class="nn">cmt.base_tasks.preprocessing</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">Preprocess</span><span class="p">,</span> <span class="n">MergeCategorization</span><span class="p">,</span> <span class="n">MergeCategorizationStats</span><span class="p">,</span> <span class="n">EventCounterDAS</span>
+    <span class="n">Categorization</span><span class="p">,</span> <span class="n">MergeCategorization</span><span class="p">,</span> <span class="n">MergeCategorizationStats</span><span class="p">,</span> <span class="n">EventCounterDAS</span>
 <span class="p">)</span>
 
 <span class="n">cmt_style</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="s2">&quot;default&quot;</span><span class="p">,</span> <span class="s2">&quot;cmt_style&quot;</span><span class="p">)</span>
@@ -231,7 +231,7 @@
 <span class="sd">    :param skip_processing: whether to skip the preprocessing and categorization steps.</span>
 <span class="sd">    :type skip_processing: bool</span>
 <span class="sd">    :param skip_merging: whether to skip the MergeCategorization task.</span>
-<span class="sd">    :type skip_processing: bool</span>
+<span class="sd">    :type skip_merging: bool</span>
 <span class="sd">    :param preplot_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)</span>
 <span class="sd">        with the RDF modules to run.</span>
 <span class="sd">    :type preplot_modules_file: str</span>
@@ -268,7 +268,7 @@
 <span class="sd">        Each branch requires one input file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_merging</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)}</span>
+            <span class="k">return</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_processing</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">MergeCategorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
@@ -310,6 +310,8 @@
         <span class="c1"># prepare inputs and outputs</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_processing</span><span class="p">:</span>
             <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_merging</span><span class="p">:</span>
+            <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">targets</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">]</span><span class="o">.</span><span class="n">path</span>
         <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
@@ -339,7 +341,6 @@
                 <span class="n">selection</span> <span class="o">=</span> <span class="n">join_root_selection</span><span class="p">(</span><span class="n">region_selection</span><span class="p">,</span> <span class="n">selection</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;and&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">selection</span> <span class="o">=</span> <span class="n">region_selection</span>
-
         <span class="k">if</span> <span class="n">selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
             <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
 
