@@ -152,15 +152,16 @@ class Config_ul_2018(Config):
                 splitting=200000,
                 tags=["ul"]),
             # single top
-            # Dataset("st_antitop",
-                # dataset="/ST_t-channel_antitop_5f_TuneCP5_13TeV-powheg-pythia8/"
-                # "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                # process=self.processes.get("singlet"),
-                # # prefix="xrootd-cms.infn.it//",
-                # xs=80.95,
-                # splitting=200000),
+            Dataset("st_antitop",
+                dataset=\
+                    "/ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/"
+                    "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+                process=self.processes.get("singlet"),
+                # prefix="xrootd-cms.infn.it//",
+                xs=80.95,
+                splitting=200000),
             Dataset("st_top",
-                dataset="/ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
+                dataset="/ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",

@@ -201,6 +201,9 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         default="")
     weights_file = None
 
+    default_store = "$CMT_STORE_EOS_PREPROCESSING"
+    default_wlcg_fs = "wlcg_fs_categorization"
+
     def output(self):
         """
         :return: One file per input file with the tree + additional branches
