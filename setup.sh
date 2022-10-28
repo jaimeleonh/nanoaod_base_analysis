@@ -24,8 +24,8 @@ action() {
         export CMT_ON_LXPLUS="0"
     fi
     
-    # check if we're on gaeui (ciemat)
-    if [[ "$( hostname )" = gae*.ciemat.es ]]; then
+    # check if we're at ciemat
+    if [[ "$( hostname -f )" = *.ciemat.es ]]; then
         export CMT_ON_CIEMAT="1"
     else
         export CMT_ON_CIEMAT="0"
