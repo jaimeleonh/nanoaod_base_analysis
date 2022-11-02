@@ -472,7 +472,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             processes.append(process)
             if process.parent_process:
                 processes += get_processes(process=self.config.processes.get(
-                    dataset.process.parent_process))
+                    process.parent_process))
             return processes
 
         for dataset in self.datasets:
@@ -481,7 +481,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             for process in processes:
                 if process.name in self.config.process_group_names[self.process_group_name]:
                     filtered_processes.append(process)
-            # print dataset.name, [process.name for process in processes]
             if len(filtered_processes) > 1:
                 raise Exception("%s process group name includes not orthogonal processes %s"
                     % (self.process_group_name, ", ".join(filtered_processes.names)))
@@ -698,7 +697,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                             systematics[dataset.name].append((syst_name, eval(systVal) - 1))
                             break
                         elif process.parent_process:
-                            process=self.config.processes.get(dataset.process.parent_process)
+                            process=self.config.processes.get(process.parent_process)
                         else:
                             break
             for dataset_name in systematics:
