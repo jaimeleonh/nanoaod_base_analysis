@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>cmt.base_tasks.preprocessing &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>cmt.base_tasks.preprocessing &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -31,7 +31,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -45,7 +45,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="index.html">cmt.base_tasks</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">cmt.base_tasks.preprocessing</a><ul>
@@ -78,7 +82,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">nanoaod-base-analysis</a>
+          <a href="../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -135,7 +139,7 @@ In case they have to be computed, RDF modules can be run.</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">PreCounter</span> <span class="pre">--version</span> <span class="pre">test</span>&#160; <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">ggf_sm</span> <span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--weights-file</span> <span class="pre">weight_file</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>weights_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> (w/o extension) with the RDF modules to run</p>
+<dd class="field-odd"><p><strong>weights_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> (w/o extension) with the RDF modules to run</p>
 </dd>
 </dl>
 <dl class="py method">
@@ -146,7 +150,7 @@ In case they have to be computed, RDF modules can be run.</p>
 <dd class="field-odd"><p>number of files for the selected dataset</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -210,9 +214,9 @@ and counts the number of events w/ and w/o additional weights</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or “../config/” (w/o extension)
+<li><p><strong>modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or “../config/” (w/o extension)
 with the RDF modules to run</p></li>
-<li><p><strong>keep_and_drop_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or “../config/” (w/o extension)
+<li><p><strong>keep_and_drop_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or “../config/” (w/o extension)
 with the RDF columns to save in the output file</p></li>
 </ul>
 </dd>
@@ -269,12 +273,12 @@ and runs the desired RDFModules</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>base_category_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – category name from the PreprocessRDF requirements.</p></li>
-<li><p><strong>systematic</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – systematic to use for categorization.</p></li>
-<li><p><strong>systematic_direction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – systematic direction to use for categorization.</p></li>
-<li><p><strong>feature_modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or <code class="docutils literal notranslate"><span class="pre">../config/</span></code> (w/o extension)
+<li><p><strong>base_category_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – category name from the PreprocessRDF requirements.</p></li>
+<li><p><strong>systematic</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic to use for categorization.</p></li>
+<li><p><strong>systematic_direction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic direction to use for categorization.</p></li>
+<li><p><strong>feature_modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or <code class="docutils literal notranslate"><span class="pre">../config/</span></code> (w/o extension)
 with the RDF modules to run</p></li>
-<li><p><strong>from_rdf</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether preprocessing was performed with PreprocessRDF</p></li>
+<li><p><strong>from_rdf</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether preprocessing was performed with PreprocessRDF</p></li>
 </ul>
 </dd>
 </dl>
@@ -291,7 +295,7 @@ with the RDF modules to run</p></li>
 <dd class="field-odd"><p>number of files for the selected dataset</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -356,7 +360,7 @@ definition.</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">MergeCategorization</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--category-name</span> <span class="pre">etau</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">tt_sl</span> <span class="pre">--workflow</span> <span class="pre">local</span> <span class="pre">--workers</span> <span class="pre">4</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>from_preprocess</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – wheter it merges the output from the PreprocessRDF task (True)
+<dd class="field-odd"><p><strong>from_preprocess</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – wheter it merges the output from the PreprocessRDF task (True)
 or Categorization (False, default)</p>
 </dd>
 </dl>
@@ -418,7 +422,7 @@ In case they have to be computed, RDF modules can be run.</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">EventCounterDAS</span> <span class="pre">--version</span> <span class="pre">test</span>&#160; <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">ggf_sm</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>use_secondary_dataset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to use the dataset included in the secondary_dataset
+<dd class="field-odd"><p><strong>use_secondary_dataset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to use the dataset included in the secondary_dataset
 parameter from the dataset instead of the actual dataset</p>
 </dd>
 </dl>

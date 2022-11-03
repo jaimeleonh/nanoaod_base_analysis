@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jet Energy Corrections &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>Jet Energy Corrections &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -31,7 +31,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -45,7 +45,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">Modules Reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../BaseModules/index.html">BaseModules</a></li>
@@ -75,7 +79,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">nanoaod-base-analysis</a>
+          <a href="../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -119,7 +123,7 @@ after applying the uncertainties.</p>
 <p>Note: UL2016_preVFP is not implemented</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>jec_sources</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – <p>names of the systematic sources to consider. They depend on the year:</p>
+<dd class="field-odd"><p><strong>jec_sources</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – <p>names of the systematic sources to consider. They depend on the year:</p>
 <ul class="simple">
 <li><p>2016: <code class="docutils literal notranslate"><span class="pre">FlavorQCD</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeBal</span></code>, <code class="docutils literal notranslate"><span class="pre">HF</span></code>, <code class="docutils literal notranslate"><span class="pre">BBEC1</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute</span></code>,        <code class="docutils literal notranslate"><span class="pre">BBEC1_2016</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2_2016</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute_2016</span></code>, <code class="docutils literal notranslate"><span class="pre">HF_2016</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeSample_2016</span></code>,        <code class="docutils literal notranslate"><span class="pre">Total</span></code></p></li>
 <li><p>2017: <code class="docutils literal notranslate"><span class="pre">FlavorQCD</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeBal</span></code>, <code class="docutils literal notranslate"><span class="pre">HF</span></code>, <code class="docutils literal notranslate"><span class="pre">BBEC1</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute</span></code>,        <code class="docutils literal notranslate"><span class="pre">BBEC1_2017</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2_2017</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute_2017</span></code>, <code class="docutils literal notranslate"><span class="pre">HF_2017</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeSample_2017</span></code>,        <code class="docutils literal notranslate"><span class="pre">Total</span></code></p></li>

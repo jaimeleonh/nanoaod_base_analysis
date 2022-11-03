@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>cmt.base_tasks.plotting &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>cmt.base_tasks.plotting &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -31,7 +31,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -45,7 +45,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="index.html">cmt.base_tasks</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="preprocessing.html">cmt.base_tasks.preprocessing</a></li>
@@ -69,7 +73,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">nanoaod-base-analysis</a>
+          <a href="../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -118,12 +122,12 @@
 <li><p><strong>feature_tags</strong> (<em>csv string</em>) – list of tags for filtering features selected via feature names.</p></li>
 <li><p><strong>skip_feature_names</strong> (<em>csv string</em>) – names or name pattern of features to skip</p></li>
 <li><p><strong>skip_feature_tags</strong> (<em>csv string</em>) – list of tags of features to skip</p></li>
-<li><p><strong>apply_weights</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to apply weights and scaling to all histograms.</p></li>
-<li><p><strong>n_bins</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – NOT YET IMPLEMENTED. Custom number of bins for plotting,
+<li><p><strong>apply_weights</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to apply weights and scaling to all histograms.</p></li>
+<li><p><strong>n_bins</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – NOT YET IMPLEMENTED. Custom number of bins for plotting,
 defaults to the value configured by the feature when empty.</p></li>
 <li><p><strong>systematics</strong> (<em>csv list</em>) – NOT YET IMPLEMENTED. List of custom systematics to be considered.</p></li>
 <li><p><strong>shape_region</strong> (<em>str from choice list</em>) – shape region used for QCD computation.</p></li>
-<li><p><strong>remove_horns</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – NOT YET IMPLEMENTED. Whether to remove the eta horns present in 2017</p></li>
+<li><p><strong>remove_horns</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – NOT YET IMPLEMENTED. Whether to remove the eta horns present in 2017</p></li>
 </ul>
 </dd>
 </dl>
@@ -141,9 +145,9 @@ it also produces the same histograms after applying those.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>skip_processing</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to skip the preprocessing and categorization steps.</p></li>
+<li><p><strong>skip_processing</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to skip the preprocessing and categorization steps.</p></li>
 <li><p><strong>skip_merging</strong> – whether to skip the MergeCategorization task.</p></li>
-<li><p><strong>preplot_modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or <code class="docutils literal notranslate"><span class="pre">../config/</span></code> (w/o extension)
+<li><p><strong>preplot_modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or <code class="docutils literal notranslate"><span class="pre">../config/</span></code> (w/o extension)
 with the RDF modules to run.</p></li>
 </ul>
 </dd>
@@ -156,7 +160,7 @@ with the RDF modules to run.</p></li>
 <dd class="field-odd"><p>number of files after merging (usually 1) unless skip_processing == True</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -195,7 +199,7 @@ Returns “1” if it’s a data sample or the apply_weights parameter is set to
 <dd class="field-odd"><p>Product of all weights to be applied</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -224,27 +228,27 @@ rescales them if needed and plots and saves them.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>stack</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to show all backgrounds stacked (True) or normalized to 1 (False)</p></li>
-<li><p><strong>do_qcd</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to estimate QCD using the ABCD method</p></li>
+<li><p><strong>stack</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to show all backgrounds stacked (True) or normalized to 1 (False)</p></li>
+<li><p><strong>do_qcd</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to estimate QCD using the ABCD method</p></li>
 <li><p><strong>qcd_wp</strong> (<em>str from choice list</em>) – working point to use for QCD estimation</p></li>
-<li><p><strong>qcd_signal_region_wp</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – region to use as signal region for QCD estimation</p></li>
+<li><p><strong>qcd_signal_region_wp</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – region to use as signal region for QCD estimation</p></li>
 <li><p><strong>shape_region</strong> (<em>str from choice list</em>) – region to use as shape region for QCD estimation</p></li>
-<li><p><strong>qcd_sym_shape</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to symmetrise the shape coming from both possible shape regions</p></li>
-<li><p><strong>qcd_category_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – category name used for the same sign regions in QCD estimation</p></li>
-<li><p><strong>hide_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to show (False) or hide (True) the data histograms</p></li>
-<li><p><strong>normalize_signals</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to normalize signals to the
+<li><p><strong>qcd_sym_shape</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to symmetrise the shape coming from both possible shape regions</p></li>
+<li><p><strong>qcd_category_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – category name used for the same sign regions in QCD estimation</p></li>
+<li><p><strong>hide_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to show (False) or hide (True) the data histograms</p></li>
+<li><p><strong>normalize_signals</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to normalize signals to the
 total background yield (True) or not (False)</p></li>
-<li><p><strong>blinded</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to blind data in specified regions</p></li>
-<li><p><strong>save_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to save plots in png</p></li>
-<li><p><strong>save_pdf</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to save plots in pdf</p></li>
-<li><p><strong>save_root</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to write plots in a root file</p></li>
-<li><p><strong>save_yields</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to save histogram yields in a json file</p></li>
-<li><p><strong>process_group_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – name of the process grouping name</p></li>
-<li><p><strong>bins_in_x_axis</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to plot histograms with the bin numbers
+<li><p><strong>blinded</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to blind data in specified regions</p></li>
+<li><p><strong>save_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to save plots in png</p></li>
+<li><p><strong>save_pdf</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to save plots in pdf</p></li>
+<li><p><strong>save_root</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to write plots in a root file</p></li>
+<li><p><strong>save_yields</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to save histogram yields in a json file</p></li>
+<li><p><strong>process_group_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – name of the process grouping name</p></li>
+<li><p><strong>bins_in_x_axis</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – (NOT YET IMPLEMENTED) whether to plot histograms with the bin numbers
 in the x axis instead of the actual values</p></li>
-<li><p><strong>plot_systematics</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – (NOT YET FULLY IMPLEMENTED) whether to plot histograms
+<li><p><strong>plot_systematics</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – (NOT YET FULLY IMPLEMENTED) whether to plot histograms
 with their uncertainties</p></li>
-<li><p><strong>fixed_colors</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – whether to plot histograms with their defined colors (False) or fixed colors
+<li><p><strong>fixed_colors</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to plot histograms with their defined colors (False) or fixed colors
 (True) starting from <code class="docutils literal notranslate"><span class="pre">ROOT</span></code> color <code class="docutils literal notranslate"><span class="pre">2</span></code>.</p></li>
 </ul>
 </dd>
@@ -270,7 +274,7 @@ with their uncertainties</p></li>
 <dd class="field-odd"><p>string to be included in the output filenames</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></p>
 </dd>
 </dl>
 </dd></dl>

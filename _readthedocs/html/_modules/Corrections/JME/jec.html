@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Corrections.JME.jec &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>Corrections.JME.jec &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -28,7 +28,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -42,7 +42,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
@@ -54,7 +58,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../../index.html">nanoaod-base-analysis</a>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -127,7 +131,7 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">jec_provider</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;JEC_PATH&quot;</span><span class="p">),</span> <span class="n">jec_sources_str</span>
                 <span class="p">)</span>
             <span class="p">)</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">jecProviderRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="o">=</span><span class="n">isMC</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">jecProviderRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>

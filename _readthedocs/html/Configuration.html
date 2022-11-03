@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Setting the configuration &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/design-tabs.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Setting the environment" href="Environment.html" />
+    <link rel="prev" title="Installation" href="Installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Tasks.html">Executing tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq/index.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">nanoaod-base-analysis user guide</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Setting the configuration</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/Configuration.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="setting-the-configuration">
+<span id="configuration"></span><h1>Setting the configuration<a class="headerlink" href="#setting-the-configuration" title="Permalink to this heading"></a></h1>
+<p>NanoAOD framework allows you to configure multiple settings for your analysis to be done.
+Some of them are mandatory to create your configuration files, but you can create others in order to improve your analysis. The mandatory ones are defined <a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis/-/tree/py3/cmt/config">here</a>, where the parent classes can be found in <a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools/-/tree/master/analysis_tools">this</a> repository.</p>
+<p>As we said in the <a class="reference internal" href="Structure.html#structure"><span class="std std-ref">Structure of the framework</span></a> section, <a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis/tree/main/config">hhbbtt repository</a> serves us as an example on how to configure our analysis. So if we navigate through it we can see there are several python and yaml files.  Python ones define the main configuration  settings for an analysis (and there may be several of them taking advantage of inheritance), and yaml files are used to indicate modules to use, features to compute/plot, or weights to apply.</p>
+<p>Therefore, to set your configuration, you’ll have to create a config file (with a python format) and yaml files in your own <em>reponame/config/</em> folder and define the settings you need inside of them.</p>
+<p>Let’s see then what are the main settings you can configure and how to do it:</p>
+<ul>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools/-/blob/master/analysis_tools/dataset.py">Datasets</a>: Datasets consist of ntuples root files and can be data or Monte Carlo. Several datasets are already defined in <a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis/-/blob/py3/cmt/config/base_config.py">the base framework code</a>, but you will probably need to define some more in your configuration file (<a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis/blob/main/config/ul_2018_v10.py">e.g.</a>). Every dataset is assigned to a process and a specific cross section.</p></li>
+<li><p><strong>Redirector</strong>: XRootD redirectors may be used to read datasets that aren’t local. There’s the option to specify one for an individual dataset (e.g. <code class="docutils literal notranslate"><span class="pre">prefix=&quot;xrootd-cms.infn.it//</span></code>), or just one for all non-localdatasets as a parameter in the <code class="docutils literal notranslate"><span class="pre">Config</span></code> object constructor e.g.: <code class="docutils literal notranslate"><span class="pre">config</span> <span class="pre">=</span> <span class="pre">Config_ul_2018(&quot;ul_2018_v10&quot;,</span> <span class="pre">year=2018,</span> <span class="pre">ecm=13,</span> <span class="pre">lumi_pb=59741,</span> <span class="pre">xrd_redir='gaeds004.ciemat.es:1094')</span></code> . This setting is not compulsory, but it’s recommended in the case of CIEMAT, since it allows you to take advantage of local data sources or caches (please, ask computing support for recommended settings).</p></li>
+<li><p><strong>Categories</strong>: selections to be applied.</p></li>
+<li><p><strong>Processes</strong>: classify and merge datasets. This parameter facilitates the selection of datasets when plotting.</p></li>
+<li><p><strong>Features</strong>: histograms of the variables of the process and particles of interest to be plotted.</p></li>
+<li><p><strong>Weights</strong>: used to make a proper normalization, both for the variables and the systematics. They are only applied to Monte Carlo data.</p></li>
+<li><p><strong>Systematics</strong>: used in the plotting task. There’s the possibility to not use them for your features just leaving the values systematics as <code class="docutils literal notranslate"><span class="pre">systematics=[]</span></code> (<a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis/blob/5298be05d19a3a561cbf814a595545815cedd566/config/base_config.py#L345">e.g.</a>).</p></li>
+<li><p><strong>Modules</strong>: RDataFrame (RDF) based code used to set new variables to the analysis from the ntuple branches, other files and/or make selections over specific variables. You can use <a class="reference external" href="https://github.com/jaimeleonh/InferenceTools/tree/main/python">existing ones</a>, or just make yours. More info about modules can be found in the sections <a class="reference internal" href="faq/moreinfo.html#info"><span class="std std-ref">More info</span></a> and <a class="reference internal" href="modules/index.html#modules"><span class="std std-ref">Modules Reference</span></a>.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>How to make modules</strong>:</p></li>
+</ul>
+<p>You’ll have to create two files: a .yaml file and a .py one. The first one is used to sort modules to be applied and has to be inside your config folder (as <a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis/blob/5298be05d19a3a561cbf814a595545815cedd566/config/modulesrdf.yaml">this one</a>), and the .py file to define the code of your modules. Instructions to create your modules are the following:</p>
+<ol class="arabic simple">
+<li><p>Create a new (empty or with a README) repository.</p></li>
+<li><p>Clone it inside <em>$CMSSW_BASE/src/</em> + <em>Reponame/Modules/</em> (or <em>WHATEVER/YOUWANT/</em>) <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/username/reponame.git</span> <span class="pre">Reponame/Modules</span></code>.</p></li>
+<li><p>Inside Reponame/Modules create a BuildFile.xml (you can adapt it from <a class="reference external" href="https://github.com/jaimeleonh/InferenceTools/blob/main/BuildFile.xml">this file</a>).</p></li>
+<li><p>Create a python folder. If precompiled code wants to be added, create a src and an interface folders.</p></li>
+<li><p>Inside python/modulename.py, create a moduleProducer class (with the init and run methods) and a module function (which returns a moduleProducer object and is the one that’s going to be included in the .yaml file).</p></li>
+</ol>
+</div></blockquote>
+</li>
+</ul>
+<p>All of these parameters are mandatory for the configuration of any analysis with this framework, but you can add other settings like regions or channels that can be very useful to classify categories.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Environment.html" class="btn btn-neutral float-right" title="Setting the environment" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
