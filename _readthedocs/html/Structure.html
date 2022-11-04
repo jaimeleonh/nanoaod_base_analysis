@@ -46,8 +46,8 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Structure of the framework</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id1">User code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id2">Main code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#user-code">User code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">Main code</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
@@ -85,18 +85,19 @@
              
   <section id="structure-of-the-framework">
 <span id="structure"></span><h1>Structure of the framework<a class="headerlink" href="#structure-of-the-framework" title="Permalink to this heading"></a></h1>
-<p>To understand the framework we can divide it in two different sections:</p>
-<section id="id1">
-<h2><a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis">User code</a><a class="headerlink" href="#id1" title="Permalink to this heading"></a></h2>
-<p>This repository contains the needed configuration just for a hhbbtt analysis, and serves as an example so it can be modified with the desired configuration.
-It contains two folders:</p>
+<p>This framework is structured in two separate repositories, summarized in the next sections.</p>
+<section id="user-code">
+<h2>User code<a class="headerlink" href="#user-code" title="Permalink to this heading"></a></h2>
+<p>This repository should contain the user’s configuration and custom tasks. As an example, <a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis">this repository</a>
+includes the code used for the HH-&gt;bbtt analysis, and it can be used as an example to add the desired configuration.</p>
+<p>It contains two folders:</p>
 <ul class="simple">
 <li><p><em>Config</em>: it contains different files in yaml and python format to define the configuration of the analysis.</p></li>
 <li><p><em>Tasks</em>: files in python format. Custom tasks (i.e. specific from your analysis or modifying a common task) can be stored here taking advantage of inheritance.</p></li>
 </ul>
 </section>
-<section id="id2">
-<h2><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis/">Main code</a><a class="headerlink" href="#id2" title="Permalink to this heading"></a></h2>
+<section id="id1">
+<h2><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis/">Main code</a><a class="headerlink" href="#id1" title="Permalink to this heading"></a></h2>
 <p>Base code of the framework that shouldn’t be modified unless there is any improvement suggestion. In this repository there are several folders, some of them just to document information about the code, and inside the main one (<em>/cmt/</em>) are a few relevant files on our understanding of the code:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis/-/blob/py3/cmt/base_tasks/preprocessing.py">preprocessing.py</a>: main tasks of the code to process data and to count events are defined here.</p></li>

@@ -396,11 +396,17 @@
 <span class="s2">                        dau1_eta = -999.;</span>
 <span class="s2">                        dau1_phi = -999.;</span>
 <span class="s2">                        dau1_mass = -999.;</span>
+<span class="s2">                        dau2_pt = -999.;</span>
+<span class="s2">                        dau2_eta = -999.;</span>
+<span class="s2">                        dau2_phi = -999.;</span>
+<span class="s2">                        dau2_mass = -999.;</span>
 <span class="s2">                    }</span>
-<span class="s2">                    dau2_pt = tau_pt.at(dau2_index);</span>
-<span class="s2">                    dau2_eta = tau_eta.at(dau2_index);</span>
-<span class="s2">                    dau2_phi = tau_phi.at(dau2_index);</span>
-<span class="s2">                    dau2_mass = tau_mass.at(dau2_index);</span>
+<span class="s2">                    if (pairType &gt;= 0) {</span>
+<span class="s2">                        dau2_pt = tau_pt.at(dau2_index);</span>
+<span class="s2">                        dau2_eta = tau_eta.at(dau2_index);</span>
+<span class="s2">                        dau2_phi = tau_phi.at(dau2_index);</span>
+<span class="s2">                        dau2_mass = tau_mass.at(dau2_index);</span>
+<span class="s2">                    }</span>
 
 <span class="s2">                    return HHJets.GetHHJets(event, pairType,</span>
 <span class="s2">                        Jet_pt, Jet_eta, Jet_phi, Jet_mass,</span>
@@ -433,18 +439,23 @@
 
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;VBFjet1_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.vbfjet_idx1&quot;</span><span class="p">)</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;VBFjet2_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.vbfjet_idx2&quot;</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;ctjet_indexes&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.ctjet_indexes&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;fwjet_indexes&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.fwjet_indexes&quot;</span><span class="p">)</span>
+
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;isBoosted&quot;</span><span class="p">,</span> <span class="s2">&quot;HHJets.isBoosted&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span><span class="p">:</span>
             <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;bjet1_JetIdx &gt;= 0&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;Jet_HHbtag&quot;</span><span class="p">,</span> <span class="s2">&quot;bjet1_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;bjet2_JetIdx&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;VBFjet1_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;VBFjet2_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;isBoosted&quot;</span><span class="p">]</span>
+            <span class="s2">&quot;VBFjet1_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;VBFjet2_JetIdx&quot;</span><span class="p">,</span> <span class="s2">&quot;ctjet_indexes&quot;</span><span class="p">,</span> <span class="s2">&quot;fwjet_indexes&quot;</span><span class="p">,</span> <span class="s2">&quot;isBoosted&quot;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="HHJetsRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/hhjets.html#Tools.Tools.HHJets.HHJetsRDF">[docs]</a><span class="k">def</span> <span class="nf">HHJetsRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns the HHbtag output, the indexes from the 2 bjets and 2 vbfjets (if existing) and if the</span>
-<span class="sd">    event is boosted.</span>
+<span class="sd">    Returns the HHbtag output, the indexes from the 2 bjets and 2 vbfjets (if existing),</span>
+<span class="sd">    the indexes of the additional central and forward jets (if existing) and if the</span>
+<span class="sd">    event has a boosted topology.</span>
 
 <span class="sd">    Lepton and jet systematics (used for pt and mass variables) can be modified using the parameters</span>
 <span class="sd">    from :ref:`BaseModules_JetLepMetSyst`.</span>

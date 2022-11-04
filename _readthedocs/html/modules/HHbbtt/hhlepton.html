@@ -127,6 +127,7 @@ systematics.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>runPeriod</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – run period in caps (data only)</p></li>
+<li><p><strong>isV10</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether the input sample is from nanoaodV10 (default: <code class="docutils literal notranslate"><span class="pre">False</span></code>)</p></li>
 <li><p><strong>deeptau_version</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – version of the DeepTau discriminator (default: <code class="docutils literal notranslate"><span class="pre">2017v2p1</span></code>)</p></li>
 <li><p><strong>vvvl_vsjet</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – VVVLoose DeepTauVSjet WP value</p></li>
 <li><p><strong>vl_vse</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – VLoose DeepTauVSe WP value</p></li>
@@ -143,6 +144,7 @@ systematics.</p>
 <span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.HHLepton</span><span class="w"></span>
 <span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
 <span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
+<span class="w">        </span><span class="nt">isV10</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&quot;nanoV10&quot;)</span><span class="w"></span>
 <span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
 <span class="w">        </span><span class="nt">runPeriod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.runPeriod</span><span class="w"></span>
 <span class="w">        </span><span class="nt">vvvl_vsjet</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsjet.VVVLoose</span><span class="w"></span>

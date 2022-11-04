@@ -5,12 +5,14 @@
 Structure of the framework
 ====================================
 
-To understand the framework we can divide it in two different sections:
+This framework is structured in two separate repositories, summarized in the next sections.
 
-`User code <https://github.com/jaimeleonh/hhbbtt-analysis>`_
--------------------------------------------------------------
+User code
+---------
 
-This repository contains the needed configuration just for a hhbbtt analysis, and serves as an example so it can be modified with the desired configuration.
+This repository should contain the user's configuration and custom tasks. As an example, `this repository  <https://github.com/jaimeleonh/hhbbtt-analysis>`_
+includes the code used for the HH->bbtt analysis, and it can be used as an example to add the desired configuration.
+
 It contains two folders:
 
 - *Config*: it contains different files in yaml and python format to define the configuration of the analysis.
