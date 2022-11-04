@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to nanoaod-base-analysis’s documentation! &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>Welcome to nanoaod-base-analysis’s documentation! &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -22,7 +22,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Usage" href="usage.html" /> 
+    <link rel="next" title="Structure of the framework" href="Structure.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -30,7 +30,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="#" class="icon icon-home"> nanoaod-base-analysis
+            <a href="#" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -44,7 +44,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/index.html">Modules Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq/index.html">FAQ</a></li>
@@ -56,7 +60,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">nanoaod-base-analysis</a>
+          <a href="#">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -76,9 +80,9 @@
              
   <section id="welcome-to-nanoaod-base-analysis-s-documentation">
 <h1>Welcome to nanoaod-base-analysis’s documentation!<a class="headerlink" href="#welcome-to-nanoaod-base-analysis-s-documentation" title="Permalink to this heading"></a></h1>
-<p>Check out the <a class="reference internal" href="usage.html"><span class="doc">Usage</span></a> section for further information, including
-how to perform the <a class="reference internal" href="usage.html#installation"><span class="std std-ref">Installation</span></a> of the project.</p>
-<p>Information about the code can be found under the <a class="reference internal" href="api/index.html"><span class="doc">API Reference</span></a>.</p>
+<p>This code aims to process NanoAOD datasets, allowing to generate different root files, histograms and plots with the desired selection of events, variables and branches.</p>
+<p>It’s a Python and RDataFrame based framework that uses <a class="reference external" href="https://github.com/riga/law">law</a> to perform multiple CMS analyses.</p>
+<p>Therefore, it is only required to create a configuration with specific settings of your analysis to start using the code with law commands.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This project is under active development.</p>
@@ -87,10 +91,15 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <h2>Contents<a class="headerlink" href="#contents" title="Permalink to this heading"></a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Structure.html">Structure of the framework</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Structure.html#user-code">User code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Structure.html#id1">Main code</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/base_tasks/index.html">cmt.base_tasks</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/base_tasks/preprocessing.html">cmt.base_tasks.preprocessing</a><ul>
@@ -380,6 +389,7 @@ how to perform the <a class="reference internal" href="usage.html#installation">
 <li class="toctree-l1"><a class="reference internal" href="faq/index.html">FAQ</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="faq/usage.html">Usage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="faq/plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq/moreinfo.html">More info</a></li>
 </ul>
 </li>
 </ul>
@@ -391,7 +401,7 @@ how to perform the <a class="reference internal" href="usage.html#installation">
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="usage.html" class="btn btn-neutral float-right" title="Usage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Structure.html" class="btn btn-neutral float-right" title="Structure of the framework" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

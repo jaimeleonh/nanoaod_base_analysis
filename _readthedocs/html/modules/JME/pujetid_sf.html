@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PUJet Id SF &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>PUJet Id SF &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -31,7 +31,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -45,7 +45,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">Modules Reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../BaseModules/index.html">BaseModules</a></li>
@@ -75,7 +79,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">nanoaod-base-analysis</a>
+          <a href="../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -118,16 +122,16 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>lep_pt</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – pt of the leptons to remove from the Jet collection. Can be included as a
+<li><p><strong>lep_pt</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – pt of the leptons to remove from the Jet collection. Can be included as a
 straight vector from the RDataFrame or as vector made out of floats available in the
 RDataFrame (e.g. “{lep1_pt, lep2_pt}”). Default: none.</p></li>
-<li><p><strong>lep_eta</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – eta of the leptons to remove from the Jet collection. Can be included as a
+<li><p><strong>lep_eta</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – eta of the leptons to remove from the Jet collection. Can be included as a
 straight vector from the RDataFrame or as vector made out of floats available in the
 RDataFrame (e.g. “{lep1_eta, lep2_eta}”). Default: none.</p></li>
-<li><p><strong>lep_phi</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – phi of the leptons to remove from the Jet collection. Can be included as a
+<li><p><strong>lep_phi</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – phi of the leptons to remove from the Jet collection. Can be included as a
 straight vector from the RDataFrame or as vector made out of floats available in the
 RDataFrame (e.g. “{lep1_phi, lep2_phi}”). Default: none.</p></li>
-<li><p><strong>lep_mass</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – mass of the leptons to remove from the Jet collection. Can be included as a
+<li><p><strong>lep_mass</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – mass of the leptons to remove from the Jet collection. Can be included as a
 straight vector from the RDataFrame or as vector made out of floats available in the
 RDataFrame (e.g. “{lep1_mass, lep2_mass}”). Default: none.</p></li>
 </ul>

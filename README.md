@@ -1,27 +1,12 @@
-# Installation (on lxplus)
+This is the main code of the NanoAOD-base-analysis, which aims to process NanoAOD datasets, allowing to generate different root files, histograms and plots with the desired selection of events, variables and branches.
 
-```
-git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git -b py3 nanoaod_base_analysis
-cd nanoaod_base_analysis
-source setup.sh
-law index --verbose
-```
+If you want to make some suggestions to improve this code, feel free to make a pull request!
 
-After starting a new session, you always need to do ``` source setup.sh ```
+# User guide:
 
+Information about the code, how to install it, setting a configuration to use it and more useful information about this framework cand be found [here](https://nanoaod-base-analysis.readthedocs.io).
 
-# Running
-
-## htcondor
-
-To run in htcondor at CERN, simply add ```--worflow htcondor```. To run at CIEMAT, add also ```--htcondor-scheduler condorsc1.ciemat.es```.
-
-Remember to obtain your proxy before (`voms-proxy-init -voms cms -valid 192:0`) and copy it to the `nanoaod_base_analysis` folder (`cp /tmp/x509up_uXXXXXX ./x509up`)
-
-
-# Documentation
-
-Some WIP documentation can be found [here](https://nanoaod-base-analysis.readthedocs.io). In case you want to update it after including some changes:
+In case you want to update it after including some changes:
 ```
 cd docs
 make html
@@ -29,5 +14,12 @@ cp -r build/* ../_readthedocs
 cd ..
 git add _readthedocs
 ```
- 
+
 And `commit` back whenever you are ready.
+
+# Running
+
+## htcondor
+
+To run in htcondor at CERN, simply add ```--worflow htcondor```. To run at CIEMAT, add also ```--htcondor-scheduler condorsc1.ciemat.es```.
+

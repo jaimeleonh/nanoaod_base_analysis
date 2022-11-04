@@ -6,3 +6,4 @@ FAQ
 
     usage
     plotting
+    moreinfo

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>cmt.base_tasks.plotting &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>cmt.base_tasks.plotting &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -28,7 +28,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -42,7 +42,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
@@ -54,7 +58,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../../index.html">nanoaod-base-analysis</a>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -547,7 +551,7 @@
             <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">parent_process</span><span class="p">:</span>
                 <span class="n">processes</span> <span class="o">+=</span> <span class="n">get_processes</span><span class="p">(</span><span class="n">process</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-                    <span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">parent_process</span><span class="p">))</span>
+                    <span class="n">process</span><span class="o">.</span><span class="n">parent_process</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">processes</span>
 
         <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">:</span>
@@ -556,7 +560,6 @@
             <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="n">processes</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">process_group_names</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">process_group_name</span><span class="p">]:</span>
                     <span class="n">filtered_processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
-            <span class="c1"># print dataset.name, [process.name for process in processes]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_processes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> process group name includes not orthogonal processes </span><span class="si">%s</span><span class="s2">&quot;</span>
                     <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_group_name</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filtered_processes</span><span class="o">.</span><span class="n">names</span><span class="p">)))</span>
@@ -773,7 +776,7 @@
                             <span class="n">systematics</span><span class="p">[</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">syst_name</span><span class="p">,</span> <span class="nb">eval</span><span class="p">(</span><span class="n">systVal</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
                             <span class="k">break</span>
                         <span class="k">elif</span> <span class="n">process</span><span class="o">.</span><span class="n">parent_process</span><span class="p">:</span>
-                            <span class="n">process</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">parent_process</span><span class="p">)</span>
+                            <span class="n">process</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">process</span><span class="o">.</span><span class="n">parent_process</span><span class="p">)</span>
                         <span class="k">else</span><span class="p">:</span>
                             <span class="k">break</span>
             <span class="k">for</span> <span class="n">dataset_name</span> <span class="ow">in</span> <span class="n">systematics</span><span class="p">:</span>

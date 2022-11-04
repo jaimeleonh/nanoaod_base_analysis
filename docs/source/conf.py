@@ -2,7 +2,7 @@
 
 # -- Project information
 
-project = 'nanoaod-base-analysis'
+project = 'nanoaod-base-analysis user guide'
 
 import sys, os
 sys.path.insert(0, os.path.abspath('../../'))

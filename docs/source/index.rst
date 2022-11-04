@@ -1,11 +1,13 @@
 Welcome to nanoaod-base-analysis's documentation!
 =================================================
 
+This code aims to process NanoAOD datasets, allowing to generate different root files, histograms and plots with the desired selection of events, variables and branches. 
 
-Check out the :doc:`usage` section for further information, including
-how to perform the :ref:`installation` of the project.
+It's a Python and RDataFrame based framework that uses `law <https://github.com/riga/law>`_ to perform multiple CMS analyses.
 
-Information about the code can be found under the :doc:`api/index`.
+Therefore, it is only required to create a configuration with specific settings of your analysis to start using the code with law commands.
+
+
 
 .. note::
 
@@ -16,7 +18,11 @@ Contents
 
 .. toctree::
 
-   usage
+   Structure
+   Installation
+   Configuration
+   Environment
+   Tasks
    api/index
    modules/index
    faq/index
