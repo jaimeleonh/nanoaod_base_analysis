@@ -103,8 +103,16 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         :return: number of files for the selected dataset
         :rtype: int
         """
-        return len(self.dataset.get_files(
-            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+        if not self.dataset.get_aux("preprocess_merging_factor", None):
+            return len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+        else:
+            nfiles = len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+            nbranches = nfiles // self.dataset.get_aux("preprocess_merging_factor")
+            if nfiles % self.dataset.get_aux("preprocess_merging_factor"):
+                nbranches += 1
+            return nbranches
 
     def workflow_requires(self):
         """
@@ -115,14 +123,32 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         """
         Each branch requires one input file
         """
-        return InputData.req(self, file_index=self.branch)
+        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        if not merging_factor:
+            return InputData.req(self, file_index=self.branch)
+        else:
+            nfiles = len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+            reqs = {}
+            for i in range(merging_factor * self.branch, merging_factor * (self.branch + 1)):
+                if i >= nfiles:
+                    break
+                reqs[str(i)] = InputData.req(self, file_index=i)
+            return reqs
 
     def output(self):
         """
         :return: One file per input file
         :rtype: `.json`
         """
-        return  self.local_target("data_%s.json" % self.branch)
+        return self.local_target("data_%s.json" % self.branch)
+
+    def get_input(self):
+        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        if not merging_factor:
+            return self.input().path
+        else:
+            return tuple([f.path for f in self.input().values()])
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -136,7 +162,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         ROOT = import_root()
 
         # prepare inputs and outputs
-        inp = self.input().path
+        inp = self.get_input()
         outp = self.output()
         df = ROOT.RDataFrame(self.tree_name, inp)
         weight_modules = self.get_feature_modules(self.weights_file)
@@ -223,7 +249,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         # ROOT.ROOT.EnableImplicitMT()
 
         # prepare inputs and outputs
-        inp = self.input().path
+        inp = self.get_input()
         print(inp)
         outp = self.output()
         df = ROOT.RDataFrame(self.tree_name, inp)
