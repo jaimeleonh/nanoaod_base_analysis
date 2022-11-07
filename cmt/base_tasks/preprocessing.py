@@ -524,9 +524,6 @@ class Categorization(PreprocessRDF):
     :param feature_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)
         with the RDF modules to run
     :type feature_modules_file: str
-
-    :param from_rdf: whether preprocessing was performed with PreprocessRDF
-    :type from_rdf: bool
     """
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
         "base category with the initial selection, default: base")
@@ -536,8 +533,6 @@ class Categorization(PreprocessRDF):
         "for categorization, default: None")
     feature_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
-    from_rdf = luigi.BoolParameter(default=True, description="whether preprocessing was performed "
-        "with PreprocessRDF, default: True")
 
     # regions not supported
     region_name = None
@@ -548,32 +543,14 @@ class Categorization(PreprocessRDF):
     tree_name = "Events"
 
     def __init__(self, *args, **kwargs):
-        # if self.from_rdf:
-            # self.max_events = -1
-        # print(self.max_events)
         super(Categorization, self).__init__(*args, **kwargs)
 
-    def create_branch_map(self):
-        # if self.max_events != -1 and not self.from_rdf:
-        if not self.from_rdf:
-            return len(self.splitted_branches)
-        else:
-            return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
-
     def workflow_requires(self):
-        if not self.from_rdf:
-            return {"data": Preprocess.vreq(self, category_name=self.base_category_name)}
-        else:
-            return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
+        return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
 
     def requires(self):
-        if not self.from_rdf:
-            return Preprocess.vreq(self, category_name=self.base_category_name,
-                branch=self.branch)
-        else:
-            return PreprocessRDF.vreq(self, category_name=self.base_category_name,
-                branch=self.branch)
+        return PreprocessRDF.vreq(self, category_name=self.base_category_name,
+            branch=self.branch)
 
     def output(self):
         return {
