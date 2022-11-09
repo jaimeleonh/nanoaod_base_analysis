@@ -182,8 +182,16 @@
 <span class="sd">        :return: number of files for the selected dataset</span>
 <span class="sd">        :rtype: int</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span></div>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">nfiles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+            <span class="n">nbranches</span> <span class="o">=</span> <span class="n">nfiles</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">nfiles</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">):</span>
+                <span class="n">nbranches</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="n">nbranches</span></div>
 
 <div class="viewcode-block" id="PreCounter.workflow_requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.workflow_requires">[docs]</a>    <span class="k">def</span> <span class="nf">workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -194,14 +202,32 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Each branch requires one input file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+        <span class="n">merging_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">merging_factor</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">nfiles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+            <span class="n">reqs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">merging_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">,</span> <span class="n">merging_factor</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">nfiles</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">reqs</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">reqs</span></div>
 
 <div class="viewcode-block" id="PreCounter.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :return: One file per input file</span>
 <span class="sd">        :rtype: `.json`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span>  <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">get_input</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">merging_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">merging_factor</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">tuple</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">path</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
 
 <div class="viewcode-block" id="PreCounter.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
     <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -215,7 +241,7 @@
         <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
 
         <span class="c1"># prepare inputs and outputs</span>
-        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
         <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
         <span class="n">weight_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_file</span><span class="p">)</span>
@@ -302,7 +328,7 @@
         <span class="c1"># ROOT.ROOT.EnableImplicitMT()</span>
 
         <span class="c1"># prepare inputs and outputs</span>
-        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
         <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
@@ -577,9 +603,6 @@
 <span class="sd">    :param feature_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)</span>
 <span class="sd">        with the RDF modules to run</span>
 <span class="sd">    :type feature_modules_file: str</span>
-
-<span class="sd">    :param from_rdf: whether preprocessing was performed with PreprocessRDF</span>
-<span class="sd">    :type from_rdf: bool</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">base_category_name</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;base_selection&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;the name of the &quot;</span>
         <span class="s2">&quot;base category with the initial selection, default: base&quot;</span><span class="p">)</span>
@@ -589,8 +612,6 @@
         <span class="s2">&quot;for categorization, default: None&quot;</span><span class="p">)</span>
     <span class="n">feature_modules_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with modules to run RDataFrame&quot;</span><span class="p">,</span>
         <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-    <span class="n">from_rdf</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether preprocessing was performed &quot;</span>
-        <span class="s2">&quot;with PreprocessRDF, default: True&quot;</span><span class="p">)</span>
 
     <span class="c1"># regions not supported</span>
     <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
@@ -601,32 +622,14 @@
     <span class="n">tree_name</span> <span class="o">=</span> <span class="s2">&quot;Events&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="c1"># if self.from_rdf:</span>
-            <span class="c1"># self.max_events = -1</span>
-        <span class="c1"># print(self.max_events)</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">Categorization</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Categorization.create_branch_map"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.create_branch_map">[docs]</a>    <span class="k">def</span> <span class="nf">create_branch_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># if self.max_events != -1 and not self.from_rdf:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_rdf</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splitted_branches</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span></div>
-
 <div class="viewcode-block" id="Categorization.workflow_requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.workflow_requires">[docs]</a>    <span class="k">def</span> <span class="nf">workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_rdf</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">Preprocess</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">)}</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">)}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">)}</span></div>
 
 <div class="viewcode-block" id="Categorization.requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.requires">[docs]</a>    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_rdf</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">Preprocess</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">,</span>
-                <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">,</span>
-                <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_category_name</span><span class="p">,</span>
+            <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Categorization.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span>
