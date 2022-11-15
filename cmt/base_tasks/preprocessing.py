@@ -181,6 +181,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
 
         from shutil import copy
         ROOT = import_root()
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs
         inp = self.get_input()
@@ -267,7 +268,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         """
         from shutil import copy
         ROOT = import_root()
-        # ROOT.ROOT.EnableImplicitMT()
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs
         inp = self.get_input()
@@ -588,6 +589,7 @@ class Categorization(PreprocessRDF):
         """
         from shutil import copy
         ROOT = import_root()
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs
         # inp = self.input()["data"].path

@@ -34,6 +34,7 @@ class Target():
 class Task(law.Task):
 
     version = luigi.Parameter(description="version of outputs to produce")
+    request_cpus = luigi.IntParameter(default=1, description="number of cpus requested, default: 1")
     notify = law.telegram.NotifyTelegramParameter()
 
     default_store = "$CMT_STORE"
@@ -309,6 +310,7 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         config.custom_content.append(("getenv", "true"))
         config.custom_content.append(("log", "/dev/null"))
         config.custom_content.append(("+MaxRuntime", int(math.floor(self.max_runtime * 3600)) - 1))
+        config.custom_content.append(("RequestCpus", self.request_cpus))
 
         # print "{}/x509up".format(os.getenv("HOME"))
         # config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))

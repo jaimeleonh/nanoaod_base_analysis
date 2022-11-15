@@ -241,6 +241,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             inp = self.input().targets[self.branch].path
         outp = self.output().path
 
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
         df = ROOT.RDataFrame(self.tree_name, inp)
 
         modules = self.get_feature_modules(self.preplot_modules_file)
