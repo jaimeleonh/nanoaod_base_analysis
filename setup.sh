@@ -225,7 +225,7 @@ action() {
         export HHBTAG_PATH="HHTools"
         if [ ! -d "$HHBTAG_PATH" ]; then
           git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
-          git clone https://gitlab.cern.ch/hh/bbtautau/MulticlassInference --branch fix/compatibility
+          git clone https://gitlab.cern.ch/hh/bbtautau/MulticlassInference
           git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
           git clone https://github.com/GilesStrong/cms_hh_proc_interface.git
           cd cms_hh_proc_interface
