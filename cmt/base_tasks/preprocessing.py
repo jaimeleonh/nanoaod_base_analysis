@@ -103,16 +103,25 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         :return: number of files for the selected dataset
         :rtype: int
         """
-        if not self.dataset.get_aux("preprocess_merging_factor", None):
+        threshold = self.dataset.get_aux("event_threshold", None)
+        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        if not threshold and not merging_factor:
             return len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
-        else:
+        elif threshold and not merging_factor:
+            return len(self.dataset.get_file_groups(
+                path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name),
+                threshold=threshold))
+        elif not threshold and merging_factor:
             nfiles = len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
             nbranches = nfiles // self.dataset.get_aux("preprocess_merging_factor")
             if nfiles % self.dataset.get_aux("preprocess_merging_factor"):
                 nbranches += 1
             return nbranches
+        else:
+            raise ValueError("Both event_threshold and preprocess_merging_factor "
+                "can't be set at once")
 
     def workflow_requires(self):
         """
@@ -123,10 +132,18 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         """
         Each branch requires one input file
         """
+        threshold = self.dataset.get_aux("event_threshold", None)
         merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
-        if not merging_factor:
+        if not threshold and not merging_factor:
             return InputData.req(self, file_index=self.branch)
-        else:
+        elif threshold and not merging_factor:
+            reqs = {}
+            for i in self.dataset.get_file_groups(
+                    path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name),
+                    threshold=threshold)[self.branch]:
+                reqs[str(i)] = InputData.req(self, file_index=i)
+            return reqs
+        elif not threshold and merging_factor:
             nfiles = len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
             reqs = {}
@@ -135,6 +152,9 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
                     break
                 reqs[str(i)] = InputData.req(self, file_index=i)
             return reqs
+        else:
+            raise ValueError("Both event_threshold and preprocess_merging_factor "
+                "can't be set at once")
 
     def output(self):
         """
@@ -145,7 +165,8 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
 
     def get_input(self):
         merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
-        if not merging_factor:
+        threshold = self.dataset.get_aux("event_threshold", None)
+        if not merging_factor and not threshold:
             return self.input().path
         else:
             return tuple([f.path for f in self.input().values()])
