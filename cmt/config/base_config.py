@@ -29,6 +29,9 @@ class Config():
         self.weights = self.add_weights()
         self.systematics = self.add_systematics()
 
+    def get_aux(self, name, default=None):
+        return self.x.get(name, default)
+
     def add_categories(self):
         categories = []
         return ObjectCollection(categories)
