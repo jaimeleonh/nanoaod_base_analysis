@@ -426,11 +426,11 @@ class InputData(DatasetTask, law.ExternalTask):
         if self.file_index != law.NO_INT:
             return self.dynamic_target(
                 self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), 
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
                     index=self.file_index),
                 avoid_store=True)
         else:
             cls = law.SiblingFileCollection
             return cls([self.dynamic_target(file_path, avoid_store=True)
                 for file_path in self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False)])
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)])

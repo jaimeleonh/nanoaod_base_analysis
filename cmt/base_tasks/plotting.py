@@ -176,7 +176,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         """
         if self.skip_processing or self.skip_merging:
             return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
         return self.n_files_after_merging
 
     def workflow_requires(self):

@@ -107,14 +107,14 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
         if not threshold and not merging_factor:
             return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
         elif threshold and not merging_factor:
             return len(self.dataset.get_file_groups(
-                path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name),
+                path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
                 threshold=threshold))
         elif not threshold and merging_factor:
             nfiles = len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
             nbranches = nfiles // self.dataset.get_aux("preprocess_merging_factor")
             if nfiles % self.dataset.get_aux("preprocess_merging_factor"):
                 nbranches += 1
@@ -139,13 +139,13 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         elif threshold and not merging_factor:
             reqs = {}
             for i in self.dataset.get_file_groups(
-                    path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name),
+                    path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
                     threshold=threshold)[self.branch]:
                 reqs[str(i)] = InputData.req(self, file_index=i)
             return reqs
         elif not threshold and merging_factor:
             nfiles = len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
             reqs = {}
             for i in range(merging_factor * self.branch, merging_factor * (self.branch + 1)):
                 if i >= nfiles:
@@ -186,6 +186,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         # prepare inputs and outputs
         inp = self.get_input()
         outp = self.output()
+        print(inp)
         df = ROOT.RDataFrame(self.tree_name, inp)
         weight_modules = self.get_feature_modules(self.weights_file)
         if len(weight_modules) > 0:
@@ -366,15 +367,15 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             self.max_events = self.dataset.get_aux("splitting")
         if not os.path.exists(
                 os.path.expandvars("$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
-                    self.config.name, self.max_events, self.dataset.name))):
+                    self.config_name, self.max_events, self.dataset.name))):
             ROOT = import_root()
             files = self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False)
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)
             branches = []
             for ifil, fil in enumerate(files):
                 nevents = -1
                 fil = self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), index=ifil)
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), index=ifil)
                 print("Analyzing file %s" % fil)
                 nevents = self.get_n_events(fil)
                 initial_event = 0
@@ -391,12 +392,12 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
                     isplit += 1
             with open(create_file_dir(os.path.expandvars(
                     "$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
-                    self.config.name, self.max_events, self.dataset.name))), "w+") as f:
+                    self.config_name, self.max_events, self.dataset.name))), "w+") as f:
                 json.dump(branches, f, indent=4)
         else:
              with open(create_file_dir(os.path.expandvars(
                     "$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
-                    self.config.name, self.max_events, self.dataset.name)))) as f:
+                    self.config_name, self.max_events, self.dataset.name)))) as f:
                 branches = json.load(f)
         return branches
 
@@ -409,7 +410,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             return len(self.splitted_branches)
         else:
             return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
 
     def workflow_requires(self):
         return {"data": InputData.req(self)}

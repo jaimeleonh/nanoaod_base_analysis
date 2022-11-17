@@ -47,7 +47,7 @@ class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow)
 
     def create_branch_map(self):
         return len(self.dataset.get_files(
-            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
 
     def workflow_requires(self):
         return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
