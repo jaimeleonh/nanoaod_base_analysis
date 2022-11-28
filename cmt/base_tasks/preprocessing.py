@@ -289,6 +289,10 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
         # filtered_df = filtered_df.Filter("event == 83362796")
 
+        # print(filtered_df.Count().GetValue())
+        # import sys
+        # sys.exit()
+
         modules = self.get_feature_modules(self.modules_file)
         branches = list(df.GetColumnNames())
         if len(modules) > 0:
@@ -627,7 +631,10 @@ class Categorization(PreprocessRDF):
                 tf.Close()
                 copy(inp, outp["data"].path)
 
-        except ReferenceError:  # empty input file
+        except ReferenceError:  # empty ntuple
+            tf.Close()
+            copy(inp, outp["data"].path)
+        except AttributeError:  # empty input file
             tf.Close()
             copy(inp, outp["data"].path)
         #copy(self.input()["stats"].path, outp["stats"].path)
