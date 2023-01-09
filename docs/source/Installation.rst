@@ -9,10 +9,9 @@ The code is designed to work both in CIEMAT User Interfaces (*gaecmsui*)  and *l
 .. code-block:: console
 
    #Make a fork of the user code <https://github.com/jaimeleonh/hhbbtt-analysis> in your repository with the reponame you want.
-   git clone https://github.com/username/reponame #where username is your own user name.
+   git clone https://github.com/username/reponame #where username is your own github user name.
    cd <reponame>
    git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git --branch py3 nanoaod_base_analysis/
-   cd ..
    source setup.sh
    law index --verbose #to do only after installation or including a new task
 
