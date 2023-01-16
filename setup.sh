@@ -78,6 +78,7 @@ action() {
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
     if [ -n "$CMT_CIEMAT_USER" ]; then
       export TMPDIR="/nfs/cms/$CMT_CIEMAT_USER/cmt/tmp"
+      mkdir -p "$TMPDIR"
     fi
 
     # specific eos dirs
@@ -89,7 +90,6 @@ action() {
 
     # create some dirs already
     mkdir -p "$CMT_TMP_DIR"
-    mkdir -p "$TMPDIR"
 
 
     #
