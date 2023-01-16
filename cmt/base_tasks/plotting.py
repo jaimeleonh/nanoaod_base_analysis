@@ -267,6 +267,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 selection = join_root_selection(region_selection, selection, op="and")
             else:
                 selection = region_selection
+
         if selection != "1":
             df = df.Define("selection", selection).Filter("selection")
 
@@ -491,6 +492,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     self.processes_datasets[process] = []
                 self.processes_datasets[process].append(dataset)
                 self.datasets_to_run.append(dataset)
+        if len(self.datasets_to_run) == 0:
+            raise ValueError("No datasets were selected. Are you sure you want to use"
+                " %s as process_group_name?" % self.process_group_name)
 
         # get QCD regions when requested
         self.qcd_regions = None
@@ -524,16 +528,17 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             for dataset, category in itertools.product(
                 self.datasets_to_run, self.expand_category())
         )
-        reqs["stats"] = OrderedDict()
-        for dataset in self.datasets_to_run:
-            if dataset.process.isData or not self.apply_weights:
-                continue
-            if dataset.get_aux("secondary_dataset", None):
-                reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
-                    dataset_name=dataset.get_aux("secondary_dataset"))
-            else:
-                reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
-                    dataset_name=dataset.name)
+        if self.stack:
+            reqs["stats"] = OrderedDict()
+            for dataset in self.datasets_to_run:
+                if dataset.process.isData or not self.apply_weights:
+                    continue
+                if dataset.get_aux("secondary_dataset", None):
+                    reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
+                        dataset_name=dataset.get_aux("secondary_dataset"))
+                else:
+                    reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
+                        dataset_name=dataset.name)
 
         if self.do_qcd:
             reqs["qcd"] = {
@@ -1056,7 +1061,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         nevents = {}
         for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
-            if not process.isData and self.apply_weights:
+            if not process.isData and self.apply_weights and self.stack:
                 for dataset in datasets:
                     inp = inputs["stats"][dataset.name]
                     with open(inp.path) as f:
@@ -1107,7 +1112,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                 histo = copy(rootfile.Get(feature_name))
                                 rootfile.Close()
                                 dataset_histo.Add(histo)
-                            if not process.isData and self.apply_weights:
+                            if not process.isData and self.stack:
                                 if nevents[dataset.name] != 0:
                                     dataset_histo.Scale(dataset.xs * lumi / nevents[dataset.name])
                                     scaling = dataset.get_aux("scaling", None)
