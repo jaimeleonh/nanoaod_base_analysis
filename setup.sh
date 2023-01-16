@@ -76,6 +76,10 @@ action() {
     [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10"
     [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
+    if [ -n "$CMT_CIEMAT_USER" ]; then
+      export TMPDIR="/nfs/cms/$CMT_CIEMAT_USER/cmt/tmp"
+      mkdir -p "$TMPDIR"
+    fi
 
     # specific eos dirs
     [ -z "$CMT_STORE_EOS_PREPROCESSING" ] && export CMT_STORE_EOS_PREPROCESSING="$CMT_STORE_EOS"
