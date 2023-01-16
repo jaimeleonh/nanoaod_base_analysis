@@ -12,6 +12,7 @@ import contextlib
 import itertools
 from collections import OrderedDict, defaultdict
 import os
+from subprocess import call
 import json
 
 import law
@@ -662,39 +663,54 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
     although a bigger number can be set with the `merging` parameter inside the dataset
     definition.
 
+    In simulated samples, ``hadd`` is used to perform the merging. In data samples, to avoid
+    skipping events due to different branches between them, ``haddnano.py`` (safer but slower)
+    is used instead. In any case, the use of one method or the other can be forced by specifying
+    the parameters ``--force-hadd`` and ``--force-haddnano`` respectively.
+
     Example command:
 
     ``law run MergeCategorization --version test --category-name etau \
 --config-name base_config --dataset-name tt_sl --workflow local --workers 4``
 
-    :param from_preprocess: wheter it merges the output from the PreprocessRDF task (True)
+    :param from_preprocess: whether it merges the output from the PreprocessRDF task (True)
         or Categorization (False, default)
     :type from_preprocess: bool
+
+    :param force_hadd: whether to force ``hadd`` as tool to do the merging.
+    :type force_hadd: bool
+
+    :param force_haddnano: whether to force ``haddnano.py`` as tool to do the merging.
+    :type force_haddnano: bool
     """
 
     from_preprocess = luigi.BoolParameter(default=False, description="whether to use as input "
         "PreprocessRDF, default: False")
+    force_hadd = luigi.BoolParameter(default=False, description="whether to force hadd "
+        "as tool to do the merging, default: False")
+    force_haddnano = luigi.BoolParameter(default=False, description="whether to force haddnano.py "
+        "as tool to do the merging, default: False")
 
     # regions not supported
     region_name = None
     tree_name = "Events"
     merge_factor = 10
 
-    default_store = "$CMT_STORE_EOS_CATEGORIZATION"
+    default_store = "$CMT_STORE_EOS_MERGECATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
     def merge_workflow_requires(self):
         if not self.from_preprocess:
-            return Categorization.req(self, _prefer_cli=["workflow"])
+            return Categorization.vreq(self, _prefer_cli=["workflow"])
         else:
-            return PreprocessRDF.req(self, _prefer_cli=["workflow"])
+            return PreprocessRDF.vreq(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
         if not self.from_preprocess:
-            return Categorization.req(self, workflow="local", branches=range(start_leaf, end_leaf),
+            return Categorization.vreq(self, workflow="local", branches=range(start_leaf, end_leaf),
                 _exclude={"branch"})
         else:
-            return PreprocessRDF.req(self, workflow="local", branches=range(start_leaf, end_leaf),
+            return PreprocessRDF.vreq(self, workflow="local", branches=range(start_leaf, end_leaf),
                 _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
@@ -711,10 +727,10 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
     def merge(self, inputs, output):
         ROOT = import_root()
+        # with output.localize("w") as tmp_out:
         with output.localize("w") as tmp_out:
-            # law.root.hadd_task(self, [inp.path for inp in inputs], tmp_out, local=True)
             good_inputs = []
-            for inp in inputs:
+            for inp in inputs:  # merge only files with a filled tree
                 tf = ROOT.TFile.Open(inp.path)
                 try:
                     tree = tf.Get(self.tree_name)
@@ -722,11 +738,25 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                         good_inputs.append(inp)
                 except:
                     print("File %s not used" % inp.path)
-            #if good_inputs:
-            law.root.hadd_task(self, good_inputs, tmp_out, local=True)
-            #else:
-            #    raise Exception("No good files were found")
-
+            if len(good_inputs) != 0:
+                use_hadd = self.dataset.process.isMC
+                assert not(self.force_haddnano and self.force_hadd)
+                if self.force_haddnano:
+                    use_hadd = False
+                elif self.force_hadd:
+                    use_hadd = True
+                if use_hadd:
+                    print("Merging with hadd...")
+                    law.root.hadd_task(self, good_inputs, tmp_out, local=True)
+                else:
+                    print("Merging with haddnano.py...")
+                    cmd = "python3 %s/bin/%s/haddnano.py %s %s" % (
+                        os.environ["CMSSW_BASE"], os.environ["SCRAM_ARCH"],
+                        create_file_dir(tmp_out.path), " ".join([f.path for f in good_inputs]))
+                    rc = call(cmd, shell=True)
+            else:  # if all input files are empty, create an empty file as output
+                tf = ROOT.TFile.Open(create_file_dir(tmp_out.path), "RECREATE")
+                tf.Close()
 
 class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
     """
@@ -739,7 +769,7 @@ class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
     """
 
     def atomic_requires(self, dataset, category):
-        return MergeCategorization.req(self, dataset_name=dataset.name, category_name=category.name)
+        return MergeCategorization.vreq(self, dataset_name=dataset.name, category_name=category.name)
 
 
 class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
