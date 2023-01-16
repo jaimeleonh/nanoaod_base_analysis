@@ -3,7 +3,7 @@ Plotting
 
 .. dropdown:: How do I normalize histograms if my input dataset is skimmed (i.e. pre-filtered)?
 
-    You can assign to the dataset a ``secondary_dataset`` parameter, which will be used to
-    extract the number of events from DAS using ``dasgoclient``. This option won't be useful if
-    weights have to be applied to the sum of events. In this case, a solution will come (hopefully)
-    soon.
+    You can assign to the dataset a ``secondary_dataset`` parameter, which should point to
+    a valid dataset that can be used to do the event counting. If the
+    ``secondary_dataset`` parameter has been defined, the plotting will automatically
+    require the counting from this dataset instead of the one is being plotted.
