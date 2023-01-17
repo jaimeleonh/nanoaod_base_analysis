@@ -287,8 +287,10 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
     htcondor_central_scheduler = luigi.BoolParameter(default=False, significant=False,
         description="whether or not remote tasks should connect to the central scheduler, default: "
         "False")
+    custom_condor_tag = law.CSVParameter(default=(), 
+       description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
 
-    exclude_params_branch = {"max_runtime", "htcondor_central_scheduler"}
+    exclude_params_branch = {"max_runtime", "htcondor_central_scheduler", "custom_condor_tag"}
 
     def htcondor_output_directory(self):
         # the directory where submission meta data should be stored
@@ -311,6 +313,9 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         config.custom_content.append(("log", "/dev/null"))
         config.custom_content.append(("+MaxRuntime", int(math.floor(self.max_runtime * 3600)) - 1))
         config.custom_content.append(("RequestCpus", self.request_cpus))
+        if self.custom_condor_tag:
+            for elem in self.custom_condor_tag:
+                config.custom_content.append((elem, None))
 
         # print "{}/x509up".format(os.getenv("HOME"))
         # config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))
