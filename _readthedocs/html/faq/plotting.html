@@ -73,9 +73,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="index.html">FAQ</a> &raquo;</li>
-      <li>Plotting</li>
+      <li><a href="../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">FAQ</a></li>
+      <li class="breadcrumb-item active">Plotting</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/faq/plotting.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -94,10 +94,10 @@ How do I normalize histograms if my input dataset is skimmed (i.e. pre-filtered)
 <div class="sd-summary-up docutils">
 <svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
 </summary><div class="sd-summary-content sd-card-body docutils">
-<p class="sd-card-text">You can assign to the dataset a <code class="docutils literal notranslate"><span class="pre">secondary_dataset</span></code> parameter, which will be used to
-extract the number of events from DAS using <code class="docutils literal notranslate"><span class="pre">dasgoclient</span></code>. This option won’t be useful if
-weights have to be applied to the sum of events. In this case, a solution will come (hopefully)
-soon.</p>
+<p class="sd-card-text">You can assign to the dataset a <code class="docutils literal notranslate"><span class="pre">secondary_dataset</span></code> parameter, which should point to
+a valid dataset that can be used to do the event counting. If the
+<code class="docutils literal notranslate"><span class="pre">secondary_dataset</span></code> parameter has been defined, the plotting will automatically
+require the counting from this dataset instead of the one is being plotted.</p>
 </div>
 </details></section>
 

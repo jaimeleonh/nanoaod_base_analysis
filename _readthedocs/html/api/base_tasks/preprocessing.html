@@ -89,10 +89,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../index.html">API Reference</a> &raquo;</li>
-          <li><a href="index.html">cmt.base_tasks</a> &raquo;</li>
-      <li>cmt.base_tasks.preprocessing</li>
+      <li><a href="../../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="index.html">cmt.base_tasks</a></li>
+      <li class="breadcrumb-item active">cmt.base_tasks.preprocessing</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../_sources/api/base_tasks/preprocessing.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -342,12 +342,20 @@ post-selection</p>
 parallelization entering the plotting tasks. By default it merges into one output file,
 although a bigger number can be set with the <cite>merging</cite> parameter inside the dataset
 definition.</p>
+<p>In simulated samples, <code class="docutils literal notranslate"><span class="pre">hadd</span></code> is used to perform the merging. In data samples, to avoid
+skipping events due to different branches between them, <code class="docutils literal notranslate"><span class="pre">haddnano.py</span></code> (safer but slower)
+is used instead. In any case, the use of one method or the other can be forced by specifying
+the parameters <code class="docutils literal notranslate"><span class="pre">--force-hadd</span></code> and <code class="docutils literal notranslate"><span class="pre">--force-haddnano</span></code> respectively.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">MergeCategorization</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--category-name</span> <span class="pre">etau</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">tt_sl</span> <span class="pre">--workflow</span> <span class="pre">local</span> <span class="pre">--workers</span> <span class="pre">4</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>from_preprocess</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – wheter it merges the output from the PreprocessRDF task (True)
-or Categorization (False, default)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>from_preprocess</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether it merges the output from the PreprocessRDF task (True)
+or Categorization (False, default)</p></li>
+<li><p><strong>force_hadd</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to force <code class="docutils literal notranslate"><span class="pre">hadd</span></code> as tool to do the merging.</p></li>
+<li><p><strong>force_haddnano</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to force <code class="docutils literal notranslate"><span class="pre">haddnano.py</span></code> as tool to do the merging.</p></li>
+</ul>
 </dd>
 </dl>
 <dl class="py attribute">

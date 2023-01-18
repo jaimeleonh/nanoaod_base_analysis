@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Base.Modules.METfilters &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>Base.Modules.METfilters &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -15,6 +16,8 @@
         <script src="../../../_static/underscore.js"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/design-tabs.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -25,7 +28,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -39,9 +42,14 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
 </ul>
 
         </div>
@@ -50,16 +58,16 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../../index.html">nanoaod-base-analysis</a>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../../index.html">Module code</a> &raquo;</li>
-      <li>Base.Modules.METfilters</li>
+      <li><a href="../../../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">Base.Modules.METfilters</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -90,7 +98,7 @@
         <span class="k">pass</span>
 
     <span class="k">def</span> <span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
         <span class="n">flags</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">Flag_goodVertices</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">Flag_globalSuperTightHalo2016Filter</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
@@ -156,7 +164,7 @@
 
 
 <div class="viewcode-block" id="MetFilterRDF"><a class="viewcode-back" href="../../../modules/BaseModules/METfilters.html#Base.Modules.METfilters.MetFilterRDF">[docs]</a><span class="k">def</span> <span class="nf">MetFilterRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Module to apply MET Filters</span>
 
 <span class="sd">    YAML sintaxis:</span>

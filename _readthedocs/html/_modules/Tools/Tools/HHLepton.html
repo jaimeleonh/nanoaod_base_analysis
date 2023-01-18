@@ -65,9 +65,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../../index.html">Module code</a> &raquo;</li>
-      <li>Tools.Tools.HHLepton</li>
+      <li><a href="../../../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">Tools.Tools.HHLepton</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -219,7 +219,7 @@
         <span class="k">pass</span>
 
     <span class="k">def</span> <span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
         <span class="n">electrons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Electron&quot;</span><span class="p">)</span>
         <span class="n">muons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Muon&quot;</span><span class="p">)</span>
         <span class="n">taus</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Tau&quot;</span><span class="p">)</span>
@@ -483,7 +483,7 @@
         <span class="k">pass</span>
 
     <span class="k">def</span> <span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;process event, return True (go to next module) or False (fail, go to next event)&quot;&quot;&quot;</span>
         <span class="n">muons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Muon&quot;</span><span class="p">)</span>
         <span class="n">electrons</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Electron&quot;</span><span class="p">)</span>
         <span class="n">taus</span> <span class="o">=</span> <span class="n">Collection</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;Tau&quot;</span><span class="p">)</span>
@@ -725,7 +725,7 @@
 
 
 <div class="viewcode-block" id="HHLeptonRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/hhlepton.html#Tools.Tools.HHLepton.HHLeptonRDF">[docs]</a><span class="k">def</span> <span class="nf">HHLeptonRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns the index of the two selected taus + several of their variables not affected by</span>
 <span class="sd">    systematics.</span>
 
@@ -837,7 +837,7 @@
 
 
 <div class="viewcode-block" id="HHLeptonVarRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/hhlepton.html#Tools.Tools.HHLepton.HHLeptonVarRDF">[docs]</a><span class="k">def</span> <span class="nf">HHLeptonVarRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns the pt and mass of the selected taus possibly including systematics</span>
 
 <span class="sd">    Lepton systematics (used for pt and mass variables) can be modified using the parameters from </span>

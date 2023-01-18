@@ -707,11 +707,11 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
     def merge_requires(self, start_leaf, end_leaf):
         if not self.from_preprocess:
-            return Categorization.vreq(self, workflow="local", branches=range(start_leaf, end_leaf),
-                _exclude={"branch"})
+            return Categorization.vreq(self, workflow="local",
+		branches=range(start_leaf, end_leaf - 1), _exclude={"branch"})
         else:
-            return PreprocessRDF.vreq(self, workflow="local", branches=range(start_leaf, end_leaf),
-                _exclude={"branch"})
+            return PreprocessRDF.vreq(self, workflow="local",
+		branches=range(start_leaf, end_leaf - 1), _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
         if not self.from_preprocess:
@@ -794,7 +794,7 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
         return PreCounter.req(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return PreCounter.req(self, workflow="local", branches=range(start_leaf, end_leaf),
+        return PreCounter.req(self, workflow="local", branches=range(start_leaf, end_leaf - 1),
             _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):

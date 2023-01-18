@@ -65,9 +65,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../../index.html">Module code</a> &raquo;</li>
-      <li>cmt.base_tasks.plotting</li>
+      <li><a href="../../../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">cmt.base_tasks.plotting</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -347,12 +347,8 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">selection</span> <span class="o">=</span> <span class="n">region_selection</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="n">selection</span><span class="p">)</span>
-
         <span class="k">if</span> <span class="n">selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
             <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">Count</span><span class="p">()</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
 
         <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
         <span class="n">tree</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">)</span>

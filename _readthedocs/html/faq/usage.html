@@ -73,9 +73,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="index.html">FAQ</a> &raquo;</li>
-      <li>Usage</li>
+      <li><a href="../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">FAQ</a></li>
+      <li class="breadcrumb-item active">Usage</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/faq/usage.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -118,6 +118,28 @@ This will download again all CMSSW modules and recompile, but keep in mind it wi
 data folder, so make a backup of your changes. It can also be done manually going into the module’s
 folder, running <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">pull</span> <span class="pre">origin</span> <span class="pre">branchname</span></code> (usually <code class="docutils literal notranslate"><span class="pre">branchname</span></code> = <code class="docutils literal notranslate"><span class="pre">main</span></code>), going back to
 the <code class="docutils literal notranslate"><span class="pre">${CMSSW_BASE}/src</span></code> folder and recompiling (<code class="docutils literal notranslate"><span class="pre">scram</span> <span class="pre">b</span></code>).</p>
+</div>
+</details><details class="sd-sphinx-override sd-dropdown sd-card sd-mb-3">
+<summary class="sd-summary-title sd-card-header">
+I launched some jobs to htcondor and after one day or so they still appear as idle.<div class="sd-summary-down docutils">
+<svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.72a.75.75 0 000 1.06l6.25 6.25a.75.75 0 001.06 0l6.25-6.25a.75.75 0 00-1.06-1.06L12 14.44 6.28 8.72a.75.75 0 00-1.06 0z"></path></svg></div>
+<div class="sd-summary-up docutils">
+<svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
+</summary><div class="sd-summary-content sd-card-body docutils">
+<p class="sd-card-text">If you are running at CIEMAT, remember you should store your analysis setup under /nfs,
+as /afs is not mounted in the htcondor nodes.</p>
+</div>
+</details><details class="sd-sphinx-override sd-dropdown sd-card sd-mb-3">
+<summary class="sd-summary-title sd-card-header">
+A colleague has already run some PreprocessRDF, Categorization or
+ MergeCategorization tasks. Can I use his/her ntuples?<div class="sd-summary-down docutils">
+<svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.72a.75.75 0 000 1.06l6.25 6.25a.75.75 0 001.06 0l6.25-6.25a.75.75 0 00-1.06-1.06L12 14.44 6.28 8.72a.75.75 0 00-1.06 0z"></path></svg></div>
+<div class="sd-summary-up docutils">
+<svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
+</summary><div class="sd-summary-content sd-card-body docutils">
+<p class="sd-card-text">Yes, just set <code class="docutils literal notranslate"><span class="pre">CMT_STORE_EOS_PREPROCESSING</span></code>, <code class="docutils literal notranslate"><span class="pre">CMT_STORE_EOS_CATEGORIZATION</span></code> or
+<code class="docutils literal notranslate"><span class="pre">CMT_STORE_EOS_MERGECATEGORIZATION</span></code> to the new path (e.g.
+<code class="docutils literal notranslate"><span class="pre">/eos/user/${CMT_CERN_USER:0:1}/$CMT_CERN_USER/cmt</span></code> or <code class="docutils literal notranslate"><span class="pre">/nfs/cms/$CMT_CIEMAT_USER/cmt</span></code>)</p>
 </div>
 </details></section>
 
