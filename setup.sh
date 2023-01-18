@@ -77,7 +77,7 @@ action() {
     [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
     if [ -n "$CMT_CIEMAT_USER" ]; then
-      export TMPDIR="/nfs/cms/$CMT_CIEMAT_USER/cmt/tmp"
+      export TMPDIR="/nfs/scratch_cms/$CMT_CIEMAT_USER/cmt/tmp"
       mkdir -p "$TMPDIR"
     fi
 
