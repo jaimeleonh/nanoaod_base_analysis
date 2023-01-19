@@ -531,7 +531,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.stack:
             reqs["stats"] = OrderedDict()
             for dataset in self.datasets_to_run:
-                if dataset.process.isData or not self.apply_weights:
+                if dataset.process.isData or not self.stack:
                     continue
                 if dataset.get_aux("secondary_dataset", None):
                     reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
@@ -1061,7 +1061,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         nevents = {}
         for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
-            if not process.isData and self.apply_weights and self.stack:
+            if not process.isData and self.stack:
                 for dataset in datasets:
                     inp = inputs["stats"][dataset.name]
                     with open(inp.path) as f:

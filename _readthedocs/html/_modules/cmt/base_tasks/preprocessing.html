@@ -65,9 +65,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../../index.html" class="icon icon-home"></a></li>
-          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
-      <li class="breadcrumb-item active">cmt.base_tasks.preprocessing</li>
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>cmt.base_tasks.preprocessing</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -154,7 +154,7 @@
 
 
 <div class="viewcode-block" id="PreCounter"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter">[docs]</a><span class="k">class</span> <span class="nc">PreCounter</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">LocalWorkflow</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">SplittedTask</span><span class="p">,</span> <span class="n">RDFModuleTask</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs a counting of the events with and without applying the necessary weights.</span>
 <span class="sd">    Weights are read from the config file.</span>
 <span class="sd">    In case they have to be computed, RDF modules can be run.</span>
@@ -179,7 +179,7 @@
     <span class="n">tree_name</span> <span class="o">=</span> <span class="s2">&quot;Events&quot;</span>
 
 <div class="viewcode-block" id="PreCounter.create_branch_map"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.create_branch_map">[docs]</a>    <span class="k">def</span> <span class="nf">create_branch_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :return: number of files for the selected dataset</span>
 <span class="sd">        :rtype: int</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -204,12 +204,12 @@
                 <span class="s2">&quot;can&#39;t be set at once&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="PreCounter.workflow_requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.workflow_requires">[docs]</a>    <span class="k">def</span> <span class="nf">workflow_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">)}</span></div>
 
 <div class="viewcode-block" id="PreCounter.requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.requires">[docs]</a>    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Each branch requires one input file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;event_threshold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -237,7 +237,7 @@
                 <span class="s2">&quot;can&#39;t be set at once&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="PreCounter.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :return: One file per input file</span>
 <span class="sd">        :rtype: `.json`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -254,7 +254,7 @@
 <div class="viewcode-block" id="PreCounter.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
     <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates one RDataFrame per input file, runs the desired RDFModules</span>
 <span class="sd">        and counts the number of events w/ and w/o additional weights</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -292,7 +292,7 @@
 
 
 <div class="viewcode-block" id="PreCounterWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounterWrapper">[docs]</a><span class="k">class</span> <span class="nc">PreCounterWrapper</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the PreCounter task over several datasets in parallel.</span>
 
 <span class="sd">    Example command:</span>
@@ -305,7 +305,7 @@
 
 
 <div class="viewcode-block" id="PreprocessRDF"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF">[docs]</a><span class="k">class</span> <span class="nc">PreprocessRDF</span><span class="p">(</span><span class="n">PreCounter</span><span class="p">,</span> <span class="n">DatasetTaskWithCategory</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs the preprocessing step applying a preselection + running RDF modules</span>
 
 <span class="sd">    See requirements in :class:`.PreCounter`.</span>
@@ -334,7 +334,7 @@
     <span class="n">default_wlcg_fs</span> <span class="o">=</span> <span class="s2">&quot;wlcg_fs_categorization&quot;</span>
 
 <div class="viewcode-block" id="PreprocessRDF.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :return: One file per input file with the tree + additional branches</span>
 <span class="sd">        :rtype: `.root`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -343,7 +343,7 @@
 <div class="viewcode-block" id="PreprocessRDF.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
     <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates one RDataFrame per input file, applies a preselection</span>
 <span class="sd">        and runs the desired RDFModules</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -387,7 +387,7 @@
 
 
 <div class="viewcode-block" id="PreprocessRDFWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDFWrapper">[docs]</a><span class="k">class</span> <span class="nc">PreprocessRDFWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the PreprocessRDF task over several datasets in parallel.</span>
 
 <span class="sd">    Example command:</span>
@@ -610,7 +610,7 @@
 
 <span class="c1"># class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):</span>
 <div class="viewcode-block" id="Categorization"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization">[docs]</a><span class="k">class</span> <span class="nc">Categorization</span><span class="p">(</span><span class="n">PreprocessRDF</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs the categorization step running RDF modules and applying a post-selection</span>
 
 <span class="sd">    Example command:</span>
@@ -668,7 +668,7 @@
 <div class="viewcode-block" id="Categorization.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
     <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates one RDataFrame per input file, runs the desired RDFModules and applies a</span>
 <span class="sd">        post-selection</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -721,7 +721,7 @@
 
 
 <div class="viewcode-block" id="CategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.CategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">CategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the Categorization task over several datasets in parallel.</span>
 
 <span class="sd">    Example command:</span>
@@ -736,7 +736,7 @@
 
 
 <div class="viewcode-block" id="MergeCategorization"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorization">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorization</span><span class="p">(</span><span class="n">DatasetTaskWithCategory</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">ForestMerge</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Merges the output from the Categorization or PreprocessRDF tasks in order to reduce the</span>
 <span class="sd">    parallelization entering the plotting tasks. By default it merges into one output file,</span>
 <span class="sd">    although a bigger number can be set with the `merging` parameter inside the dataset</span>
@@ -838,7 +838,7 @@
                 <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="MergeCategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the MergeCategorizationWrapper task over several datasets in parallel.</span>
 
 <span class="sd">    Example command:</span>
@@ -852,7 +852,7 @@
 
 
 <div class="viewcode-block" id="MergeCategorizationStats"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStats">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationStats</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">ForestMerge</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Merges the output from the PreCounter task in order to reduce the </span>
 <span class="sd">    parallelization entering the plotting tasks.</span>
 
@@ -917,7 +917,7 @@
 
 
 <div class="viewcode-block" id="MergeCategorizationStatsWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationStatsWrapper</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the MergeCategorizationStatsWrapper task over several datasets in parallel.</span>
 
 <span class="sd">    Example command:</span>
@@ -930,7 +930,7 @@
 
 
 <div class="viewcode-block" id="EventCounterDAS"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS">[docs]</a><span class="k">class</span> <span class="nc">EventCounterDAS</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs a counting of the events with and without applying the necessary weights.</span>
 <span class="sd">    Weights are read from the config file.</span>
 <span class="sd">    In case they have to be computed, RDF modules can be run.</span>
@@ -947,20 +947,20 @@
         <span class="s2">&quot;secondary_dataset instead of the actual dataset or folder, default: False&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="EventCounterDAS.requires"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS.requires">[docs]</a>    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        No requirements needed</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">{}</span></div>
 
 <div class="viewcode-block" id="EventCounterDAS.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :return: One file for the whole dataset</span>
 <span class="sd">        :rtype: `.json`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;stats.json&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="EventCounterDAS.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Asks for the numbers of events using dasgoclient and stores them in the output json file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">randomize</span>
@@ -986,7 +986,7 @@
         <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">tmpname</span><span class="p">)</span></div></div>
 
 <div class="viewcode-block" id="EventCounterDASWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDASWrapper">[docs]</a><span class="k">class</span> <span class="nc">EventCounterDASWrapper</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the EventCounterDAS task over several datasets in parallel.</span>
 
 <span class="sd">    Example command:</span>
