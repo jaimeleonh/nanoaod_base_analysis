@@ -84,10 +84,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home"></a></li>
-          <li class="breadcrumb-item"><a href="../index.html">Modules Reference</a></li>
-          <li class="breadcrumb-item"><a href="index.html">BTV</a></li>
-      <li class="breadcrumb-item active">b-tagging</li>
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Modules Reference</a> &raquo;</li>
+          <li><a href="index.html">BTV</a> &raquo;</li>
+      <li>b-tagging</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../_sources/modules/BTV/btagging.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -154,18 +154,18 @@ RDataFrame (e.g. “{lep1_mass, lep2_mass}”). Default: none.</p></li>
 </dd>
 </dl>
 <p>YAML sintaxis:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">btag_SFRDF</span>
-<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Corrections.BTV.btag_SF</span>
-<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span>
-<span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span>
-<span class="w">        </span><span class="nt">isUL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&#39;ul&#39;)</span>
-<span class="w">        </span><span class="nt">reshape_uncertainties</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">central</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]</span>
-<span class="w">        </span><span class="nt">lep_pt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
-<span class="w">        </span><span class="nt">lep_eta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
-<span class="w">        </span><span class="nt">lep_phi</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
-<span class="w">        </span><span class="nt">lep_mass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">btag_SFRDF</span><span class="w"></span>
+<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Corrections.BTV.btag_SF</span><span class="w"></span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
+<span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
+<span class="w">        </span><span class="nt">isUL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&#39;ul&#39;)</span><span class="w"></span>
+<span class="w">        </span><span class="nt">reshape_uncertainties</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">central</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]</span><span class="w"></span>
+<span class="w">        </span><span class="nt">lep_pt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
+<span class="w">        </span><span class="nt">lep_eta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
+<span class="w">        </span><span class="nt">lep_phi</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
+<span class="w">        </span><span class="nt">lep_mass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
 </pre></div>
 </div>
 </dd></dl>
