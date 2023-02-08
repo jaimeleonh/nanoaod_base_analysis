@@ -289,6 +289,8 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         "False")
     custom_condor_tag = law.CSVParameter(default=(), 
        description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
+    custom_output_tag = luigi.Parameter(default="",
+       description="Custom output tag for submission and status files")
 
     exclude_params_branch = {"max_runtime", "htcondor_central_scheduler", "custom_condor_tag"}
 
@@ -301,6 +303,9 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         # each job can define a bootstrap file that is executed prior to the actual job
         # in order to setup software and environment variables
         return os.path.expandvars("$CMT_BASE/cmt/files/cern_htcondor_bootstrap.sh")
+
+    def htcondor_output_postfix(self):
+        return self.custom_output_tag + super(HTCondorWorkflow, self).htcondor_output_postfix()
 
     def htcondor_job_config(self, config, job_num, branches):
         # render variables
