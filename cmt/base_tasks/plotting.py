@@ -1174,4 +1174,3 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     else:
                         self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
             self.plot(feature)
-
