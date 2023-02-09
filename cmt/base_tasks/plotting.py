@@ -1026,6 +1026,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             hist_dir.cd()
             for hist in all_hists:
                 hist.Write(hist.cmt_process_name)
+            bkg_histo.Write("background")
 
             if self.plot_systematics:
                 for syst_dir, shape_hists in self.histos["shape"].items():
