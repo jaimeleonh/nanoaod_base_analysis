@@ -169,6 +169,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
 
+    def __init__(self, *args, **kwargs):
+        super(PrePlot, self).__init__(*args, **kwargs)
+        self.custom_output_tag = "_%s" % self.region_name
+
     def create_branch_map(self):
         """
         :return: number of files after merging (usually 1) unless skip_processing == True
