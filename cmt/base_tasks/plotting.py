@@ -367,6 +367,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         total background yield (True) or not (False)
     :type normalize_signals: bool
 
+    :param avoid_normalization: whether to avoid normalizing by cross section and initial 
+        number of events
+    :type avoid_normalization: bool
+
     :param blinded: (NOT YET IMPLEMENTED) whether to blind data in specified regions
     :type blinded: bool
 
@@ -416,6 +420,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
     normalize_signals = luigi.BoolParameter(default=True, description="whether to normalize "
         "signals to the total bkg yield, default: True")
+    avoid_normalization = luigi.BoolParameter(default=False, description="whether to avoid "
+        "normalizing by cross section and initial number of events, default: False")
     blinded = luigi.BoolParameter(default=False, description="whether to blind bins above a "
         "certain feature value, default: False")
     save_png = luigi.BoolParameter(default=False, description="whether to save created histograms "
@@ -528,10 +534,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             for dataset, category in itertools.product(
                 self.datasets_to_run, self.expand_category())
         )
-        if self.stack:
+        if not self.avoid_normalization:
             reqs["stats"] = OrderedDict()
             for dataset in self.datasets_to_run:
-                if dataset.process.isData or not self.stack:
+                if dataset.process.isData:
                     continue
                 if dataset.get_aux("secondary_dataset", None):
                     reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
@@ -1061,7 +1067,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         nevents = {}
         for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
-            if not process.isData and self.stack:
+            if not process.isData and not self.avoid_normalization:
                 for dataset in datasets:
                     inp = inputs["stats"][dataset.name]
                     with open(inp.path) as f:
@@ -1112,7 +1118,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                 histo = copy(rootfile.Get(feature_name))
                                 rootfile.Close()
                                 dataset_histo.Add(histo)
-                            if not process.isData and self.stack:
+                            if not process.isData and not self.avoid_normalization:
                                 if nevents[dataset.name] != 0:
                                     dataset_histo.Scale(dataset.xs * lumi / nevents[dataset.name])
                                     scaling = dataset.get_aux("scaling", None)
