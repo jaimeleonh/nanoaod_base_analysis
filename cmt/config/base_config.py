@@ -376,7 +376,7 @@ class Config():
             while "{{" in feature_expression:
                 initial = feature_expression.find("{{")
                 final = feature_expression.find("}}")
-                feature_name_to_look = feature_expression[initial + 1: final]
+                feature_name_to_look = feature_expression[initial + 2: final]
                 feature_to_look = self.features.get(feature_name_to_look)
                 feature_to_look_expression = feature_to_look.expression
                 if not isMC:
