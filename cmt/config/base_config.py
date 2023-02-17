@@ -403,7 +403,7 @@ class Config():
                             tag = central.expression
 
                 feature_to_look_expression = add_systematic_tag(feature_to_look_expression, tag)
-                feature_expression = feature_expression.replace(feature_expression[initial: final + 1],
+                feature_expression = feature_expression.replace(feature_expression[initial: final + 2],
                     feature_to_look_expression)
             return feature_expression
 
