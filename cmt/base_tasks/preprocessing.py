@@ -91,13 +91,13 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
 
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
+    tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
+        "the root file, default: Events (nanoAOD)")
     # regions not supported
     region_name = None
 
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
-
-    tree_name = "Events"
 
     def create_branch_map(self):
         """
@@ -186,7 +186,6 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
 
         # prepare inputs and outputs
         inp = self.get_input()
-        outp = self.output()
         print(inp)
         df = ROOT.RDataFrame(self.tree_name, inp)
         weight_modules = self.get_feature_modules(self.weights_file)
@@ -552,15 +551,21 @@ class Categorization(PreprocessRDF):
     :param feature_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)
         with the RDF modules to run
     :type feature_modules_file: str
+
+    :param skip_preprocess: whether to skip the PreprocessRDF task
+    :type skip_preprocess: bool
     """
+
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
         "base category with the initial selection, default: base")
     systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
         "default: None")
     systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
         "for categorization, default: None")
-    feature_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
+    feature_modules_file = luigi.Parameter(description="filename with RDataFrame modules to run",
         default="")
+    skip_preprocess = luigi.BoolParameter(default=False, description="whether to skip the "
+        " PreprocessRDF task, default: False")
 
     # regions not supported
     region_name = None
@@ -568,17 +573,21 @@ class Categorization(PreprocessRDF):
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
-    tree_name = "Events"
-
     def __init__(self, *args, **kwargs):
         super(Categorization, self).__init__(*args, **kwargs)
 
     def workflow_requires(self):
-        return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
+        if not self.skip_preprocess:
+            return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
+        else:
+            return {"data": InputData.req(self)}
 
     def requires(self):
-        return PreprocessRDF.vreq(self, category_name=self.base_category_name,
-            branch=self.branch)
+        if not self.skip_preprocess:
+            return PreprocessRDF.vreq(self, category_name=self.base_category_name,
+                branch=self.branch)
+        else:
+            return InputData.req(self, file_index=self.branch)
 
     def output(self):
         return {
@@ -690,10 +699,11 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
         "as tool to do the merging, default: False")
     force_haddnano = luigi.BoolParameter(default=False, description="whether to force haddnano.py "
         "as tool to do the merging, default: False")
+    tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
+        "the root file, default: Events (nanoAOD)")
 
     # regions not supported
     region_name = None
-    tree_name = "Events"
     merge_factor = 10
 
     default_store = "$CMT_STORE_EOS_MERGECATEGORIZATION"
@@ -795,7 +805,7 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
         return PreCounter.req(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return PreCounter.req(self, workflow="local", branches=range(start_leaf, end_leaf - 1),
+        return PreCounter.req(self, workflow="local", branches=((start_leaf, end_leaf),),
             _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):

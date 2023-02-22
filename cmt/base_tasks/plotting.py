@@ -98,8 +98,8 @@ class BasePlotTask(ConfigTaskWithCategory):
         significant=False, description="shape region default: os_inviso")
     remove_horns = luigi.BoolParameter(default=False, description="whether to remove horns "
         "from distributions, default: False")
-
-    tree_name = "Events"
+    tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
+        "the root file, default: Events (nanoAOD)")
 
     def __init__(self, *args, **kwargs):
         super(BasePlotTask, self).__init__(*args, **kwargs)
@@ -267,6 +267,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
         if self.region_name != law.NO_STR:
             region_selection = self.config.regions.get(self.region_name).selection
+            print(region_selection)
             if selection != "1":
                 selection = join_root_selection(region_selection, selection, op="and")
             else:
@@ -1045,6 +1046,21 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         hist.Write("%s_%s" % (hist.cmt_process_name, syst_dir))
             f.Close()
 
+    def get_nevents(self):
+        nevents = {}
+        for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+            if not process.isData and not self.avoid_normalization:
+                for dataset in datasets:
+                    inp = self.input()["stats"][dataset.name]
+                    with open(inp.path) as f:
+                        stats = json.load(f)
+                        # nevents += stats["nevents"]
+                        nevents[dataset.name] = stats["nweightedevents"]
+        return nevents
+
+    def get_normalization_factor(self, dataset):
+        return dataset.xs * self.config.lumi_pb / self.nevents[dataset.name]
+
     @law.decorator.notify
     @law.decorator.safe_output
     def run(self):
@@ -1058,8 +1074,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         # create root tchains for inputs
         inputs = self.input()
 
-        lumi = self.config.lumi_pb
-
         self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
         self.signal_names = [p.name for p in self.processes_datasets.keys() if p.isSignal]
         self.background_names = [p.name for p in self.processes_datasets.keys()
@@ -1071,15 +1085,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.fixed_colors:
             colors = list(range(2, 2 + len(self.processes_datasets.keys())))
 
-        nevents = {}
-        for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
-            if not process.isData and not self.avoid_normalization:
-                for dataset in datasets:
-                    inp = inputs["stats"][dataset.name]
-                    with open(inp.path) as f:
-                        stats = json.load(f)
-                        # nevents += stats["nevents"]
-                        nevents[dataset.name] = stats["nweightedevents"]
+        self.nevents = self.get_nevents()
 
         for feature in self.features:
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
@@ -1125,8 +1131,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                 rootfile.Close()
                                 dataset_histo.Add(histo)
                             if not process.isData and not self.avoid_normalization:
-                                if nevents[dataset.name] != 0:
-                                    dataset_histo.Scale(dataset.xs * lumi / nevents[dataset.name])
+                                if self.nevents[dataset.name] != 0:
+                                    dataset_histo.Scale(self.get_normalization_factor(dataset))
                                     scaling = dataset.get_aux("scaling", None)
                                     if scaling:
                                         print("Scaling {} histo by {} +- {}".format(

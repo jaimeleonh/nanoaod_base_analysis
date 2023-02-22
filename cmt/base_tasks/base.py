@@ -413,7 +413,8 @@ class RDFModuleTask():
         branchStatus = [1 for branchName in branchNames]
         for pattern, stat in ops:
             for ib, b in enumerate(branchNames):
-                if re.match(pattern, str(b)):
+                #if re.match(pattern, str(b)):
+                if re.fullmatch(pattern, str(b)) is not None:
                     branchStatus[ib] = stat
 
         return [branchName for (branchName, branchStatus) in zip(branchNames, branchStatus)
