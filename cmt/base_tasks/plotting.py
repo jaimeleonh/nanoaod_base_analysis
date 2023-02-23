@@ -119,6 +119,8 @@ class BasePlotTask(ConfigTaskWithCategory):
             if self.skip_feature_tags and feature.has_tag(self.skip_feature_tags):
                 continue
             features.append(feature)
+        if len(features) == 0:
+            raise ValueError("No features were included. Did you spell them correctly?")
         return features
 
     def get_binning(self, feature):
@@ -267,7 +269,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
         if self.region_name != law.NO_STR:
             region_selection = self.config.regions.get(self.region_name).selection
-            print(region_selection)
             if selection != "1":
                 selection = join_root_selection(region_selection, selection, op="and")
             else:
