@@ -194,6 +194,10 @@ class DatasetTask(ConfigTask):
 
     dataset_name = luigi.Parameter(default="hh_ggf", description="name of the dataset to process, "
         "default: hh_ggf")
+    tree_name = luigi.Parameter(default=law.NO_STR, description="name of the tree inside "
+        "the root file, default: Events (nanoAOD)")
+
+    default_tree_name = "Events"
 
     def __init__(self, *args, **kwargs):
         super(DatasetTask, self).__init__(*args, **kwargs)
@@ -203,6 +207,9 @@ class DatasetTask(ConfigTask):
 
         # store a reference to the main process
         self.process = self.dataset.process
+
+        if self.tree_name == law.NO_STR:
+            self.tree_name = getattr(self.config, "tree_name", self.default_tree_name)
 
     def store_parts(self):
         parts = super(DatasetTask, self).store_parts()

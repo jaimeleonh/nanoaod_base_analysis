@@ -91,8 +91,6 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
 
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default="")
-    tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
-        "the root file, default: Events (nanoAOD)")
     # regions not supported
     region_name = None
 
@@ -332,8 +330,6 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
 
     # regions not supported
     region_name = None
-
-    tree_name = "Events"
 
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
@@ -699,8 +695,6 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
         "as tool to do the merging, default: False")
     force_haddnano = luigi.BoolParameter(default=False, description="whether to force haddnano.py "
         "as tool to do the merging, default: False")
-    tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
-        "the root file, default: Events (nanoAOD)")
 
     # regions not supported
     region_name = None
@@ -716,7 +710,6 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
             return PreprocessRDF.vreq(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        print(self.branch, start_leaf, end_leaf)
         if not self.from_preprocess:
             return Categorization.vreq(self, workflow="local",
                 branches=((start_leaf, end_leaf),), _exclude={"branch"})
