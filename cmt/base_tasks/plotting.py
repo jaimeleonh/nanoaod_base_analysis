@@ -1046,6 +1046,27 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         hist.Write("%s_%s" % (hist.cmt_process_name, syst_dir))
             f.Close()
 
+        if self.save_yields:
+            yields = OrderedDict()
+            for hist in signal_hists + background_hists + data_hists:
+                yields[hist.cmt_process_name] = {
+                    "Total yield": hist.cmt_yield,
+                    "Total yield error": hist.cmt_yield_error,
+                    "Entries": getattr(hist, "cmt_entries", hist.GetEntries()),
+                    "Binned yield": hist.cmt_bin_yield,
+                    "Binned yield error": hist.cmt_bin_yield_error,
+                }
+            if bkg_histo:
+                yields["background"] = {
+                    "Total yield": sum([hist.cmt_yield for hist in background_hists]),
+                    "Total yield error": math.sqrt(sum([(hist.cmt_yield_error)**2 for hist in background_hists])),
+                    "Entries": getattr(bkg_histo, "cmt_entries", bkg_histo.GetEntries()),
+                    "Binned yield": [sum([hist.cmt_bin_yield[i] for hist in background_hists]) for i in range(0, background_hists[0].GetNbinsX())],
+                    "Binned yield error": [math.sqrt(sum([(hist.cmt_bin_yield_error[i])**2 for hist in background_hists])) for i in range(0, background_hists[0].GetNbinsX())],
+                }
+            with open(create_file_dir(self.output()["yields"].targets[feature.name].path), "w") as f:
+                json.dump(yields, f, indent=4)
+
     def get_nevents(self):
         nevents = {}
         for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
@@ -1166,6 +1187,12 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         process_histo.GetNbinsX() + 1, yield_error)
                     process_histo.cmt_yield_error = yield_error.value
 
+                    process_histo.cmt_bin_yield = []
+                    process_histo.cmt_bin_yield_error = []
+                    for ibin in range(1, process_histo.GetNbinsX() + 1):
+                        process_histo.cmt_bin_yield.append(process_histo.GetBinContent(ibin))
+                        process_histo.cmt_bin_yield_error.append(process_histo.GetBinError(ibin))
+
                     if syst == "central":
                         if self.fixed_colors:
                             color = colors[iproc]
@@ -1187,4 +1214,5 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                            self.histos["all"].append(process_histo)
                     else:
                         self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
+
             self.plot(feature)
