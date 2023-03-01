@@ -199,13 +199,13 @@
 
 <span class="sd">    :type jec_sources: list of str</span>
 
-<span class="sd">    :param: pt: pt of the object to shift</span>
+<span class="sd">    :param pt: pt of the object to shift</span>
 <span class="sd">    :type pt: str</span>
 
-<span class="sd">    :param: eta: pt of the object to shift</span>
+<span class="sd">    :param eta: pt of the object to shift</span>
 <span class="sd">    :type eta: str</span>
 
-<span class="sd">    :param: mass: mass of the object to shift</span>
+<span class="sd">    :param mass: mass of the object to shift</span>
 <span class="sd">    :type mass: str</span>
 
 <span class="sd">    YAML sintaxis:</span>
@@ -220,6 +220,7 @@
 <span class="sd">                isMC: self.dataset.process.isMC</span>
 <span class="sd">                jerTag: self.config.year</span>
 <span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
+<span class="sd">                ispreVFP: self.config.get_aux(&#39;ispreVFP&#39;, False)</span>
 <span class="sd">                jec_sources: []</span>
 <span class="sd">                (pt: bjet1_pt_nom)</span>
 <span class="sd">                (eta: bjet1_eta)</span>
@@ -230,6 +231,7 @@
     <span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
     <span class="n">isUL</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
     <span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
+    <span class="n">isPreVFP</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;ispreVFP&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
     <span class="n">jetType</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;jetType&quot;</span><span class="p">,</span> <span class="s2">&quot;AK4PFchs&quot;</span><span class="p">)</span>
     <span class="c1"># jerTag = kwargs.pop(&quot;jerTag&quot;, &quot;&quot;)</span>
     <span class="n">jec_sources</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;jec_sources&quot;</span><span class="p">,</span> <span class="p">[])</span>
@@ -244,11 +246,11 @@
         <span class="s1">&#39;UL2018&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer19UL18_V5_MC&#39;</span><span class="p">,</span>
     <span class="p">}</span>
 
-    <span class="c1">#if isUL and year == 2016:</span>
-    <span class="c1">#    raise ValueError(&quot;UL 2016 needs a further check&quot;)</span>
+    <span class="n">campaign_tag</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">((</span><span class="s2">&quot;UL&quot;</span> <span class="k">if</span> <span class="n">isUL</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">),</span> <span class="n">year</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">isPreVFP</span><span class="p">:</span>
+        <span class="n">campaign_tag</span> <span class="o">+=</span> <span class="s2">&quot;_preVFP&quot;</span>
 
-    <span class="c1"># if jerTag != &quot;&quot;:</span>
-    <span class="n">jerTag</span> <span class="o">=</span> <span class="n">jerTagsMC</span><span class="p">[</span><span class="s2">&quot;</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">((</span><span class="s2">&quot;UL&quot;</span> <span class="k">if</span> <span class="n">isUL</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">),</span> <span class="n">year</span><span class="p">)]</span>
+    <span class="n">jerTag</span> <span class="o">=</span> <span class="n">jerTagsMC</span><span class="p">[</span><span class="n">campaign_tag</span><span class="p">]</span>
     <span class="n">jerInputFileName</span> <span class="o">=</span> <span class="n">jerTag</span> <span class="o">+</span> <span class="s2">&quot;_PtResolution_&quot;</span> <span class="o">+</span> <span class="n">jetType</span> <span class="o">+</span> <span class="s2">&quot;.txt&quot;</span>
 
     <span class="n">jec_sources_per_year</span> <span class="o">=</span> <span class="p">{</span>

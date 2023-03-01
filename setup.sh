@@ -255,10 +255,10 @@ action() {
 
           git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
           cd Corrections/JME/data
-          wget https://github.com/cms-jet/JECDatabase/tree/master/tarballs/Summer19UL18_V5_MC.tar.gz?raw=true -O Summer19UL18_V5_MC.tar.gz
-          wget https://github.com/cms-jet/JECDatabase/tree/master/tarballs/Summer19UL17_V5_MC.tar.gz?raw=true -O Summer19UL17_V5_MC.tar.gz
-          wget https://github.com/cms-jet/JECDatabase/tree/master/tarballs/Summer19UL16_V7_MC.tar.gz?raw=true -O Summer19UL16_V7_MC.tar.gz
-          wget https://github.com/cms-jet/JECDatabase/tree/master/tarballs/Summer19UL16APV_V7_MC.tar.gz?raw=true -O Summer19UL16APV_V7_MC.tar.gz
+          wget https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL18_V5_MC.tar.gz
+          wget https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL17_V5_MC.tar.gz
+          wget https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16_V7_MC.tar.gz
+          wget https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16APV_V7_MC.tar.gz
           cd -
 
           git clone https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections.git Corrections/LUM

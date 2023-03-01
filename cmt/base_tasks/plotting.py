@@ -389,7 +389,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     :param save_root: whether to write plots in a root file
     :type save_root: bool
 
-    :param save_yields: (NOT YET IMPLEMENTED) whether to save histogram yields in a json file
+    :param save_yields: whether to save histogram yields in a json file
     :type save_yields: bool
 
     :param process_group_name: name of the process grouping name
