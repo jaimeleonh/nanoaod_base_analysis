@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Corrections.JME.jec &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>Corrections.JME.jec &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -28,7 +28,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -42,7 +42,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
@@ -54,7 +58,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../../index.html">nanoaod-base-analysis</a>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -97,10 +101,10 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;JEC_PATH&quot;</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">jerInputArchivePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CMSSW_BASE&#39;</span><span class="p">]</span> <span class="o">+</span> \
-                    <span class="s2">&quot;/src/PhysicsTools/NanoAODTools/data/jme/&quot;</span>
+                    <span class="s2">&quot;/src/Corrections/JME/data/&quot;</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">jerTag</span> <span class="o">=</span> <span class="n">jerInputFileName</span><span class="p">[:</span><span class="n">jerInputFileName</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;_MC_&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="s1">&#39;_MC&#39;</span><span class="p">)]</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">jerArchive</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">jerInputArchivePath</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerTag</span> <span class="o">+</span> <span class="s2">&quot;.tgz&quot;</span><span class="p">,</span> <span class="s2">&quot;r:gz&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">jerInputArchivePath</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerTag</span> <span class="o">+</span> <span class="s2">&quot;.tar.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;r:gz&quot;</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">jerArchive</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span> <span class="o">=</span> <span class="s2">&quot;RegroupedV2_</span><span class="si">%s</span><span class="s2">_UncertaintySources_AK4PFchs.txt&quot;</span>\
@@ -219,7 +223,7 @@
 <span class="sd">                jec_sources: []</span>
 <span class="sd">                (pt: bjet1_pt_nom)</span>
 <span class="sd">                (eta: bjet1_eta)</span>
-<span class="sd">                (mass: bjet1_mass)</span>
+<span class="sd">                (mass: bjet1_mass_nom)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -234,14 +238,14 @@
         <span class="s1">&#39;2016&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer16_07Aug2017_V11_MC&#39;</span><span class="p">,</span>
         <span class="s1">&#39;2017&#39;</span><span class="p">:</span> <span class="s1">&#39;Fall17_17Nov2017_V32_MC&#39;</span><span class="p">,</span>
         <span class="s1">&#39;2018&#39;</span><span class="p">:</span> <span class="s1">&#39;Autumn18_V19_MC&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;UL2016_preVFP&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer20UL16APV_JRV3_MC&#39;</span><span class="p">,</span> <span class="c1"># dummy</span>
-        <span class="s1">&#39;UL2016&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer20UL16_JRV3_MC&#39;</span><span class="p">,</span> <span class="c1"># dummy</span>
+        <span class="s1">&#39;UL2016_preVFP&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer19UL16APV_V7_MC&#39;</span><span class="p">,</span> <span class="c1"># julia</span>
+        <span class="s1">&#39;UL2016&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer19UL16_V7_MC&#39;</span><span class="p">,</span> <span class="c1"># julia</span>
         <span class="s1">&#39;UL2017&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer19UL17_V5_MC&#39;</span><span class="p">,</span>
         <span class="s1">&#39;UL2018&#39;</span><span class="p">:</span> <span class="s1">&#39;Summer19UL18_V5_MC&#39;</span><span class="p">,</span>
     <span class="p">}</span>
 
-    <span class="k">if</span> <span class="n">isUL</span> <span class="ow">and</span> <span class="n">year</span> <span class="o">==</span> <span class="mi">2016</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;UL 2016 needs a further check&quot;</span><span class="p">)</span>
+    <span class="c1">#if isUL and year == 2016:</span>
+    <span class="c1">#    raise ValueError(&quot;UL 2016 needs a further check&quot;)</span>
 
     <span class="c1"># if jerTag != &quot;&quot;:</span>
     <span class="n">jerTag</span> <span class="o">=</span> <span class="n">jerTagsMC</span><span class="p">[</span><span class="s2">&quot;</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">((</span><span class="s2">&quot;UL&quot;</span> <span class="k">if</span> <span class="n">isUL</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">),</span> <span class="n">year</span><span class="p">)]</span>

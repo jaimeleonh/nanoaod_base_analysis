@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Corrections.JME.PUjetID_SF &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>Corrections.JME.PUjetID_SF &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
@@ -28,7 +28,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -42,7 +42,11 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
@@ -54,7 +58,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../../index.html">nanoaod-base-analysis</a>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -291,6 +295,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">year</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ispreVFP</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;ispreVFP&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lep_pt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;lep_pt&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lep_eta</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;lep_eta&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lep_phi</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;lep_phi&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -365,11 +370,22 @@
                 <span class="n">correctionlib</span><span class="o">.</span><span class="n">register_pyroot_binding</span><span class="p">()</span>
                 <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/PUjetID_SFULinterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
                 <span class="n">json_path</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/&quot;</span>
-                    <span class="s2">&quot;POG/JME/20</span><span class="si">{0}</span><span class="s2">_UL/jmar.json.gz&quot;</span><span class="p">)</span>
+                    <span class="s2">&quot;POG/JME/</span><span class="si">{}</span><span class="s2">/jmar.json.gz&quot;</span><span class="p">)</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
-                    <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;18&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2018_UL&quot;</span>
+                    <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2017</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2017_UL&quot;</span>
+                    <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2016</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ispreVFP</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2016preVFP_UL&quot;</span>
+                        <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2016postVFP_UL&quot;</span>
+                        <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;2016 and 2017 not yet implemented&quot;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Incorrect year&quot;</span><span class="p">)</span>
 
                 <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">                    auto _PUjetID_SF = PUjetID_SFULinterface(</span><span class="si">%s</span><span class="s2">, &quot;</span><span class="si">%s</span><span class="s2">&quot;);</span>
@@ -448,6 +464,7 @@
 <span class="sd">                year: self.config.year</span>
 <span class="sd">                isMC: self.dataset.process.isMC</span>
 <span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
+<span class="sd">                ispreVFP: self.config.get_aux(&quot;isPreVFP&quot;)</span>
 <span class="sd">                lep_pt: ...</span>
 <span class="sd">                lep_eta: ...</span>
 <span class="sd">                lep_phi: ...</span>
