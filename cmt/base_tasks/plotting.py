@@ -842,6 +842,11 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             qcd_hist.cmt_yield = qcd_hist.IntegralAndError(
                 0, qcd_hist.GetNbinsX() + 1, yield_error)
             qcd_hist.cmt_yield_error = yield_error.value
+            qcd_hist.cmt_bin_yield = []
+            qcd_hist.cmt_bin_yield_error = []
+            for ibin in range(1, qcd_hist.GetNbinsX() + 1):
+                qcd_hist.cmt_bin_yield.append(qcd_hist.GetBinContent(ibin))
+                qcd_hist.cmt_bin_yield_error.append(qcd_hist.GetBinError(ibin))
             qcd_hist.cmt_scale = 1.
             qcd_hist.cmt_process_name = "qcd"
             qcd_hist.process_label = "QCD"
