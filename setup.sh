@@ -77,8 +77,11 @@ action() {
     [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
     if [ -n "$CMT_CIEMAT_USER" ]; then
-      export TMPDIR="/nfs/scratch_cms/$CMT_CIEMAT_USER/cmt/tmp"
-      mkdir -p "$TMPDIR"
+       if [ -n "$CMT_TMPDIR" ]; then
+         export TMPDIR="$CMT_TMPDIR"
+      else
+         export TMPDIR="/nfs/scratch_cms/$CMT_CIEMAT_USER/cmt/tmp"
+      fi
     fi
 
     # specific eos dirs
@@ -90,6 +93,7 @@ action() {
 
     # create some dirs already
     mkdir -p "$CMT_TMP_DIR"
+    mkdir -p "$TMPDIR"
 
 
     #
