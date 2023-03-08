@@ -295,7 +295,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">year</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ispreVFP</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;ispreVFP&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ispreVFP</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;ispreVFP&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lep_pt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;lep_pt&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lep_eta</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;lep_eta&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lep_phi</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;lep_phi&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -431,8 +431,6 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Module to compute PU Jet Id scale factors.</span>
 
-<span class="sd">    Note: 2016 and 2017 are not yet implemented</span>
-
 <span class="sd">    :param lep_pt: pt of the leptons to remove from the Jet collection. Can be included as a</span>
 <span class="sd">        straight vector from the RDataFrame or as vector made out of floats available in the</span>
 <span class="sd">        RDataFrame (e.g. &quot;{lep1_pt, lep2_pt}&quot;). Default: none.</span>
@@ -464,7 +462,7 @@
 <span class="sd">                year: self.config.year</span>
 <span class="sd">                isMC: self.dataset.process.isMC</span>
 <span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
-<span class="sd">                ispreVFP: self.config.get_aux(&quot;isPreVFP&quot;)</span>
+<span class="sd">                ispreVFP: self.config.get_aux(&quot;isPreVFP&quot;, False)</span>
 <span class="sd">                lep_pt: ...</span>
 <span class="sd">                lep_eta: ...</span>
 <span class="sd">                lep_phi: ...</span>

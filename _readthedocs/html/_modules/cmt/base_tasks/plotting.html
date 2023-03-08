@@ -468,7 +468,7 @@
 <span class="sd">    :param save_root: whether to write plots in a root file</span>
 <span class="sd">    :type save_root: bool</span>
 
-<span class="sd">    :param save_yields: (NOT YET IMPLEMENTED) whether to save histogram yields in a json file</span>
+<span class="sd">    :param save_yields: whether to save histogram yields in a json file</span>
 <span class="sd">    :type save_yields: bool</span>
 
 <span class="sd">    :param process_group_name: name of the process grouping name</span>
@@ -1124,7 +1124,19 @@
                 <span class="k">for</span> <span class="n">syst_dir</span><span class="p">,</span> <span class="n">shape_hists</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">histos</span><span class="p">[</span><span class="s2">&quot;shape&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                     <span class="k">for</span> <span class="n">hist</span> <span class="ow">in</span> <span class="n">shape_hists</span><span class="p">:</span>
                         <span class="n">hist</span><span class="o">.</span><span class="n">Write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">hist</span><span class="o">.</span><span class="n">cmt_process_name</span><span class="p">,</span> <span class="n">syst_dir</span><span class="p">))</span>
-            <span class="n">f</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span></div>
+            <span class="n">f</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_yields</span><span class="p">:</span>
+            <span class="n">yields</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">hist</span> <span class="ow">in</span> <span class="n">signal_hists</span> <span class="o">+</span> <span class="n">background_hists</span> <span class="o">+</span> <span class="n">data_hists</span><span class="p">:</span>
+                <span class="n">yields</span><span class="p">[</span><span class="n">hist</span><span class="o">.</span><span class="n">cmt_process_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">hist</span><span class="o">.</span><span class="n">cmt_yield</span><span class="p">,</span>
+                    <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="n">hist</span><span class="o">.</span><span class="n">cmt_yield_error</span><span class="p">,</span>
+                    <span class="s2">&quot;entries&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">hist</span><span class="p">,</span> <span class="s2">&quot;cmt_entries&quot;</span><span class="p">,</span> <span class="n">hist</span><span class="o">.</span><span class="n">GetEntries</span><span class="p">()),</span>
+                <span class="p">}</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()[</span><span class="s2">&quot;json&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">yields</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span></div>
+
 
     <span class="k">def</span> <span class="nf">get_nevents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">nevents</span> <span class="o">=</span> <span class="p">{}</span>

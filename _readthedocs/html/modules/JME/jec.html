@@ -123,23 +123,19 @@ after applying the uncertainties.</p>
 <p>Note: UL2016_preVFP is not implemented</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>jec_sources</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – <p>names of the systematic sources to consider. They depend on the year:</p>
-<ul class="simple">
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>jec_sources</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.11)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – <p>names of the systematic sources to consider. They depend on the year:</p>
+<ul>
 <li><p>2016: <code class="docutils literal notranslate"><span class="pre">FlavorQCD</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeBal</span></code>, <code class="docutils literal notranslate"><span class="pre">HF</span></code>, <code class="docutils literal notranslate"><span class="pre">BBEC1</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute</span></code>,        <code class="docutils literal notranslate"><span class="pre">BBEC1_2016</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2_2016</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute_2016</span></code>, <code class="docutils literal notranslate"><span class="pre">HF_2016</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeSample_2016</span></code>,        <code class="docutils literal notranslate"><span class="pre">Total</span></code></p></li>
 <li><p>2017: <code class="docutils literal notranslate"><span class="pre">FlavorQCD</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeBal</span></code>, <code class="docutils literal notranslate"><span class="pre">HF</span></code>, <code class="docutils literal notranslate"><span class="pre">BBEC1</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute</span></code>,        <code class="docutils literal notranslate"><span class="pre">BBEC1_2017</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2_2017</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute_2017</span></code>, <code class="docutils literal notranslate"><span class="pre">HF_2017</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeSample_2017</span></code>,        <code class="docutils literal notranslate"><span class="pre">Total</span></code></p></li>
 <li><p>2018: <code class="docutils literal notranslate"><span class="pre">FlavorQCD</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeBal</span></code>, <code class="docutils literal notranslate"><span class="pre">HF</span></code>, <code class="docutils literal notranslate"><span class="pre">BBEC1</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute</span></code>,        <code class="docutils literal notranslate"><span class="pre">BBEC1_2018</span></code>, <code class="docutils literal notranslate"><span class="pre">EC2_2018</span></code>, <code class="docutils literal notranslate"><span class="pre">Absolute_2018</span></code>, <code class="docutils literal notranslate"><span class="pre">HF_2018</span></code>, <code class="docutils literal notranslate"><span class="pre">RelativeSample_2018</span></code>,        <code class="docutils literal notranslate"><span class="pre">Total</span></code></p></li>
 </ul>
 <p>Note: probably more are available, to be checked.</p>
-</p>
-</dd>
-<dt class="field-even">Param<span class="colon">:</span></dt>
-<dd class="field-even"><p>pt: pt of the object to shift</p>
-</dd>
-<dt class="field-odd">Param<span class="colon">:</span></dt>
-<dd class="field-odd"><p>eta: pt of the object to shift</p>
-</dd>
-<dt class="field-even">Param<span class="colon">:</span></dt>
-<dd class="field-even"><p>mass: mass of the object to shift</p>
+</p></li>
+<li><p><strong>pt</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – pt of the object to shift</p></li>
+<li><p><strong>eta</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – pt of the object to shift</p></li>
+<li><p><strong>mass</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – mass of the object to shift</p></li>
+</ul>
 </dd>
 </dl>
 <p>YAML sintaxis:</p>
@@ -151,6 +147,7 @@ after applying the uncertainties.</p>
 <span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
 <span class="w">        </span><span class="nt">jerTag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
 <span class="w">        </span><span class="nt">isUL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&#39;ul&#39;)</span><span class="w"></span>
+<span class="w">        </span><span class="nt">ispreVFP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.get_aux(&#39;ispreVFP&#39;, False)</span><span class="w"></span>
 <span class="w">        </span><span class="nt">jec_sources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
 <span class="w">        </span><span class="nt">(pt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bjet1_pt_nom)</span><span class="w"></span>
 <span class="w">        </span><span class="nt">(eta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bjet1_eta)</span><span class="w"></span>

@@ -118,7 +118,6 @@
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Corrections.JME.PUjetID_SF.</span></span><span class="sig-name descname"><span class="pre">PUjetID_SFRDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/Corrections/JME/PUjetID_SF.html#PUjetID_SFRDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Corrections.JME.PUjetID_SF.PUjetID_SFRDF" title="Permalink to this definition"></a></dt>
 <dd><p>Bases:</p>
 <p>Module to compute PU Jet Id scale factors.</p>
-<p>Note: 2016 and 2017 are not yet implemented</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -145,7 +144,7 @@ RDataFrame (e.g. “{lep1_mass, lep2_mass}”). Default: none.</p></li>
 <span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
 <span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
 <span class="w">        </span><span class="nt">isUL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&#39;ul&#39;)</span><span class="w"></span>
-<span class="w">        </span><span class="nt">ispreVFP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.get_aux(&quot;isPreVFP&quot;)</span><span class="w"></span>
+<span class="w">        </span><span class="nt">ispreVFP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.get_aux(&quot;isPreVFP&quot;, False)</span><span class="w"></span>
 <span class="w">        </span><span class="nt">lep_pt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
 <span class="w">        </span><span class="nt">lep_eta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
 <span class="w">        </span><span class="nt">lep_phi</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"></span>
