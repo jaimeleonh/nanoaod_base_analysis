@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corrections.MUO.muonSF_GEMethod &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/design-tabs.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>Corrections.MUO.muonSF_GEMethod</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Corrections.MUO.muonSF_GEMethod</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+<span class="kn">import</span> <span class="nn">correctionlib</span>
+<span class="n">correctionlib</span><span class="o">.</span><span class="n">register_pyroot_binding</span><span class="p">()</span>
+
+<span class="n">json_path</span> <span class="o">=</span> <span class="s2">&quot;/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/MUO/</span><span class="si">{}</span><span class="s2">/muon_Z.json.gz&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">MuonSFproducer</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span>   <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span> <span class="o">=</span>   <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isUL&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span>   <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">preVFP</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;preVFP&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only implemented for UL datasets&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2018_UL&quot;</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2017</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2017_UL&quot;</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2016</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">preVFP</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2016preVFP_UL&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="s2">&quot;2016postVFP_UL&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only implemented for RunII (2016, 2017 &amp; 2018)&quot;</span><span class="p">)</span>
+
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">json_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s2">&quot;/libCorrectionsWrapper.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libCorrectionsWrapper.so&quot;</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span>
+                <span class="s1">&#39;#include &quot;$CMSSW_BASE/src/Corrections/Wrapper/interface/custom_sf.h&quot;&#39;</span><span class="p">))</span>
+
+            <span class="c1"># Declaring four objects: for HighPtId, for LooseRelTkIso, for the Trigger and for Global/Tracker Reco</span>
+            <span class="c1"># Of course this should be changed if more WPs are needed, maybe looping over </span>
+            <span class="c1"># an input parameter.</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span>
+                <span class="s1">&#39;auto ID_SF = &#39;</span>
+                    <span class="s1">&#39;MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;NUM_HighPtID_DEN_TrackerMuons&quot;);&#39;</span>
+                <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span>
+                <span class="s1">&#39;auto iso_SF = &#39;</span>
+                    <span class="s1">&#39;MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;NUM_LooseRelTkIso_DEN_HighPtIDandIPCut&quot;);&#39;</span>
+                <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span>
+                <span class="s1">&#39;auto reco_SF = &#39;</span>
+                    <span class="s1">&#39;MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;NUM_GlobalMuons_DEN_genTracks&quot;);&#39;</span>
+                <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2016</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span>
+                    <span class="s1">&#39;auto trig_SF = &#39;</span>
+                        <span class="s1">&#39;MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;NUM_Mu50_or_TkMu50_DEN_CutBasedIdGlobalHighPt_and_TkIsoLoose&quot;);&#39;</span>
+                    <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span>
+                    <span class="s1">&#39;auto trig_SF = &#39;</span>
+                        <span class="s1">&#39;MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;NUM_Mu50_or_OldMu100_or_TkMu100_DEN_CutBasedIdGlobalHighPt_and_TkIsoLoose&quot;);&#39;</span>
+                    <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">                using Vint = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">                double get_mu_idSF(std::string syst, float eta, float TuneP_relPt, float pt) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    sf = ID_SF.eval({&quot;</span><span class="si">%s</span><span class="s2">&quot;, fabs(eta), TuneP_pt, syst});</span>
+<span class="s2">                    return sf;</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_mu_isoSF(std::string syst, float eta, float TuneP_relPt, float pt) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    sf = iso_SF.eval({&quot;</span><span class="si">%s</span><span class="s2">&quot;, fabs(eta), TuneP_pt, syst});</span>
+<span class="s2">                    return sf;</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_mu_trigSF(std::string syst, float eta, float TuneP_relPt, float pt) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    if(TuneP_pt &lt; 52.0) sf = 1.0;</span>
+<span class="s2">                    else sf = trig_SF.eval({&quot;</span><span class="si">%s</span><span class="s2">&quot;, fabs(eta), TuneP_pt, syst});</span>
+<span class="s2">                    return sf;</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_mu_recoSF(std::string syst, float eta, float TuneP_relPt, float pt) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    sf = reco_SF.eval({&quot;</span><span class="si">%s</span><span class="s2">&quot;, fabs(eta), TuneP_pt, syst});</span>
+<span class="s2">                    return sf;</span>
+<span class="s2">                }</span>
+
+<span class="s2">                double get_mu_trigSF_OLDforLegacy2018(float eta, float TuneP_relPt, float pt) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    double SF_trigger[4];</span>
+<span class="s2">                    if (TuneP_pt &lt; 55){</span>
+<span class="s2">                       SF_trigger[0] = 0.980; SF_trigger[1] = 0.982; SF_trigger[2] = 0.983; SF_trigger[3] = 0.987;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 60){</span>
+<span class="s2">                       SF_trigger[0] = 0.982; SF_trigger[1] = 0.966; SF_trigger[2] = 1.012; SF_trigger[3] = 0.952;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 120){</span>
+<span class="s2">                       SF_trigger[0] = 0.976; SF_trigger[1] = 0.967; SF_trigger[2] = 1.002; SF_trigger[3] = 0.999;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 200){</span>
+<span class="s2">                       SF_trigger[0] = 0.980; SF_trigger[1] = 0.964; SF_trigger[2] = 1.004; SF_trigger[3] = 1.003;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 300){</span>
+<span class="s2">                       SF_trigger[0] = 0.978; SF_trigger[1] = 0.960; SF_trigger[2] = 1.009; SF_trigger[3] = 1.024;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 500){</span>
+<span class="s2">                       SF_trigger[0] = 0.973; SF_trigger[1] = 0.985; SF_trigger[2] = 0.993; SF_trigger[3] = 0.993;</span>
+<span class="s2">                    }else {</span>
+<span class="s2">                       SF_trigger[0] = 0.957; SF_trigger[1] = 0.988; SF_trigger[2] = 1.062; SF_trigger[3] = 1.070;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    double etaEdge[4];</span>
+<span class="s2">                    etaEdge[0] = 0.9; etaEdge[1] = 1.2; etaEdge[2] = 2.1; etaEdge[3] = 2.4;</span>
+<span class="s2">                    unsigned int ibin;</span>
+<span class="s2">                    for (ibin = 0; ibin &lt; 4; ibin++) {</span>
+<span class="s2">                       if (fabs(eta) &lt; etaEdge[ibin]) break;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    return sf = SF_trigger[ibin];</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_mu_recoSF_OLDforLegacy2018(float eta, float TuneP_relPt, float pt, float phi, float mass) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    float p = TuneP_pt*cosh(eta);</span>
+<span class="s2">                    double SF_reco[8];</span>
+<span class="s2">                    if(fabs(eta) &lt; 1.6){</span>
+<span class="s2">                       SF_reco[0] = 0.9943; SF_reco[1] = 0.9948; SF_reco[2] = 0.9950; SF_reco[3] = 0.994;</span>
+<span class="s2">                       SF_reco[4] = 0.9914; SF_reco[5] = 0.993;  SF_reco[6] = 0.991;  SF_reco[7] = 1.0;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    else {</span>
+<span class="s2">                       SF_reco[0] = 1.0;   SF_reco[1] = 0.993; SF_reco[2] = 0.990; SF_reco[3] = 0.988;</span>
+<span class="s2">                       SF_reco[4] = 0.981; SF_reco[5] = 0.983; SF_reco[6] = 0.978; SF_reco[7] = 0.98;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    double pEdge[8];</span>
+<span class="s2">                    pEdge[0] = 100; pEdge[1] = 150; pEdge[2] = 200;  pEdge[3] = 300;</span>
+<span class="s2">                    pEdge[4] = 400; pEdge[5] = 600; pEdge[6] = 1500; pEdge[7] = 3500;</span>
+<span class="s2">                    unsigned int ibin;</span>
+<span class="s2">                    for (ibin = 0; ibin &lt; 8; ibin++) {</span>
+<span class="s2">                       if (p &lt; pEdge[ibin]) </span>
+<span class="s2">                          return sf = SF_reco[ibin];</span>
+<span class="s2">                    }</span>
+<span class="s2">                    return sf = SF_reco[7];</span>
+<span class="s2">                }</span>
+
+<span class="s2">                double get_mu_trigSF_OLDforLegacy2017(float eta, float TuneP_relPt, float pt) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    double SF_trigger[4];</span>
+<span class="s2">                    if (TuneP_pt &lt; 55){</span>
+<span class="s2">                       SF_trigger[0] = 0.968; SF_trigger[1] = 0.929; SF_trigger[2] = 0.980; SF_trigger[3] = 0.869;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 60){</span>
+<span class="s2">                       SF_trigger[0] = 0.968; SF_trigger[1] = 0.953; SF_trigger[2] = 0.981; SF_trigger[3] = 0.864;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 120){</span>
+<span class="s2">                       SF_trigger[0] = 0.969; SF_trigger[1] = 0.945; SF_trigger[2] = 0.985; SF_trigger[3] = 0.926;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 200){</span>
+<span class="s2">                       SF_trigger[0] = 0.967; SF_trigger[1] = 0.946; SF_trigger[2] = 0.991; SF_trigger[3] = 0.992;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 300){</span>
+<span class="s2">                       SF_trigger[0] = 0.964; SF_trigger[1] = 0.948; SF_trigger[2] = 0.986; SF_trigger[3] = 1.023;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 500){</span>
+<span class="s2">                       SF_trigger[0] = 0.963; SF_trigger[1] = 0.939; SF_trigger[2] = 1.002; SF_trigger[3] = 0.905;</span>
+<span class="s2">                    }else {</span>
+<span class="s2">                       SF_trigger[0] = 0.951; SF_trigger[1] = 0.896; SF_trigger[2] = 0.922; SF_trigger[3] = 0.424;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    double etaEdge[4];</span>
+<span class="s2">                    etaEdge[0] = 0.9; etaEdge[1] = 1.2; etaEdge[2] = 2.1; etaEdge[3] = 2.4;</span>
+<span class="s2">                    unsigned int ibin;</span>
+<span class="s2">                    for (ibin = 0; ibin &lt; 4; ibin++) {</span>
+<span class="s2">                       if (fabs(eta) &lt; etaEdge[ibin]) break;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    return sf = SF_trigger[ibin];</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_mu_recoSF_OLDforLegacy2017(float eta, float TuneP_relPt, float pt, float phi, float mass) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    float p = TuneP_pt*cosh(eta);</span>
+<span class="s2">                    double SF_reco[8];</span>
+<span class="s2">                    if(fabs(eta) &lt; 1.6){</span>
+<span class="s2">                       SF_reco[0] = 0.9938; SF_reco[1] = 0.9950; SF_reco[2] = 0.996; SF_reco[3] = 0.996;</span>
+<span class="s2">                       SF_reco[4] = 0.994;  SF_reco[5] = 1.003;  SF_reco[6] = 0.987; SF_reco[7] = 0.9;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    else {</span>
+<span class="s2">                       SF_reco[0] = 1.0;   SF_reco[1] = 0.993; SF_reco[2] = 0.989; SF_reco[3] = 0.986;</span>
+<span class="s2">                       SF_reco[4] = 0.989; SF_reco[5] = 0.983; SF_reco[6] = 0.986; SF_reco[7] = 1.01;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    double pEdge[8];</span>
+<span class="s2">                    pEdge[0] = 100; pEdge[1] = 150; pEdge[2] = 200;  pEdge[3] = 300;</span>
+<span class="s2">                    pEdge[4] = 400; pEdge[5] = 600; pEdge[6] = 1500; pEdge[7] = 3500;</span>
+<span class="s2">                    unsigned int ibin;</span>
+<span class="s2">                    for (ibin = 0; ibin &lt; 8; ibin++) {</span>
+<span class="s2">                       if (p &lt; pEdge[ibin]) </span>
+<span class="s2">                          return sf = SF_reco[ibin];</span>
+<span class="s2">                    }</span>
+<span class="s2">                    return sf = SF_reco[7];</span>
+<span class="s2">                }</span>
+
+<span class="s2">                double get_mu_trigSF_OLDforLegacy2016(float eta, float TuneP_relPt, float pt) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    double SF_trigger[4];</span>
+<span class="s2">                    if (TuneP_pt &lt; 55){</span>
+<span class="s2">                       SF_trigger[0] = 0.980; SF_trigger[1] = 0.938; SF_trigger[2] = 0.996; SF_trigger[3] = 0.934;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 60){</span>
+<span class="s2">                       SF_trigger[0] = 0.983; SF_trigger[1] = 0.958; SF_trigger[2] = 1.005; SF_trigger[3] = 0.954;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 120){</span>
+<span class="s2">                       SF_trigger[0] = 0.980; SF_trigger[1] = 0.956; SF_trigger[2] = 0.990; SF_trigger[3] = 0.948;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 200){</span>
+<span class="s2">                       SF_trigger[0] = 0.980; SF_trigger[1] = 0.948; SF_trigger[2] = 0.988; SF_trigger[3] = 0.935;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 300){</span>
+<span class="s2">                       SF_trigger[0] = 0.980; SF_trigger[1] = 0.927; SF_trigger[2] = 0.977; SF_trigger[3] = 0.888;</span>
+<span class="s2">                    }else if(TuneP_pt &lt; 500){</span>
+<span class="s2">                       SF_trigger[0] = 0.962; SF_trigger[1] = 0.911; SF_trigger[2] = 1.010; SF_trigger[3] = 0.953;</span>
+<span class="s2">                    }else {</span>
+<span class="s2">                       SF_trigger[0] = 0.983; SF_trigger[1] = 0.824; SF_trigger[2] = 1.020; SF_trigger[3] = 1.134;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    double etaEdge[4];</span>
+<span class="s2">                    etaEdge[0] = 0.9; etaEdge[1] = 1.2; etaEdge[2] = 2.1; etaEdge[3] = 2.4;</span>
+<span class="s2">                    unsigned int ibin;</span>
+<span class="s2">                    for (ibin = 0; ibin &lt; 4; ibin++) {</span>
+<span class="s2">                       if (fabs(eta) &lt; etaEdge[ibin]) break;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    return sf = SF_trigger[ibin];</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_mu_recoSF_OLDforLegacy2016(float eta, float TuneP_relPt, float pt, float phi, float mass) {</span>
+<span class="s2">                    double sf;</span>
+<span class="s2">                    float TuneP_pt = TuneP_relPt*pt;</span>
+<span class="s2">                    float p = TuneP_pt*cosh(eta);</span>
+<span class="s2">                    double SF_reco[8];</span>
+<span class="s2">                    if(fabs(eta) &lt; 1.6){</span>
+<span class="s2">                       SF_reco[0] = 0.9914; SF_reco[1] = 0.9936; SF_reco[2] = 0.993; SF_reco[3] = 0.993;</span>
+<span class="s2">                       SF_reco[4] = 0.990;  SF_reco[5] = 0.990;  SF_reco[6] = 0.989; SF_reco[7] = 0.8;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    else {</span>
+<span class="s2">                       SF_reco[0] = 1.0;   SF_reco[1] = 0.993; SF_reco[2] = 0.991; SF_reco[3] = 0.985;</span>
+<span class="s2">                       SF_reco[4] = 0.981; SF_reco[5] = 0.979; SF_reco[6] = 0.978; SF_reco[7] = 0.9;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    double pEdge[8];</span>
+<span class="s2">                    pEdge[0] = 100; pEdge[1] = 150; pEdge[2] = 200;  pEdge[3] = 300;</span>
+<span class="s2">                    pEdge[4] = 400; pEdge[5] = 600; pEdge[6] = 1500; pEdge[7] = 3500;</span>
+<span class="s2">                    unsigned int ibin;</span>
+<span class="s2">                    for (ibin = 0; ibin &lt; 8; ibin++) {</span>
+<span class="s2">                       if (p &lt; pEdge[ibin]) </span>
+<span class="s2">                          return sf = SF_reco[ibin];</span>
+<span class="s2">                    }</span>
+<span class="s2">                    return sf = SF_reco[7];</span>
+<span class="s2">                }</span>
+
+<span class="s2">                double get_idSF_weight(std::string syst, Vfloat eta, Vfloat TuneP_relPt, Vfloat pt, int mu1_idx, int mu2_idx) {</span>
+<span class="s2">                    double mu1_sf, mu2_sf, weight;</span>
+<span class="s2">                    mu1_sf = get_mu_idSF(syst, eta[mu1_idx], TuneP_relPt[mu1_idx], pt[mu1_idx]);</span>
+<span class="s2">                    mu2_sf = get_mu_idSF(syst, eta[mu2_idx], TuneP_relPt[mu2_idx], pt[mu2_idx]);</span>
+<span class="s2">                    return weight = mu1_sf*mu2_sf;</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_isoSF_weight(std::string syst, Vfloat eta, Vfloat TuneP_relPt, Vfloat pt, int mu1_idx, int mu2_idx) {</span>
+<span class="s2">                    double mu1_sf, mu2_sf, weight;</span>
+<span class="s2">                    mu1_sf = get_mu_isoSF(syst, eta[mu1_idx], TuneP_relPt[mu1_idx], pt[mu1_idx]);</span>
+<span class="s2">                    mu2_sf = get_mu_isoSF(syst, eta[mu2_idx], TuneP_relPt[mu2_idx], pt[mu2_idx]);</span>
+<span class="s2">                    return weight = mu1_sf*mu2_sf;</span>
+<span class="s2">                }</span>
+<span class="s2">            //// For Reco &amp; Trigger SFs from JSON ////</span>
+<span class="s2">                double get_trigSF_weight(std::string syst, Vfloat eta, Vfloat TuneP_relPt, Vfloat pt, int mu1_idx, int mu2_idx) {</span>
+<span class="s2">                    double mu1_sf, mu2_sf, weight;</span>
+<span class="s2">                    mu1_sf = get_mu_trigSF(syst, eta[mu1_idx], TuneP_relPt[mu1_idx], pt[mu1_idx]);</span>
+<span class="s2">                    mu2_sf = get_mu_trigSF(syst, eta[mu2_idx], TuneP_relPt[mu2_idx], pt[mu2_idx]);</span>
+<span class="s2">                    return weight = mu1_sf + mu2_sf - mu1_sf*mu2_sf;</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_recoSF_weight(std::string syst, Vfloat eta, Vfloat TuneP_relPt, Vfloat pt, int mu1_idx, int mu2_idx) {</span>
+<span class="s2">                    double mu1_sf, mu2_sf, weight;</span>
+<span class="s2">                    mu1_sf = get_mu_recoSF(syst, eta[mu1_idx], TuneP_relPt[mu1_idx], pt[mu1_idx]);</span>
+<span class="s2">                    mu2_sf = get_mu_recoSF(syst, eta[mu2_idx], TuneP_relPt[mu2_idx], pt[mu2_idx]);</span>
+<span class="s2">                    return weight = mu1_sf*mu2_sf;</span>
+<span class="s2">                }</span>
+<span class="s2">            &quot;&quot;&quot;</span>  <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tag</span><span class="p">))</span>
+
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            //// For Reco &amp; Trigger SFs in Table format ////</span>
+<span class="s2">                double get_trigSF_weight_OLDforLegacy(Vfloat eta, Vfloat TuneP_relPt, Vfloat pt, int mu1_idx, int mu2_idx) {</span>
+<span class="s2">                    double mu1_sf, mu2_sf, weight;</span>
+<span class="s2">                    mu1_sf = get_mu_trigSF_OLDforLegacy</span><span class="si">%s</span><span class="s2">(eta[mu1_idx], TuneP_relPt[mu1_idx], pt[mu1_idx]);</span>
+<span class="s2">                    mu2_sf = get_mu_trigSF_OLDforLegacy</span><span class="si">%s</span><span class="s2">(eta[mu2_idx], TuneP_relPt[mu2_idx], pt[mu2_idx]);</span>
+<span class="s2">                    return weight = mu1_sf + mu2_sf - mu1_sf*mu2_sf;</span>
+<span class="s2">                }</span>
+<span class="s2">                double get_recoSF_weight_OLDforLegacy(Vfloat eta, Vfloat TuneP_relPt, Vfloat pt, Vfloat phi, Vfloat mass, int mu1_idx, int mu2_idx) {</span>
+<span class="s2">                    double mu1_sf, mu2_sf, weight;</span>
+<span class="s2">                    mu1_sf = get_mu_recoSF_OLDforLegacy</span><span class="si">%s</span><span class="s2">(eta[mu1_idx], TuneP_relPt[mu1_idx], pt[mu1_idx], phi[mu1_idx], mass[mu1_idx]);</span>
+<span class="s2">                    mu2_sf = get_mu_recoSF_OLDforLegacy</span><span class="si">%s</span><span class="s2">(eta[mu2_idx], TuneP_relPt[mu2_idx], pt[mu2_idx], phi[mu2_idx], mass[mu2_idx]);</span>
+<span class="s2">                    return weight = mu1_sf*mu2_sf;</span>
+<span class="s2">                }</span>
+<span class="s2">            &quot;&quot;&quot;</span>  <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
+
+        <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">corr</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;idSF&quot;</span><span class="p">,</span> <span class="s2">&quot;isoSF&quot;</span><span class="p">,</span> <span class="s2">&quot;trigSF&quot;</span><span class="p">,</span> <span class="s2">&quot;recoSF&quot;</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">syst</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;sf&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;_up&quot;</span><span class="p">,</span> <span class="s2">&quot;systup&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;_down&quot;</span><span class="p">,</span> <span class="s2">&quot;systdown&quot;</span><span class="p">)]:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;mu_</span><span class="si">%s</span><span class="s2">_weight</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">corr</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
+                               <span class="s1">&#39;get_</span><span class="si">%s</span><span class="s1">_weight(&quot;</span><span class="si">%s</span><span class="s1">&quot;, Muon_eta, Muon_tunepRelPt, Muon_pt, mu1_index, mu2_index)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">corr</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
+                <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;mu_</span><span class="si">%s</span><span class="s2">_weight</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">corr</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">))</span>
+
+        <span class="c1">## For Reco &amp; Trigger SFs in Table format ##</span>
+        <span class="c1">#df = df.Define(&quot;mu_trigSF_weight&quot;, &#39;get_trigSF_weight(Muon_eta, Muon_tunepRelPt, Muon_pt, mu1_index, mu2_index)&#39;)</span>
+        <span class="c1">#df = df.Define(&quot;mu_recoSF_weight&quot;, &#39;get_recoSF_weight(Muon_eta, Muon_tunepRelPt, Muon_pt, Muon_phi, Muon_mass, mu1_index, mu2_index)&#39;)</span>
+        <span class="c1">#branches.append(&quot;mu_trigSF_weight&quot;)</span>
+        <span class="c1">#branches.append(&quot;mu_recoSF_weight&quot;)</span>
+
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
+
+
+<div class="viewcode-block" id="MuonSF"><a class="viewcode-back" href="../../../modules/MUO/muongem.html#Corrections.MUO.muonSF_GEMethod.MuonSF">[docs]</a><span class="k">def</span> <span class="nf">MuonSF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Module to obtain high-pt di-muon SFs with their uncertainties for: reco, ID, iso &amp; trigger.</span>
+<span class="sd">    Implemented for the full RunII (2016, 2017 &amp; 2018).</span>
+<span class="sd">    All SFs are taken from official JSONs. Alternatively, trigger &amp; reco SFs can be</span>
+<span class="sd">    read from a table format, taken from the Muon POG twiki.</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: MuonSF</span>
+<span class="sd">            path: Corrections.MUO.muonSF_GEMethod</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+<span class="sd">                year: self.config.year</span>
+<span class="sd">                isUL: self.dataset.has_tag(&#39;ul&#39;)</span>
+<span class="sd">                preVFP: self.dataset.has_tag(&#39;preVFP&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">MuonSFproducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -17,6 +17,7 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 3
 
    Structure
    Installation
