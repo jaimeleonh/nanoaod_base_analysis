@@ -919,6 +919,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
         dummy_hist.GetYaxis().SetMaxDigits(4)
+        dummy_hist.GetYaxis().SetTitleOffset(1.5)
         maximum = max([hist.GetMaximum() for hist in draw_hists])
         if self.log_y:
             dummy_hist.SetMaximum(100 * maximum)
