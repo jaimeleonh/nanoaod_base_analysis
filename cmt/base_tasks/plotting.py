@@ -12,6 +12,7 @@ import json
 import math
 import itertools
 import functools
+import array
 from collections import OrderedDict
 
 import law
@@ -124,10 +125,17 @@ class BasePlotTask(ConfigTaskWithCategory):
         return features
 
     def get_binning(self, feature):
-        y_axis_adendum = (" / %s %s" % (
-            (feature.binning[2] - feature.binning[1]) / feature.binning[0],
-                feature.get_aux("units")) if feature.get_aux("units") else "")
-        return feature.binning, y_axis_adendum
+        if isinstance(feature.binning, tuple):
+            y_axis_adendum = (" / %s %s" % (
+                (feature.binning[2] - feature.binning[1]) / feature.binning[0],
+                    feature.get_aux("units")) if feature.get_aux("units") else "")
+            binning_args = tuple(feature.binning)
+        else:
+            y_axis_adendum = ""
+            n_bins = len(feature.binning) - 1
+            binning_args = n_bins, array.array("f", feature.binning)
+
+        return binning_args, y_axis_adendum
 
     def get_feature_systematics(self, feature):
         return feature.systematics
@@ -1018,7 +1026,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             lines = []
             for y in [0.5, 1.0, 1.5]:
-                l = ROOT.TLine(binning_args[1], y, binning_args[2], y)
+                if isinstance(feature.binning, tuple):
+                    l = ROOT.TLine(binning_args[1], y, binning_args[2], y)
+                else:
+                    l = ROOT.TLine(binning_args[1][0], y, binning_args[1][-1], y)
                 r.setup_line(l, props={"NDC": False, "LineStyle": 3, "LineWidth": 1,
                     "LineColor": 1})
                 lines.append(l)
