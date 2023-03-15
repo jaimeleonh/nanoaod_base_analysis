@@ -39,6 +39,6 @@ Usage
   A possible solution would be to fix the prefix for the dataset in your config file, so that you force the 
   program to take it from a server where you know it is not corrupted. From DAS, you can check the sites where
   a dataset replica is stored by typing ``site dataset=/your_DAS_dataset/``. You can then look for the prefixes of 
-  the different sites by typing on your terminal (here for the european site) 
+  the different sites by typing on your terminal (here for the european redirector) 
   ``xrdfs xrootd-cms.infn.it locate -h /one_of_the_files_from_DAS_dataset.root``. The ones where it says ``Server`` are valid.
-  TIP: If you're running on lxplus, use ``prefix=eoscms-ns-ip563.cern.ch:1098//`` when possible. It also runs much faster.
+  TIP: If you're running on lxplus, try to use the T2_CH_CERN prefix when possible. It also runs much faster.
