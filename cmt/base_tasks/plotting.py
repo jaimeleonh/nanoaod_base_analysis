@@ -112,7 +112,7 @@ class BasePlotTask(ConfigTaskWithCategory):
         for feature in self.config.features:
             if self.feature_names and not law.util.multi_match(feature.name, self.feature_names):
                 continue
-            if self.feature_tags and not feature.has_tag(self.feature_tags):
+            if self.feature_tags and not any([feature.has_tag(tag) for tag in self.feature_tags]):
                 continue
             if self.skip_feature_names and \
                     law.util.multi_match(feature.name, self.skip_feature_names):
