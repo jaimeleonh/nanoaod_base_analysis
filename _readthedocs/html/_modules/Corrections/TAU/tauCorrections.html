@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Corrections.TAU.tauCorrections &mdash; nanoaod-base-analysis 0.1 documentation</title>
+  <title>Corrections.TAU.tauCorrections &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -15,6 +16,8 @@
         <script src="../../../_static/underscore.js"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/design-tabs.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -25,7 +28,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
@@ -39,9 +42,14 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
 </ul>
 
         </div>
@@ -50,7 +58,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../../index.html">nanoaod-base-analysis</a>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -87,6 +95,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_wps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vsjet_wps&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;Medium&quot;</span><span class="p">,</span> <span class="s2">&quot;Tight&quot;</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vse_wps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vse_wps&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;VVLoose&quot;</span><span class="p">,</span> <span class="s2">&quot;Tight&quot;</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vsmu_wps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vsmu_wps&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;VLoose&quot;</span><span class="p">,</span> <span class="s2">&quot;Tight&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_vse_wp</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;vsjet_vse_wp&quot;</span><span class="p">,</span> <span class="s2">&quot;VVLoose&quot;</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
@@ -115,14 +124,14 @@
 <span class="s2">                using Vint = const ROOT::RVec&lt;int&gt;&amp;;</span>
 <span class="s2">                ROOT::RVec&lt;double&gt; get_deeptau_vsjet_sf(</span>
 <span class="s2">                        Vfloat pt, Vint dm, Vint genmatch,</span>
-<span class="s2">                        std::string wp, std::string syst, std::string flag) {</span>
+<span class="s2">                        std::string wp, std::string wp_vse, std::string syst, std::string flag) {</span>
 <span class="s2">                    ROOT::RVec&lt;double&gt; sf;</span>
 <span class="s2">                    for (size_t i = 0; i &lt; pt.size(); i++) {</span>
 <span class="s2">                        if (flag == &quot;dm&quot; &amp;&amp; (pt[i] &lt;= 40 || (dm[i] &gt; 2 &amp;&amp; dm[i] &lt; 10))) {</span>
 <span class="s2">                            sf.push_back(1.);</span>
 <span class="s2">                        }</span>
 <span class="s2">                        else</span>
-<span class="s2">                            sf.push_back(corr_vsjet.eval({pt[i], dm[i], genmatch[i], wp, syst, flag}));</span>
+<span class="s2">                            sf.push_back(corr_vsjet.eval({pt[i], dm[i], genmatch[i], wp, wp_vse, syst, flag}));</span>
 <span class="s2">                    }</span>
 <span class="s2">                    return sf;</span>
 <span class="s2">                }</span>
@@ -162,11 +171,14 @@
             <span class="k">for</span> <span class="n">wp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_wps</span><span class="p">:</span>
                 <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_pt_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
                     <span class="s1">&#39;get_deeptau_vsjet_sf(&#39;</span>
-                        <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;pt&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
+                        <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;pt&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                            <span class="n">wp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_vse_wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
                 <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_pt_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">))</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_dm_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
+                    <span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_dm_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
                     <span class="s1">&#39;get_deeptau_vsjet_sf(&#39;</span>
-                        <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;dm&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
+                        <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;dm&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                            <span class="n">wp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_vse_wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
                 <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_dm_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">))</span>
 
             <span class="k">for</span> <span class="n">wp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vse_wps</span><span class="p">:</span>
@@ -203,6 +215,10 @@
 
 <span class="sd">    :param vsmu_wps: DeepTau2017v2p1VSmu WPs to consider. Default: `[VLoose, Tight]`</span>
 <span class="sd">    :type vsmu_wps: list of str</span>
+
+<span class="sd">    :param vsjet_vse_wp: DeepTau2017v2p1VSeWP used to compute the DeepTau2017v2p1VSjet scale factor.</span>
+<span class="sd">        Default: `VVLoose`</span>
+<span class="sd">    :type vsjet_vse_wp: str</span>
 
 <span class="sd">    YAML sintaxis:</span>
 
