@@ -112,13 +112,14 @@ class Task(law.Task):
 
     def retrieve_file(self, filename):
         filenames = [
+            filename,
             os.path.expandvars("$CMT_BASE/../{}".format(filename)),
             os.path.expandvars("$CMT_BASE/cmt/{}".format(filename))
         ]
         for f in filenames:
             if os.path.isfile(f):
                 return f
-        return ""
+        raise ValueError("File %s could not be found under the default paths" % filename)
 
 
 class ConfigTask(Task):
