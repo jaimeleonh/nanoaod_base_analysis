@@ -119,7 +119,8 @@ class Task(law.Task):
         for f in filenames:
             if os.path.isfile(f):
                 return f
-        raise ValueError("File %s could not be found under the default paths" % filename)
+        return ""
+        # raise ValueError("File %s could not be found under the default paths" % filename)
 
 
 class ConfigTask(Task):

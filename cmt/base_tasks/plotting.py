@@ -75,6 +75,9 @@ class BasePlotTask(ConfigTaskWithCategory):
     :param systematics: NOT YET IMPLEMENTED. List of custom systematics to be considered.
     :type systematics: csv list
 
+    :param store_systematics: whether to store systematic templates inside the output root files.
+    :type store_systematics: bool
+
     :param shape_region: shape region used for QCD computation.
     :type shape_region: str from choice list
 
@@ -95,6 +98,8 @@ class BasePlotTask(ConfigTaskWithCategory):
     n_bins = luigi.IntParameter(default=law.NO_INT, description="custom number of bins for "
         "plotting, defaults to the value configured by the feature when empty, default: empty")
     systematics = law.CSVParameter(default=(), description="list of systematics, default: empty")
+    store_systematics = luigi.BoolParameter(default=True, description="whether to store "
+        "systematic templates inside root files, default: True")
     shape_region = luigi.ChoiceParameter(default="os_inviso", choices=("os_inviso", "ss_iso"),
         significant=False, description="shape region default: os_inviso")
     remove_horns = luigi.BoolParameter(default=False, description="whether to remove horns "
@@ -298,7 +303,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             systs = self.get_systs(feature, isMC) \
                 + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC)
             systs_directions = [("central", "")]
-            if isMC:
+            if isMC and self.store_systematics:
                 systs_directions += list(itertools.product(systs, directions))
 
             # apply selection if needed
