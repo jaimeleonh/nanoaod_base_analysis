@@ -71,6 +71,7 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
         return OrderedDict(
             ((dataset.name, category.name), self.atomic_requires(dataset, category))
             for dataset, category in itertools.product(self.datasets, self.categories)
+            if not dataset.process.name in category.get_aux("skip_processes", [])
         )
 
 
@@ -795,10 +796,10 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
     default_wlcg_fs = "wlcg_fs_categorization"
 
     def merge_workflow_requires(self):
-        return PreCounter.req(self, _prefer_cli=["workflow"])
+        return PreCounter.vreq(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return PreCounter.req(self, workflow="local", branches=((start_leaf, end_leaf),),
+        return PreCounter.vreq(self, workflow="local", branches=((start_leaf, end_leaf),),
             _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
