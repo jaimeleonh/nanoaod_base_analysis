@@ -356,6 +356,8 @@ class Config():
                 return obj.expression
             elif isinstance(obj, Category):
                 return obj.selection
+            elif isinstance(obj, str):
+                return obj
             else:
                 raise ValueError("Object %s cannot be used in method get_feature_expression" % obj)
 

@@ -47,6 +47,8 @@ cmt_style.style.legend_y2 = 0.93
 
 EMPTY = -1.e5
 
+directions = ["up", "down"]
+
 ROOT = import_root()
 
 class BasePlotTask(ConfigTaskWithCategory):
@@ -153,6 +155,13 @@ class BasePlotTask(ConfigTaskWithCategory):
             systs.append(syst)
         return systs
 
+    def get_unique_systs(self, systs):
+        unique_systs = []
+        for syst in systs:
+            if syst not in unique_systs:
+                unique_systs.append(syst)
+        return unique_systs
+
     def get_output_postfix(self):
         postfix = ""
         if self.region:
@@ -240,6 +249,55 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 self.config.weights[category], syst_name, syst_direction)
         return self.config.weights.default
 
+    def define_histograms(self, df):
+        histos = []
+        isMC = self.dataset.process.isMC
+        for feature in self.features:
+            binning_args, y_axis_adendum = self.get_binning(feature)
+            x_title = (str(feature.get_aux("x_title"))
+                + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
+            y_title = "Events" + y_axis_adendum
+            title = "; %s; %s" % (x_title, y_title)
+            systs = self.get_unique_systs(self.get_systs(feature, isMC) \
+                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC))
+            systs_directions = [("central", "")]
+            if isMC and self.store_systematics:
+                systs_directions += list(itertools.product(systs, directions))
+
+            # loop over systematics and up/down variations
+            for syst_name, direction in systs_directions:
+                # apply selection if needed
+                if feature.selection:
+                    feat_df = df.Define("feat_selection", self.config.get_object_expression(
+                        feature.selection, isMC, syst_name, direction)).Filter("feat_selection")
+                else:
+                    feat_df = df
+
+                # define tag just for histograms's name
+                if syst_name != "central" and isMC:
+                    tag = "_%s" % syst_name
+                    if direction != "":
+                        tag += "_%s" % direction
+                else:
+                    tag = ""
+                feature_expression = self.config.get_object_expression(
+                    feature, isMC, syst_name, direction)
+                feature_name = feature.name + tag
+                hist_base = ROOT.TH1D(feature_name, title, *binning_args)
+                if self.nentries > 0:
+                    hmodel = ROOT.RDF.TH1DModel(hist_base)
+                    histos.append(
+                        feat_df.Define(
+                            "weight", "{}".format(self.get_weight(
+                                self.category.name, syst_name, direction))
+                        ).Define(
+                            "var", feature_expression).Histo1D(hmodel, "var", "weight")
+                    )
+                else:  # no entries available, append empty histogram
+                    histos.append(hist_base)
+        return histos
+
+
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
@@ -248,8 +306,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         and produces a set of plots per each feature, one for the nominal value
         and others (if available) for all systematics.
         """
-        isMC = self.dataset.process.isMC
-        directions = ["up", "down"]
 
         # prepare inputs and outputs
         if self.skip_processing:
@@ -292,50 +348,9 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
         tf = ROOT.TFile.Open(inp)
         tree = tf.Get(self.tree_name)
-        nentries = tree.GetEntries()
-        histos = []
-        for feature in self.features:
-            binning_args, y_axis_adendum = self.get_binning(feature)
-            x_title = (str(feature.get_aux("x_title"))
-                + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
-            y_title = "Events" + y_axis_adendum
-            title = "; %s; %s" % (x_title, y_title)
-            systs = self.get_systs(feature, isMC) \
-                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC)
-            systs_directions = [("central", "")]
-            if isMC and self.store_systematics:
-                systs_directions += list(itertools.product(systs, directions))
+        self.nentries = tree.GetEntries()
 
-            # apply selection if needed
-            if feature.selection:
-                feat_df = df.Define("feat_selection", feature.selection).Filter("feat_selection")
-            else:
-                feat_df = df
-
-            # loop over systematics and up/down variations
-            for syst_name, direction in systs_directions:
-                # define tag just for histograms's name
-                if syst_name != "central" and isMC:
-                    tag = "_%s" % syst_name
-                    if direction != "":
-                        tag += "_%s" % direction
-                else:
-                    tag = ""
-                feature_expression = self.config.get_object_expression(
-                    feature, isMC, syst_name, direction)
-                feature_name = feature.name + tag
-                hist_base = ROOT.TH1D(feature_name, title, *binning_args)
-                if nentries > 0:
-                    hmodel = ROOT.RDF.TH1DModel(hist_base)
-                    histos.append(
-                        feat_df.Define(
-                            "weight", "{}".format(self.get_weight(
-                                self.category.name, syst_name, direction))
-                        ).Define(
-                            "var", feature_expression).Histo1D(hmodel, "var", "weight")
-                    )
-                else:  # no entries available, append empty histogram
-                    histos.append(hist_base)
+        histos = self.define_histograms(df)
 
         out = ROOT.TFile.Open(create_file_dir(outp), "RECREATE")
         for histo in histos:
@@ -356,7 +371,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 --process-group-name etau --feature-names Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta \
 --workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
 --dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
---MergeCategorizationStats-version test_old --PrePlot-workflow htcondor``
+--MergeCategorizationStats-version test_old``
 
     :param stack: whether to show all backgrounds stacked (True) or normalized to 1 (False)
     :type stack: bool
@@ -419,6 +434,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     :param fixed_colors: whether to plot histograms with their defined colors (False) or fixed colors
         (True) starting from ``ROOT`` color ``2``.
     :type fixed_colors: bool
+
+    :param log_y: whether to set y axis to log scale
+    :type log_y: bool
 
     """
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
@@ -573,7 +591,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp"])
                 for key, region in self.qcd_regions.items()
             }
-            if self.qcd_category_name != "default":
+            if self.qcd_category_name != "default":  # to be fixed
                 reqs["qcd"]["ss_iso"] = FeaturePlot.vreq(self,
                     region_name=self.qcd_regions.ss_iso.name, category_name=self.qcd_category_name,
                     blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
@@ -597,7 +615,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         return reqs
 
-    def get_output_postfix(self, feature, key="pdf"):
+    def get_output_postfix(self, key="pdf"):
         """
         :return: string to be included in the output filenames
         :rtype: str
@@ -632,7 +650,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         return {
             key: law.SiblingFileCollection(OrderedDict(
                 (feature.name, self.local_target("{}{}{}.{}".format(
-                    prefix, feature.name, self.get_output_postfix(feature, key), ext)))
+                    prefix, feature.name, self.get_output_postfix(key), ext)))
                 for feature in self.features
             ))
             for key, prefix, ext in output_data
@@ -923,30 +941,65 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
         # Draw
         if self.hide_data or len(data_hists) == 0 or not self.stack:
+            do_ratio = False
             c = Canvas()
             if self.log_y:
                 c.SetLogy()
+            label_scaling = 1
         else:
+            do_ratio = True
             c = RatioCanvas()
             dummy_hist.GetXaxis().SetLabelOffset(100)
             dummy_hist.GetXaxis().SetTitleOffset(100)
             c.get_pad(1).cd()
             if self.log_y:
                 c.get_pad(1).SetLogy()
+            label_scaling = 5./4.
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
+        if do_ratio:
+            r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         dummy_hist.GetYaxis().SetMaxDigits(4)
-        dummy_hist.GetYaxis().SetTitleOffset(1.5)
+        dummy_hist.GetYaxis().SetTitleOffset(1.22)
         maximum = max([hist.GetMaximum() for hist in draw_hists])
         if self.log_y:
             dummy_hist.SetMaximum(100 * maximum)
             dummy_hist.SetMinimum(0.0011)
         else:
-            dummy_hist.SetMaximum(1.1 * maximum)
+            dummy_hist.SetMaximum(1.25 * maximum)
             dummy_hist.SetMinimum(0.001)
 
-        draw_labels = get_labels(upper_right="")
+        inner_text=[self.category.label + " category"]
+        if self.region:
+            if isinstance(self.region.label, list):
+                inner_text += self.region.label
+            else:
+                inner_text.append(self.region.label)
+
+        if maximum > 1e4 and not self.log_y:
+            upper_left_offset = 0.05
+        else:
+            upper_left_offset = 0.0
+
+        if not (self.hide_data or not len(data_hists) > 0) or self.stack:
+            upper_right="{}, {} TeV ({:.1f} ".format(
+                self.config.year,
+                self.config.ecm,
+                self.config.lumi_fb
+            ) + "fb^{-1})"
+        else:
+            upper_right="{} Simulation ({} TeV)".format(
+                self.config.year,
+                self.config.ecm,
+            )
+
+        draw_labels = get_labels(
+            upper_left_offset=upper_left_offset,
+            upper_right=upper_right,
+            scaling=label_scaling,
+            inner_text=inner_text
+        )
 
         dummy_hist.Draw()
         for ih, hist in enumerate(draw_hists):
@@ -1063,7 +1116,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if bkg_histo:
                bkg_histo.Write("background")
 
-            if self.plot_systematics:
+            if self.store_systematics:
                 for syst_dir, shape_hists in self.histos["shape"].items():
                     for hist in shape_hists:
                         hist.Write("%s_%s" % (hist.cmt_process_name, syst_dir))
@@ -1144,11 +1197,11 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if self.plot_systematics:
                 self.histos["bkg_histo_syst"] = ROOT.TH1D(
                     randomize("syst"), hist_title, *binning_args)
+            if self.store_systematics:
                 self.histos["shape"] = {}
-                shape_systematics = self.get_systs(feature, True) \
-                    + self.config.get_weights_systematics(self.config.weights[self.category.name], True)
+                shape_systematics = self.get_unique_systs(self.get_systs(feature, True) \
+                    + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
 
-                directions = ["up", "down"]
                 systs_directions += list(itertools.product(shape_systematics, directions))
 
             for (syst, d) in systs_directions:
@@ -1239,3 +1292,628 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
 
             self.plot(feature)
+
+
+class BasePlot2DTask(BasePlotTask):
+    def get_features(self):
+        features = []
+        for feature_pair_name in self.feature_names:
+            try:
+                feature_pair_names = feature_pair_name.split(":")
+            except:
+                print("%s cannot be considered for a 2D plot" % feature_pair_name)
+                continue
+            feature_pair = []
+            for feature_name in feature_pair_names:
+                for feature in self.config.features:
+                    if feature.name == feature_name:
+                        feature_pair.append(feature)
+                        break
+            if len(feature_pair) == 2:
+                features.append(tuple(feature_pair))
+
+        if len(features) == 0:
+            raise ValueError("No features were included. Did you spell them correctly?")
+        return features
+
+    def get_binning(self, feature):
+        binning_args = []
+        for feature_elem in feature:
+            if isinstance(feature_elem.binning, tuple):
+                binning_args += feature_elem.binning
+            else:
+                binning_args += [len(feature_elem.binning) - 1, array.array("f", feature_elem.binning)]
+
+        return tuple(binning_args), ""
+
+
+class PrePlot2D(PrePlot, BasePlot2DTask):
+    def define_histograms(self, df):
+        histos = []
+        isMC = self.dataset.process.isMC
+        for feature_pair in self.features:
+            binning_args, _ = self.get_binning(feature_pair)
+            x_title = (str(feature_pair[0].get_aux("x_title"))
+                + (" [%s]" % feature_pair[0].get_aux("units")
+                if feature_pair[0].get_aux("units") else ""))
+            y_title = (str(feature_pair[1].get_aux("x_title"))
+                + (" [%s]" % feature_pair[1].get_aux("units")
+                if feature_pair[1].get_aux("units") else ""))
+
+            title = "; %s; %s; Events" % (x_title, y_title)
+            systs = self.get_unique_systs(self.get_systs(feature_pair[0], isMC)
+                + self.get_systs(feature_pair[1], isMC) \
+                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC)
+            )
+            systs_directions = [("central", "")]
+            if isMC and self.store_systematics:
+                systs_directions += list(itertools.product(systs, directions))
+
+            # loop over systematics and up/down variations
+            for syst_name, direction in systs_directions:
+                # apply selection if needed
+                feat_df = df
+                for ifeat, feature in enumerate(feature_pair):
+                    if feature.selection:
+                        feat_df = df.Define(
+                            "feat%s_selection" % ifeat, self.config.get_object_expression(
+                                feature.selection, isMC, syst_name, direction)).Filter(
+                            "feat%s_selection" % ifeat)
+
+                # define tag just for histograms's name
+                if syst_name != "central" and isMC:
+                    tag = "_%s" % syst_name
+                    if direction != "":
+                        tag += "_%s" % direction
+                else:
+                    tag = ""
+                feature_expressions = [
+                    self.config.get_object_expression(
+                        feature_pair[0], isMC, syst_name, direction),
+                    self.config.get_object_expression(
+                        feature_pair[1], isMC, syst_name, direction),
+                ]
+                feature_name = "_".join([feature.name for feature in feature_pair]) + tag
+                hist_base = ROOT.TH2D(feature_name, title, *binning_args)
+                if self.nentries > 0:
+                    hmodel = ROOT.RDF.TH2DModel(hist_base)
+                    histos.append(
+                        feat_df.Define(
+                            "weight", "{}".format(self.get_weight(
+                                self.category.name, syst_name, direction))
+                            ).Define("var1", feature_expressions[0]).Define("var2", feature_expressions[1]
+                            ).Histo2D(hmodel, "var1", "var2", "weight")
+                    )
+                else:  # no entries available, append empty histogram
+                    histos.append(hist_base)
+        return histos
+
+
+class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
+
+    """
+    Performs the actual histogram plotting: loads the histograms obtained in the PrePlot2D tasks,
+    rescales them if needed and plots and saves them.
+
+    Example command:
+
+    ``law run FeaturePlot2D --version test --category-name etau --config-name ul_2018 \
+--process-group-name etau --feature-names lep1_pt:lep1_eta,Hbb_mass:Htt_svfit_mass \
+--workers 20 --PrePlot2D-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
+--dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
+--MergeCategorizationStats-version test_old``
+    
+    :param log_z: whether to set y axis to log scale 
+    :type log_z: bool
+    """
+
+    log_z = luigi.BoolParameter(default=False, description="set logarithmic scale for Z axis, "
+        "default: False")
+
+    def requires(self):
+        """
+        All requirements needed:
+
+            * Histograms coming from the PrePlot2D task.
+
+            * Number of total events coming from the MergeCategorizationStats task \
+              (to normalize MC histograms).
+
+            * If estimating QCD, FeaturePlot2D for the three additional QCD regions needed.
+
+        """
+
+        reqs = {}
+        reqs["data"] = OrderedDict(
+            ((dataset.name, category.name), PrePlot2D.vreq(self,
+                dataset_name=dataset.name, category_name=self.get_data_category(category).name))
+            for dataset, category in itertools.product(
+                self.datasets_to_run, self.expand_category())
+        )
+        if not self.avoid_normalization:
+            reqs["stats"] = OrderedDict()
+            for dataset in self.datasets_to_run:
+                if dataset.process.isData:
+                    continue
+                if dataset.get_aux("secondary_dataset", None):
+                    reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
+                        dataset_name=dataset.get_aux("secondary_dataset"))
+                else:
+                    reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
+                        dataset_name=dataset.name)
+
+        if self.do_qcd:
+            reqs["qcd"] = {
+                key: self.req(self, region_name=region.name, blinded=False, hide_data=False,
+                    do_qcd=False, stack=True, save_root=True, save_pdf=True, save_yields=False,
+                    remove_horns=False,_exclude=["feature_tags", "shape_region",
+                    "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp"])
+                for key, region in self.qcd_regions.items()
+            }
+            if self.qcd_category_name != "default":
+                reqs["qcd"]["ss_iso"] = FeaturePlot2D.vreq(self,
+                    region_name=self.qcd_regions.ss_iso.name, category_name=self.qcd_category_name,
+                    blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
+                    save_pdf=True, save_yields=False, feature_names=(self.qcd_feature,),
+                    bin_opt_version=law.NO_STR, remove_horns=self.remove_horns, _exclude=["feature_tags",
+                        "shape_region", "qcd_category_name", "qcd_sym_shape", "bin_opt_version",
+                        "qcd_signal_region_wp"])
+                # reqs["qcd"]["os_inviso"] = FeaturePlot2D.vreq(self,
+                    # region_name=self.qcd_regions.os_inviso.name, category_name=self.qcd_category_name,
+                    # blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
+                    # save_pdf=True, save_yields=True, feature_names=(self.qcd_feature,),
+                    # remove_horns=self.remove_horns, _exclude=["feature_tags", "bin_opt_version"])
+                reqs["qcd"]["ss_inviso"] = FeaturePlot2D.vreq(self,
+                    region_name=self.qcd_regions.ss_inviso.name,
+                    category_name=self.qcd_category_name,
+                    blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
+                    save_pdf=True, save_yields=False, feature_names=(self.qcd_feature,),
+                    bin_opt_version=law.NO_STR, remove_horns=self.remove_horns, _exclude=["feature_tags", 
+                        "shape_region", "qcd_category_name", "qcd_sym_shape", "bin_opt_version",
+                        "qcd_signal_region_wp"])
+
+        return reqs
+
+    def output(self):
+        """
+        Output files to be filled: pdf, png, root or json
+        """
+        def get_feature_name(feature_pair):
+            return "_".join([feature.name for feature in feature_pair])
+
+        # output definitions, i.e. key, file prefix, extension
+        output_data = []
+        if self.save_root:
+            output_data.append(("root", "root/", "root"))
+        if self.save_yields:
+            output_data.append(("yields", "yields/", "json"))
+        out = {
+            key: law.SiblingFileCollection(OrderedDict(
+                (get_feature_name(feature_pair), self.local_target("{}{}{}.{}".format(
+                    prefix, get_feature_name(feature_pair),
+                    self.get_output_postfix(key), ext)))
+                for feature_pair in self.features
+            ))
+            for key, prefix, ext in output_data
+        }
+        output_data = []
+        if self.save_pdf:
+            output_data.append(("pdf", "", "pdf"))
+        if self.save_png:
+            output_data.append(("png", "", "png"))
+        out.update({
+            key: law.SiblingFileCollection(OrderedDict(
+                (get_feature_name(feature_pair), OrderedDict(
+                    (process.name, self.local_target("{}{}{}_{}.{}".format(
+                        prefix, get_feature_name(feature_pair),
+                        self.get_output_postfix(key), process.name, ext)))
+                    for process in self.processes_datasets
+                    if not process.isData or not self.hide_data
+                ))
+                for feature_pair in self.features
+            ))
+            for key, prefix, ext in output_data
+        })
+        return out
+
+    def plot(self, feature):
+        """
+        Performs the actual plotting.
+        """
+        # helper to extract the qcd shape in a region
+        def get_qcd(region, files, bin_limit=0.):
+            d_hist = files[region].Get("histograms/" + self.data_names[0])
+            if not d_hist:
+                raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
+                    self.data_names[0], region, files[region]))
+
+            b_hists = []
+            for b_name in self.background_names:
+                b_hist = files[region].Get("histograms/" + b_name)
+                if not b_hist:
+                    raise Exception("background histogram '{}' not found in region '{}'".format(
+                        b_name, region))
+                b_hists.append(b_hist)
+
+            qcd_hist = d_hist.Clone(randomize("qcd_" + region))
+            for hist in b_hists:
+                qcd_hist.Add(hist, -1.)
+
+            # removing negative bins
+            for ibinx, ibiny in itertools.product(
+                    range(1, qcd_hist.GetNbinsX() + 1),
+                    range(1, qcd_hist.GetNbinsY() + 1)):
+                if qcd_hist.GetBinContent(ibinx, ibiny) < bin_limit:
+                    qcd_hist.SetBinContent(ibinx, ibiny, 1.e-6)
+
+            return qcd_hist
+
+        def get_integral_and_error(hist):
+            error = c_double(0.)
+            integral = hist.IntegralAndError(
+                0, hist.GetNbinsX() + 1,
+                0, hist.GetNbinsY() + 1, error)
+            error = error.value
+            compatible = True if integral <= 0 else False
+            # compatible = True if integral - error <= 0 else False
+            return integral, error, compatible
+
+        background_hists = self.histos["background"]
+        signal_hists = self.histos["signal"]
+        data_hists = self.histos["data"]
+        all_hists = self.histos["all"]
+        if self.plot_systematics:
+            bkg_histo_syst = self.histos["bkg_histo_syst"]
+
+        binning_args, _ = self.get_binning(feature)
+        x_title = (str(feature[0].get_aux("x_title"))
+            + (" [%s]" % feature[0].get_aux("units") if feature[0].get_aux("units") else ""))
+        y_title = (str(feature[1].get_aux("x_title"))
+            + (" [%s]" % feature[1].get_aux("units") if feature[1].get_aux("units") else ""))
+        z_title = ("Events" if self.stack else "Normalized Events")
+        hist_title = "; %s; %s; %s" % (x_title, y_title, z_title)
+
+        feature_pair_name = "_".join([elem.name for elem in feature])
+        # qcd shape files
+        qcd_shape_files = None
+        if self.do_qcd:
+            qcd_shape_files = {}
+            for key, region in self.qcd_regions.items():
+                if self.qcd_category_name != "default":
+                    my_feature = (feature_pair_name if "shape" in key or key == "os_inviso"
+                        else self.qcd_feature)
+                else:
+                    my_feature = feature_pair_name
+                qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
+
+            # do the qcd extrapolation
+            if "shape" in qcd_shape_files:
+                qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
+                qcd_hist.Scale(1. / qcd_hist.Integral())
+            else:  #sym shape
+                qcd_hist = get_qcd("shape1", qcd_shape_files).Clone(randomize("qcd"))
+                qcd_hist2 = get_qcd("shape2", qcd_shape_files).Clone(randomize("qcd"))
+                qcd_hist.Scale(1. / qcd_hist.Integral())
+                qcd_hist2.Scale(1. / qcd_hist2.Integral())
+                qcd_hist.Add(qcd_hist2)
+                qcd_hist.Scale(0.5)
+
+            n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
+                get_qcd("os_inviso", qcd_shape_files, -999))
+            n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
+                get_qcd("ss_iso", qcd_shape_files, -999))
+            n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
+                get_qcd("ss_inviso", qcd_shape_files, -999))
+            # if not n_ss_iso or not n_ss_inviso:
+            if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
+                print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")
+                qcd_scaling = 0.
+                qcd_inviso = 0.
+                qcd_inviso_error = 0.
+                qcd_hist.Scale(qcd_scaling)
+            else:
+                qcd_inviso = n_os_inviso / n_ss_inviso
+                qcd_inviso_error = qcd_inviso * math.sqrt(
+                    (n_os_inviso_error / n_os_inviso) * (n_os_inviso_error / n_os_inviso)
+                    + (n_ss_inviso_error / n_ss_inviso) * (n_ss_inviso_error / n_ss_inviso)
+                )
+                qcd_scaling = n_os_inviso * n_ss_iso / n_ss_inviso
+                os_inviso_rel_error = n_os_inviso_error / n_os_inviso
+                ss_iso_rel_error = n_ss_iso_error / n_ss_iso
+                ss_inviso_rel_error = n_ss_inviso_error / n_ss_inviso
+                new_errors_sq = {}
+                for ibinx, ibiny in itertools.product(
+                        range(1, qcd_hist.GetNbinsX() + 1),
+                        range(1, qcd_hist.GetNbinsY() + 1)):
+                    if qcd_hist.GetBinContent(ibinx, ibiny) > 0:
+                        bin_rel_error = (qcd_hist.GetBinError(ibinx, ibiny)
+                            / qcd_hist.GetBinContent(ibinx, ibiny))
+                    else:
+                        bin_rel_error = 0
+                    new_errors_sq[(ibinx, ibiny)] = (bin_rel_error * bin_rel_error
+                        + os_inviso_rel_error * os_inviso_rel_error
+                        + ss_iso_rel_error * ss_iso_rel_error
+                        + ss_inviso_rel_error * ss_inviso_rel_error)
+                qcd_hist.Scale(qcd_scaling)
+                # fix errors
+                for ibinx, ibiny in itertools.product(
+                        range(1, qcd_hist.GetNbinsX() + 1),
+                        range(1, qcd_hist.GetNbinsY() + 1)):
+                    qcd_hist.SetBinError(ibinx, ibiny, qcd_hist.GetBinContent(ibinx, ibiny)
+                        * math.sqrt(new_errors_sq[(ibinx, ibiny)]))
+
+            # store and style
+            yield_error = c_double(0.)
+            qcd_hist.cmt_yield = qcd_hist.IntegralAndError(
+                0, qcd_hist.GetNbinsX() + 1, 0, qcd_hist.GetNbinsY() + 1, yield_error)
+            qcd_hist.cmt_yield_error = yield_error.value
+            qcd_hist.cmt_bin_yield = []
+            qcd_hist.cmt_bin_yield_error = []
+            for ibiny in range(1, qcd_hist.GetNbinsY() + 1):
+                qcd_hist.cmt_bin_yield.append([
+                    qcd_hist.GetBinContent(ibinx, ibiny)
+                    for ibinx in range(1, qcd_hist.GetNbinsX() + 1)
+                ])
+                qcd_hist.cmt_bin_yield_error.append([
+                    qcd_hist.GetBinError(ibinx, ibiny)
+                    for ibinx in range(1, qcd_hist.GetNbinsX() + 1)
+                ])
+            qcd_hist.cmt_scale = 1.
+            qcd_hist.cmt_process_name = "qcd"
+            qcd_hist.process_label = "QCD"
+            qcd_hist.SetTitle("QCD")
+            background_hists.append(qcd_hist)
+            all_hists.append(qcd_hist)
+
+        if not self.hide_data:
+            all_hists += data_hists
+
+        bkg_histo = None
+        if not self.stack:
+            for hist in all_hists:
+                scale = 1. / (hist.Integral() or 1.)
+                hist.Scale(scale)
+                hist.scale = scale
+            draw_hists = all_hists
+        else:
+            draw_hists = all_hists
+            for hist in background_hists:
+                if not bkg_histo:
+                    bkg_histo = hist.Clone()
+                else:
+                    bkg_histo.Add(hist.Clone())
+            if not self.hide_data:
+                draw_hists.extend(data_hists)
+
+        dummy_hist = ROOT.TH2F(randomize("dummy"), hist_title, *binning_args)
+        r.setup_hist(dummy_hist)
+        dummy_hist.GetZaxis().SetMaxDigits(4)
+        dummy_hist.GetZaxis().SetTitleOffset(1.22)  # FIXME
+
+        if self.log_z:
+            dummy_hist.SetMinimum(0.0011)
+        else:
+            dummy_hist.SetMinimum(0.001)
+
+        inner_text=[self.category.label + " category"]
+        if self.region:
+            if isinstance(self.region.label, list):
+                inner_text += self.region.label
+            else:
+                inner_text.append(self.region.label)
+
+        if not (self.hide_data or not len(data_hists) > 0) or self.stack:
+            upper_right="{}, {} TeV ({:.1f} ".format(
+                self.config.year,
+                self.config.ecm,
+                self.config.lumi_fb
+            ) + "fb^{-1})"
+        else:
+            upper_right="{} Simulation ({} TeV)".format(
+                self.config.year,
+                self.config.ecm,
+            )
+
+        draw_labels = get_labels(
+            upper_right=upper_right,
+            inner_text=inner_text
+        )
+
+        for ih, hist in enumerate(draw_hists):
+            c = Canvas()
+            if self.log_z:
+                c.SetLogz()
+            dummy_hist.SetMaximum(hist.GetMaximum())
+            dummy_hist.Draw()
+            hist.Draw("COLZ,SAME")
+            for label in draw_labels:
+                label.Draw("same")
+
+            outputs = []
+            if self.save_png:
+                outputs.append(self.output()["png"].targets[feature_pair_name][hist.cmt_process_name].path)
+            if self.save_pdf:
+                outputs.append(self.output()["pdf"].targets[feature_pair_name][hist.cmt_process_name].path)
+            for output in outputs:
+                c.SaveAs(create_file_dir(output))
+
+        if self.save_root:
+            f = ROOT.TFile.Open(create_file_dir(
+                self.output()["root"].targets[feature_pair_name].path), "RECREATE")
+            f.cd()
+            # c.Write("canvas") #FIXME
+
+            hist_dir = f.mkdir("histograms")
+            hist_dir.cd()
+            for hist in all_hists:
+                hist.Write(hist.cmt_process_name)
+            if bkg_histo:
+               bkg_histo.Write("background")
+
+            if self.store_systematics:
+                for syst_dir, shape_hists in self.histos["shape"].items():
+                    for hist in shape_hists:
+                        hist.Write("%s_%s" % (hist.cmt_process_name, syst_dir))
+            f.Close()
+
+        if self.save_yields:
+            yields = OrderedDict()
+            for hist in signal_hists + background_hists + data_hists:
+                yields[hist.cmt_process_name] = {
+                    "Total yield": hist.cmt_yield,
+                    "Total yield error": hist.cmt_yield_error,
+                    "Entries": getattr(hist, "cmt_entries", hist.GetEntries()),
+                    "Binned yield": hist.cmt_bin_yield,
+                    "Binned yield error": hist.cmt_bin_yield_error,
+                }
+            if bkg_histo:
+                yields["background"] = {
+                    "Total yield": sum([hist.cmt_yield for hist in background_hists]),
+                    "Total yield error": math.sqrt(sum([(hist.cmt_yield_error)**2 for hist in background_hists])),
+                    "Entries": getattr(bkg_histo, "cmt_entries", bkg_histo.GetEntries()),
+                    "Binned yield": [[
+                        sum([hist.cmt_bin_yield[j][i] for hist in background_hists])
+                        for i in range(0, background_hists[0].GetNbinsX())]
+                        for j in range(0, background_hists[0].GetNbinsY())],
+                    "Binned yield error": [[
+                        math.sqrt(sum([(hist.cmt_bin_yield_error[j][i]) ** 2
+                            for hist in background_hists]))
+                        for i in range(0, background_hists[0].GetNbinsX())]
+                        for j in range(0, background_hists[0].GetNbinsY())],
+                }
+            with open(create_file_dir(self.output()["yields"].targets[feature_pair_name].path), "w") as f:
+                json.dump(yields, f, indent=4)
+
+    @law.decorator.notify
+    @law.decorator.safe_output
+    def run(self):
+        """
+        Splits processes into data, signal and background. Creates histograms from each process
+        loading them from the input files. Scales the histograms and applies the correct format
+        to them.
+        """
+        ROOT.gStyle.SetOptStat(0)
+
+        # create root tchains for inputs
+        inputs = self.input()
+
+        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
+        self.signal_names = [p.name for p in self.processes_datasets.keys() if p.isSignal]
+        self.background_names = [p.name for p in self.processes_datasets.keys()
+            if not p.isData and not p.isSignal]
+
+        self.nevents = self.get_nevents()
+
+        for feature_pair in self.features:
+            self.histos = {"background": [], "signal": [], "data": [], "all": []}
+
+            binning_args, _ = self.get_binning(feature_pair)
+            x_title = (str(feature_pair[0].get_aux("x_title"))
+                + (" [%s]" % feature_pair[0].get_aux("units")
+                if feature_pair[0].get_aux("units") else ""))
+            y_title = (str(feature_pair[1].get_aux("x_title"))
+                + (" [%s]" % feature_pair[1].get_aux("units")
+                if feature_pair[1].get_aux("units") else ""))
+            z_title = ("Events" if self.stack else "Normalized Events")
+            hist_title = "; %s; %s: %s" % (x_title, y_title, z_title)
+
+            systs_directions = [("central", "")]
+            if self.plot_systematics:
+                self.histos["bkg_histo_syst"] = ROOT.TH2D(
+                    randomize("syst"), hist_title, *binning_args)
+            if self.store_systematics:
+                self.histos["shape"] = {}
+                shape_systematics = self.get_unique_systs(
+                    self.get_systs(feature_pair[0], True) \
+                    + self.get_systs(feature_pair[1], True) \
+                    + self.config.get_weights_systematics(self.config.weights[self.category.name],
+                        True))
+
+                systs_directions += list(itertools.product(shape_systematics, directions))
+
+            feature_pair_name = "_".join([feature.name for feature in feature_pair])
+            for (syst, d) in systs_directions:
+                feature_name = feature_pair_name if syst == "central" else "%s_%s_%s" % (
+                    feature_pair_name, syst, d)
+                if syst != "central":
+                    self.histos["shape"]["%s_%s" % (syst, d)] = []
+                for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+                    if syst != "central" and process.isData:
+                        continue
+                    process_histo = ROOT.TH2D(randomize(process.name), hist_title, *binning_args)
+                    process_histo.process_label = str(process.label)
+                    process_histo.cmt_process_name = process.name
+                    process_histo.Sumw2()
+                    for dataset in datasets:
+                        dataset_histo = ROOT.TH2D(randomize("tmp"), hist_title, *binning_args)
+                        dataset_histo.Sumw2()
+                        for category in self.expand_category():
+                            inp = inputs["data"][
+                                (dataset.name, category.name)].collection.targets.values()
+                            for elem in inp:
+                                rootfile = ROOT.TFile.Open(elem.path)
+                                histo = copy(rootfile.Get(feature_name))
+                                rootfile.Close()
+                                dataset_histo.Add(histo)
+                            if not process.isData and not self.avoid_normalization:
+                                if self.nevents[dataset.name] != 0:
+                                    dataset_histo.Scale(self.get_normalization_factor(dataset))
+                                    scaling = dataset.get_aux("scaling", None)
+                                    if scaling:
+                                        print("Scaling {} histo by {} +- {}".format(
+                                            dataset.name, scaling[0], scaling[1]))
+                                        old_errors = [[dataset_histo.GetBinError(ibinx, ibiny)\
+                                                / dataset_histo.GetBinContent(ibinx, ibiny)
+                                                if dataset_histo.GetBinContent(ibinx, ibiny) != 0 else 0
+                                                for ibinx in range(1, dataset_histo.GetNbinsX() + 1)]
+                                            for ibiny in range(1, dataset_histo.GetNbinsY() + 1)
+                                        ]
+                                        new_errors = [[
+                                                math.sqrt(elem ** 2 + (scaling[1] / scaling[0]) ** 2)
+                                                for elem in line]
+                                            for line in old_errors]
+                                        dataset_histo.Scale(scaling[0])
+                                        for ibinx, ibiny in itertools.product(
+                                                range(1, dataset_histo.GetNbinsX() + 1),
+                                                range(1, dataset_histo.GetNbinsY() + 1)):
+                                            dataset_histo.SetBinError(
+                                                ibinx, ibiny, dataset_histo.GetBinContent(ibinx, ibiny)
+                                                    * new_errors[ibiny - 1][ibinx - 1])
+
+                        process_histo.Add(dataset_histo)
+                        if self.plot_systematics and not process.isData and not process.isSignal \
+                                and syst == "central":
+                            dataset_histo_syst = dataset_histo.Clone()
+                            self.histos["bkg_histo_syst"].Add(dataset_histo_syst)
+
+                    yield_error = c_double(0.)
+                    process_histo.cmt_yield = process_histo.IntegralAndError(
+                        0, process_histo.GetNbinsX() + 1,
+                        0, process_histo.GetNbinsY() + 1, yield_error)
+                    process_histo.cmt_yield_error = yield_error.value
+
+                    process_histo.cmt_bin_yield = []
+                    process_histo.cmt_bin_yield_error = []
+                    for ibiny in range(1, process_histo.GetNbinsY() + 1):
+                        process_histo.cmt_bin_yield.append(
+                            [process_histo.GetBinContent(ibinx, ibiny)
+                            for ibinx in range(1, process_histo.GetNbinsX() + 1)]
+                        )
+                        process_histo.cmt_bin_yield_error.append(
+                            [process_histo.GetBinError(ibinx, ibiny)
+                            for ibinx in range(1, process_histo.GetNbinsX() + 1)]
+                        )
+
+                    if syst == "central":
+                        if process.isSignal:
+                            self.histos["signal"].append(process_histo)
+                        elif process.isData:
+                            self.histos["data"].append(process_histo)
+                        else:
+                            self.histos["background"].append(process_histo)
+                        if not process.isData: #or not self.hide_data:
+                           self.histos["all"].append(process_histo)
+                    else:
+                        self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
+
+            self.plot(feature_pair)
