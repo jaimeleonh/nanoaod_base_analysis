@@ -696,7 +696,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         hist.SetLineColor(color)
         hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
-    def get_systematics(self):
+    def get_norm_systematics(self):
         """
         Method to extract all normalization systematics from the KLUB files.
         It considers the processes given by the process_group_name and their parents.
@@ -1177,7 +1177,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if not p.isData and not p.isSignal]
 
         if self.plot_systematics:
-            systematics = self.get_systematics()
+            systematics = self.get_norm_systematics()
 
         if self.fixed_colors:
             colors = list(range(2, 2 + len(self.processes_datasets.keys())))

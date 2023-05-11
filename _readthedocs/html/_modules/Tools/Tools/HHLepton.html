@@ -510,6 +510,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">isMC</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">=</span> <span class="n">year</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">runPeriod</span> <span class="o">=</span> <span class="n">runPeriod</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isRun3</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isRun3&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">df_filter</span> <span class="o">=</span> <span class="n">df_filter</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">deeptau_version</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;deeptau_version&quot;</span><span class="p">,</span> <span class="s2">&quot;2017v2p1&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isV10</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isV10&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
@@ -543,12 +544,14 @@
             <span class="s2">&quot;HLT_DoubleTightChargedIsoPFTau35_Trk1_TightID_eta2p1_Reg&quot;</span><span class="p">,</span>
             <span class="s2">&quot;HLT_DoubleMediumChargedIsoPFTau40_Trk1_TightID_eta2p1_Reg&quot;</span><span class="p">,</span>
             <span class="s2">&quot;HLT_DoubleTightChargedIsoPFTau40_Trk1_eta2p1_Reg&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;HLT_DoubleMediumChargedIsoPFTauHPS35_Trk1_eta2p1_Reg&quot;</span><span class="p">]</span>
+            <span class="s2">&quot;HLT_DoubleMediumChargedIsoPFTauHPS35_Trk1_eta2p1_Reg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;HLT_DoubleMediumDeepTauPFTauHPS35_L2NN_eta2p1&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tautaujet_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_DoubleMediumDeepTauPFTauHPS30_L2NN_eta2p1_PFJet60&quot;</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTau20_Trk1_eta2p1_Reg&quot;</span><span class="p">,</span>
             <span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTau20_Trk1_eta2p1&quot;</span><span class="p">,</span>
             <span class="s2">&quot;HLT_VBF_DoubleLooseChargedIsoPFTauHPS20_Trk1_eta2p1&quot;</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2018</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2022</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isV10</span><span class="p">:</span>
                 <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">                    using Vbool = const ROOT::RVec&lt;Bool_t&gt;&amp;;</span>
@@ -575,7 +578,7 @@
 <span class="s2">                        return trigger_reqs;</span>
 <span class="s2">                    }</span>
 <span class="s2">                    std::vector&lt;trig_req&gt; get_tautau_triggers(</span>
-<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                            Vbool triggers, bool isMC, bool isRun3, int run, int runPeriod) {</span>
 <span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
 <span class="s2">                        trigger_reqs.push_back(trig_req({triggers[2], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
 <span class="s2">                        trigger_reqs.push_back(trig_req({triggers[3], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
@@ -583,6 +586,12 @@
 <span class="s2">                            trigger_reqs.push_back(trig_req({triggers[4], 40, 2.1, 40, 2.1, {{64, 4}, {64, 4}}}));</span>
 <span class="s2">                        else</span>
 <span class="s2">                            trigger_reqs.push_back(trig_req({triggers[5], 40, 2.1, 40, 2.1, {{2, 16}, {2, 16}}}));</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_tautaujet_triggers(Vbool triggers, bool isRun3) { // DUMMY FUNCTION</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        if (isRun3)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[0], 35, 2.1, 35, 2.1, {{8, 32, 128, 16384}, {8, 32, 128, 16384}}}));</span>
 <span class="s2">                        return trigger_reqs;</span>
 <span class="s2">                    }</span>
 <span class="s2">                    std::vector&lt;trig_req&gt; get_vbf_triggers(</span>
@@ -621,14 +630,25 @@
 <span class="s2">                        return trigger_reqs;</span>
 <span class="s2">                    }</span>
 <span class="s2">                    std::vector&lt;trig_req&gt; get_tautau_triggers(</span>
-<span class="s2">                            Vbool triggers, bool isMC, int run, int runPeriod) {</span>
+<span class="s2">                            Vbool triggers, bool isMC, bool isRun3, int run, int runPeriod) {</span>
 <span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[2], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
-<span class="s2">                        trigger_reqs.push_back(trig_req({triggers[3], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
-<span class="s2">                        if (!isMC &amp;&amp; run &lt; 317509)</span>
-<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[4], 40, 2.1, 40, 2.1, {{64, 4}, {64, 4}}}));</span>
-<span class="s2">                        else</span>
-<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[5], 40, 2.1, 40, 2.1, {{2, 32}, {2, 32}}}));</span>
+<span class="s2">                        if (isRun3) {</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[6], 40, 2.1, 40, 2.1, {{8, 32, 128}, {8, 32, 128}}}));</span>
+<span class="s2">                            // trigger_reqs.push_back(trig_req({triggers[7], 35, 2.1, 35, 2.1, {{8, 32, 128, 16384}, {8, 32, 128, 16384}}}));</span>
+<span class="s2">                        } else {</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[2], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[3], 40, 2.1, 40, 2.1, {{64, 4, 8}, {64, 4, 8}}}));</span>
+<span class="s2">                            if (!isMC &amp;&amp; run &lt; 317509)</span>
+<span class="s2">                                trigger_reqs.push_back(trig_req({triggers[4], 40, 2.1, 40, 2.1, {{64, 4}, {64, 4}}}));</span>
+<span class="s2">                            else</span>
+<span class="s2">                                trigger_reqs.push_back(trig_req({triggers[5], 40, 2.1, 40, 2.1, {{2, 32}, {2, 32}}}));</span>
+<span class="s2">                        }</span>
+<span class="s2">                        return trigger_reqs;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    std::vector&lt;trig_req&gt; get_tautaujet_triggers(Vbool triggers, bool isRun3) {</span>
+<span class="s2">                        std::vector&lt;trig_req&gt; trigger_reqs;</span>
+<span class="s2">                        if (isRun3)</span>
+<span class="s2">                            trigger_reqs.push_back(trig_req({triggers[0], 35, 2.1, 35, 2.1, {{8, 32, 128, 16384}, {8, 32, 128, 16384}}}));</span>
 <span class="s2">                        return trigger_reqs;</span>
 <span class="s2">                    }</span>
 <span class="s2">                    std::vector&lt;trig_req&gt; get_vbf_triggers(</span>
@@ -643,7 +663,8 @@
 <span class="s2">                &quot;&quot;&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
-        <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;pairType&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_index&quot;</span><span class="p">,</span> <span class="s2">&quot;dau2_index&quot;</span><span class="p">,</span> <span class="s2">&quot;isVBFtrigger&quot;</span><span class="p">,</span> <span class="s2">&quot;isOS&quot;</span><span class="p">,</span>
+        <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;pairType&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_index&quot;</span><span class="p">,</span> <span class="s2">&quot;dau2_index&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;isTauTauJetTrigger&quot;</span><span class="p">,</span> <span class="s2">&quot;isVBFtrigger&quot;</span><span class="p">,</span> <span class="s2">&quot;isOS&quot;</span><span class="p">,</span>
             <span class="s2">&quot;dau1_eta&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_phi&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_iso&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_decayMode&quot;</span><span class="p">,</span>
             <span class="s2">&quot;dau1_idDeepTauVSe&quot;</span><span class="p">,</span> <span class="s2">&quot;dau1_idDeepTauVSmu&quot;</span><span class="p">,</span>
             <span class="s2">&quot;dau1_idDeepTauVSjet&quot;</span><span class="p">,</span>
@@ -662,6 +683,9 @@
         <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tautau_triggers</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">tautau_triggers</span><span class="p">[</span><span class="n">ib</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;false&quot;</span>
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tautaujet_triggers</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tautaujet_triggers</span><span class="p">[</span><span class="n">ib</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;false&quot;</span>
         <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_branches</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span><span class="p">[</span><span class="n">ib</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;false&quot;</span>
@@ -678,8 +702,11 @@
             <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mutau_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;etau_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_etau_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
             <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">etau_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;tautau_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_tautau_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
-            <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tautau_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;tautau_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_tautau_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tautau_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isRun3</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;tautaujet_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_tautaujet_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tautaujet_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isRun3</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">)))</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;vbf_triggers&quot;</span><span class="p">,</span> <span class="s2">&quot;get_vbf_triggers({</span><span class="si">%s</span><span class="s2">}, </span><span class="si">%s</span><span class="s2">, run, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
             <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vbf_triggers</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">),</span> <span class="n">runPeriod</span><span class="p">))</span>
 
@@ -704,7 +731,7 @@
             <span class="s2">&quot;Tau_idDeepTau</span><span class="si">{6}</span><span class="s2">VSjet, Tau_rawDeepTau</span><span class="si">{6}</span><span class="s2">VSjet, &quot;</span>
             <span class="s2">&quot;Tau_dz, Tau_decayMode, Tau_charge, &quot;</span>
             <span class="s2">&quot;TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi, &quot;</span>
-            <span class="s2">&quot;mutau_triggers, etau_triggers, tautau_triggers, vbf_triggers&quot;</span>
+            <span class="s2">&quot;mutau_triggers, etau_triggers, tautau_triggers, tautaujet_triggers, vbf_triggers&quot;</span>
         <span class="s2">&quot;)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">,</span>
             <span class="n">Electron_mvaIso_WP80</span><span class="p">,</span> <span class="n">Electron_mvaNoIso_WP90</span><span class="p">,</span> <span class="n">Electron_mvaIso_WP90</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">deeptau_version</span><span class="p">))</span>
@@ -857,6 +884,79 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHLeptonVarRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">HHDiTauJetRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHDiTauJetRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HH_DITAUJET&quot;</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;HH_DITAUJET&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;true&quot;</span>
+            
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">                using VInt = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">                float deltaR(float eta_1, float eta_2, float phi_1, float phi_2) {</span>
+<span class="s2">                   const float deta = eta_1 - eta_2;</span>
+<span class="s2">                   const float dphi = ROOT::Math::VectorUtil::Phi_mpi_pi(phi_1 - phi_2);</span>
+<span class="s2">                   const float dRsq = std::pow(deta,2) + std::pow(dphi,2);</span>
+<span class="s2">                   return sqrt(dRsq);</span>
+<span class="s2">                }</span>
+<span class="s2">                int pass_ditaujet(</span>
+<span class="s2">                    int pairType, int isTauTauJetTrigger,</span>
+<span class="s2">                    Vfloat tau_eta, Vfloat tau_phi, int dau1_index, int dau2_index,</span>
+<span class="s2">                    Vfloat jet_pt, Vfloat jet_eta, Vfloat jet_phi)</span>
+<span class="s2">                {</span>
+<span class="s2">                    if (pairType != 2 || isTauTauJetTrigger != 1)  // tautau channel, ditau+jet trig</span>
+<span class="s2">                        return 1;</span>
+<span class="s2">                    float dau1_eta = tau_eta[dau1_index];</span>
+<span class="s2">                    float dau2_eta = tau_eta[dau2_index];</span>
+<span class="s2">                    float dau1_phi = tau_phi[dau1_index];</span>
+<span class="s2">                    float dau2_phi = tau_phi[dau2_index];</span>
+<span class="s2">                    for (int ijet = 0; ijet &lt; jet_pt.size(); ijet++) {</span>
+<span class="s2">                        if (jet_pt[ijet] &lt; 65)  // 60 from the HLT Path + 5</span>
+<span class="s2">                            continue;</span>
+<span class="s2">                        // Overlap removal criteria</span>
+<span class="s2">                        if ((deltaR(dau1_eta, jet_eta[ijet], dau1_phi, jet_phi[ijet]) &gt; 0.5) &amp;&amp;</span>
+<span class="s2">                                (deltaR(dau2_eta, jet_eta[ijet], dau2_phi, jet_phi[ijet]) &gt; 0.5))</span>
+<span class="s2">                            return 1;</span>
+<span class="s2">                    }</span>
+<span class="s2">                    return 0;</span>
+<span class="s2">                }</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;passTauTauJet&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pass_ditaujet(pairType, isTauTauJetTrigger, &quot;</span>
+                <span class="s2">&quot;Tau_eta, Tau_phi, dau1_index, dau2_index, &quot;</span>
+                <span class="s2">&quot;Jet_pt</span><span class="si">{0}</span><span class="s2">, Jet_eta, Jet_phi)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;passTauTauJet == 1&quot;</span><span class="p">),</span> <span class="p">[]</span>
+
+
+<span class="k">def</span> <span class="nf">HHDiTauJetRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Filters events passing the ditau+jet trigger but not the offline criteria</span>
+
+<span class="sd">    Lepton systematics (used for pt and mass variables) can be modified using the parameters from </span>
+<span class="sd">    :ref:`BaseModules_JetLepMetSyst`.</span>
+
+<span class="sd">    Required RDFModules: :ref:`HHLepton_HHLeptonRDF`.</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: HHDiTauJetRDF</span>
+<span class="sd">            path: Tools.Tools.HHLepton</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHDiTauJetRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        
+        
+        
 </pre></div>
 
            </div>

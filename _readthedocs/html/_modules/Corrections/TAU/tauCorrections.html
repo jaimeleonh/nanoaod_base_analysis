@@ -118,23 +118,46 @@
                 <span class="s1">&#39;auto corr_vsmu = MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;DeepTau2017v2p1VSmu&quot;);&#39;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
             <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span>
                 <span class="s1">&#39;auto corr_tes = MyCorrections(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;tau_energy_scale&quot;);&#39;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">                    using Vint = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">                    ROOT::RVec&lt;double&gt; get_deeptau_vsjet_sf(</span>
+<span class="s2">                            Vfloat pt, Vint dm, Vint genmatch,</span>
+<span class="s2">                            std::string wp, std::string wp_vse, std::string syst, std::string flag) {</span>
+<span class="s2">                        ROOT::RVec&lt;double&gt; sf;</span>
+<span class="s2">                        for (size_t i = 0; i &lt; pt.size(); i++) {</span>
+<span class="s2">                            if (flag == &quot;dm&quot; &amp;&amp; (pt[i] &lt;= 40 || (dm[i] &gt; 2 &amp;&amp; dm[i] &lt; 10))) {</span>
+<span class="s2">                                sf.push_back(1.);</span>
+<span class="s2">                            }</span>
+<span class="s2">                            else</span>
+<span class="s2">                                sf.push_back(corr_vsjet.eval({pt[i], dm[i], genmatch[i], wp, wp_vse, syst, flag}));</span>
+<span class="s2">                        }</span>
+<span class="s2">                        return sf;</span>
+<span class="s2">                    }</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
+<span class="s2">                    using Vint = const ROOT::RVec&lt;int&gt;&amp;;</span>
+<span class="s2">                    ROOT::RVec&lt;double&gt; get_deeptau_vsjet_sf(</span>
+<span class="s2">                            Vfloat pt, Vint dm, Vint genmatch,</span>
+<span class="s2">                            std::string wp, std::string syst, std::string flag) {</span>
+<span class="s2">                        ROOT::RVec&lt;double&gt; sf;</span>
+<span class="s2">                        for (size_t i = 0; i &lt; pt.size(); i++) {</span>
+<span class="s2">                            if (flag == &quot;dm&quot; &amp;&amp; (pt[i] &lt;= 40 || (dm[i] &gt; 2 &amp;&amp; dm[i] &lt; 10))) {</span>
+<span class="s2">                                sf.push_back(1.);</span>
+<span class="s2">                            }</span>
+<span class="s2">                            else</span>
+<span class="s2">                                sf.push_back(corr_vsjet.eval({pt[i], dm[i], genmatch[i], wp, syst, flag}));</span>
+<span class="s2">                        }</span>
+<span class="s2">                        return sf;</span>
+<span class="s2">                    }</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">)</span>
+                
                 
             <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">                using Vfloat = const ROOT::RVec&lt;float&gt;&amp;;</span>
-<span class="s2">                using Vint = const ROOT::RVec&lt;int&gt;&amp;;</span>
-<span class="s2">                ROOT::RVec&lt;double&gt; get_deeptau_vsjet_sf(</span>
-<span class="s2">                        Vfloat pt, Vint dm, Vint genmatch,</span>
-<span class="s2">                        std::string wp, std::string wp_vse, std::string syst, std::string flag) {</span>
-<span class="s2">                    ROOT::RVec&lt;double&gt; sf;</span>
-<span class="s2">                    for (size_t i = 0; i &lt; pt.size(); i++) {</span>
-<span class="s2">                        if (flag == &quot;dm&quot; &amp;&amp; (pt[i] &lt;= 40 || (dm[i] &gt; 2 &amp;&amp; dm[i] &lt; 10))) {</span>
-<span class="s2">                            sf.push_back(1.);</span>
-<span class="s2">                        }</span>
-<span class="s2">                        else</span>
-<span class="s2">                            sf.push_back(corr_vsjet.eval({pt[i], dm[i], genmatch[i], wp, wp_vse, syst, flag}));</span>
-<span class="s2">                    }</span>
-<span class="s2">                    return sf;</span>
-<span class="s2">                }</span>
 <span class="s2">                ROOT::RVec&lt;double&gt; get_deeptau_vse_sf(</span>
 <span class="s2">                        Vfloat eta, Vint genmatch, std::string wp, std::string syst) {</span>
 <span class="s2">                    ROOT::RVec&lt;double&gt; sf;</span>
@@ -169,16 +192,27 @@
         <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">syst</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;nom&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;_up&quot;</span><span class="p">,</span> <span class="s2">&quot;up&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;_down&quot;</span><span class="p">,</span> <span class="s2">&quot;down&quot;</span><span class="p">)]:</span>
             <span class="k">for</span> <span class="n">wp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_wps</span><span class="p">:</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_pt_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
-                    <span class="s1">&#39;get_deeptau_vsjet_sf(&#39;</span>
-                        <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;pt&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span>
-                            <span class="n">wp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_vse_wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isUL</span><span class="p">:</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_pt_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
+                        <span class="s1">&#39;get_deeptau_vsjet_sf(&#39;</span>
+                            <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;pt&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                                <span class="n">wp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_vse_wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
+                        <span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_dm_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
+                        <span class="s1">&#39;get_deeptau_vsjet_sf(&#39;</span>
+                            <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;dm&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                                <span class="n">wp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_vse_wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_pt_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
+                        <span class="s1">&#39;get_deeptau_vsjet_sf(&#39;</span>
+                            <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;pt&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                                <span class="n">wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
+                        <span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_dm_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
+                        <span class="s1">&#39;get_deeptau_vsjet_sf(&#39;</span>
+                            <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;dm&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                                <span class="n">wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
                 <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_pt_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">))</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span>
-                    <span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_dm_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">),</span>
-                    <span class="s1">&#39;get_deeptau_vsjet_sf(&#39;</span>
-                        <span class="s1">&#39;Tau_pt, Tau_decayMode, Tau_genPartFlav, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;dm&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span>
-                            <span class="n">wp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vsjet_vse_wp</span><span class="p">,</span> <span class="n">syst</span><span class="p">))</span>
                 <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Tau_sfDeepTau2017v2p1VSjet_dm_binned_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">))</span>
 
             <span class="k">for</span> <span class="n">wp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vse_wps</span><span class="p">:</span>

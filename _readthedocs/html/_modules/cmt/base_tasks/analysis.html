@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cmt.base_tasks.analysis &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/design-tabs.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>cmt.base_tasks.analysis</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cmt.base_tasks.analysis</h1><div class="highlight"><pre>
+<span></span><span class="c1"># coding: utf-8</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Analysis tasks.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span> <span class="k">as</span> <span class="n">copy</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">tabulate</span>
+
+<span class="kn">import</span> <span class="nn">law</span>
+<span class="kn">import</span> <span class="nn">luigi</span>
+
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">import_root</span><span class="p">,</span> <span class="n">create_file_dir</span><span class="p">,</span> <span class="n">randomize</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">cmt.base_tasks.plotting</span> <span class="kn">import</span> <span class="n">FeaturePlot</span>
+
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+<span class="n">directions</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;up&quot;</span><span class="p">,</span> <span class="s2">&quot;down&quot;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="CreateDatacards"><a class="viewcode-back" href="../../../api/base_tasks/analysis.html#cmt.base_tasks.analysis.CreateDatacards">[docs]</a><span class="k">class</span> <span class="nc">CreateDatacards</span><span class="p">(</span><span class="n">FeaturePlot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Task that creates datacards for its use inside the combine framework</span>
+
+<span class="sd">    :param automcstats: Value used for autoMCStats inside the datacard, -1 to avoid using it.</span>
+<span class="sd">    :type automcstats: int</span>
+
+<span class="sd">    :param additional_lines: Additional lines to write at the end of the datacard.</span>
+<span class="sd">    :type additional_lines: list of `str`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">automcstats</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">IntParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;value used for autoMCStats inside &quot;</span>
+        <span class="s2">&quot;the datacard, -1 to avoid using it, default: 10&quot;</span><span class="p">)</span>
+    <span class="n">additional_lines</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;addtional lines to write at the &quot;</span>
+        <span class="s2">&quot;end of the datacard&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CreateDatacards.requires"><a class="viewcode-back" href="../../../api/base_tasks/analysis.html#cmt.base_tasks.analysis.CreateDatacards.requires">[docs]</a>    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Needs as input the root file provided by the FeaturePlot task</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">FeaturePlot</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_root</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">stack</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">hide_data</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="CreateDatacards.output"><a class="viewcode-back" href="../../../api/base_tasks/analysis.html#cmt.base_tasks.analysis.CreateDatacards.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns, per feature, one txt storing the datacard and its corresponding root file</span>
+<span class="sd">        storing the histograms</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">region_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">region</span> <span class="k">else</span> <span class="s2">&quot;_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">feature</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;txt&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}{}</span><span class="s2">.txt&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">feature</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">region_name</span><span class="p">)),</span>
+                <span class="s2">&quot;root&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}{}</span><span class="s2">.root&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">feature</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">region_name</span><span class="p">))</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="CreateDatacards.get_norm_systematics"><a class="viewcode-back" href="../../../api/base_tasks/analysis.html#cmt.base_tasks.analysis.CreateDatacards.get_norm_systematics">[docs]</a>    <span class="k">def</span> <span class="nf">get_norm_systematics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to extract all normalization systematics from the KLUB files.</span>
+<span class="sd">        It considers the processes given by the process_group_name and their parents.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># systematics</span>
+        <span class="n">systematics</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_systematics</span><span class="p">:</span>
+            <span class="n">all_signal_names</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">all_background_names</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">processes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">isSignal</span><span class="p">:</span>
+                    <span class="n">all_signal_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;llr_name&quot;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;llr_name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">isData</span><span class="p">:</span>
+                    <span class="n">all_background_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;llr_name&quot;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;llr_name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+            <span class="kn">from</span> <span class="nn">cmt.analysis.systReader</span> <span class="kn">import</span> <span class="n">systReader</span>
+            <span class="n">syst_folder</span> <span class="o">=</span> <span class="s2">&quot;files/systematics/&quot;</span>
+            <span class="n">syst</span> <span class="o">=</span> <span class="n">systReader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retrieve_file</span><span class="p">(</span><span class="n">syst_folder</span> <span class="o">+</span> <span class="s2">&quot;systematics_</span><span class="si">{}</span><span class="s2">.cfg&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">year</span><span class="p">)),</span> <span class="n">all_signal_names</span><span class="p">,</span> <span class="n">all_background_names</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">syst</span><span class="o">.</span><span class="n">writeOutput</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">syst</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+            <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_channel_from_region</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">)</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">channel</span> <span class="o">==</span> <span class="s2">&quot;mutau&quot;</span><span class="p">):</span>
+                <span class="n">syst</span><span class="o">.</span><span class="n">addSystFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retrieve_file</span><span class="p">(</span><span class="n">syst_folder</span>
+                    <span class="o">+</span> <span class="s2">&quot;systematics_mutau_</span><span class="si">%s</span><span class="s2">.cfg&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">year</span><span class="p">))</span>
+            <span class="k">elif</span><span class="p">(</span><span class="n">channel</span> <span class="o">==</span> <span class="s2">&quot;etau&quot;</span><span class="p">):</span>
+                <span class="n">syst</span><span class="o">.</span><span class="n">addSystFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retrieve_file</span><span class="p">(</span><span class="n">syst_folder</span>
+                    <span class="o">+</span> <span class="s2">&quot;systematics_etau_</span><span class="si">%s</span><span class="s2">.cfg&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">year</span><span class="p">))</span>
+            <span class="n">syst</span><span class="o">.</span><span class="n">addSystFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retrieve_file</span><span class="p">(</span><span class="n">syst_folder</span> <span class="o">+</span> <span class="s2">&quot;syst_th.cfg&quot;</span><span class="p">))</span>
+            <span class="n">syst</span><span class="o">.</span><span class="n">writeSystematics</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">isy</span><span class="p">,</span> <span class="n">syst_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">syst</span><span class="o">.</span><span class="n">SystNames</span><span class="p">):</span>
+                <span class="k">if</span> <span class="s2">&quot;CMS_scale_t&quot;</span> <span class="ow">in</span> <span class="n">syst</span><span class="o">.</span><span class="n">SystNames</span><span class="p">[</span><span class="n">isy</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;CMS_scale_j&quot;</span> <span class="ow">in</span> <span class="n">syst</span><span class="o">.</span><span class="n">SystNames</span><span class="p">[</span><span class="n">isy</span><span class="p">]:</span>
+                    <span class="k">continue</span>
+                <span class="c1"># for dataset in self.datasets:</span>
+                    <span class="c1"># process = dataset.process</span>
+                <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">processes_datasets</span><span class="p">:</span>
+                    <span class="n">original_process</span> <span class="o">=</span> <span class="n">process</span>
+                    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                        <span class="n">process_name</span> <span class="o">=</span> <span class="p">(</span><span class="n">process</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;llr_name&quot;</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;llr_name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">process_name</span> <span class="ow">in</span> <span class="n">syst</span><span class="o">.</span><span class="n">SystProcesses</span><span class="p">[</span><span class="n">isy</span><span class="p">]:</span>
+                            <span class="n">iproc</span> <span class="o">=</span> <span class="n">syst</span><span class="o">.</span><span class="n">SystProcesses</span><span class="p">[</span><span class="n">isy</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">process_name</span><span class="p">)</span>
+                            <span class="n">systVal</span> <span class="o">=</span> <span class="n">syst</span><span class="o">.</span><span class="n">SystValues</span><span class="p">[</span><span class="n">isy</span><span class="p">][</span><span class="n">iproc</span><span class="p">]</span>
+                            <span class="k">if</span> <span class="n">syst_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">systematics</span><span class="p">:</span>
+                                <span class="n">systematics</span><span class="p">[</span><span class="n">syst_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                            <span class="n">systematics</span><span class="p">[</span><span class="n">syst_name</span><span class="p">][</span><span class="n">original_process</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">systVal</span><span class="p">)</span>
+                            <span class="k">break</span>
+                        <span class="k">elif</span> <span class="n">process</span><span class="o">.</span><span class="n">parent_process</span><span class="p">:</span>
+                            <span class="n">process</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">process</span><span class="o">.</span><span class="n">parent_process</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">break</span>
+        <span class="k">return</span> <span class="n">systematics</span></div>
+
+    <span class="k">def</span> <span class="nf">write_datacard</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yields</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">norm_systematics</span><span class="p">,</span> <span class="n">shape_systematics</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">n_dashes</span> <span class="o">=</span> <span class="mi">50</span>
+
+        <span class="n">region_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">region</span> <span class="k">else</span> <span class="s2">&quot;_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">bin_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">feature</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">region_name</span><span class="p">)</span>
+
+        <span class="n">table</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="s2">&quot;bin&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">bin_name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">))])</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="s2">&quot;process&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">)</span>
+
+        <span class="n">sig_counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">bkg_counter</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;process&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">p_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">p_name</span><span class="p">)</span><span class="o">.</span><span class="n">isSignal</span><span class="p">:</span>
+                    <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">signal_counter</span><span class="p">)</span>
+                    <span class="n">sig_counter</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bkg_counter</span><span class="p">)</span>
+                    <span class="n">bkg_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>  <span class="c1"># qcd coming from do_qcd</span>
+                <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bkg_counter</span><span class="p">)</span>
+                <span class="n">bkg_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="s2">&quot;rate&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">yields</span><span class="p">[</span><span class="n">p_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">p_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">])</span>
+
+        <span class="c1"># normalization systematics</span>
+        <span class="k">for</span> <span class="n">norm_syst</span> <span class="ow">in</span> <span class="n">norm_systematics</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="p">[</span><span class="n">norm_syst</span><span class="p">,</span> <span class="s2">&quot;lnN&quot;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">p_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">p_name</span> <span class="ow">in</span> <span class="n">norm_systematics</span><span class="p">[</span><span class="n">norm_syst</span><span class="p">]:</span>
+                    <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">norm_systematics</span><span class="p">[</span><span class="n">norm_syst</span><span class="p">][</span><span class="n">p_name</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
+            <span class="n">table</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="c1"># shape systematics</span>
+        <span class="k">for</span> <span class="n">shape_syst</span> <span class="ow">in</span> <span class="n">shape_systematics</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="p">[</span><span class="n">shape_syst</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">p_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">p_name</span> <span class="ow">in</span> <span class="n">shape_systematics</span><span class="p">[</span><span class="n">shape_syst</span><span class="p">]:</span>
+                    <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
+            <span class="n">table</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="n">fancy_table</span> <span class="o">=</span> <span class="n">tabulate</span><span class="o">.</span><span class="n">tabulate</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">tablefmt</span><span class="o">=</span><span class="s2">&quot;plain&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()[</span><span class="n">feature</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="s2">&quot;txt&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;i&quot;</span><span class="p">,</span> <span class="s2">&quot;j&quot;</span><span class="p">,</span> <span class="s2">&quot;k&quot;</span><span class="p">]:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">max  *</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">letter</span><span class="p">)</span>
+
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">n_dashes</span> <span class="o">*</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;shapes  *  </span><span class="si">{0}</span><span class="s2">  </span><span class="si">{0}</span><span class="s2">.root  $PROCESS  $PROCESS_$SYSTEMATIC</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">bin_name</span><span class="p">))</span>
+
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">n_dashes</span> <span class="o">*</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{:&lt;11}</span><span class="s2">  </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;bin&quot;</span><span class="p">,</span> <span class="n">bin_name</span><span class="p">))</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;observation  -1</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">n_dashes</span> <span class="o">*</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fancy_table</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">n_dashes</span> <span class="o">*</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">fancy_table</span><span class="p">)):</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fancy_table</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automcstats</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;*  autoMCStats  </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">automcstats</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">arg</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CreateDatacards.run"><a class="viewcode-back" href="../../../api/base_tasks/analysis.html#cmt.base_tasks.analysis.CreateDatacards.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Splits the processes into data and non-data. Per feature, loads the input histograms, </span>
+<span class="sd">        creates the output histograms and the datacard inside the txt file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">processes_datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">isData</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only 1 data process can be provided inside the process group&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">processes_datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">isData</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">do_qcd</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;qcd&quot;</span><span class="p">)</span>
+
+        <span class="n">norm_systematics</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_norm_systematics</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
+            <span class="n">systs_directions</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;central&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span>
+            <span class="n">shape_syst_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_unique_systs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_systs</span><span class="p">(</span><span class="n">feature</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> \
+                <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_weights_systematics</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="kc">True</span><span class="p">))</span>
+            <span class="n">systs_directions</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">shape_syst_list</span><span class="p">,</span> <span class="n">directions</span><span class="p">))</span>
+
+            <span class="c1"># Convert the shape systematics list to a dict with the systs as keys and a list of </span>
+            <span class="c1"># the processes affected by them (all non-data processes except the qcd if computed</span>
+            <span class="c1"># in the code)</span>
+            <span class="n">shape_systematics</span> <span class="o">=</span> <span class="p">{</span><span class="n">shape_syst</span><span class="p">:</span> <span class="p">[</span><span class="n">p_name</span> <span class="k">for</span> <span class="n">p_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">shape_syst</span> <span class="ow">in</span> <span class="n">shape_syst_list</span><span class="p">}</span>
+
+            <span class="n">histos</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;root&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="p">[</span><span class="n">feature</span><span class="o">.</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_names</span><span class="p">:</span>
+                <span class="n">histos</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="s2">&quot;histograms/&quot;</span> <span class="o">+</span> <span class="n">name</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">:</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="ow">in</span> <span class="n">systs_directions</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">syst</span> <span class="o">==</span> <span class="s2">&quot;central&quot;</span><span class="p">:</span>
+                        <span class="n">name_to_save</span> <span class="o">=</span> <span class="n">name</span>
+                        <span class="n">name_from_featureplot</span> <span class="o">=</span> <span class="n">name</span>
+                    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">do_qcd</span> <span class="ow">and</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;qcd&quot;</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">name_to_save</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="o">.</span><span class="n">capitalize</span><span class="p">())</span>
+                        <span class="n">name_from_featureplot</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+                    <span class="n">histos</span><span class="p">[</span><span class="n">name_to_save</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="s2">&quot;histograms/&quot;</span> <span class="o">+</span> <span class="n">name_from_featureplot</span><span class="p">))</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+
+            <span class="n">yields</span> <span class="o">=</span> <span class="p">{</span><span class="n">name_central</span><span class="p">:</span> <span class="n">histos</span><span class="p">[</span><span class="n">name_central</span><span class="p">]</span><span class="o">.</span><span class="n">Integral</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">name_central</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_data_names</span><span class="p">}</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_datacard</span><span class="p">(</span><span class="n">yields</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span>
+                <span class="n">norm_systematics</span><span class="p">,</span> <span class="n">shape_systematics</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">additional_lines</span><span class="p">)</span>
+
+            <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()[</span><span class="n">feature</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="s2">&quot;root&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">),</span>
+                <span class="s2">&quot;RECREATE&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">histo</span> <span class="ow">in</span> <span class="n">histos</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="s2">&quot;data&quot;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;data_obs&quot;</span>
+                <span class="n">histo</span><span class="o">.</span><span class="n">Write</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+            <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -8,3 +8,4 @@ cmt.base_tasks
    
     preprocessing
     plotting
+    analysis
