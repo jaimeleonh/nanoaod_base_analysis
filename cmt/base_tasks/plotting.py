@@ -191,7 +191,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     skip_merging = luigi.BoolParameter(default=False, description="whether to skip"
         " MergeCategorization task, default: False")
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
-        default="")
+        default=law.NO_STR)
 
     def __init__(self, *args, **kwargs):
         super(PrePlot, self).__init__(*args, **kwargs)

@@ -28,6 +28,7 @@ class Config():
         self.versions = self.add_versions()
         self.weights = self.add_weights()
         self.systematics = self.add_systematics()
+        self.default_module_files = self.add_default_module_files()
 
     def get_aux(self, name, default=None):
         return self.x.get(name, default)
@@ -334,6 +335,10 @@ class Config():
     def add_systematics(self):
         systematics = []
         return ObjectCollection(systematics)
+
+    def add_default_module_files(self):
+        defaults = {}
+        return defaults
 
     # feature methods
 

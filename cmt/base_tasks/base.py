@@ -334,13 +334,13 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         # print "{}/x509up".format(os.getenv("HOME"))
         # config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))
         #config.custom_content.append(("arguments", "$(Proxy_path)"))
-        
+
         return config
-    
+
     def htcondor_create_job_file_factory(self, **kwargs):
         # job file fectory config priority: kwargs > class defaults
         kwargs = merge_dicts(self.htcondor_job_file_factory_defaults, kwargs)
-        
+
         return HTCondorJobFileFactory(**kwargs)
 
     def htcondor_use_local_scheduler(self):
@@ -352,12 +352,20 @@ class SplittedTask():
     def get_splitted_branches(self):
         return
 
+
 class RDFModuleTask():
     def get_feature_modules(self, filename):
         module_params = None
-        if filename:
+
+        # check for default modules file inside the config
+        if filename == law.NO_STR:
+            if self.config.default_module_files.get(self.task_family, None):
+                filename = self.config.default_module_files[self.task_family]
+
+        if filename != "" and filename != law.NO_STR:
             import yaml
             from cmt.utils.yaml_utils import ordered_load
+
             tmp_file = self.retrieve_file("config/{}.yaml".format(filename))
 
             with open(tmp_file) as f:

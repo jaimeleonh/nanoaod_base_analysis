@@ -244,7 +244,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     :type keep_and_drop_file: str
     """
 
-    modules_file = luigi.Parameter(description="filename with RDF modules", default="")
+    modules_file = luigi.Parameter(description="filename with RDF modules", default=law.NO_STR)
     keep_and_drop_file = luigi.Parameter(description="filename with branches to save, empty: all",
         default="")
     weights_file = None
@@ -560,7 +560,7 @@ class Categorization(PreprocessRDF):
     systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
         "for categorization, default: None")
     feature_modules_file = luigi.Parameter(description="filename with RDataFrame modules to run",
-        default="")
+        default=law.NO_STR)
     skip_preprocess = luigi.BoolParameter(default=False, description="whether to skip the "
         " PreprocessRDF task, default: False")
 
