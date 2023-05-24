@@ -91,7 +91,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
     """
 
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
-        default="")
+        default=law.NO_STR)
     # regions not supported
     region_name = None
 
