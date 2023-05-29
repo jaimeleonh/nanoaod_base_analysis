@@ -7,7 +7,7 @@
   <title>HHLepton &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -31,14 +31,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -88,10 +92,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../index.html">Modules Reference</a> &raquo;</li>
-          <li><a href="index.html">HH-&gt;bbtt</a> &raquo;</li>
-      <li>HHLepton</li>
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Modules Reference</a></li>
+          <li class="breadcrumb-item"><a href="index.html">HH-&gt;bbtt</a></li>
+      <li class="breadcrumb-item active">HHLepton</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../_sources/modules/HHbbtt/hhlepton.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -140,20 +144,20 @@ systematics.</p>
 </dd>
 </dl>
 <p>YAML sintaxis:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HHLeptonRDF</span><span class="w"></span>
-<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.HHLepton</span><span class="w"></span>
-<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
-<span class="w">        </span><span class="nt">isV10</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&quot;nanoV10&quot;)</span><span class="w"></span>
-<span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
-<span class="w">        </span><span class="nt">runPeriod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.runPeriod</span><span class="w"></span>
-<span class="w">        </span><span class="nt">vvvl_vsjet</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsjet.VVVLoose</span><span class="w"></span>
-<span class="w">        </span><span class="nt">vl_vse</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vse.VLoose</span><span class="w"></span>
-<span class="w">        </span><span class="nt">vvl_vse</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vse.VVLoose</span><span class="w"></span>
-<span class="w">        </span><span class="nt">t_vsmu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsmu.Tight</span><span class="w"></span>
-<span class="w">        </span><span class="nt">vl_vsmu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsmu.VLoose</span><span class="w"></span>
-<span class="w">        </span><span class="nt">filter</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span><span class="w"></span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HHLeptonRDF</span>
+<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.HHLepton</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span>
+<span class="w">        </span><span class="nt">isV10</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&quot;nanoV10&quot;)</span>
+<span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span>
+<span class="w">        </span><span class="nt">runPeriod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.runPeriod</span>
+<span class="w">        </span><span class="nt">vvvl_vsjet</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsjet.VVVLoose</span>
+<span class="w">        </span><span class="nt">vl_vse</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vse.VLoose</span>
+<span class="w">        </span><span class="nt">vvl_vse</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vse.VVLoose</span>
+<span class="w">        </span><span class="nt">t_vsmu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsmu.Tight</span>
+<span class="w">        </span><span class="nt">vl_vsmu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.deeptau.vsmu.VLoose</span>
+<span class="w">        </span><span class="nt">filter</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -170,11 +174,11 @@ systematics.</p>
 <a class="reference internal" href="../BaseModules/baseModules.html#basemodules-jetlepmetsyst"><span class="std std-ref">JetLepMetSyst</span></a>.</p>
 <p>Required RDFModules: <a class="reference internal" href="#hhlepton-hhleptonrdf"><span class="std std-ref">HHLeptonRDF</span></a>.</p>
 <p>YAML sintaxis:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HHLeptonVarRDF</span><span class="w"></span>
-<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.HHLepton</span><span class="w"></span>
-<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HHLeptonVarRDF</span>
+<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.HHLepton</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span>
 </pre></div>
 </div>
 </dd></dl>

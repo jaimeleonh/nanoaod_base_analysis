@@ -4,11 +4,11 @@
 Installation
 =======================
 
-The code is designed to work both in CIEMAT User Interfaces (*gaecmsui*)  and *lxplus*, so once you're in one of them you could follow these steps:
+The code is designed to work both in CIEMAT User Interfaces (you'll need to access to a gaecmsui (``ssh gaecmsui``) and then go to your */nfs/cms/username/* path) and *lxplus*, so once you're in one of them you can follow these steps:
 
 .. code-block:: console
 
-   #Make a fork of the user code <https://github.com/jaimeleonh/hhbbtt-analysis> in your repository with the reponame you want.
+   Make a fork of the user code <https://github.com/jaimeleonh/hhbbtt-analysis> in your repository with the reponame you want.
    git clone https://github.com/username/reponame #where username is your own github user name.
    cd <reponame>
    git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git --branch py3 nanoaod_base_analysis/
@@ -25,4 +25,3 @@ As improvements of the main code are frequently made, it is very recommended to 
 
    cd nanoaod_base_analysis
    git pull origin py3
-

@@ -7,7 +7,7 @@
   <title>Jet Energy Corrections &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -31,14 +31,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -86,10 +90,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../index.html">Modules Reference</a> &raquo;</li>
-          <li><a href="index.html">JME</a> &raquo;</li>
-      <li>Jet Energy Corrections</li>
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Modules Reference</a></li>
+          <li class="breadcrumb-item"><a href="index.html">JME</a></li>
+      <li class="breadcrumb-item active">Jet Energy Corrections</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../_sources/modules/JME/jec.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -139,19 +143,19 @@ after applying the uncertainties.</p>
 </dd>
 </dl>
 <p>YAML sintaxis:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">jecProviderRDF</span><span class="w"></span>
-<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Base.Modules.jec</span><span class="w"></span>
-<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
-<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
-<span class="w">        </span><span class="nt">jerTag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span><span class="w"></span>
-<span class="w">        </span><span class="nt">isUL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&#39;ul&#39;)</span><span class="w"></span>
-<span class="w">        </span><span class="nt">ispreVFP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.get_aux(&#39;ispreVFP&#39;, False)</span><span class="w"></span>
-<span class="w">        </span><span class="nt">jec_sources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="w">        </span><span class="nt">(pt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bjet1_pt_nom)</span><span class="w"></span>
-<span class="w">        </span><span class="nt">(eta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bjet1_eta)</span><span class="w"></span>
-<span class="w">        </span><span class="nt">(mass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bjet1_mass_nom)</span><span class="w"></span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">jecProviderRDF</span>
+<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Base.Modules.jec</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span>
+<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span>
+<span class="w">        </span><span class="nt">jerTag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.year</span>
+<span class="w">        </span><span class="nt">isUL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.has_tag(&#39;ul&#39;)</span>
+<span class="w">        </span><span class="nt">ispreVFP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.config.get_aux(&#39;ispreVFP&#39;, False)</span>
+<span class="w">        </span><span class="nt">jec_sources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+<span class="w">        </span><span class="nt">(pt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bjet1_pt_nom)</span>
+<span class="w">        </span><span class="nt">(eta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bjet1_eta)</span>
+<span class="w">        </span><span class="nt">(mass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bjet1_mass_nom)</span>
 </pre></div>
 </div>
 </dd></dl>

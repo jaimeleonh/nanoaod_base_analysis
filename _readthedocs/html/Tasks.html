@@ -7,7 +7,7 @@
   <title>Executing tasks &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+      <link rel="stylesheet" href="_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -31,14 +31,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -49,7 +53,11 @@
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Configuration.html">Setting the configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Environment.html">Setting the environment</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Executing tasks</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Executing tasks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#htcondor-jobs-submission">HTCondor Jobs submission</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#verifying-executions">Verifying executions</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/index.html">Modules Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq/index.html">FAQ</a></li>
@@ -68,8 +76,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Executing tasks</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Executing tasks</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/Tasks.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -104,14 +112,19 @@
 </ul>
 <p>The general structure of the bash commands to run each law task is:</p>
 <img alt="_images/lawcommands.png" src="_images/lawcommands.png" />
-<p>When running each task, there are multiple parameters that can be added to do your analysis in some specific ways. For example, there’s the possibility to use just one specific branch from your dataset with the parameter <code class="docutils literal notranslate"><span class="pre">--branch</span></code> (which starts in 0) or all of them (by default).</p>
+<p>When running each task, there are multiple <strong>parameters</strong> that can be added to do your analysis in some specific ways. For example:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--branch</span></code>: there’s the possibility to use just one specific branch from your dataset (which starts in 0), several or all of them (by default).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--keep-and-drop-file</span></code>: useful to save only the variables you’re interested in in the output root file(s), specially for the <em>PreprocessRDF</em> and <em>Categorization</em> tasks, saving some space in the disk you’re using. It uses a <em>.txt</em> documment located in the <em>reponame/config/</em> folder, where variables that aren’t of interest are defined (<a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis/blob/main/config/keep_and_drop_file_test.txt">here</a> you can see an example).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--workers</span></code>: indicates how many workers you want to use in parallel. When running the tasks in HTCondor with a lot of files, is specially important to put a high number (e.g. 200).</p></li>
+</ul>
 <p>To run all tasks over several datasets in parallel, except for <em>PrePlot</em> and <em>FeaturePlot</em>, is also possible. This can be done by just adding <em>Wrapper</em> at the end of the task command name (e.g. <code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">PreCounterWrapper</span></code>).</p>
 <p>For a better understanding on how to perform a NanoAOD-base-analysis let’s take as an example an analysis for all branches of the gluon-gluon fusion standard model dataset (which is inside the main code) with no systematics, using as parameters <em>ul_2018</em> configuration and <em>modulesRDF</em> files, <em>base_selection</em> and <em>etau</em> categories and running all jobs locally. Finally we’ll obtain some plots for the <em>Htt_svfit_mass</em>, <em>Htt_svfit_pt</em>, <em>Htt_svfit_eta</em> features.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">law run PreCounter --version test_ggf --config-name ul_2018 --dataset-name ggf_sm --weights-file weights --workflow local --workers 10</span>
 
 <span class="go">law run MergeCategorizationStats --version test_ggf --config-name ul_2018 --dataset-name ggf_sm --workflow local --workers 10</span>
 
-<span class="go">law run PreprocessRDF --version cecilia_testnfs --category-name base_selection --config-name  ul_2018 --dataset-name ggf_sm --workflow local --workers 10 --modules-file modulesrdf --max-runtime 48h</span>
+<span class="go">law run PreprocessRDF --version test_ggf --category-name base_selection --config-name  ul_2018 --dataset-name ggf_sm --workflow local --workers 10 --modules-file modulesrdf --max-runtime 48h</span>
 
 <span class="go">law run Categorization --version test_ggf --category-name etau --config-name  ul_2018 --dataset-name ggf_sm --workflow local --base-category-name base_selection --workers 10</span>
 
@@ -123,6 +136,24 @@
 </pre></div>
 </div>
 <p>This is just an example on how to run a NanoAOD-base-analysis, but more specific information on how to run each task can be found in the <a class="reference internal" href="api/index.html#api"><span class="std std-ref">API Reference</span></a>, where more examples can be found as well. Also the available options for each task execution command can be checked with the <code class="docutils literal notranslate"><span class="pre">--help</span></code> option.</p>
+<section id="htcondor-jobs-submission">
+<h2>HTCondor Jobs submission<a class="headerlink" href="#htcondor-jobs-submission" title="Permalink to this heading"></a></h2>
+<p>This framework gives you the option to submit the jobs in different CPU’s infraestructures of HTCondor at CIEMAT and CERN. This is possible using just a couple of parameters for the <em>PreCounter</em>, <em>PreprocessRDF</em>, <em>Categorization</em> and <em>PrePlot</em> tasks, the rest of the tasks will run in the same user interface you’re using, as they don’t require so much time to be done.</p>
+<ul class="simple">
+<li><p><strong>CIEMAT CPU’s</strong>: <code class="docutils literal notranslate"><span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--htcondor-scheduler</span> <span class="pre">condorsc1.ciemat.es</span> <span class="pre">--transfer-logs</span> <span class="pre">true</span></code></p></li>
+<li><p><strong>CIEMAT gaefacil01</strong>: <code class="docutils literal notranslate"><span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--custom-condor-tag</span> <span class="pre">&quot;+CieRunInAF=True,+CieSingularityImage=cc7&quot;</span> <span class="pre">--htcondor-scheduler</span> <span class="pre">condorsc1.ciemat.es</span> <span class="pre">--transfer-logs</span> <span class="pre">true</span></code></p></li>
+<li><p><strong>CERN</strong>: <code class="docutils literal notranslate"><span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--transfer-logs</span> <span class="pre">true</span></code></p></li>
+</ul>
+<p>Where the parameter <code class="docutils literal notranslate"><span class="pre">--transfer-logs</span> <span class="pre">true</span></code> saves the logs from HTCondor in your repository so you can see them in the <em>$CMT_STORE_LOCAL</em> folder. These logs are especially useful in case you need to review any error that may have occurred during the execution of the tasks.</p>
+</section>
+<section id="verifying-executions">
+<h2>Verifying executions<a class="headerlink" href="#verifying-executions" title="Permalink to this heading"></a></h2>
+<p>The output files are the result of every task execution, and are located in the <em>$CMT_STORE</em> directory (<code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$CMT_STORE</span></code> to know which one is in your case). During the execution of the tasks, errors may occur that prevent the generation of all or some of the expected output files. Sometimes these errors are easy to spot and a thorough examination of them and their solution is not necessary, but on other occasions it will be needed to review that everything has worked correctly by checking a series of points such as:</p>
+<ul class="simple">
+<li><p><strong>Counting events from a folder</strong>: it can be done just with the following command <code class="docutils literal notranslate"><span class="pre">count_events.py</span> <span class="pre">foldername</span></code> (the <em>count_events.py</em> script is defined in the setup.sh). You can also compare number of events from different folders to check if different versions are right with <code class="docutils literal notranslate"><span class="pre">diffFolderEvents.py</span> <span class="pre">foldername1</span> <span class="pre">foldername2</span></code>, and if you need to know which files are different <code class="docutils literal notranslate"><span class="pre">diffEvents.py</span> <span class="pre">foldername1</span> <span class="pre">foldername2</span></code>.</p></li>
+<li><p><strong>Checking condor logs</strong>: if the jobs have been submitted to condor and the parameter <code class="docutils literal notranslate"><span class="pre">--transfer-logs</span> <span class="pre">true</span></code> have been used, you can verify in the appropiate folder if there is any job that has not completed succesfully. This can be done doing a <em>find</em> of the following message <code class="docutils literal notranslate"><span class="pre">This</span> <span class="pre">progress</span> <span class="pre">looks</span> <span class="pre">:(</span> <span class="pre">because</span> <span class="pre">there</span> <span class="pre">were</span> <span class="pre">failed</span> <span class="pre">tasks</span></code>.</p></li>
+</ul>
+</section>
 </section>
 
 
