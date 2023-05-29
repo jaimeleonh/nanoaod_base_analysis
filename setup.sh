@@ -313,7 +313,7 @@ action() {
             cmt_pip_install --no-deps git+https://github.com/riga/law
             cmt_pip_install --no-deps git+https://github.com/riga/plotlib
             cmt_pip_install --no-deps gast==0.2.2  # https://github.com/tensorflow/autograph/issues/1
-            cmt_pip_install sphinx
+            cmt_pip_install sphinx==5.2.2
             cmt_pip_install sphinx_rtd_theme
             cmt_pip_install sphinx_design
         fi
