@@ -7,7 +7,7 @@
   <title>Setting the environment &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+      <link rel="stylesheet" href="_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -31,14 +31,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -68,8 +72,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Setting the environment</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Setting the environment</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/Environment.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -81,7 +85,8 @@
              
   <section id="setting-the-environment">
 <span id="environment"></span><h1>Setting the environment<a class="headerlink" href="#setting-the-environment" title="Permalink to this heading"></a></h1>
-<p>Every time we want to run the code we need to do the following steps in your local repository:</p>
+<p>After configuring the analysis, we can define the different directories mentioned in <a class="reference internal" href="Structure.html#directories-layout"><span class="std std-ref">Directories layout</span></a> as we prefer in our user code’s setup.sh, or use the ones defined by default.</p>
+<p>Therefore, once we have configure our analysis and environment, you’ll need to do the following steps in your local repository every time we want to run the code:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cd nanoaod_base_analysis #To update the main code</span>
 <span class="go">git pull origin py3 #To update the main code</span>
 <span class="go">cd ..</span>

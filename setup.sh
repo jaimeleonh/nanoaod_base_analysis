@@ -76,10 +76,19 @@ action() {
     [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10"
     [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
+    if [ -n "$CMT_CIEMAT_USER" ]; then
+       if [ -n "$CMT_TMPDIR" ]; then
+         export TMPDIR="$CMT_TMPDIR"
+       else
+         export TMPDIR="/nfs/scratch_cms/$CMT_CIEMAT_USER/cmt/tmp"
+       fi
+       mkdir -p "$TMPDIR"
+    fi
 
     # specific eos dirs
     [ -z "$CMT_STORE_EOS_PREPROCESSING" ] && export CMT_STORE_EOS_PREPROCESSING="$CMT_STORE_EOS"
     [ -z "$CMT_STORE_EOS_CATEGORIZATION" ] && export CMT_STORE_EOS_CATEGORIZATION="$CMT_STORE_EOS"
+    [ -z "$CMT_STORE_EOS_MERGECATEGORIZATION" ] && export CMT_STORE_EOS_MERGECATEGORIZATION="$CMT_STORE_EOS"
     [ -z "$CMT_STORE_EOS_SHARDS" ] && export CMT_STORE_EOS_SHARDS="$CMT_STORE_EOS"
     [ -z "$CMT_STORE_EOS_EVALUATION" ] && export CMT_STORE_EOS_EVALUATION="$CMT_STORE_EOS"
 
@@ -225,6 +234,7 @@ action() {
         export HHBTAG_PATH="HHTools"
         if [ ! -d "$HHBTAG_PATH" ]; then
           git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
+          git clone https://gitlab.cern.ch/hh/bbtautau/MulticlassInference
           git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
           git clone https://github.com/GilesStrong/cms_hh_proc_interface.git
           cd cms_hh_proc_interface
@@ -246,7 +256,15 @@ action() {
         if [ ! -d "$CORRECTIONS_PATH" ]; then
           git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
           git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/TAU
+
           git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
+          cd Corrections/JME/data
+          wget https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL18_V5_MC.tar.gz
+          wget https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL17_V5_MC.tar.gz
+          wget https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16_V7_MC.tar.gz
+          wget https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16APV_V7_MC.tar.gz
+          cd -
+
           git clone https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections.git Corrections/LUM
           git clone https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections.git Corrections/MUO
           git clone https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections.git Corrections/EGM
@@ -298,6 +316,7 @@ action() {
             cmt_pip_install sphinx
             cmt_pip_install sphinx_rtd_theme
             cmt_pip_install sphinx_design
+            cmt_pip_install urllib3==1.26.6
         fi
 
         # gfal python bindings

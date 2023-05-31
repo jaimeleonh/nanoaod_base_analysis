@@ -28,6 +28,10 @@ class Config():
         self.versions = self.add_versions()
         self.weights = self.add_weights()
         self.systematics = self.add_systematics()
+        self.default_module_files = self.add_default_module_files()
+
+    def get_aux(self, name, default=None):
+        return self.x.get(name, default)
 
     def add_categories(self):
         categories = []
@@ -332,6 +336,10 @@ class Config():
         systematics = []
         return ObjectCollection(systematics)
 
+    def add_default_module_files(self):
+        defaults = {}
+        return defaults
+
     # feature methods
 
     def get_central_value(self, feature):
@@ -353,6 +361,8 @@ class Config():
                 return obj.expression
             elif isinstance(obj, Category):
                 return obj.selection
+            elif isinstance(obj, str):
+                return obj
             else:
                 raise ValueError("Object %s cannot be used in method get_feature_expression" % obj)
 
@@ -369,11 +379,11 @@ class Config():
                 return feat_expression + tag
 
         feature_expression = get_expression(feature)
-        if "{" in feature_expression:  # derived expression
-            while "{" in feature_expression:
-                initial = feature_expression.find("{")
-                final = feature_expression.find("}")
-                feature_name_to_look = feature_expression[initial + 1: final]
+        if "{{" in feature_expression:  # derived expression
+            while "{{" in feature_expression:
+                initial = feature_expression.find("{{")
+                final = feature_expression.find("}}")
+                feature_name_to_look = feature_expression[initial + 2: final]
                 feature_to_look = self.features.get(feature_name_to_look)
                 feature_to_look_expression = feature_to_look.expression
                 if not isMC:
@@ -400,7 +410,7 @@ class Config():
                             tag = central.expression
 
                 feature_to_look_expression = add_systematic_tag(feature_to_look_expression, tag)
-                feature_expression = feature_expression.replace(feature_expression[initial: final + 1],
+                feature_expression = feature_expression.replace(feature_expression[initial: final + 2],
                     feature_to_look_expression)
             return feature_expression
 

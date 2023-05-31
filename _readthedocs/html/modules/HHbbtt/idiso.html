@@ -7,7 +7,7 @@
   <title>Id and isolation SF &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -23,7 +23,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="FAQ" href="../../faq/index.html" />
-    <link rel="prev" title="HHDNN" href="hhdnn.html" /> 
+    <link rel="prev" title="HHMulticlass" href="hhmulticlass.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -31,14 +31,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -64,6 +68,7 @@
 <li class="toctree-l4"><a class="reference internal" href="hhlepton.html">HHLepton</a></li>
 <li class="toctree-l4"><a class="reference internal" href="hhjets.html">HHJets</a></li>
 <li class="toctree-l4"><a class="reference internal" href="hhdnn.html">HHDNN</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hhmulticlass.html">HHMulticlass</a></li>
 <li class="toctree-l4 current"><a class="current reference internal" href="#">Id and isolation SF</a></li>
 </ul>
 </li>
@@ -87,10 +92,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../index.html">Modules Reference</a> &raquo;</li>
-          <li><a href="index.html">HH-&gt;bbtt</a> &raquo;</li>
-      <li>Id and isolation SF</li>
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Modules Reference</a></li>
+          <li class="breadcrumb-item"><a href="index.html">HH-&gt;bbtt</a></li>
+      <li class="breadcrumb-item active">Id and isolation SF</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../_sources/modules/HHbbtt/idiso.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -128,12 +133,12 @@
 </dd>
 </dl>
 <p>YAML sintaxis:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dauIdIsoSFRDF</span><span class="w"></span>
-<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.dauIdIso</span><span class="w"></span>
-<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span><span class="w"></span>
-<span class="w">        </span><span class="nt">systs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">central</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]</span><span class="w"></span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">codename</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dauIdIsoSFRDF</span>
+<span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tools.Tools.dauIdIso</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">isMC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self.dataset.process.isMC</span>
+<span class="w">        </span><span class="nt">systs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">central</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -145,7 +150,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="hhdnn.html" class="btn btn-neutral float-left" title="HHDNN" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="hhmulticlass.html" class="btn btn-neutral float-left" title="HHMulticlass" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="../../faq/index.html" class="btn btn-neutral float-right" title="FAQ" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

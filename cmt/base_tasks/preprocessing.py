@@ -12,6 +12,7 @@ import contextlib
 import itertools
 from collections import OrderedDict, defaultdict
 import os
+from subprocess import call
 import json
 
 import law
@@ -70,6 +71,7 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
         return OrderedDict(
             ((dataset.name, category.name), self.atomic_requires(dataset, category))
             for dataset, category in itertools.product(self.datasets, self.categories)
+            if not dataset.process.name in category.get_aux("skip_processes", [])
         )
 
 
@@ -89,22 +91,37 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
     """
 
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
-        default="")
+        default=law.NO_STR)
     # regions not supported
     region_name = None
 
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
-    tree_name = "Events"
-
     def create_branch_map(self):
         """
         :return: number of files for the selected dataset
         :rtype: int
         """
-        return len(self.dataset.get_files(
-            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+        threshold = self.dataset.get_aux("event_threshold", None)
+        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        if not threshold and not merging_factor:
+            return len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
+        elif threshold and not merging_factor:
+            return len(self.dataset.get_file_groups(
+                path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
+                threshold=threshold))
+        elif not threshold and merging_factor:
+            nfiles = len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
+            nbranches = nfiles // self.dataset.get_aux("preprocess_merging_factor")
+            if nfiles % self.dataset.get_aux("preprocess_merging_factor"):
+                nbranches += 1
+            return nbranches
+        else:
+            raise ValueError("Both event_threshold and preprocess_merging_factor "
+                "can't be set at once")
 
     def workflow_requires(self):
         """
@@ -115,14 +132,44 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         """
         Each branch requires one input file
         """
-        return InputData.req(self, file_index=self.branch)
+        threshold = self.dataset.get_aux("event_threshold", None)
+        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        if not threshold and not merging_factor:
+            return InputData.req(self, file_index=self.branch)
+        elif threshold and not merging_factor:
+            reqs = {}
+            for i in self.dataset.get_file_groups(
+                    path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
+                    threshold=threshold)[self.branch]:
+                reqs[str(i)] = InputData.req(self, file_index=i)
+            return reqs
+        elif not threshold and merging_factor:
+            nfiles = len(self.dataset.get_files(
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
+            reqs = {}
+            for i in range(merging_factor * self.branch, merging_factor * (self.branch + 1)):
+                if i >= nfiles:
+                    break
+                reqs[str(i)] = InputData.req(self, file_index=i)
+            return reqs
+        else:
+            raise ValueError("Both event_threshold and preprocess_merging_factor "
+                "can't be set at once")
 
     def output(self):
         """
         :return: One file per input file
         :rtype: `.json`
         """
-        return  self.local_target("data_%s.json" % self.branch)
+        return self.local_target("data_%s.json" % self.branch)
+
+    def get_input(self):
+        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        threshold = self.dataset.get_aux("event_threshold", None)
+        if not merging_factor and not threshold:
+            return self.input().path
+        else:
+            return tuple([f.path for f in self.input().values()])
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -134,10 +181,11 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
 
         from shutil import copy
         ROOT = import_root()
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs
-        inp = self.input().path
-        outp = self.output()
+        inp = self.get_input()
+        print(inp)
         df = ROOT.RDataFrame(self.tree_name, inp)
         weight_modules = self.get_feature_modules(self.weights_file)
         if len(weight_modules) > 0:
@@ -196,7 +244,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     :type keep_and_drop_file: str
     """
 
-    modules_file = luigi.Parameter(description="filename with RDF modules", default="")
+    modules_file = luigi.Parameter(description="filename with RDF modules", default=law.NO_STR)
     keep_and_drop_file = luigi.Parameter(description="filename with branches to save, empty: all",
         default="")
     weights_file = None
@@ -220,10 +268,10 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         """
         from shutil import copy
         ROOT = import_root()
-        # ROOT.ROOT.EnableImplicitMT()
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs
-        inp = self.input().path
+        inp = self.get_input()
         print(inp)
         outp = self.output()
         df = ROOT.RDataFrame(self.tree_name, inp)
@@ -239,6 +287,10 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             filtered_df = df
 
         # filtered_df = filtered_df.Filter("event == 83362796")
+
+        # print(filtered_df.Count().GetValue())
+        # import sys
+        # sys.exit()
 
         modules = self.get_feature_modules(self.modules_file)
         branches = list(df.GetColumnNames())
@@ -280,8 +332,6 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
     # regions not supported
     region_name = None
 
-    tree_name = "Events"
-
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
@@ -318,15 +368,15 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             self.max_events = self.dataset.get_aux("splitting")
         if not os.path.exists(
                 os.path.expandvars("$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
-                    self.config.name, self.max_events, self.dataset.name))):
+                    self.config_name, self.max_events, self.dataset.name))):
             ROOT = import_root()
             files = self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False)
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)
             branches = []
             for ifil, fil in enumerate(files):
                 nevents = -1
                 fil = self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), index=ifil)
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), index=ifil)
                 print("Analyzing file %s" % fil)
                 nevents = self.get_n_events(fil)
                 initial_event = 0
@@ -343,12 +393,12 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
                     isplit += 1
             with open(create_file_dir(os.path.expandvars(
                     "$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
-                    self.config.name, self.max_events, self.dataset.name))), "w+") as f:
+                    self.config_name, self.max_events, self.dataset.name))), "w+") as f:
                 json.dump(branches, f, indent=4)
         else:
              with open(create_file_dir(os.path.expandvars(
                     "$CMT_TMP_DIR/%s/splitted_branches_%s/%s.json" % (
-                    self.config.name, self.max_events, self.dataset.name)))) as f:
+                    self.config_name, self.max_events, self.dataset.name)))) as f:
                 branches = json.load(f)
         return branches
 
@@ -361,7 +411,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             return len(self.splitted_branches)
         else:
             return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
 
     def workflow_requires(self):
         return {"data": InputData.req(self)}
@@ -499,19 +549,20 @@ class Categorization(PreprocessRDF):
         with the RDF modules to run
     :type feature_modules_file: str
 
-    :param from_rdf: whether preprocessing was performed with PreprocessRDF
-    :type from_rdf: bool
+    :param skip_preprocess: whether to skip the PreprocessRDF task
+    :type skip_preprocess: bool
     """
+
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
         "base category with the initial selection, default: base")
     systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
         "default: None")
     systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
         "for categorization, default: None")
-    feature_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
-        default="")
-    from_rdf = luigi.BoolParameter(default=True, description="whether preprocessing was performed "
-        "with PreprocessRDF, default: True")
+    feature_modules_file = luigi.Parameter(description="filename with RDataFrame modules to run",
+        default=law.NO_STR)
+    skip_preprocess = luigi.BoolParameter(default=False, description="whether to skip the "
+        " PreprocessRDF task, default: False")
 
     # regions not supported
     region_name = None
@@ -519,35 +570,21 @@ class Categorization(PreprocessRDF):
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
-    tree_name = "Events"
-
     def __init__(self, *args, **kwargs):
-        # if self.from_rdf:
-            # self.max_events = -1
-        # print(self.max_events)
         super(Categorization, self).__init__(*args, **kwargs)
 
-    def create_branch_map(self):
-        # if self.max_events != -1 and not self.from_rdf:
-        if not self.from_rdf:
-            return len(self.splitted_branches)
-        else:
-            return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False))
-
     def workflow_requires(self):
-        if not self.from_rdf:
-            return {"data": Preprocess.vreq(self, category_name=self.base_category_name)}
-        else:
+        if not self.skip_preprocess:
             return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
+        else:
+            return {"data": InputData.req(self)}
 
     def requires(self):
-        if not self.from_rdf:
-            return Preprocess.vreq(self, category_name=self.base_category_name,
-                branch=self.branch)
-        else:
+        if not self.skip_preprocess:
             return PreprocessRDF.vreq(self, category_name=self.base_category_name,
                 branch=self.branch)
+        else:
+            return InputData.req(self, file_index=self.branch)
 
     def output(self):
         return {
@@ -564,6 +601,7 @@ class Categorization(PreprocessRDF):
         """
         from shutil import copy
         ROOT = import_root()
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs
         # inp = self.input()["data"].path
@@ -600,7 +638,10 @@ class Categorization(PreprocessRDF):
                 tf.Close()
                 copy(inp, outp["data"].path)
 
-        except ReferenceError:  # empty input file
+        except ReferenceError:  # empty ntuple
+            tf.Close()
+            copy(inp, outp["data"].path)
+        except AttributeError:  # empty input file
             tf.Close()
             copy(inp, outp["data"].path)
         #copy(self.input()["stats"].path, outp["stats"].path)
@@ -628,40 +669,54 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
     although a bigger number can be set with the `merging` parameter inside the dataset
     definition.
 
+    In simulated samples, ``hadd`` is used to perform the merging. In data samples, to avoid
+    skipping events due to different branches between them, ``haddnano.py`` (safer but slower)
+    is used instead. In any case, the use of one method or the other can be forced by specifying
+    the parameters ``--force-hadd`` and ``--force-haddnano`` respectively.
+
     Example command:
 
     ``law run MergeCategorization --version test --category-name etau \
 --config-name base_config --dataset-name tt_sl --workflow local --workers 4``
 
-    :param from_preprocess: wheter it merges the output from the PreprocessRDF task (True)
+    :param from_preprocess: whether it merges the output from the PreprocessRDF task (True)
         or Categorization (False, default)
     :type from_preprocess: bool
+
+    :param force_hadd: whether to force ``hadd`` as tool to do the merging.
+    :type force_hadd: bool
+
+    :param force_haddnano: whether to force ``haddnano.py`` as tool to do the merging.
+    :type force_haddnano: bool
     """
 
     from_preprocess = luigi.BoolParameter(default=False, description="whether to use as input "
         "PreprocessRDF, default: False")
+    force_hadd = luigi.BoolParameter(default=False, description="whether to force hadd "
+        "as tool to do the merging, default: False")
+    force_haddnano = luigi.BoolParameter(default=False, description="whether to force haddnano.py "
+        "as tool to do the merging, default: False")
 
     # regions not supported
     region_name = None
-    tree_name = "Events"
     merge_factor = 10
 
-    default_store = "$CMT_STORE_EOS_CATEGORIZATION"
+    default_store = "$CMT_STORE_EOS_MERGECATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
     def merge_workflow_requires(self):
         if not self.from_preprocess:
-            return Categorization.req(self, _prefer_cli=["workflow"])
+            return Categorization.vreq(self, _prefer_cli=["workflow"])
         else:
-            return PreprocessRDF.req(self, _prefer_cli=["workflow"])
+            return PreprocessRDF.vreq(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
         if not self.from_preprocess:
-            return Categorization.req(self, workflow="local", branches=range(start_leaf, end_leaf),
-                _exclude={"branch"})
+            return Categorization.vreq(self, workflow="local",
+                branches=((start_leaf, end_leaf),), _exclude={"branch"})
         else:
-            return PreprocessRDF.req(self, workflow="local", branches=range(start_leaf, end_leaf),
-                _exclude={"branch"})
+            return PreprocessRDF.vreq(self, workflow="local",
+                branches=((start_leaf, end_leaf),), _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
         if not self.from_preprocess:
@@ -677,10 +732,10 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
     def merge(self, inputs, output):
         ROOT = import_root()
+        # with output.localize("w") as tmp_out:
         with output.localize("w") as tmp_out:
-            # law.root.hadd_task(self, [inp.path for inp in inputs], tmp_out, local=True)
             good_inputs = []
-            for inp in inputs:
+            for inp in inputs:  # merge only files with a filled tree
                 tf = ROOT.TFile.Open(inp.path)
                 try:
                     tree = tf.Get(self.tree_name)
@@ -688,11 +743,25 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                         good_inputs.append(inp)
                 except:
                     print("File %s not used" % inp.path)
-            #if good_inputs:
-            law.root.hadd_task(self, good_inputs, tmp_out, local=True)
-            #else:
-            #    raise Exception("No good files were found")
-
+            if len(good_inputs) != 0:
+                use_hadd = self.dataset.process.isMC
+                assert not(self.force_haddnano and self.force_hadd)
+                if self.force_haddnano:
+                    use_hadd = False
+                elif self.force_hadd:
+                    use_hadd = True
+                if use_hadd:
+                    print("Merging with hadd...")
+                    law.root.hadd_task(self, good_inputs, tmp_out, local=True)
+                else:
+                    print("Merging with haddnano.py...")
+                    cmd = "python3 %s/bin/%s/haddnano.py %s %s" % (
+                        os.environ["CMSSW_BASE"], os.environ["SCRAM_ARCH"],
+                        create_file_dir(tmp_out.path), " ".join([f.path for f in good_inputs]))
+                    rc = call(cmd, shell=True)
+            else:  # if all input files are empty, create an empty file as output
+                tf = ROOT.TFile.Open(create_file_dir(tmp_out.path), "RECREATE")
+                tf.Close()
 
 class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
     """
@@ -705,7 +774,7 @@ class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
     """
 
     def atomic_requires(self, dataset, category):
-        return MergeCategorization.req(self, dataset_name=dataset.name, category_name=category.name)
+        return MergeCategorization.vreq(self, dataset_name=dataset.name, category_name=category.name)
 
 
 class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
@@ -727,10 +796,10 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
     default_wlcg_fs = "wlcg_fs_categorization"
 
     def merge_workflow_requires(self):
-        return PreCounter.req(self, _prefer_cli=["workflow"])
+        return PreCounter.vreq(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return PreCounter.req(self, workflow="local", branches=range(start_leaf, end_leaf),
+        return PreCounter.vreq(self, workflow="local", branches=((start_leaf, end_leaf),),
             _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):

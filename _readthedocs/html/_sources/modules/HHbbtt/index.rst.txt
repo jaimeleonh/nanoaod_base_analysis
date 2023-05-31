@@ -15,4 +15,5 @@ RDFModules
     hhlepton
     hhjets
     hhdnn
+    hhmulticlass
     idiso 

@@ -34,6 +34,7 @@ class Target():
 class Task(law.Task):
 
     version = luigi.Parameter(description="version of outputs to produce")
+    request_cpus = luigi.IntParameter(default=1, description="number of cpus requested, default: 1")
     notify = law.telegram.NotifyTelegramParameter()
 
     default_store = "$CMT_STORE"
@@ -111,6 +112,7 @@ class Task(law.Task):
 
     def retrieve_file(self, filename):
         filenames = [
+            filename,
             os.path.expandvars("$CMT_BASE/../{}".format(filename)),
             os.path.expandvars("$CMT_BASE/cmt/{}".format(filename))
         ]
@@ -118,6 +120,7 @@ class Task(law.Task):
             if os.path.isfile(f):
                 return f
         return ""
+        # raise ValueError("File %s could not be found under the default paths" % filename)
 
 
 class ConfigTask(Task):
@@ -193,6 +196,10 @@ class DatasetTask(ConfigTask):
 
     dataset_name = luigi.Parameter(default="hh_ggf", description="name of the dataset to process, "
         "default: hh_ggf")
+    tree_name = luigi.Parameter(default=law.NO_STR, description="name of the tree inside "
+        "the root file, default: Events (nanoAOD)")
+
+    default_tree_name = "Events"
 
     def __init__(self, *args, **kwargs):
         super(DatasetTask, self).__init__(*args, **kwargs)
@@ -202,6 +209,9 @@ class DatasetTask(ConfigTask):
 
         # store a reference to the main process
         self.process = self.dataset.process
+
+        if self.tree_name == law.NO_STR:
+            self.tree_name = getattr(self.config, "tree_name", self.default_tree_name)
 
     def store_parts(self):
         parts = super(DatasetTask, self).store_parts()
@@ -286,8 +296,12 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
     htcondor_central_scheduler = luigi.BoolParameter(default=False, significant=False,
         description="whether or not remote tasks should connect to the central scheduler, default: "
         "False")
+    custom_condor_tag = law.CSVParameter(default=(), 
+       description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
+    custom_output_tag = luigi.Parameter(default="",
+       description="Custom output tag for submission and status files")
 
-    exclude_params_branch = {"max_runtime", "htcondor_central_scheduler"}
+    exclude_params_branch = {"max_runtime", "htcondor_central_scheduler", "custom_condor_tag"}
 
     def htcondor_output_directory(self):
         # the directory where submission meta data should be stored
@@ -299,6 +313,9 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         # in order to setup software and environment variables
         return os.path.expandvars("$CMT_BASE/cmt/files/cern_htcondor_bootstrap.sh")
 
+    def htcondor_output_postfix(self):
+        return self.custom_output_tag + super(HTCondorWorkflow, self).htcondor_output_postfix()
+
     def htcondor_job_config(self, config, job_num, branches):
         # render variables
         config.render_variables["cmt_base"] = os.environ["CMT_BASE"]
@@ -309,17 +326,21 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         config.custom_content.append(("getenv", "true"))
         config.custom_content.append(("log", "/dev/null"))
         config.custom_content.append(("+MaxRuntime", int(math.floor(self.max_runtime * 3600)) - 1))
+        config.custom_content.append(("RequestCpus", self.request_cpus))
+        if self.custom_condor_tag:
+            for elem in self.custom_condor_tag:
+                config.custom_content.append((elem, None))
 
         # print "{}/x509up".format(os.getenv("HOME"))
         # config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))
         #config.custom_content.append(("arguments", "$(Proxy_path)"))
-        
+
         return config
-    
+
     def htcondor_create_job_file_factory(self, **kwargs):
         # job file fectory config priority: kwargs > class defaults
         kwargs = merge_dicts(self.htcondor_job_file_factory_defaults, kwargs)
-        
+
         return HTCondorJobFileFactory(**kwargs)
 
     def htcondor_use_local_scheduler(self):
@@ -331,12 +352,20 @@ class SplittedTask():
     def get_splitted_branches(self):
         return
 
+
 class RDFModuleTask():
     def get_feature_modules(self, filename):
         module_params = None
-        if filename:
+
+        # check for default modules file inside the config
+        if filename == law.NO_STR:
+            if self.config.default_module_files.get(self.task_family, None):
+                filename = self.config.default_module_files[self.task_family]
+
+        if filename != "" and filename != law.NO_STR:
             import yaml
             from cmt.utils.yaml_utils import ordered_load
+
             tmp_file = self.retrieve_file("config/{}.yaml".format(filename))
 
             with open(tmp_file) as f:
@@ -401,7 +430,8 @@ class RDFModuleTask():
         branchStatus = [1 for branchName in branchNames]
         for pattern, stat in ops:
             for ib, b in enumerate(branchNames):
-                if re.match(pattern, str(b)):
+                # if re.match(pattern, str(b)):
+                if re.fullmatch(pattern, str(b)) is not None:
                     branchStatus[ib] = stat
 
         return [branchName for (branchName, branchStatus) in zip(branchNames, branchStatus)
@@ -424,11 +454,11 @@ class InputData(DatasetTask, law.ExternalTask):
         if self.file_index != law.NO_INT:
             return self.dynamic_target(
                 self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), 
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
                     index=self.file_index),
                 avoid_store=True)
         else:
             cls = law.SiblingFileCollection
             return cls([self.dynamic_target(file_path, avoid_store=True)
                 for file_path in self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config.name), add_prefix=False)])
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)])

@@ -159,7 +159,8 @@ class Config_ul_2018(Config):
                 process=self.processes.get("singlet"),
                 # prefix="xrootd-cms.infn.it//",
                 xs=80.95,
-                splitting=200000),
+                splitting=200000,
+                tags=["ul"]),
             Dataset("st_top",
                 dataset="/ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/"
                     "RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",

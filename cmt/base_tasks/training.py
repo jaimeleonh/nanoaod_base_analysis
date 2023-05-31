@@ -168,7 +168,7 @@ class TrainingTask(ConfigTask):
 
     def get_data_specs(self, shards_req, configs=None, training_config_name=None):
         if configs is None:
-            configs = {self.config.name: self.config}
+            configs = {self.config_name: self.config}
         if training_config_name is None:
             training_config_name = self.training_config_name
 

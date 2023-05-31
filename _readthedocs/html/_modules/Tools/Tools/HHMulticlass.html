@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tools.Tools.HHMulticlass &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/design-tabs.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            nanoaod-base-analysis user guide
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../Structure.html">Structure of the framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Configuration.html">Setting the configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Environment.html">Setting the environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Tasks.html">Executing tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules/index.html">Modules Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq/index.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">nanoaod-base-analysis user guide</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">Tools.Tools.HHMulticlass</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Tools.Tools.HHMulticlass</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">array</span> <span class="kn">import</span> <span class="n">array</span>
+
+<span class="kn">from</span> <span class="nn">PhysicsTools.NanoAODTools.postprocessing.framework.datamodel</span> <span class="kn">import</span> <span class="n">Collection</span><span class="p">,</span> <span class="n">Object</span>
+<span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
+<span class="kn">from</span> <span class="nn">Base.Modules.baseModules</span> <span class="kn">import</span> <span class="n">JetLepMetModule</span><span class="p">,</span> <span class="n">JetLepMetSyst</span>
+
+<span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">HHMulticlassRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span>
+        <span class="n">model_specs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model_specs&quot;</span><span class="p">)</span>
+        <span class="n">special_chars</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">()[] &quot;</span>
+        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">special_chars</span><span class="p">:</span>
+            <span class="n">model_specs</span> <span class="o">=</span> <span class="n">model_specs</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">char</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">model_specs</span> <span class="o">=</span> <span class="n">model_specs</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_specs</span> <span class="o">=</span> <span class="p">[(</span><span class="n">model_specs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">model_specs</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_specs</span><span class="p">),</span> <span class="mi">2</span><span class="p">)]</span>
+        <span class="n">model_specs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;{&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;}&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">model_specs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">model_specs</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_specs</span><span class="p">),</span> <span class="mi">2</span><span class="p">)]</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">HHMulticlassRDFProducer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;_HHbbttMulticlass&quot;</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;_HHbbttMulticlass&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;_HHbbttMulticlass&quot;</span>
+
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc10&quot;</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/&quot;</span>
+                    <span class="s2">&quot;external/eigen/d812f411c3f9-cms/include/&quot;</span><span class="p">)</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc10/&quot;</span>
+                    <span class="s2">&quot;external/tensorflow/2.5.0/include/&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_SCRAM_ARCH&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;slc7_amd64_gcc820&quot;</span><span class="p">:</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
+                    <span class="s2">&quot;external/eigen/d812f411c3f9-bcolbf/include/eigen3&quot;</span><span class="p">)</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.include /cvmfs/cms.cern.ch/slc7_amd64_gcc820/&quot;</span>
+                    <span class="s2">&quot;external/tensorflow/2.1.0-bcolbf/include&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Architecture not considered&quot;</span><span class="p">)</span>
+
+            <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Tools/Tools&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libToolsTools.so&quot;</span><span class="p">)</span>
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/HHMulticlassInterface.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                auto hhmdnn = HHMulticlassInterface(</span><span class="si">%s</span><span class="s2">, {</span><span class="si">%s</span><span class="s2">});</span>
+<span class="s2">            &quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">model_specs</span><span class="p">)))</span>
+        
+            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                std::vector&lt;std::string&gt; get_node_names(size_t imodel) {</span>
+<span class="s2">                    return hhmdnn.get_node_names(imodel);</span>
+<span class="s2">                }</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;mdnn_hhbbtt_</span><span class="si">%s</span><span class="s2">_</span><span class="si">{}%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">model_spec</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">model_spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_specs</span><span class="p">]</span>
+        <span class="n">all_branches</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">()</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;mdnn_output</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="p">,</span> <span class="s2">&quot;hhmdnn.GetPredictionsWithInputs(&quot;</span>
+            <span class="s2">&quot;event, pairType, &quot;</span>
+            <span class="s2">&quot;Jet_pt</span><span class="si">{0}</span><span class="s2">, Jet_eta, Jet_phi, Jet_mass</span><span class="si">{0}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Jet_btagDeepFlavB, Jet_btagDeepFlavCvL, Jet_btagDeepFlavCvB, Jet_HHbtag, &quot;</span>
+            <span class="s2">&quot;dau1_index, dau2_index, &quot;</span>
+            <span class="s2">&quot;bjet1_JetIdx, bjet2_JetIdx, VBFjet1_JetIdx, VBFjet2_JetIdx, &quot;</span>
+            <span class="s2">&quot;ctjet_indexes, fwjet_indexes, &quot;</span>
+            <span class="s2">&quot;Muon_pt</span><span class="si">{1}</span><span class="s2">, Muon_eta, Muon_phi, Muon_mass</span><span class="si">{1}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Electron_pt</span><span class="si">{2}</span><span class="s2">, Electron_eta, Electron_phi, Electron_mass</span><span class="si">{2}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Tau_pt</span><span class="si">{3}</span><span class="s2">, Tau_eta, Tau_phi, Tau_mass</span><span class="si">{3}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;MET</span><span class="si">{5}</span><span class="s2">_pt</span><span class="si">{6}</span><span class="s2">, MET</span><span class="si">{5}</span><span class="s2">_phi</span><span class="si">{6}</span><span class="s2">, &quot;</span>
+            <span class="s2">&quot;Htt_svfit_pt</span><span class="si">{4}</span><span class="s2">, Htt_svfit_eta</span><span class="si">{4}</span><span class="s2">, Htt_svfit_phi</span><span class="si">{4}</span><span class="s2">, Htt_svfit_mass</span><span class="si">{4}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">jet_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">muon_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">electron_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_syst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">met_smear_tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_syst</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">branches_to_save</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch_tmp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">branches</span><span class="p">):</span>
+            <span class="n">node_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">elem</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">get_node_names</span><span class="p">(</span><span class="n">ib</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">inode</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node_names</span><span class="p">):</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch_tmp</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node</span><span class="p">),</span>
+                    <span class="s2">&quot;mdnn_output</span><span class="si">%s</span><span class="s2">[</span><span class="si">%s</span><span class="s2">][</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">systs</span><span class="p">,</span> <span class="n">ib</span><span class="p">,</span> <span class="n">inode</span><span class="p">))</span>
+                <span class="n">branches_to_save</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">branch_tmp</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches_to_save</span>
+
+
+<div class="viewcode-block" id="HHMulticlassRDF"><a class="viewcode-back" href="../../../modules/HHbbtt/hhmulticlass.html#Tools.Tools.HHMulticlass.HHMulticlassRDF">[docs]</a><span class="k">def</span> <span class="nf">HHMulticlassRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the HH-&gt;bbtt Muticlass DNN outputs.</span>
+
+<span class="sd">    Lepton and jet systematics (used for pt and mass variables) can be modified using the parameters</span>
+<span class="sd">    from :ref:`BaseModules_JetLepMetSyst`.</span>
+
+<span class="sd">    :param model_specs: versions and models to be used. Syntaxis: ``((version, model), ...)``.</span>
+<span class="sd">    :type model_specs: tuple of tuple of str</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: HHMulticlassRDF</span>
+<span class="sd">            path: Tools.Tools.HHMulticlass</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+<span class="sd">                year: self.config.year</span>
+<span class="sd">                model_specs: ((v5 , kl1_c2v1_c31_vbf))</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">HHMulticlassRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
