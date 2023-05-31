@@ -4,7 +4,9 @@
 Setting the environment
 ==========================
 
-Every time we want to run the code we need to do the following steps in your local repository:
+After configuring the analysis, we can define the different directories mentioned in :ref:`Directories layout<directories layout>` as we prefer in our user code's setup.sh, or use the ones defined by default.
+
+Therefore, once we have configure our analysis and environment, you'll need to do the following steps in your local repository every time we want to run the code:
 
 .. code-block:: console
 

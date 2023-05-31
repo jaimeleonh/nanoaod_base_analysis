@@ -7,7 +7,7 @@
   <title>Structure of the framework &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
+      <link rel="stylesheet" href="_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -31,14 +31,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> nanoaod-base-analysis user guide
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -47,7 +51,10 @@
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Structure of the framework</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#user-code">User code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id1">Main code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">Main code</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#environment-variables">Environment variables</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
@@ -72,8 +79,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Structure of the framework</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Structure of the framework</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/Structure.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -88,7 +95,7 @@
 <p>This framework is structured in two separate repositories, summarized in the next sections.</p>
 <section id="user-code">
 <h2>User code<a class="headerlink" href="#user-code" title="Permalink to this heading"></a></h2>
-<p>This repository should contain the user’s configuration and custom tasks. As an example, <a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis">this repository</a>
+<p>It should contain the user’s configuration and custom tasks. As an example, <a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis">this repository</a>
 includes the code used for the HH-&gt;bbtt analysis, and it can be used as an example to add the desired configuration.</p>
 <p>It contains two folders:</p>
 <ul class="simple">
@@ -108,6 +115,89 @@ includes the code used for the HH-&gt;bbtt analysis, and it can be used as an ex
 <img alt="_images/lawStructure.png" src="_images/lawStructure.png" />
 <p>Where there are two branches of tasks before plotting depending on what the goal is: event counting or processing data.
 In the section <a class="reference internal" href="Tasks.html#tasks"><span class="std std-ref">Executing tasks</span></a> you can see step by step how it works and which are the specific tasks the code can make.</p>
+<section id="environment-variables">
+<h3>Environment variables<a class="headerlink" href="#environment-variables" title="Permalink to this heading"></a></h3>
+<p>Inside the user and main code there is a <em>setup</em> file, where multiple directories are defined with a variable name. The source file of the main code define:</p>
+<ul id="directories-layout">
+<li><p><strong>Directories layout</strong>: Important directories and what you can file inside of them:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>$CMT_STORE</strong>: output files of every task.</p></li>
+<li><p><strong>$CMT_JOB_DIR</strong>: scripts of the jobs that are being executed.</p></li>
+<li><p><strong>$CMT_TMPDIR</strong>: temporal files that are produced during the execution of all tasks.</p></li>
+<li><p><strong>$CMT_STORE_LOCAL</strong>: condor status, submission information and logs.</p></li>
+<li><p><strong>$CMT_GFAL_DIR</strong>: Grid File Access Library.</p></li>
+<li><p><strong>$CMT_REMOTE_JOB</strong>: number of jobs (not a directory, but still may be useful).</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><dl class="simple">
+<dt>Useful <strong>Git repositories</strong>:</dt><dd><ul class="simple">
+<li><p><a class="reference external" href="https://github.com/cms-nanoAOD/nanoAOD-tools">CMS-nanoAOD-tools ($NANOTOOLS_PATH)</a></p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/cmt-base-modules">Base modules cms-phys-ciemat ($BASEMODULES_PATH)</a></p></li>
+<li><p><a class="reference external" href="https://github.com/bvormwald/HHKinFit2/tree/CMSSWversion">HHKinFit2 ($HHKINFIT_PATH)</a></p></li>
+<li><dl class="simple">
+<dt>SVfit (<em>$SVFIT_PATH</em>) with two repositories:</dt><dd><ul>
+<li><p><a class="reference external" href="https://github.com/LLRCMS/ClassicSVfit/tree/bbtautau_LegacyRun2">Classic SVfit</a></p></li>
+<li><p><a class="reference external" href="https://github.com/svfit/SVfitTF">SVfitTF</a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/diegof/gem-modules">GEM Modules ($GEM_PATH)</a></p></li>
+<li><dl class="simple">
+<dt>HTT-utilities (<em>$HTT_PATH</em>) with several repositories:</dt><dd><ul>
+<li><p><a class="reference external" href="https://github.com/CMS-HTT/LeptonEff-interface">LeptonEff-interface</a></p></li>
+<li><p><a class="reference external" href="https://github.com/CMS-HTT/LeptonEfficiencies">Lepton Efficiencies</a></p></li>
+<li><p><a class="reference external" href="https://github.com/cms-tau-pog/TauTriggerSFs/tree/run2_SFs">TauAnalysisTools</a></p></li>
+<li><p>TauAnalysisTools data: <a class="reference external" href="https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root">data1</a> , <a class="reference external" href="https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root">data2</a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://github.com/hh-italian-group/HHbtag">HHbtag ($HHBTAG_PATH):</a></dt><dd><ul>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/hh/bbtautau/MulticlassInference">hh/bbtautau</a></p></li>
+<li><p><a class="reference external" href="https://github.com/jaimeleonh/InferenceTools">InterferenceTools</a></p></li>
+<li><p><a class="reference external" href="https://github.com/GilesStrong/cms_hh_proc_interface">cms_hh_proc_interface</a></p></li>
+<li><p><a class="reference external" href="https://github.com/GilesStrong/cms_hh_tf_inference">cms_hh_tf_inference</a></p></li>
+<li><p><a class="reference external" href="https://github.com/GilesStrong/cms_runII_dnn_models">cms_runII_dnn_models</a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Corrections (<em>$CORRECTIONS_PATH</em>):</dt><dd><ul>
+<li><p><a class="reference external" href="https://github.com/jaimeleonh/correctionlib-wrapper/tree/cmssw_version">correctionlib-wrapper</a></p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections">tau-corrections</a></p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections">jme-corrections</a></p></li>
+<li><p>jme-corrections data: <a class="reference external" href="https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL18_V5_MC.tar.gz">1</a>, <a class="reference external" href="https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL17_V5_MC.tar.gz">2</a>, <a class="reference external" href="https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16_V7_MC.tar.gz">3</a>, <a class="reference external" href="https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16APV_V7_MC.tar.gz">4</a>.</p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections">lum-corrections</a></p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections">muo-corrections</a></p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections">egm-corrections</a></p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections">btv-corrections</a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Software (<em>$CMT_SOFTWARE</em>):</dt><dd><ul>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools">analysis_tools</a></p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools">plotting_tools</a></p></li>
+<li><p><a class="reference external" href="https://github.com/riga/law">law</a></p></li>
+<li><p><a class="reference external" href="https://github.com/riga/plotlib">plotlib</a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><strong>CMS Software</strong>: you cand find the CMS software used for this framework inside <em>Reponame/nanoaod_base_analysis/data/cmssw/</em>, also associated to the variable <em>$CMT_CMSSW_BASE</em>. Also, you can see the version with <em>$CMT_CMSSW_VERSION</em>.</p></li>
+<li><p><strong>$PYTHONPATH</strong> and <strong>$CMT_PYTHON_VERSION</strong>.</p></li>
+</ul>
+</section>
 </section>
 </section>
 
