@@ -51,10 +51,9 @@
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Structure of the framework</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#user-code">User code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id1">Main code</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#environment-variables">Environment variables</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">Main code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#directories-layout">Directories layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#git-repositories">Git repositories</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
@@ -115,59 +114,113 @@ includes the code used for the HH-&gt;bbtt analysis, and it can be used as an ex
 <img alt="_images/lawStructure.png" src="_images/lawStructure.png" />
 <p>Where there are two branches of tasks before plotting depending on what the goal is: event counting or processing data.
 In the section <a class="reference internal" href="Tasks.html#tasks"><span class="std std-ref">Executing tasks</span></a> you can see step by step how it works and which are the specific tasks the code can make.</p>
-<section id="environment-variables">
-<h3>Environment variables<a class="headerlink" href="#environment-variables" title="Permalink to this heading"></a></h3>
-<p>Inside the user and main code there is a <em>setup</em> file, where multiple directories are defined with a variable name. The source file of the main code define:</p>
-<ul id="directories-layout">
-<li><p><strong>Directories layout</strong>: Important directories and what you can file inside of them:</p>
+</section>
+<section id="directories-layout">
+<span id="id2"></span><h2>Directories layout<a class="headerlink" href="#directories-layout" title="Permalink to this heading"></a></h2>
+<p>Once installed the framework in your user area, the directories structure and some important folders and files located inside will be the following:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">reponame/</span></code>: user code of the framework. This path would be <code class="docutils literal notranslate"><span class="pre">/nfs/cms/&lt;username&gt;/&lt;installdir&gt;/&lt;reponame&gt;</span></code> in CIEMAT by default, and <code class="docutils literal notranslate"><span class="pre">/afs/cern.ch/&lt;installdir&gt;/&lt;user&gt;/&lt;reponame&gt;</span></code> in CERN.</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">config/</span></code>: different files in yaml and python format to define the configuration of the analysis are inside.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">modules/</span></code>: specific modules for some tasks are added here.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tasks/</span></code>: for custom tasks in python format.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">setup.sh</span></code>: required to define environment variables and install important software code. The environment variables can be modified in this setup.sh script.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nanoaod_base_analysis/</span></code>: or main code. Defined with the variable <code class="docutils literal notranslate"><span class="pre">$CMT_BASE</span></code>.</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">_readthedocs/</span></code> and <code class="docutils literal notranslate"><span class="pre">docs/</span></code>: folders where this docummentation you are looking at is defined.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bin/</span></code>: some useful scripts to use.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cmt/</span></code>: python modules from the framework’s code.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">data/</span></code>:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p><strong>$CMT_STORE</strong>: output files of every task.</p></li>
-<li><p><strong>$CMT_JOB_DIR</strong>: scripts of the jobs that are being executed.</p></li>
-<li><p><strong>$CMT_TMPDIR</strong>: temporal files that are produced during the execution of all tasks.</p></li>
-<li><p><strong>$CMT_STORE_LOCAL</strong>: condor status, submission information and logs.</p></li>
-<li><p><strong>$CMT_GFAL_DIR</strong>: Grid File Access Library.</p></li>
-<li><p><strong>$CMT_REMOTE_JOB</strong>: number of jobs (not a directory, but still may be useful).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cmssw/</span></code>: CMS software used for this framework, also associated to the variable <code class="docutils literal notranslate"><span class="pre">$CMT_CMSSW_BASE</span></code> or <code class="docutils literal notranslate"><span class="pre">$CMT_BASE/data/cmssw</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">jobs/</span></code>: submit files and the actual scripts submitted. Defined with the variable <code class="docutils literal notranslate"><span class="pre">$CMT_JOB_DIR</span></code> or <code class="docutils literal notranslate"><span class="pre">$CMT_BASE/data/jobs</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">law/</span></code>: index of law tasks.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">software/</span></code>: software of law, python and sphinx. Defined with <code class="docutils literal notranslate"><span class="pre">$CMT_SOFTWARE</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">store/</span></code>: condor control files (json files) and htcondor logs (.txt files). Defined with the variable <code class="docutils literal notranslate"><span class="pre">$CMT_STORE_LOCAL</span></code>. (Very) general structure of the folders inside the path is <code class="docutils literal notranslate"><span class="pre">&lt;TaskName&gt;/&lt;config_name&gt;/&lt;dataset_name&gt;/[&lt;category_name&gt;</span> <span class="pre">(for</span> <span class="pre">PreprocessRDF,</span> <span class="pre">Categorization,</span> <span class="pre">PrePlot)]/&lt;version_name&gt;</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tmp/</span></code>: it contains sorted .txt lists of LFNs (Logical File Names) for the required input files needed for preprocessing or precounting. Defined with <code class="docutils literal notranslate"><span class="pre">$CMT_TMP_DIR</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">x509up</span></code>: CMS VOMS proxy. It’s created once you make a <code class="docutils literal notranslate"><span class="pre">voms-proxy-init</span></code>.</p></li>
 </ul>
 </div></blockquote>
 </li>
-<li><dl class="simple">
-<dt>Useful <strong>Git repositories</strong>:</dt><dd><ul class="simple">
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Output area (<code class="docutils literal notranslate"><span class="pre">cmt/</span></code>): output files produced by every task. Defined with the variable <code class="docutils literal notranslate"><span class="pre">$CMT_STORE</span></code> and located by default in <code class="docutils literal notranslate"><span class="pre">/nfs/cms/&lt;username&gt;/cmt/</span></code> in CIEMAT and <code class="docutils literal notranslate"><span class="pre">/eos/&lt;username&gt;</span></code> in CERN. (Very) general structure of the folders inside the path is <code class="docutils literal notranslate"><span class="pre">&lt;username&gt;/cmt/&lt;TaskName&gt;/&lt;config_name&gt;/[&lt;dataset_name&gt;</span> <span class="pre">(all</span> <span class="pre">except</span> <span class="pre">FeaturePlot)]/[&lt;category_name&gt;</span> <span class="pre">(for</span> <span class="pre">PreprocessRDF,</span> <span class="pre">Categorization,</span> <span class="pre">MergeCategorization,</span> <span class="pre">PrePlot,</span> <span class="pre">FeaturePlot)]/&lt;version_name&gt;</span></code>.</p></li>
+<li><p>Temporal files area (<code class="docutils literal notranslate"><span class="pre">tmp/</span></code>): or <code class="docutils literal notranslate"><span class="pre">$TMPDIR</span></code> (do an <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$TMPDIR</span></code> to see specific path), it contains temporal files created during the execution of tasks and within the HTCondor nodes.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="git-repositories">
+<h2>Git repositories<a class="headerlink" href="#git-repositories" title="Permalink to this heading"></a></h2>
+<p>Useful git repositories used in the framework.</p>
+<blockquote>
+<div><ul>
+<li><p>Software: defined with <code class="docutils literal notranslate"><span class="pre">$CMT_SOFTWARE</span></code> and located in <code class="docutils literal notranslate"><span class="pre">&lt;installdir&gt;/&lt;reponame&gt;/nanoaod_base_analysis/data/software/</span></code>.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>CIEMAT tools:</p>
+<ul>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools">analysis_tools</a></p></li>
+<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools">plotting_tools</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference external" href="https://github.com/riga/law">law</a></p></li>
+<li><p><a class="reference external" href="https://github.com/riga/plotlib">plotlib</a></p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Other software, located in different areas (do an <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$variable</span></code> to see specific path):</p>
+<blockquote>
+<div><ul class="simple">
 <li><p><a class="reference external" href="https://github.com/cms-nanoAOD/nanoAOD-tools">CMS-nanoAOD-tools ($NANOTOOLS_PATH)</a></p></li>
 <li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/cmt-base-modules">Base modules cms-phys-ciemat ($BASEMODULES_PATH)</a></p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Other git repositories that can be useful for your analysis:</p>
+<blockquote>
+<div><ul>
 <li><p><a class="reference external" href="https://github.com/bvormwald/HHKinFit2/tree/CMSSWversion">HHKinFit2 ($HHKINFIT_PATH)</a></p></li>
-<li><dl class="simple">
-<dt>SVfit (<em>$SVFIT_PATH</em>) with two repositories:</dt><dd><ul>
+<li><p>SVfit (<code class="docutils literal notranslate"><span class="pre">$SVFIT_PATH</span></code>) with two repositories:</p>
+<blockquote>
+<div><ul class="simple">
 <li><p><a class="reference external" href="https://github.com/LLRCMS/ClassicSVfit/tree/bbtautau_LegacyRun2">Classic SVfit</a></p></li>
 <li><p><a class="reference external" href="https://github.com/svfit/SVfitTF">SVfitTF</a></p></li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
 </li>
 <li><p><a class="reference external" href="https://gitlab.cern.ch/diegof/gem-modules">GEM Modules ($GEM_PATH)</a></p></li>
-<li><dl class="simple">
-<dt>HTT-utilities (<em>$HTT_PATH</em>) with several repositories:</dt><dd><ul>
+<li><p>HTT-utilities (<code class="docutils literal notranslate"><span class="pre">$HTT_PATH</span></code>) with several repositories:</p>
+<blockquote>
+<div><ul class="simple">
 <li><p><a class="reference external" href="https://github.com/CMS-HTT/LeptonEff-interface">LeptonEff-interface</a></p></li>
 <li><p><a class="reference external" href="https://github.com/CMS-HTT/LeptonEfficiencies">Lepton Efficiencies</a></p></li>
 <li><p><a class="reference external" href="https://github.com/cms-tau-pog/TauTriggerSFs/tree/run2_SFs">TauAnalysisTools</a></p></li>
 <li><p>TauAnalysisTools data: <a class="reference external" href="https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root">data1</a> , <a class="reference external" href="https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root">data2</a></p></li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
 </li>
-<li><dl class="simple">
-<dt><a class="reference external" href="https://github.com/hh-italian-group/HHbtag">HHbtag ($HHBTAG_PATH):</a></dt><dd><ul>
+<li><p><a class="reference external" href="https://github.com/hh-italian-group/HHbtag">HHbtag ($HHBTAG_PATH):</a></p>
+<blockquote>
+<div><ul class="simple">
 <li><p><a class="reference external" href="https://gitlab.cern.ch/hh/bbtautau/MulticlassInference">hh/bbtautau</a></p></li>
 <li><p><a class="reference external" href="https://github.com/jaimeleonh/InferenceTools">InterferenceTools</a></p></li>
 <li><p><a class="reference external" href="https://github.com/GilesStrong/cms_hh_proc_interface">cms_hh_proc_interface</a></p></li>
 <li><p><a class="reference external" href="https://github.com/GilesStrong/cms_hh_tf_inference">cms_hh_tf_inference</a></p></li>
 <li><p><a class="reference external" href="https://github.com/GilesStrong/cms_runII_dnn_models">cms_runII_dnn_models</a></p></li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
 </li>
-<li><dl class="simple">
-<dt>Corrections (<em>$CORRECTIONS_PATH</em>):</dt><dd><ul>
+<li><p>Corrections (<code class="docutils literal notranslate"><span class="pre">$CORRECTIONS_PATH</span></code>):</p>
+<blockquote>
+<div><ul class="simple">
 <li><p><a class="reference external" href="https://github.com/jaimeleonh/correctionlib-wrapper/tree/cmssw_version">correctionlib-wrapper</a></p></li>
 <li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections">tau-corrections</a></p></li>
 <li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections">jme-corrections</a></p></li>
@@ -177,27 +230,13 @@ In the section <a class="reference internal" href="Tasks.html#tasks"><span class
 <li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections">egm-corrections</a></p></li>
 <li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections">btv-corrections</a></p></li>
 </ul>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>Software (<em>$CMT_SOFTWARE</em>):</dt><dd><ul>
-<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools">analysis_tools</a></p></li>
-<li><p><a class="reference external" href="https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools">plotting_tools</a></p></li>
-<li><p><a class="reference external" href="https://github.com/riga/law">law</a></p></li>
-<li><p><a class="reference external" href="https://github.com/riga/plotlib">plotlib</a></p></li>
-</ul>
-</dd>
-</dl>
+</div></blockquote>
 </li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
 </li>
-<li><p><strong>CMS Software</strong>: you cand find the CMS software used for this framework inside <em>Reponame/nanoaod_base_analysis/data/cmssw/</em>, also associated to the variable <em>$CMT_CMSSW_BASE</em>. Also, you can see the version with <em>$CMT_CMSSW_VERSION</em>.</p></li>
-<li><p><strong>$PYTHONPATH</strong> and <strong>$CMT_PYTHON_VERSION</strong>.</p></li>
 </ul>
-</section>
+</div></blockquote>
 </section>
 </section>
 

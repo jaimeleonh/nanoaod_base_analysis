@@ -35,55 +35,91 @@ All this code gives us the opportunity to execute multiple tasks depending on wh
 Where there are two branches of tasks before plotting depending on what the goal is: event counting or processing data.
 In the section :ref:`tasks` you can see step by step how it works and which are the specific tasks the code can make.
 
-Environment variables
-~~~~~~~~~~~~~~~~~~~~~
-
-Inside the user and main code there is a *setup* file, where multiple directories are defined with a variable name. The source file of the main code define:
-
 .. _directories layout:
 
-- **Directories layout**: Important directories and what you can file inside of them: 
+Directories layout
+------------------
 
-    - **$CMT_STORE**: output files of every task.
-    - **$CMT_JOB_DIR**: scripts of the jobs that are being executed.
-    - **$CMT_TMPDIR**: temporal files that are produced during the execution of all tasks.
-    - **$CMT_STORE_LOCAL**: condor status, submission information and logs.
-    - **$CMT_GFAL_DIR**: Grid File Access Library.
-    - **$CMT_REMOTE_JOB**: number of jobs (not a directory, but still may be useful).
+Once installed the framework in your user area, the directories structure and some important folders and files located inside will be the following:
 
-- Useful **Git repositories**:
-    - `CMS-nanoAOD-tools ($NANOTOOLS_PATH) <https://github.com/cms-nanoAOD/nanoAOD-tools>`_
-    - `Base modules cms-phys-ciemat ($BASEMODULES_PATH) <https://gitlab.cern.ch/cms-phys-ciemat/cmt-base-modules>`_
-    - `HHKinFit2 ($HHKINFIT_PATH) <https://github.com/bvormwald/HHKinFit2/tree/CMSSWversion>`_
-    -  SVfit (*$SVFIT_PATH*) with two repositories:
-        - `Classic SVfit <https://github.com/LLRCMS/ClassicSVfit/tree/bbtautau_LegacyRun2>`_
-        - `SVfitTF <https://github.com/svfit/SVfitTF>`_
-    - `GEM Modules ($GEM_PATH) <https://gitlab.cern.ch/diegof/gem-modules>`_
-    - HTT-utilities (*$HTT_PATH*) with several repositories: 
-        - `LeptonEff-interface <https://github.com/CMS-HTT/LeptonEff-interface>`_
-        - `Lepton Efficiencies <https://github.com/CMS-HTT/LeptonEfficiencies>`_
-        - `TauAnalysisTools <https://github.com/cms-tau-pog/TauTriggerSFs/tree/run2_SFs>`_
-        - TauAnalysisTools data: `data1 <https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root>`_ , `data2 <https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root>`_
-    - `HHbtag ($HHBTAG_PATH): <https://github.com/hh-italian-group/HHbtag>`_
-        - `hh/bbtautau <https://gitlab.cern.ch/hh/bbtautau/MulticlassInference>`_
-        - `InterferenceTools <https://github.com/jaimeleonh/InferenceTools>`_
-        - `cms_hh_proc_interface <https://github.com/GilesStrong/cms_hh_proc_interface>`_
-        - `cms_hh_tf_inference <https://github.com/GilesStrong/cms_hh_tf_inference>`_
-        - `cms_runII_dnn_models <https://github.com/GilesStrong/cms_runII_dnn_models>`_
-    - Corrections (*$CORRECTIONS_PATH*):
-        - `correctionlib-wrapper <https://github.com/jaimeleonh/correctionlib-wrapper/tree/cmssw_version>`_
-        - `tau-corrections <https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections>`_
-        - `jme-corrections <https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections>`_
-        - jme-corrections data: `1 <https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL18_V5_MC.tar.gz>`_, `2 <https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL17_V5_MC.tar.gz>`_, `3 <https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16_V7_MC.tar.gz>`_, `4 <https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16APV_V7_MC.tar.gz>`_.
-        - `lum-corrections <https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections>`_
-        - `muo-corrections <https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections>`_
-        - `egm-corrections <https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections>`_
-        - `btv-corrections <https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections>`_
-    - Software (*$CMT_SOFTWARE*):
-        - `analysis_tools <https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools>`_
-        - `plotting_tools <https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools>`_
+    - ``reponame/``: user code of the framework. This path would be ``/nfs/cms/<username>/<installdir>/<reponame>`` in CIEMAT by default, and ``/afs/cern.ch/<installdir>/<user>/<reponame>`` in CERN.
+ 
+        - ``config/``: different files in yaml and python format to define the configuration of the analysis are inside.
+        - ``modules/``: specific modules for some tasks are added here.
+        - ``tasks/``: for custom tasks in python format.
+        - ``setup.sh``: required to define environment variables and install important software code. The environment variables can be modified in this setup.sh script.
+        - ``nanoaod_base_analysis/``: or main code. Defined with the variable ``$CMT_BASE``.
+        
+            - ``_readthedocs/`` and ``docs/``: folders where this docummentation you are looking at is defined.
+            - ``bin/``: some useful scripts to use.
+            - ``cmt/``: python modules from the framework's code.
+            - ``data/``:
+            
+                - ``cmssw/``: CMS software used for this framework, also associated to the variable ``$CMT_CMSSW_BASE`` or ``$CMT_BASE/data/cmssw``.
+                - ``jobs/``: submit files and the actual scripts submitted. Defined with the variable ``$CMT_JOB_DIR`` or ``$CMT_BASE/data/jobs``.
+                - ``law/``: index of law tasks.
+                - ``software/``: software of law, python and sphinx. Defined with ``$CMT_SOFTWARE``. 
+                - ``store/``: condor control files (json files) and htcondor logs (.txt files). Defined with the variable ``$CMT_STORE_LOCAL``. (Very) general structure of the folders inside the path is ``<TaskName>/<config_name>/<dataset_name>/[<category_name> (for PreprocessRDF, Categorization, PrePlot)]/<version_name>``.
+                - ``tmp/``: it contains sorted .txt lists of LFNs (Logical File Names) for the required input files needed for preprocessing or precounting. Defined with ``$CMT_TMP_DIR``.
+                - ``x509up``: CMS VOMS proxy. It's created once you make a ``voms-proxy-init``.
+
+    - Output area (``cmt/``): output files produced by every task. Defined with the variable ``$CMT_STORE`` and located by default in ``/nfs/cms/<username>/cmt/`` in CIEMAT and ``/eos/<username>`` in CERN. (Very) general structure of the folders inside the path is ``<username>/cmt/<TaskName>/<config_name>/[<dataset_name> (all except FeaturePlot)]/[<category_name> (for PreprocessRDF, Categorization, MergeCategorization, PrePlot, FeaturePlot)]/<version_name>``.
+
+    - Temporal files area (``tmp/``): or ``$TMPDIR`` (do an ``echo $TMPDIR`` to see specific path), it contains temporal files created during the execution of tasks and within the HTCondor nodes.
+
+
+Git repositories
+-------------------------
+
+Useful git repositories used in the framework.
+
+    - Software: defined with ``$CMT_SOFTWARE`` and located in ``<installdir>/<reponame>/nanoaod_base_analysis/data/software/``.
+
+        - CIEMAT tools:
+        
+          - `analysis_tools <https://gitlab.cern.ch/cms-phys-ciemat/analysis_tools>`_
+          - `plotting_tools <https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools>`_
+        
         - `law <https://github.com/riga/law>`_
         - `plotlib <https://github.com/riga/plotlib>`_
 
-- **CMS Software**: you cand find the CMS software used for this framework inside *Reponame/nanoaod_base_analysis/data/cmssw/*, also associated to the variable *$CMT_CMSSW_BASE*. Also, you can see the version with *$CMT_CMSSW_VERSION*.
-- **$PYTHONPATH** and **$CMT_PYTHON_VERSION**.
+    - Other software, located in different areas (do an ``echo $variable`` to see specific path):
+
+        - `CMS-nanoAOD-tools ($NANOTOOLS_PATH) <https://github.com/cms-nanoAOD/nanoAOD-tools>`_
+        - `Base modules cms-phys-ciemat ($BASEMODULES_PATH) <https://gitlab.cern.ch/cms-phys-ciemat/cmt-base-modules>`_
+
+    - Other git repositories that can be useful for your analysis:
+
+        - `HHKinFit2 ($HHKINFIT_PATH) <https://github.com/bvormwald/HHKinFit2/tree/CMSSWversion>`_
+        -  SVfit (``$SVFIT_PATH``) with two repositories:
+
+            - `Classic SVfit <https://github.com/LLRCMS/ClassicSVfit/tree/bbtautau_LegacyRun2>`_
+            - `SVfitTF <https://github.com/svfit/SVfitTF>`_
+
+        - `GEM Modules ($GEM_PATH) <https://gitlab.cern.ch/diegof/gem-modules>`_
+        - HTT-utilities (``$HTT_PATH``) with several repositories:
+
+            - `LeptonEff-interface <https://github.com/CMS-HTT/LeptonEff-interface>`_
+            - `Lepton Efficiencies <https://github.com/CMS-HTT/LeptonEfficiencies>`_
+            - `TauAnalysisTools <https://github.com/cms-tau-pog/TauTriggerSFs/tree/run2_SFs>`_
+            - TauAnalysisTools data: `data1 <https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root>`_ , `data2 <https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root>`_
+        
+        - `HHbtag ($HHBTAG_PATH): <https://github.com/hh-italian-group/HHbtag>`_
+
+            - `hh/bbtautau <https://gitlab.cern.ch/hh/bbtautau/MulticlassInference>`_
+            - `InterferenceTools <https://github.com/jaimeleonh/InferenceTools>`_
+            - `cms_hh_proc_interface <https://github.com/GilesStrong/cms_hh_proc_interface>`_
+            - `cms_hh_tf_inference <https://github.com/GilesStrong/cms_hh_tf_inference>`_
+            - `cms_runII_dnn_models <https://github.com/GilesStrong/cms_runII_dnn_models>`_
+
+        - Corrections (``$CORRECTIONS_PATH``):
+
+            - `correctionlib-wrapper <https://github.com/jaimeleonh/correctionlib-wrapper/tree/cmssw_version>`_
+            - `tau-corrections <https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections>`_
+            - `jme-corrections <https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections>`_
+            - jme-corrections data: `1 <https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL18_V5_MC.tar.gz>`_, `2 <https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL17_V5_MC.tar.gz>`_, `3 <https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16_V7_MC.tar.gz>`_, `4 <https://github.com/cms-jet/JECDatabase/raw/master/tarballs/Summer19UL16APV_V7_MC.tar.gz>`_.
+            - `lum-corrections <https://gitlab.cern.ch/cms-phys-ciemat/lum-corrections>`_
+            - `muo-corrections <https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections>`_
+            - `egm-corrections <https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections>`_
+            - `btv-corrections <https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections>`_   
+            

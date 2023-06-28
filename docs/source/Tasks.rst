@@ -89,9 +89,8 @@ Verifying executions
 
 The output files are the result of every task execution, and are located in the *$CMT_STORE* directory (``echo $CMT_STORE`` to know which one is in your case). During the execution of the tasks, errors may occur that prevent the generation of all or some of the expected output files. Sometimes these errors are easy to spot and a thorough examination of them and their solution is not necessary, but on other occasions it will be needed to review that everything has worked correctly by checking a series of points such as:
 
-- **Counting events from a folder**: it can be done just with the following command ``count_events.py foldername`` (the *count_events.py* script is defined in the setup.sh). You can also compare number of events from different folders to check if different versions are right with ``diffFolderEvents.py foldername1 foldername2``, and if you need to know which files are different ``diffEvents.py foldername1 foldername2``.
+- **Counting events from a folder**: it can be done just with the following command ``count_events.py foldername`` (the *count_events.py* script is defined in the setup.sh). You can also compare number of events from different folders to check if different versions are right with ``diffFolderEvents.py foldername1 foldername2``, and if you need to know which files are different ``diffEvents.py foldername1 foldername2``. *count_events.py*, *diffFolderEvents.py* and *diffEvents.py* are located inside *$CMT_BASE/bin*.
 - **Checking condor logs**: if the jobs have been submitted to condor and the parameter ``--transfer-logs true`` have been used, you can verify in the appropiate folder if there is any job that has not completed succesfully. This can be done doing a *find* of the following message ``This progress looks :( because there were failed tasks``.
 
-.. En principio no se me ocurre ninguna forma más de comprobar errores, pero pensar si hay alguna más.
 
 
