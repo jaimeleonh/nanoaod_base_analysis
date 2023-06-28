@@ -85,16 +85,16 @@
              
   <section id="installation">
 <span id="id1"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
-<p>The code is designed to work both in CIEMAT User Interfaces (you’ll need to access to a gaecmsui (<code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">gaecmsui</span></code>) and then go to your <em>/nfs/cms/username/</em> path) and <em>lxplus</em>, so once you’re in one of them you can follow these steps:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Make a fork of the user code &lt;https://github.com/jaimeleonh/hhbbtt-analysis&gt; in your repository with the reponame you want.</span>
-<span class="go">git clone https://github.com/username/reponame #where username is your own github user name.</span>
+<p>The code is designed to work both in CIEMAT User Interfaces (you’ll need to access to a gaecmsui (<code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">gaecmsui</span></code>) and then go to your <code class="docutils literal notranslate"><span class="pre">/nfs/cms/username/</span></code> path) and <em>lxplus</em>, so once you’re in one of them you can follow these steps:</p>
+<p>Make a fork of the user code &lt;<a class="reference external" href="https://github.com/jaimeleonh/hhbbtt-analysis">https://github.com/jaimeleonh/hhbbtt-analysis</a>&gt; in your github area with the <em>reponame</em> you want.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git clone https://github.com/username/reponame #where username is your own github user name.</span>
 <span class="go">cd &lt;reponame&gt;</span>
 <span class="go">git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git --branch py3 nanoaod_base_analysis/</span>
 <span class="go">source setup.sh</span>
 <span class="go">law index --verbose #to do only after installation or including a new task</span>
 </pre></div>
 </div>
-<p>To reinstall the software we would need to do:</p>
+<p>To reinstall the software you would need to do:</p>
 <p><code class="docutils literal notranslate"><span class="pre">CMT_FORCE_SOFTWARE=1</span> <span class="pre">source</span> <span class="pre">setup.sh</span></code></p>
 <p>As improvements of the main code are frequently made, it is very recommended to update your own as well with the following commands every time you log into your repository:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cd nanoaod_base_analysis</span>
