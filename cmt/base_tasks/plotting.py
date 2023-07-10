@@ -631,6 +631,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             postfix += "__blinded"
         if self.stack and key not in ("root", "yields"):
             postfix += "__stack"
+        if self.log_y and key not in ("root", "yields"):
+            postfix += "__log"
         return postfix
 
     def output(self):
