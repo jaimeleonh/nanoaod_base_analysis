@@ -34,9 +34,9 @@ action() {
     # check if we're at llr
     if [[ "$( hostname -f )" = *.in2p3.fr ]]; then
         export CMT_ON_LLR="1"
+        export EXTRA_CLING_ARGS=" -O2"
     else
         export CMT_ON_LLR="0"
-        export EXTRA_CLING_ARGS=" -O2"
     fi
     
     # default cern name
