@@ -20,6 +20,7 @@ identifiers:
 repository-code: >-
   https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis
 url: 'https://nanoaod-base-analysis.readthedocs.io/en/latest/'
+doi: 10.5281/zenodo.8187177
 keywords:
   - python
   - physics
