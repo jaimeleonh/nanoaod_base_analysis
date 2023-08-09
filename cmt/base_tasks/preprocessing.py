@@ -88,15 +88,42 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
 
     :param weights_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run
     :type weights_file: str
+
+    :param systematic: systematic to use for categorization.
+    :type systematic: str
+
+    :param systematic_direction: systematic direction to use for categorization.
+    :type systematic_direction: str
     """
 
     weights_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default=law.NO_STR)
+    systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
+        "default: None")
+    systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
+        "for categorization, default: None")
+
     # regions not supported
     region_name = None
 
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
+
+    def __init__(self, *args, **kwargs):
+        super(PreCounter, self).__init__(*args, **kwargs)
+        self.addendum = self.get_addendum()
+
+    def get_addendum(self):
+        if self.systematic:
+            weights = self.config.weights.total_events_weights
+            for weight in weights:
+                try:
+                    feature = self.config.features.get(weight)
+                    if self.systematic in feature.systematics:
+                        return f"{self.systematic}_{self.systematic_direction}_"
+                except:
+                    continue
+        return ""
 
     def create_branch_map(self):
         """
@@ -161,7 +188,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         :return: One file per input file
         :rtype: `.json`
         """
-        return self.local_target("data_%s.json" % self.branch)
+        return self.local_target(f"data_{self.addendum}{self.branch}.json")
 
     def get_input(self):
         merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
@@ -170,6 +197,18 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
             return self.input().path
         else:
             return tuple([f.path for f in self.input().values()])
+
+    def get_weight(self, weights, syst_name, syst_direction, **kwargs):
+        """
+        Obtains the product of all weights depending on the category/channel applied.
+        Returns "1" if it's a data sample.
+
+        :return: Product of all weights to be applied
+        :rtype: str
+        """
+        if self.config.processes.get(self.dataset.process.name).isData:
+            return "1"
+        return self.config.get_weights_expression(weights, syst_name, syst_direction)
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -192,11 +231,15 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
             for module in weight_modules:
                 df, _ = module.run(df)
 
-        weights = self.config.weights.total_events_weights
+        weight = self.get_weight(
+            self.config.weights.total_events_weights, self.systematic, self.systematic_direction)
+
+        print(weight)
+
         hmodel = ("", "", 1, 1, 2)
         histo_noweight = df.Define("var", "1.").Histo1D(hmodel, "var")
         if not self.dataset.process.isData:
-            histo_weight = df.Define("var", "1.").Define("weight", " * ".join(weights)).Histo1D(
+            histo_weight = df.Define("var", "1.").Define("weight", weight).Histo1D(
                 hmodel, "var", "weight")
         else:
             histo_weight = df.Define("var", "1.").Histo1D(hmodel, "var")
@@ -252,12 +295,19 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     default_store = "$CMT_STORE_EOS_PREPROCESSING"
     default_wlcg_fs = "wlcg_fs_categorization"
 
+    def get_addendum(self):
+        if self.systematic:
+            systematic = self.config.systematics.get(self.systematic)
+            if self.category.name in systematic.get_aux("affected_categories", []):
+                return f"{self.systematic}_{self.systematic_direction}_"
+        return ""
+
     def output(self):
         """
         :return: One file per input file with the tree + additional branches
         :rtype: `.root`
         """
-        return self.local_target("data_%s.root" % self.branch)
+        return self.local_target(f"data_{self.addendum}{self.branch}.root")
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -539,12 +589,6 @@ class Categorization(PreprocessRDF):
     :param base_category_name: category name from the PreprocessRDF requirements.
     :type base_category_name: str
 
-    :param systematic: systematic to use for categorization.
-    :type systematic: str
-
-    :param systematic_direction: systematic direction to use for categorization.
-    :type systematic_direction: str
-
     :param feature_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)
         with the RDF modules to run
     :type feature_modules_file: str
@@ -555,10 +599,6 @@ class Categorization(PreprocessRDF):
 
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
         "base category with the initial selection, default: base")
-    systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
-        "default: None")
-    systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
-        "for categorization, default: None")
     feature_modules_file = luigi.Parameter(description="filename with RDataFrame modules to run",
         default=law.NO_STR)
     skip_preprocess = luigi.BoolParameter(default=False, description="whether to skip the "
@@ -588,7 +628,7 @@ class Categorization(PreprocessRDF):
 
     def output(self):
         return {
-            "data": self.local_target("data_%s.root" % self.branch),
+            "data": self.local_target(f"data_{self.addendum}{self.branch}.root"),
             # "stats": self.local_target("data_%s.json" % self.branch)
         }
 
@@ -688,6 +728,12 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
     :param force_haddnano: whether to force ``haddnano.py`` as tool to do the merging.
     :type force_haddnano: bool
+
+    :param systematic: systematic to use for categorization.
+    :type systematic: str
+
+    :param systematic_direction: systematic direction to use for categorization.
+    :type systematic_direction: str
     """
 
     from_preprocess = luigi.BoolParameter(default=False, description="whether to use as input "
@@ -696,6 +742,10 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
         "as tool to do the merging, default: False")
     force_haddnano = luigi.BoolParameter(default=False, description="whether to force haddnano.py "
         "as tool to do the merging, default: False")
+    systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
+        "default: None")
+    systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
+        "for categorization, default: None")
 
     # regions not supported
     region_name = None
@@ -725,8 +775,9 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
             return [inp for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
+        addendum = PreprocessRDF.get_addendum(self)
         return law.SiblingFileCollection([
-            self.local_target("data_{}.root".format(i))
+            self.local_target("data_{}{}.root".format(addendum, i))
             for i in range(self.n_files_after_merging)
         ])
 
@@ -782,11 +833,23 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
     Merges the output from the PreCounter task in order to reduce the 
     parallelization entering the plotting tasks.
 
+    :param systematic: systematic to use for categorization.
+    :type systematic: str
+
+    :param systematic_direction: systematic direction to use for categorization.
+    :type systematic_direction: str
+
     Example command:
 
     ``law run MergeCategorizationStats --version test --config-name base_config \
 --dataset-name dy_high --workers 10``
     """
+
+    systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
+        "default: None")
+    systematic_direction = luigi.Parameter(default="", description="systematic direction to use "
+        "for categorization, default: None")
+
     # regions not supported
     region_name = None
 
@@ -807,7 +870,8 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
         return [inp for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
-        return self.local_target("stats.json")
+        addendum = PreCounter.get_addendum(self)
+        return self.local_target(f"stats{addendum}.json")
 
     def merge(self, inputs, output):
         # output content
