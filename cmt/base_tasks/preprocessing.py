@@ -26,6 +26,7 @@ from cmt.base_tasks.base import (
     ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask
 )
 
+directions = ["up", "down"]
 
 class DatasetSuperWrapperTask(DatasetWrapperTask, law.WrapperTask):
 
@@ -42,6 +43,24 @@ class DatasetSuperWrapperTask(DatasetWrapperTask, law.WrapperTask):
         return OrderedDict(
             (dataset.name, self.atomic_requires(dataset))
             for dataset in self.datasets
+        )
+
+class DatasetSystWrapperTask(DatasetSuperWrapperTask):
+    systematic_names = law.CSVParameter(default=("",), description="names of systematics "
+        "to run, default: central only (empty string)")
+
+    exclude_index = True
+
+    @abc.abstractmethod
+    def atomic_requires(self, dataset, systematic, direction):
+        return None
+
+    def requires(self):
+        systematics = [("", "")] + list(itertools.product(self.systematic_names, directions))
+        return OrderedDict(
+            ((dataset.name, syst, d),
+                self.atomic_requires(dataset, syst, d))
+            for dataset, (syst, d) in itertools.product(self.datasets, systematics)
         )
 
 
@@ -72,6 +91,57 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
             ((dataset.name, category.name), self.atomic_requires(dataset, category))
             for dataset, category in itertools.product(self.datasets, self.categories)
             if not dataset.process.name in category.get_aux("skip_processes", [])
+        )
+
+
+class DatasetCategoryWrapperTask(DatasetWrapperTask):
+    category_names = law.CSVParameter(default=("baseline_even",), description="names of categories "
+        "to run, default: (baseline_even,)")
+
+    exclude_index = True
+
+    def __init__(self, *args, **kwargs):
+        super(DatasetCategoryWrapperTask, self).__init__(*args, **kwargs)
+
+        # tasks wrapped by this class do not allow composite categories, so split them here
+        self.categories = []
+        for name in self.category_names:
+            category = self.config.categories.get(name)
+            if category.subcategories:
+                self.categories.extend(category.subcategories)
+            else:
+                self.categories.append(category)
+
+    @abc.abstractmethod
+    def atomic_requires(self, dataset, category):
+        return None
+
+    def requires(self):
+        return OrderedDict(
+            ((dataset.name, category.name), self.atomic_requires(dataset, category))
+            for dataset, category in itertools.product(self.datasets, self.categories)
+            if not dataset.process.name in category.get_aux("skip_processes", [])
+        )
+
+
+class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask):
+    systematic_names = law.CSVParameter(default=("",), description="names of systematics "
+        "to run, default: central only (empty string)")
+
+    exclude_index = True
+
+    @abc.abstractmethod
+    def atomic_requires(self, dataset, category, systematic, direction):
+        return None
+
+    def requires(self):
+        systematics = [("", "")] + list(itertools.product(self.systematic_names, directions))
+        return OrderedDict(
+            ((dataset.name, category.name, syst, d),
+                self.atomic_requires(dataset, category, syst, d))
+            for dataset, category, (syst, d) in itertools.product(
+                self.datasets, self.categories, systematics)
+                if not dataset.process.name in category.get_aux("skip_processes", [])
         )
 
 
@@ -112,6 +182,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
     def __init__(self, *args, **kwargs):
         super(PreCounter, self).__init__(*args, **kwargs)
         self.addendum = self.get_addendum()
+        self.custom_output_tag = "_%s" % self.addendum
 
     def get_addendum(self):
         if self.systematic:
@@ -234,8 +305,6 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         weight = self.get_weight(
             self.config.weights.total_events_weights, self.systematic, self.systematic_direction)
 
-        print(weight)
-
         hmodel = ("", "", 1, 1, 2)
         histo_noweight = df.Define("var", "1.").Histo1D(hmodel, "var")
         if not self.dataset.process.isData:
@@ -253,7 +322,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
             json.dump(d, f, indent=4)
 
 
-class PreCounterWrapper(DatasetSuperWrapperTask):
+class PreCounterWrapper(DatasetSystWrapperTask):
     """
     Wrapper task to run the PreCounter task over several datasets in parallel.
 
@@ -262,8 +331,9 @@ class PreCounterWrapper(DatasetSuperWrapperTask):
     ``law run PreCounterWrapper --version test  --config-name base_config \
 --dataset-names tt_dl,tt_sl --PreCounter-weights-file weight_file --workers 2``
     """
-    def atomic_requires(self, dataset):
-        return PreCounter.req(self, dataset_name=dataset.name)
+    def atomic_requires(self, dataset, systematic, direction):
+        return PreCounter.req(self, dataset_name=dataset.name,
+            systematic=systematic, systematic_direction=direction)
 
 
 class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
@@ -355,7 +425,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
 
 
-class PreprocessRDFWrapper(DatasetCategoryWrapperTask):
+class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
     """
     Wrapper task to run the PreprocessRDF task over several datasets in parallel.
 
@@ -365,8 +435,9 @@ class PreprocessRDFWrapper(DatasetCategoryWrapperTask):
 --config-name ul_2018 --dataset-names tt_dl,tt_sl --PreprocessRDF-workflow htcondor \
 --PreprocessRDF-max-runtime 48h --PreprocessRDF-modules-file modulesrdf  --workers 10``
     """
-    def atomic_requires(self, dataset, category):
-        return PreprocessRDF.vreq(self, dataset_name=dataset.name, category_name=category.name)
+    def atomic_requires(self, dataset, category, systematic, direction):
+        return PreprocessRDF.vreq(self, dataset_name=dataset.name, category_name=category.name,
+            systematic=systematic, systematic_direction=direction)
 
 
 class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
@@ -687,7 +758,7 @@ class Categorization(PreprocessRDF):
         #copy(self.input()["stats"].path, outp["stats"].path)
 
 
-class CategorizationWrapper(DatasetCategoryWrapperTask):
+class CategorizationWrapper(DatasetCategorySystWrapperTask):
     """
     Wrapper task to run the Categorization task over several datasets in parallel.
 
@@ -698,8 +769,9 @@ class CategorizationWrapper(DatasetCategoryWrapperTask):
 --Categorization-base-category-name base_selection``
     """
 
-    def atomic_requires(self, dataset, category):
-        return Categorization.req(self, dataset_name=dataset.name, category_name=category.name)
+    def atomic_requires(self, dataset, category, systematic, direction):
+        return Categorization.req(self, dataset_name=dataset.name, category_name=category.name,
+            systematic=systematic, systematic_direction=direction)
 
 
 class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
@@ -814,7 +886,7 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                 tf = ROOT.TFile.Open(create_file_dir(tmp_out.path), "RECREATE")
                 tf.Close()
 
-class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
+class MergeCategorizationWrapper(DatasetCategorySystWrapperTask):
     """
     Wrapper task to run the MergeCategorizationWrapper task over several datasets in parallel.
 
@@ -824,8 +896,10 @@ class MergeCategorizationWrapper(DatasetCategoryWrapperTask):
 --config-name base_config --dataset-names tt_dl,tt_sl --workers 10``
     """
 
-    def atomic_requires(self, dataset, category):
-        return MergeCategorization.vreq(self, dataset_name=dataset.name, category_name=category.name)
+    def atomic_requires(self, dataset, category, systematic, direction):
+        return MergeCategorization.vreq(self, dataset_name=dataset.name,
+            category_name=category.name, systematic=systematic,
+            systematic_direction=direction)
 
 
 class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
@@ -906,7 +980,7 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
         output.dump(stats, indent=4, formatter="json")
 
 
-class MergeCategorizationStatsWrapper(DatasetSuperWrapperTask):
+class MergeCategorizationStatsWrapper(DatasetSystWrapperTask):
     """
     Wrapper task to run the MergeCategorizationStatsWrapper task over several datasets in parallel.
 
@@ -915,8 +989,9 @@ class MergeCategorizationStatsWrapper(DatasetSuperWrapperTask):
     ``law run MergeCategorizationStatsWrapper --version test --config-name base_config \
 --dataset-names tt_dl,tt_sl --workers 10``
     """
-    def atomic_requires(self, dataset):
-        return MergeCategorizationStats.req(self, dataset_name=dataset.name)
+    def atomic_requires(self, dataset, systematic, direction):
+        return MergeCategorizationStats.req(self, dataset_name=dataset.name,
+            systematic=systematic, systematic_direction=direction)
 
 
 class EventCounterDAS(DatasetTask):
@@ -974,6 +1049,7 @@ class EventCounterDAS(DatasetTask):
         with open(create_file_dir(self.output().path), "w+") as f:
             json.dump(output_d, f, indent=4)
         os.remove(tmpname)
+
 
 class EventCounterDASWrapper(DatasetSuperWrapperTask):
     """

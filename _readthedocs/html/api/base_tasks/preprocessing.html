@@ -7,7 +7,7 @@
   <title>cmt.base_tasks.preprocessing &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -31,18 +31,14 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="../../index.html" class="icon icon-home">
-            nanoaod-base-analysis user guide
+            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -94,10 +90,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../index.html">API Reference</a></li>
-          <li class="breadcrumb-item"><a href="index.html">cmt.base_tasks</a></li>
-      <li class="breadcrumb-item active">cmt.base_tasks.preprocessing</li>
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">API Reference</a> &raquo;</li>
+          <li><a href="index.html">cmt.base_tasks</a> &raquo;</li>
+      <li>cmt.base_tasks.preprocessing</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../_sources/api/base_tasks/preprocessing.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -144,7 +140,11 @@ In case they have to be computed, RDF modules can be run.</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">PreCounter</span> <span class="pre">--version</span> <span class="pre">test</span>&#160; <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">ggf_sm</span> <span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--weights-file</span> <span class="pre">weight_file</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>weights_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> (w/o extension) with the RDF modules to run</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>weights_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> (w/o extension) with the RDF modules to run</p></li>
+<li><p><strong>systematic</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic to use for categorization.</p></li>
+<li><p><strong>systematic_direction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic direction to use for categorization.</p></li>
+</ul>
 </dd>
 </dl>
 <dl class="py method">
@@ -185,6 +185,21 @@ In case they have to be computed, RDF modules can be run.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreCounter.get_weight">
+<span class="sig-name descname"><span class="pre">get_weight</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weights</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">syst_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">syst_direction</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreCounter.get_weight"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreCounter.get_weight" title="Permalink to this definition"></a></dt>
+<dd><p>Obtains the product of all weights depending on the category/channel applied.
+Returns “1” if it’s a data sample.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Product of all weights to be applied</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreCounter.run">
 <span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreCounter.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreCounter.run" title="Permalink to this definition"></a></dt>
 <dd><p>Creates one RDataFrame per input file, runs the desired RDFModules
@@ -199,7 +214,7 @@ and counts the number of events w/ and w/o additional weights</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreCounterWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">PreCounterWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreCounterWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreCounterWrapper" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetSuperWrapperTask</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetSystWrapperTask</span></code></p>
 <p>Wrapper task to run the PreCounter task over several datasets in parallel.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">PreCounterWrapper</span> <span class="pre">--version</span> <span class="pre">test</span>&#160; <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-names</span> <span class="pre">tt_dl,tt_sl</span> <span class="pre">--PreCounter-weights-file</span> <span class="pre">weight_file</span> <span class="pre">--workers</span> <span class="pre">2</span></code></p>
@@ -259,7 +274,7 @@ and runs the desired RDFModules</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.PreprocessRDFWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">PreprocessRDFWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#PreprocessRDFWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.PreprocessRDFWrapper" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetCategoryWrapperTask</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetCategorySystWrapperTask</span></code></p>
 <p>Wrapper task to run the PreprocessRDF task over several datasets in parallel.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">PreprocessRDFWrapper</span> <span class="pre">--version</span> <span class="pre">test</span>&#160; <span class="pre">--category-name</span> <span class="pre">base_selection</span> <span class="pre">--config-name</span> <span class="pre">ul_2018</span> <span class="pre">--dataset-names</span> <span class="pre">tt_dl,tt_sl</span> <span class="pre">--PreprocessRDF-workflow</span> <span class="pre">htcondor</span> <span class="pre">--PreprocessRDF-max-runtime</span> <span class="pre">48h</span> <span class="pre">--PreprocessRDF-modules-file</span> <span class="pre">modulesrdf</span>&#160; <span class="pre">--workers</span> <span class="pre">10</span></code></p>
@@ -279,8 +294,6 @@ and runs the desired RDFModules</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>base_category_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – category name from the PreprocessRDF requirements.</p></li>
-<li><p><strong>systematic</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic to use for categorization.</p></li>
-<li><p><strong>systematic_direction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic direction to use for categorization.</p></li>
 <li><p><strong>feature_modules_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – filename inside <code class="docutils literal notranslate"><span class="pre">cmt/config/</span></code> or <code class="docutils literal notranslate"><span class="pre">../config/</span></code> (w/o extension)
 with the RDF modules to run</p></li>
 <li><p><strong>skip_preprocess</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to skip the PreprocessRDF task</p></li>
@@ -331,7 +344,7 @@ post-selection</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.CategorizationWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">CategorizationWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#CategorizationWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.CategorizationWrapper" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetCategoryWrapperTask</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetCategorySystWrapperTask</span></code></p>
 <p>Wrapper task to run the Categorization task over several datasets in parallel.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">CategorizationWrapper</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--category-names</span> <span class="pre">etau</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-names</span> <span class="pre">tt_dl,tt_sl</span> <span class="pre">--Categorization-workflow</span> <span class="pre">htcondor</span> <span class="pre">--workers</span> <span class="pre">20</span> <span class="pre">--Categorization-base-category-name</span> <span class="pre">base_selection</span></code></p>
@@ -361,6 +374,8 @@ the parameters <code class="docutils literal notranslate"><span class="pre">--fo
 or Categorization (False, default)</p></li>
 <li><p><strong>force_hadd</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to force <code class="docutils literal notranslate"><span class="pre">hadd</span></code> as tool to do the merging.</p></li>
 <li><p><strong>force_haddnano</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – whether to force <code class="docutils literal notranslate"><span class="pre">haddnano.py</span></code> as tool to do the merging.</p></li>
+<li><p><strong>systematic</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic to use for categorization.</p></li>
+<li><p><strong>systematic_direction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic direction to use for categorization.</p></li>
 </ul>
 </dd>
 </dl>
@@ -377,7 +392,7 @@ or Categorization (False, default)</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.MergeCategorizationWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">MergeCategorizationWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#MergeCategorizationWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.MergeCategorizationWrapper" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetCategoryWrapperTask</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetCategorySystWrapperTask</span></code></p>
 <p>Wrapper task to run the MergeCategorizationWrapper task over several datasets in parallel.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">MergeCategorizationWrapper</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--category-names</span> <span class="pre">etau</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-names</span> <span class="pre">tt_dl,tt_sl</span> <span class="pre">--workers</span> <span class="pre">10</span></code></p>
@@ -392,6 +407,14 @@ or Categorization (False, default)</p></li>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetTask</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ForestMerge</span></code></p>
 <p>Merges the output from the PreCounter task in order to reduce the 
 parallelization entering the plotting tasks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>systematic</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic to use for categorization.</p></li>
+<li><p><strong>systematic_direction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – systematic direction to use for categorization.</p></li>
+</ul>
+</dd>
+</dl>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">MergeCategorizationStats</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-name</span> <span class="pre">dy_high</span> <span class="pre">--workers</span> <span class="pre">10</span></code></p>
 </dd></dl>
@@ -402,7 +425,7 @@ parallelization entering the plotting tasks.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.preprocessing.</span></span><span class="sig-name descname"><span class="pre">MergeCategorizationStatsWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/preprocessing.html#MergeCategorizationStatsWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetSuperWrapperTask</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetSystWrapperTask</span></code></p>
 <p>Wrapper task to run the MergeCategorizationStatsWrapper task over several datasets in parallel.</p>
 <p>Example command:</p>
 <p><code class="docutils literal notranslate"><span class="pre">law</span> <span class="pre">run</span> <span class="pre">MergeCategorizationStatsWrapper</span> <span class="pre">--version</span> <span class="pre">test</span> <span class="pre">--config-name</span> <span class="pre">base_config</span> <span class="pre">--dataset-names</span> <span class="pre">tt_dl,tt_sl</span> <span class="pre">--workers</span> <span class="pre">10</span></code></p>
