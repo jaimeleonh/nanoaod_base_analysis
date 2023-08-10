@@ -354,7 +354,7 @@ class SplittedTask():
 
 
 class RDFModuleTask():
-    def get_feature_modules(self, filename):
+    def get_feature_modules(self, filename, **kwargs):
         module_params = None
 
         # check for default modules file inside the config
@@ -394,6 +394,30 @@ class RDFModuleTask():
                 mod = module_params[tag]["path"]
                 mod = __import__(mod, fromlist=[name])
                 nargs, kwargs = eval('_args(%s)' % parameter_str)
+
+                # include systematics
+                systematic = kwargs.pop("systematic", getattr(self, "systematic", None))
+                if systematic:
+                    systematic = self.config.systematics.get(systematic)
+                    systematic_direction = kwargs.pop("systematic_direction",
+                        getattr(self, "systematic_direction", None))
+                    module_syst_type = systematic.get_aux("module_syst_type")
+                    if isinstance(module_syst_type, str) or isinstance(module_syst_type, list) :
+                        # we remove the first underscore from the syst expression, as it is
+                        # already included in the syst definition inside JetLepMetSyst
+                        expression = systematic.expression[1:]
+                        direction = eval(f"systematic.{systematic_direction}")
+                        if isinstance(module_syst_type, str):
+                            kwargs[module_syst_type] = f"{expression}{direction}"
+                        else:
+                            for syst_type in module_syst_type:
+                                kwargs[syst_type] = f"{expression}{direction}"
+                    elif isinstance(module_syst_type, dict):
+                        # assuming structure
+                        # module_syst_type={syst_name={up: up_exp, down: down_exp},}
+                        for syst_type in module_syst_type:
+                            kwargs[syst_type] = eval(f"syst_type[{systematic_direction}]")
+
                 modules.append(getattr(mod, name)(**kwargs)())
         return modules
 
