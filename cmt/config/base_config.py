@@ -443,12 +443,13 @@ class Config():
 
     def get_weights_systematics(self, list_of_weights, isMC=False):
         systematics = []
+        config_systematics = self.systematics.names()
         if isMC:
             for weight in list_of_weights:
                 try:
                     feature = self.features.get(weight)
                     for syst in feature.systematics:
-                        if syst not in systematics:
+                        if syst not in systematics and syst in config_systematics:
                             systematics.append(syst)
                 except ValueError:
                     continue
