@@ -196,6 +196,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     def __init__(self, *args, **kwargs):
         super(PrePlot, self).__init__(*args, **kwargs)
         self.custom_output_tag = "_%s" % self.region_name
+        self.threshold = self.dataset.get_aux("event_threshold", None)
+        self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
 
         self.syst_list = self.get_syst_list()
 
@@ -362,15 +364,37 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         nentries = {}
         for elem in ["central"] + [f"{syst}_{d}"
                 for (syst, d) in itertools.product(self.syst_list, directions)]:
-
             if self.skip_processing:
-                inp_to_consider = inp[elem].path
+                inp_to_consider = self.get_path(inp[elem])[0]
+                inp = self.get_input()
+                dfs[elem] = None
+                try:
+                    if len(inp[0]) == 1:
+                        dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
+                except:
+                    if len(inp) == 1:
+                        dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
+                # friend tree
+                if not dfs[elem]:
+                    tchain = ROOT.TChain()
+                    for elem in self.get_path(inp[elem]):
+                        tchain.Add("{}/{}".format(elem, self.tree_name))
+                    tchain.Add("{}/{}".format(self.get_path(inp[elem])[0], self.tree_name))
+                    friend_tchain = ROOT.TChain()
+                    for elem in self.get_path(inp[elem], 1):
+                        friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+                    tchain.AddFriend(friend_tchain, "friend")
+                    dfs[elem] = ROOT.RDataFrame(tchain)
+
             elif self.skip_merging:
                 inp_to_consider = inp[elem]["data"].path
+                dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
             else:
                 inp_to_consider = inp[elem].targets[self.branch].path
+                dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
 
-            dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
+            print(dfs[elem].Count().GetValue())
+
             tf = ROOT.TFile.Open(inp_to_consider)
             tree = tf.Get(self.tree_name)
             nentries[elem] = tree.GetEntries()
@@ -409,7 +433,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
             if selection != "1":
                 dfs[elem] = dfs[elem].Define("selection", selection).Filter("selection")
-
+        
         histos = self.define_histograms(dfs, nentries)
 
         out = ROOT.TFile.Open(create_file_dir(outp), "RECREATE")

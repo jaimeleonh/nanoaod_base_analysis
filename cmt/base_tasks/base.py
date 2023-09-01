@@ -24,6 +24,8 @@ from law.contrib.htcondor.job import HTCondorJobFileFactory
 
 from abc import abstractmethod
 
+from analysis_tools.utils import import_root
+
 law.contrib.load("cms", "git", "htcondor", "root", "tasks", "telegram", "tensorflow", "wlcg")
 
 class Target():
@@ -461,6 +463,43 @@ class RDFModuleTask():
         return [branchName for (branchName, branchStatus) in zip(branchNames, branchStatus)
             if branchStatus == 1]
 
+    def get_input(self):
+        if not self.merging_factor and not self.threshold:
+            return self.input()
+        else:
+            return tuple([f for f in self.input().values()])
+
+    def get_path(self, inp, index=None):
+        if not index:
+            index = 0
+        if not self.merging_factor and not self.threshold:
+            print(inp[index].path)
+            return (inp[index].path,)
+        else:
+            return tuple([t[index].path for t in inp])
+
+    def build_rdf(self):
+        ROOT = import_root()
+        inp = self.get_input()
+        try:
+            if len(inp[0]) == 1:
+                return ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        except:
+            if len(inp) == 1:
+                return ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        # friend tree
+        tchain = ROOT.TChain()
+        # for elem in self.get_path(inp):
+            # tchain.Add("{}/{}".format(elem, self.tree_name))
+        tchain.Add("{}/{}".format(self.get_path(inp)[0], self.tree_name))
+
+        # considering only one friend for now
+        friend_tchain = ROOT.TChain()
+        for elem in self.get_path(inp, 1):
+            friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+        tchain.AddFriend(friend_tchain, "friend")
+        return tchain
+
 
 class InputData(DatasetTask, law.ExternalTask):
 
@@ -476,13 +515,27 @@ class InputData(DatasetTask, law.ExternalTask):
 
     def output(self):
         if self.file_index != law.NO_INT:
-            return self.dynamic_target(
+            out = [self.dynamic_target(
                 self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
                     index=self.file_index),
-                avoid_store=True)
+                avoid_store=True)]
+            if self.dataset.friend_datasets:
+                if not isinstance(self.dataset.friend_datasets, list):
+                    friend_dataset_names = [self.dataset.friend_datasets]
+                else:
+                    friend_dataset_names = self.dataset.friend_datasets
+                for dataset_name in friend_dataset_names:
+                    out.append(self.dynamic_target(
+                        self.config.datasets.get(dataset_name).get_files(
+                            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
+                            index=self.file_index),
+                        avoid_store=True)
+                    )
+            return tuple(out)
         else:
             cls = law.SiblingFileCollection
             return cls([self.dynamic_target(file_path, avoid_store=True)
                 for file_path in self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)])
+            

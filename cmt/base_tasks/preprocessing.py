@@ -183,6 +183,8 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         super(PreCounter, self).__init__(*args, **kwargs)
         self.addendum = self.get_addendum()
         self.custom_output_tag = "_%s" % self.addendum
+        self.threshold = self.dataset.get_aux("event_threshold", None)
+        self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
 
     def get_addendum(self):
         if self.systematic:
@@ -201,16 +203,16 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         :return: number of files for the selected dataset
         :rtype: int
         """
-        threshold = self.dataset.get_aux("event_threshold", None)
-        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
-        if not threshold and not merging_factor:
+        self.threshold = self.dataset.get_aux("event_threshold", None)
+        self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        if not self.threshold and not self.merging_factor:
             return len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
-        elif threshold and not merging_factor:
+        elif self.threshold and not self.merging_factor:
             return len(self.dataset.get_file_groups(
                 path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
-                threshold=threshold))
-        elif not threshold and merging_factor:
+                threshold=self.threshold))
+        elif not self.threshold and self.merging_factor:
             nfiles = len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
             nbranches = nfiles // self.dataset.get_aux("preprocess_merging_factor")
@@ -230,22 +232,20 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         """
         Each branch requires one input file
         """
-        threshold = self.dataset.get_aux("event_threshold", None)
-        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
-        if not threshold and not merging_factor:
+        if not self.threshold and not self.merging_factor:
             return InputData.req(self, file_index=self.branch)
-        elif threshold and not merging_factor:
+        elif self.threshold and not self.merging_factor:
             reqs = {}
             for i in self.dataset.get_file_groups(
                     path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
-                    threshold=threshold)[self.branch]:
+                    threshold=self.threshold)[self.branch]:
                 reqs[str(i)] = InputData.req(self, file_index=i)
             return reqs
-        elif not threshold and merging_factor:
+        elif not self.threshold and self.merging_factor:
             nfiles = len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
             reqs = {}
-            for i in range(merging_factor * self.branch, merging_factor * (self.branch + 1)):
+            for i in range(self.merging_factor * self.branch, self.merging_factor * (self.branch + 1)):
                 if i >= nfiles:
                     break
                 reqs[str(i)] = InputData.req(self, file_index=i)
@@ -260,14 +260,6 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         :rtype: `.json`
         """
         return self.local_target(f"data_{self.addendum}{self.branch}.json")
-
-    def get_input(self):
-        merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
-        threshold = self.dataset.get_aux("event_threshold", None)
-        if not merging_factor and not threshold:
-            return self.input().path
-        else:
-            return tuple([f.path for f in self.input().values()])
 
     def get_weight(self, weights, syst_name, syst_direction, **kwargs):
         """
@@ -293,10 +285,27 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask,
         ROOT = import_root()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
-        # prepare inputs and outputs
+        # create RDataFrame
         inp = self.get_input()
-        print(inp)
-        df = ROOT.RDataFrame(self.tree_name, inp)
+        df = None
+        try:
+            if len(inp[0]) == 1:
+                return ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        except:
+            if len(inp) == 1:
+                return ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        # friend tree
+        if not df:
+            tchain = ROOT.TChain()
+            for elem in self.get_path(inp):
+                tchain.Add("{}/{}".format(elem, self.tree_name))
+            tchain.Add("{}/{}".format(self.get_path(inp)[0], self.tree_name))
+            friend_tchain = ROOT.TChain()
+            for elem in self.get_path(inp, 1):
+                friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+            tchain.AddFriend(friend_tchain, "friend")
+            df = ROOT.RDataFrame(tchain)
+
         weight_modules = self.get_feature_modules(self.weights_file)
         if len(weight_modules) > 0:
             for module in weight_modules:
@@ -392,9 +401,27 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
         # prepare inputs and outputs
         inp = self.get_input()
-        print(inp)
+        df = None
+        try:
+            if len(inp[0]) == 1:
+                df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        except:
+            if len(inp) == 1:
+                df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        # friend tree
+        if not df:
+            tchain = ROOT.TChain()
+            for elem in self.get_path(inp):
+                tchain.Add("{}/{}".format(elem, self.tree_name))
+            tchain.Add("{}/{}".format(self.get_path(inp)[0], self.tree_name))
+            friend_tchain = ROOT.TChain()
+            for elem in self.get_path(inp, 1):
+                friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+            tchain.AddFriend(friend_tchain, "friend")
+            df = ROOT.RDataFrame(tchain)
+        
         outp = self.output()
-        df = ROOT.RDataFrame(self.tree_name, inp)
+        # print(outp.path)
 
         selection = self.category.selection
         # dataset_selection = self.dataset.get_aux("selection")
@@ -716,44 +743,65 @@ class Categorization(PreprocessRDF):
 
         # prepare inputs and outputs
         # inp = self.input()["data"].path
-        inp = self.input().path
+        # inp = self.input().path
         outp = self.output()
-        tf = ROOT.TFile.Open(inp)
+        # tf = ROOT.TFile.Open(inp)
         try:
-            tree = tf.Get(self.tree_name)
-            if tree.GetEntries() > 0:
-                # build the full selection
-                selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
-                    self.systematic, self.systematic_direction)
-                dataset_selection = self.dataset.get_aux("selection")
-                if dataset_selection and dataset_selection != "1":
-                    selection = jrs(dataset_selection, selection, op="and")
-
-                df = ROOT.RDataFrame(self.tree_name, inp)
-                branches = list(df.GetColumnNames())
-                feature_modules = self.get_feature_modules(self.feature_modules_file)
-
-                # df = df.Filter("event == 265939")
-
-                if len(feature_modules) > 0:
-                    for module in feature_modules:
-                        df, add_branches = module.run(df)
-                        branches += add_branches
-                branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-                branch_list = ROOT.vector('string')()
-                for branch_name in branches:
-                    branch_list.push_back(branch_name)
-                filtered_df = df.Define("selection", selection).Filter("selection")
-                filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path), branch_list)
+            if self.skip_preprocess:
+                inp = self.get_input()
+                df = None
+                try:
+                    if len(inp[0]) == 1:
+                        df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+                except:
+                    if len(inp) == 1:
+                        df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+                # friend tree
+                if not df:
+                    tchain = ROOT.TChain()
+                    for elem in self.get_path(inp):
+                        tchain.Add("{}/{}".format(elem, self.tree_name))
+                    tchain.Add("{}/{}".format(self.get_path(inp)[0], self.tree_name))
+                    friend_tchain = ROOT.TChain()
+                    for elem in self.get_path(inp, 1):
+                        friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+                    tchain.AddFriend(friend_tchain, "friend")
+                    df = ROOT.RDataFrame(tchain)
             else:
+                tf = ROOT.TFile.Open(self.input().path)
+                tree = tf.Get(self.tree_name)
+                if tree.GetEntries() > 0:
+                    raise ReferenceError
                 tf.Close()
-                copy(inp, outp["data"].path)
+                df = ROOT.RDataFrame(self.tree_name, inp)
+
+            selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
+                self.systematic, self.systematic_direction)
+            dataset_selection = self.dataset.get_aux("selection")
+            if dataset_selection and dataset_selection != "1":
+                selection = jrs(dataset_selection, selection, op="and")
+
+            branches = list(df.GetColumnNames())
+            feature_modules = self.get_feature_modules(self.feature_modules_file)
+
+            if len(feature_modules) > 0:
+                for module in feature_modules:
+                    df, add_branches = module.run(df)
+                    branches += add_branches
+            branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
+            branch_list = ROOT.vector('string')()
+            for branch_name in branches:
+                branch_list.push_back(branch_name)
+            filtered_df = df.Define("selection", selection).Filter("selection")
+            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path), branch_list)
 
         except ReferenceError:  # empty ntuple
             tf.Close()
+            inp = self.input().path
             copy(inp, outp["data"].path)
         except AttributeError:  # empty input file
             tf.Close()
+            inp = self.input().path
             copy(inp, outp["data"].path)
         #copy(self.input()["stats"].path, outp["stats"].path)
 
