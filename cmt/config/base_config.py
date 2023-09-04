@@ -448,7 +448,8 @@ class Config():
                 try:
                     feature = self.features.get(weight)
                     for syst in feature.systematics:
-                        if syst not in systematics:
+                        # if syst not in systematics: 
+                        if syst not in systematics and syst in self.systematics.names():
                             systematics.append(syst)
                 except ValueError:
                     continue
