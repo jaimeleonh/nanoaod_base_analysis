@@ -47,7 +47,7 @@ class CreateDatacards(FeaturePlot):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False)
+        return FeaturePlot.vreq(self, save_root=True, stack=True)
 
     def output(self):
         """
@@ -136,7 +136,7 @@ class CreateDatacards(FeaturePlot):
         for p_name in self.non_data_names:
             try:
                 if self.config.processes.get(p_name).isSignal:
-                    line.append(signal_counter)
+                    line.append(sig_counter)
                     sig_counter -= 1
                 else:
                     line.append(bkg_counter)
@@ -227,8 +227,14 @@ class CreateDatacards(FeaturePlot):
 
             histos = {}
             tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
-            for name in self.data_names:
-                histos[name] = copy(tf.Get("histograms/" + name))
+            # read data histograms when hide_data is False
+            if not self.hide_data:
+                for name in self.data_names:
+                    histos[name] = copy(tf.Get("histograms/" + name))
+            # produce a dummy data hidtogram when hide_data is True (for combine)
+            else:
+                binning_args, _ = self.get_binning(feature)
+                histos['data_dummy'] = copy(ROOT.TH1D(randomize("dummy"), "data", *binning_args))
             for name in self.non_data_names:
                 for (syst, d) in systs_directions:
                     if syst == "central":
