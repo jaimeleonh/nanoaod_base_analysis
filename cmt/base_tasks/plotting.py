@@ -354,7 +354,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         """
 
         # prepare inputs and outputs
-        inp = self.input()
+        if self.skip_processing:
+            inp = self.get_input()
+        else:
+            inp = self.input()
         outp = self.output().path
 
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
@@ -366,23 +369,21 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 for (syst, d) in itertools.product(self.syst_list, directions)]:
             if self.skip_processing:
                 inp_to_consider = self.get_path(inp[elem])[0]
-                inp = self.get_input()
                 dfs[elem] = None
                 try:
-                    if len(inp[0]) == 1:
+                    if len(inp[elem][0]) == 1:
                         dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
                 except:
-                    if len(inp) == 1:
+                    if len(inp[elem]) == 1:
                         dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
                 # friend tree
                 if not dfs[elem]:
                     tchain = ROOT.TChain()
-                    for elem in self.get_path(inp[elem]):
-                        tchain.Add("{}/{}".format(elem, self.tree_name))
-                    tchain.Add("{}/{}".format(self.get_path(inp[elem])[0], self.tree_name))
+                    for f in self.get_path(inp[elem]):
+                        tchain.Add("{}/{}".format(f, self.tree_name))
                     friend_tchain = ROOT.TChain()
-                    for elem in self.get_path(inp[elem], 1):
-                        friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+                    for f in self.get_path(inp[elem], 1):
+                        friend_tchain.Add("{}/{}".format(f, self.tree_name))
                     tchain.AddFriend(friend_tchain, "friend")
                     dfs[elem] = ROOT.RDataFrame(tchain)
 
@@ -433,13 +434,14 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
             if selection != "1":
                 dfs[elem] = dfs[elem].Define("selection", selection).Filter("selection")
-        
+
         histos = self.define_histograms(dfs, nentries)
 
         out = ROOT.TFile.Open(create_file_dir(outp), "RECREATE")
         for histo in histos:
             histo = histo.Clone()
             histo.Sumw2()
+            out.cd()
             histo.Write()
         out.Close()
 

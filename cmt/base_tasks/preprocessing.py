@@ -410,11 +410,10 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                 df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
         # friend tree
         if not df:
-            tchain = ROOT.TChain()
+            tchain = ROOT.TChain("t")
             for elem in self.get_path(inp):
                 tchain.Add("{}/{}".format(elem, self.tree_name))
-            tchain.Add("{}/{}".format(self.get_path(inp)[0], self.tree_name))
-            friend_tchain = ROOT.TChain()
+            friend_tchain = ROOT.TChain("t")
             for elem in self.get_path(inp, 1):
                 friend_tchain.Add("{}/{}".format(elem, self.tree_name))
             tchain.AddFriend(friend_tchain, "friend")
@@ -433,12 +432,6 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         else:
             filtered_df = df
 
-        # filtered_df = filtered_df.Filter("event == 83362796")
-
-        # print(filtered_df.Count().GetValue())
-        # import sys
-        # sys.exit()
-
         modules = self.get_feature_modules(self.modules_file)
         branches = list(df.GetColumnNames())
         if len(modules) > 0:
@@ -446,6 +439,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                 filtered_df, add_branches = module.run(filtered_df)
                 branches += add_branches
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
+
         branch_list = ROOT.vector('string')()
         for branch_name in branches:
             branch_list.push_back(branch_name)
@@ -761,7 +755,6 @@ class Categorization(PreprocessRDF):
                     tchain = ROOT.TChain()
                     for elem in self.get_path(inp):
                         tchain.Add("{}/{}".format(elem, self.tree_name))
-                    tchain.Add("{}/{}".format(self.get_path(inp)[0], self.tree_name))
                     friend_tchain = ROOT.TChain()
                     for elem in self.get_path(inp, 1):
                         friend_tchain.Add("{}/{}".format(elem, self.tree_name))
