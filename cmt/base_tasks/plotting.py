@@ -890,7 +890,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             qcd_hist.cmt_process_name = "qcd"
             qcd_hist.process_label = "QCD"
             qcd_hist.SetTitle("QCD")
-            self.setup_background_hist(qcd_hist, ROOT.kYellow)
+            qcd_c = tuple([255, 87, 215])
+            qcd_color = ROOT.TColor.GetColor(*qcd_c)
+            self.setup_background_hist(qcd_hist, qcd_color)
             background_hists.append(qcd_hist)
             all_hists.append(qcd_hist)
 
@@ -1002,11 +1004,14 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 self.config.ecm,
             )
 
+        m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
+
         draw_labels = get_labels(
             upper_left_offset=upper_left_offset,
             upper_right=upper_right,
             scaling=label_scaling,
-            inner_text=inner_text
+            inner_text=inner_text,
+            max=m
         )
 
         dummy_hist.Draw()
