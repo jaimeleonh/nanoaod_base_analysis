@@ -6,7 +6,7 @@ Base tasks.
 
 __all__ = [
     "Task", "ConfigTask", "ConfigTaskWithCategory", "DatasetTask", "DatasetTaskWithCategory",
-    "DatasetWrapperTask", "HTCondorWorkflow", "InputData",
+    "DatasetWrapperTask", "HTCondorWorkflow", "SGEWorkflow", "InputData",
 ]
 
 
@@ -20,6 +20,8 @@ import law
 
 from law.util import merge_dicts
 from law.contrib.htcondor.job import HTCondorJobFileFactory
+from cmt.sge.job import SGEJobFileFactory
+from cmt.sge.workflow import SGEWorkflow as SGEWorkflowTmp
 # from cmt.condor_tools.htcondor import HTCondorWorkflowExt
 
 from abc import abstractmethod
@@ -298,8 +300,8 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
     htcondor_central_scheduler = luigi.BoolParameter(default=False, significant=False,
         description="whether or not remote tasks should connect to the central scheduler, default: "
         "False")
-    custom_condor_tag = law.CSVParameter(default=(), 
-       description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
+    # custom_condor_tag = law.CSVParameter(default=(),
+       # description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
     custom_output_tag = luigi.Parameter(default="",
        description="Custom output tag for submission and status files")
 
@@ -347,6 +349,65 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
 
     def htcondor_use_local_scheduler(self):
         return not self.htcondor_central_scheduler
+
+
+class SGEWorkflow(SGEWorkflowTmp):
+
+    only_missing = luigi.BoolParameter(default=True, significant=False, description="skip tasks "
+        "that are considered complete, default: True")
+    max_runtime = law.DurationParameter(default=2.0, unit="h", significant=False,
+        description="maximum runtime, default unit is hours, default: 2")
+    sge_central_scheduler = luigi.BoolParameter(default=False, significant=False,
+        description="whether or not remote tasks should connect to the central scheduler, default: "
+        "False")
+    custom_condor_tag = law.CSVParameter(default=(),
+       description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
+    custom_output_tag = luigi.Parameter(default="",
+       description="Custom output tag for submission and status files")
+
+    exclude_params_branch = {"max_runtime", "sge_central_scheduler", "custom_condor_tag"}
+
+    def sge_output_directory(self):
+        return law.LocalDirectoryTarget(self.local_path(store="$CMT_STORE_LOCAL"))
+
+    def sge_bootstrap_file(self):
+        # each job can define a bootstrap file that is executed prior to the actual job
+        # in order to setup software and environment variables
+        return os.path.expandvars("$CMT_BASE/cmt/sge/ic_sge_bootstrap.sh")
+
+    def sge_output_postfix(self):
+        return self.custom_output_tag + super(SGEWorkflow, self).sge_output_postfix()
+
+    def sge_job_config(self, config, job_num, branches):
+        # render variables
+        config.render_variables["cmt_base"] = os.environ["CMT_BASE"]
+        config.render_variables["cmt_env_path"] = os.environ["PATH"]
+
+        # custom job file content
+        # config.custom_content.append(("requirements", "(OpSysAndVer =?= \"CentOS7\")"))
+        # config.custom_content.append(("getenv", "true"))
+        # config.custom_content.append(("log", "/dev/null"))
+        config.custom_content.append(("max_runtime", int(math.floor(self.max_runtime * 3600)) - 1))
+        # config.custom_content.append(("RequestCpus", self.request_cpus))
+        # if self.custom_condor_tag:
+            # for elem in self.custom_condor_tag:
+                # config.custom_content.append((elem, None))
+
+        # print "{}/x509up".format(os.getenv("HOME"))
+        # config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))
+        #config.custom_content.append(("arguments", "$(Proxy_path)"))
+
+        return config
+
+    def sge_create_job_file_factory(self, **kwargs):
+        # job file fectory config priority: kwargs > class defaults
+        kwargs = merge_dicts(self.sge_job_file_factory_defaults, kwargs)
+
+        return SGEJobFileFactory(**kwargs)
+
+    def sge_use_local_scheduler(self):
+        return not self.sge_central_scheduler
+
 
 
 class SplittedTask():
@@ -453,6 +514,7 @@ class RDFModuleTask():
                     raise ValueError("Error in file %s, line '%s': " % (filename, line)
                         + "it's not a keep or drop pattern"
                     )
+
         branchStatus = [1 for branchName in branchNames]
         for pattern, stat in ops:
             for ib, b in enumerate(branchNames):

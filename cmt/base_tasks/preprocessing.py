@@ -22,8 +22,8 @@ from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData,
-    ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow,
+    InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask
 )
 
 directions = ["up", "down"]
@@ -145,7 +145,8 @@ class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask
         )
 
 
-class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SplittedTask, RDFModuleTask):
+class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
+        SplittedTask, RDFModuleTask):
     """
     Performs a counting of the events with and without applying the necessary weights.
     Weights are read from the config file.
@@ -418,7 +419,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                 friend_tchain.Add("{}/{}".format(elem, self.tree_name))
             tchain.AddFriend(friend_tchain, "friend")
             df = ROOT.RDataFrame(tchain)
-        
+
         outp = self.output()
         # print(outp.path)
 
@@ -667,7 +668,6 @@ class PreprocessWrapper(DatasetCategoryWrapperTask):
         return Preprocess.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
-# class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
 class Categorization(PreprocessRDF):
     """
     Performs the categorization step running RDF modules and applying a post-selection

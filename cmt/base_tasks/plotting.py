@@ -29,8 +29,8 @@ from analysis_tools.utils import (
 )
 from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, ConfigTaskWithCategory,
-    RDFModuleTask, InputData
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow,
+    ConfigTaskWithCategory, RDFModuleTask, InputData
 )
 
 from cmt.base_tasks.preprocessing import (
@@ -172,7 +172,7 @@ class BasePlotTask(ConfigTaskWithCategory):
 
 
 class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondorWorkflow,
-        RDFModuleTask):
+        SGEWorkflow, RDFModuleTask):
     """
     Performs the filling of histograms for all features considered. If systematics are considered,
     it also produces the same histograms after applying those.
