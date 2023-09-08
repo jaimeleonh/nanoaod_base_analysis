@@ -226,7 +226,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         """
         if self.skip_processing or self.skip_merging:
             return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
+                check_empty=True))
         return self.n_files_after_merging
 
     def workflow_requires(self):
@@ -317,7 +318,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                         feature.selection, isMC, syst_name, direction)).Filter("feat_selection")
                 else:
                     feat_df = df
-
                 # define tag just for the histogram's name
                 if syst_name != "central" and isMC:
                     tag = "_%s" % syst_name
@@ -394,12 +394,13 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 inp_to_consider = inp[elem].targets[self.branch].path
                 dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
 
-            print(dfs[elem].Count().GetValue())
-
-            tf = ROOT.TFile.Open(inp_to_consider)
-            tree = tf.Get(self.tree_name)
-            nentries[elem] = tree.GetEntries()
-            tf.Close()
+            try:
+                tf = ROOT.TFile.Open(inp_to_consider)
+                tree = tf.Get(self.tree_name)
+                nentries[elem] = tree.GetEntries()
+                tf.Close()
+            except:  # no tree inside the file
+                nentries[elem] = 0
 
             # applying modules according to the systematic considered
             syst = ""

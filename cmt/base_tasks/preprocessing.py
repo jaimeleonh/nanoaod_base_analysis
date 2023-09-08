@@ -46,7 +46,7 @@ class DatasetSuperWrapperTask(DatasetWrapperTask, law.WrapperTask):
         )
 
 class DatasetSystWrapperTask(DatasetSuperWrapperTask):
-    systematic_names = law.CSVParameter(default=("",), description="names of systematics "
+    systematic_names = law.CSVParameter(default=(), description="names of systematics "
         "to run, default: central only (empty string)")
 
     exclude_index = True
@@ -125,7 +125,7 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask):
 
 
 class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask):
-    systematic_names = law.CSVParameter(default=("",), description="names of systematics "
+    systematic_names = law.CSVParameter(default=(), description="names of systematics "
         "to run, default: central only (empty string)")
 
     exclude_index = True
@@ -135,7 +135,9 @@ class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask
         return None
 
     def requires(self):
-        systematics = [("", "")] + list(itertools.product(self.systematic_names, directions))
+        systematics = [("", "")]
+        if self.systematic_names:
+            list(itertools.product(self.systematic_names, directions))
         return OrderedDict(
             ((dataset.name, category.name, syst, d),
                 self.atomic_requires(dataset, category, syst, d))
@@ -208,14 +210,16 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
         self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
         if not self.threshold and not self.merging_factor:
             return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
+                check_empty=True))
         elif self.threshold and not self.merging_factor:
             return len(self.dataset.get_file_groups(
                 path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
                 threshold=self.threshold))
         elif not self.threshold and self.merging_factor:
             nfiles = len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
+                check_empty=True))
             nbranches = nfiles // self.dataset.get_aux("preprocess_merging_factor")
             if nfiles % self.dataset.get_aux("preprocess_merging_factor"):
                 nbranches += 1
@@ -244,7 +248,8 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
             return reqs
         elif not self.threshold and self.merging_factor:
             nfiles = len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
+                check_empty=True))
             reqs = {}
             for i in range(self.merging_factor * self.branch, self.merging_factor * (self.branch + 1)):
                 if i >= nfiles:
@@ -326,8 +331,9 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
         d = {
             "nevents": histo_noweight.Integral(),
             "nweightedevents": histo_weight.Integral(),
-            "filenames": [inp]
+            "filenames": [str(inp)]
         }
+
         with open(create_file_dir(self.output().path), "w+") as f:
             json.dump(d, f, indent=4)
 
@@ -514,7 +520,8 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
                     self.config_name, self.max_events, self.dataset.name))):
             ROOT = import_root()
             files = self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
+                check_empty=True)
             branches = []
             for ifil, fil in enumerate(files):
                 nevents = -1

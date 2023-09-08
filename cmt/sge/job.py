@@ -189,55 +189,31 @@ class SGEJobManager(BaseJobManager):
         chunking = isinstance(job_id, (list, tuple))
         job_ids = make_list(job_id)
 
-        # build the condor_q command
-        cmd = ["qstat"]
-        # if pool:
-            # cmd += ["-pool", pool]
-        # if scheduler:
-            # cmd += ["-name", scheduler]
-        # cmd += ["-long"]
-        cmd = quote_cmd(cmd)
+        # build the qstat command
+        query_data = {}
+        for _job_id in job_ids:
+            cmd = ["/usr/bin/qstat -j " + str(_job_id)]
+            # if pool:
+                # cmd += ["-pool", pool]
+            # if scheduler:
+                # cmd += ["-name", scheduler]
+            # cmd += ["-long"]
+            cmd = quote_cmd(cmd)
 
-        logger.debug("query sge job(s) with command '{}'".format(cmd))
-        code, out, err = interruptable_popen(cmd, shell=True, executable="/bin/bash",
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.debug("query sge job(s) with command '{}'".format(cmd))
+            code, out, err = interruptable_popen(eval(cmd), shell=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        # handle errors
-        if code != 0:
-            if silent:
-                return None
-            raise Exception("queue query of sge job(s) '{}' failed with code {}:"
-                "\n{}".format(job_id, code, err))
-
-        # parse the output and extract the status per job
-        query_data = self.parse_qstat(out)
-
-        # some jobs might already be in the condor history, so query for missing job ids
-        missing_ids = [_job_id for _job_id in job_ids if _job_id not in query_data]
-        if missing_ids:
-            while missing_ids:
-                # build the qstat -j command
-                cmd = ["/usr/bin/qstat -j " + ",".join(missing_ids)]
-                # if pool:
-                    # cmd += ["-pool", pool]
-                # if scheduler:
-                    # cmd += ["-name", scheduler]
-
-                cmd = quote_cmd(cmd)
-
-                logger.debug("query sge job history with command '{}'".format(cmd))
-                code, out, err = interruptable_popen(eval(cmd), shell=True,# executable=None,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                # handle errors
-                if code != 1:
-                    raise Exception("history query of sge job(s) '{}' failed with code {}:"
-                        "\n{}".format(job_id, code, err))
-
-                # parse the output and update query data
-                missing_query_data = self.parse_qstat_job(err)
-                query_data.update(missing_query_data)
-                for missing_id in missing_query_data:
-                    missing_ids.remove(missing_id)
+            # handle errors
+            if code == 0:
+                query_data.update(self.parse_qstat_job(out))
+            elif code == 1:
+                query_data.update(self.parse_qstat_job(err))
+            else:
+                if silent:
+                    return None
+                raise Exception("queue query of sge job(s) '{}' failed with code {}:"
+                    "\n{}".format(_job_id, code, err))
 
         # compare to the requested job ids and perform some checks
         for _job_id in job_ids:
@@ -254,17 +230,6 @@ class SGEJobManager(BaseJobManager):
         return query_data if chunking else query_data[job_id]
 
     @classmethod
-    def parse_qstat(cls, out):
-        query_data = {}
-        if out:
-            for l in out.strip().split("\n")[2:]:
-                l = [elem for elem in l.split(" ") if elem != ""]
-                job_id = l[0]
-                status = cls.map_status(l[4])
-                query_data[job_id] = cls.job_status_dict(job_id=job_id, status=status, code=0,
-                    error=0)
-        return query_data
-
     def parse_qstat_job(cls, out):
         query_data = {}
         if out:
@@ -274,6 +239,11 @@ class SGEJobManager(BaseJobManager):
                 for elem in l:
                     query_data[elem] = cls.job_status_dict(job_id=elem, status=cls.FINISHED, code=0,
                         error=0)
+            elif len(t) > 2:
+                status = cls.RUNNING if any([l.startswith("usage") for l in t]) else cls.PENDING
+                l = [elem for elem in t[1].split(" ") if elem != ""]
+                query_data[l[1]] = cls.job_status_dict(job_id=l[1], status=status, code=0,
+                    error=0)
         return query_data
 
     @classmethod

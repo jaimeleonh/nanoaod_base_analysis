@@ -581,7 +581,7 @@ class InputData(DatasetTask, law.ExternalTask):
                 self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
                     index=self.file_index),
-                avoid_store=True)]
+                avoid_store=True, check_empty=True)]
             if self.dataset.friend_datasets:
                 if not isinstance(self.dataset.friend_datasets, list):
                     friend_dataset_names = [self.dataset.friend_datasets]
@@ -591,8 +591,7 @@ class InputData(DatasetTask, law.ExternalTask):
                     out.append(self.dynamic_target(
                         self.config.datasets.get(dataset_name).get_files(
                             os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
-                            index=self.file_index),
-                        avoid_store=True)
+                            index=self.file_index), avoid_store=True, check_empty=True)
                     )
             return tuple(out)
         else:
