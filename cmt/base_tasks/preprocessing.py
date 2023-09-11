@@ -305,7 +305,6 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
             tchain = ROOT.TChain()
             for elem in self.get_path(inp):
                 tchain.Add("{}/{}".format(elem, self.tree_name))
-            tchain.Add("{}/{}".format(self.get_path(inp)[0], self.tree_name))
             friend_tchain = ROOT.TChain()
             for elem in self.get_path(inp, 1):
                 friend_tchain.Add("{}/{}".format(elem, self.tree_name))
@@ -331,7 +330,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
         d = {
             "nevents": histo_noweight.Integral(),
             "nweightedevents": histo_weight.Integral(),
-            "filenames": [str(inp)]
+            "filenames": [str(self.get_path(inp))]
         }
 
         with open(create_file_dir(self.output().path), "w+") as f:
