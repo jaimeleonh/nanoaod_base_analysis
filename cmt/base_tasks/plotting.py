@@ -343,7 +343,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                     histos.append(hist_base)
         return histos
 
-
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
@@ -369,15 +368,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 for (syst, d) in itertools.product(self.syst_list, directions)]:
             if self.skip_processing:
                 inp_to_consider = self.get_path(inp[elem])[0]
-                dfs[elem] = None
-                try:
-                    if len(inp[elem][0]) == 1:
-                        dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
-                except:
-                    if len(inp[elem]) == 1:
-                        dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
+                if not self.dataset.friend_datasets:
+                    dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
                 # friend tree
-                if not dfs[elem]:
+                else:
                     tchain = ROOT.TChain()
                     for f in self.get_path(inp[elem]):
                         tchain.Add("{}/{}".format(f, self.tree_name))
@@ -415,10 +409,12 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                     dfs[elem], _ = module.run(dfs[elem])
 
             selection = "1"
-            dataset_selection = self.dataset.get_aux("selection")
+            dataset_selection = self.config.get_object_expression(
+                self.dataset.get_aux("selection", "1"), self.dataset.process.isMC, syst, d)
 
             if self.skip_processing:
-                selection = self.config.get_object_expression(self.category, self.dataset.process.isMC)
+                selection = self.config.get_object_expression(
+                    self.category, self.dataset.process.isMC, syst, d)
 
             if dataset_selection and dataset_selection != "1":
                 if selection != "1":
@@ -427,7 +423,9 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                     selection = dataset_selection
 
             if self.region_name != law.NO_STR:
-                region_selection = self.config.regions.get(self.region_name).selection
+                region_selection = self.config.get_object_expression(
+                    self.config.regions.get(self.region_name).selection,
+                    self.dataset.process.isMC, syst, d)
                 if selection != "1":
                     selection = join_root_selection(region_selection, selection, op="and")
                 else:
@@ -541,6 +539,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "default: False")
     qcd_category_name = luigi.Parameter(default="default", description="category use "
         "for qcd regions ss_iso and ss_inviso, default=default (same as category)")
+    do_sideband = luigi.BoolParameter(default=False, description="whether to compute the background "
+        "shape from sideband region, default: False")
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
     normalize_signals = luigi.BoolParameter(default=True, description="whether to normalize "
         "signals to the total bkg yield, default: True")
@@ -594,6 +594,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         # select processes and datasets
         assert self.process_group_name in self.config.process_group_names
+        assert not (self.do_qcd and self.do_sideband)
         self.processes_datasets = {}
         self.datasets_to_run = []
 
@@ -637,6 +638,11 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             # complain when no data is present
             if not any(dataset.process.isData for dataset in self.datasets):
                 raise Exception("no real dataset passed for QCD estimation")
+
+        self.sideband_regions = None
+        if self.do_sideband:
+            self.sideband_regions = {key: self.config.regions.get(key)
+                for key in ["signal", "background"]}
 
         # obtain the list of systematics that apply to the normalization only if this is done
         self.norm_syst_list = []
@@ -721,6 +727,15 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         "shape_region", "qcd_category_name", "qcd_sym_shape", "bin_opt_version",
                         "qcd_signal_region_wp"])
 
+        if self.do_sideband:
+            reqs["sideband"] = {
+                key: self.req(self, region_name=region.name, blinded=False, hide_data=False,
+                    do_sideband=False, stack=True, save_root=True, save_pdf=True, save_yields=False,
+                    remove_horns=False,_exclude=["feature_tags", "shape_region",
+                    "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp"])
+                for key, region in self.sideband_regions.items()
+            }
+
         return reqs
 
     def get_output_postfix(self, key="pdf"):
@@ -733,6 +748,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             postfix += "__pg_" + self.process_group_name
         if self.do_qcd:
             postfix += "__qcd"
+        if self.do_sideband:
+            postfix += "__sideband"
         if self.hide_data:
             postfix += "__nodata"
         elif self.blinded and key not in ("root", "yields"):
@@ -892,6 +909,24 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             return qcd_hist
 
+        # helper to extract data and bkg histos in sideband and signal regions
+        def get_sideband(region, files, bin_limit=0.):
+            d_hist = files[region].Get("histograms/" + self.data_names[0]).Clone(
+                randomize("bkg_" + region))
+            if not d_hist:
+                raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
+                    self.data_names[0], region, files[region]))
+
+            b_hist = None
+            for b_name in self.background_names:
+                if not b_hist:
+                    b_hist = files[region].Get("histograms/" + b_name).Clone(
+                        randomize("bkg_" + region))
+                else:
+                    b_hist.Add(files[region].Get("histograms/" + b_name))
+
+            return d_hist, b_hist
+
         def get_integral_and_error(hist):
             error = c_double(0.)
             integral = hist.IntegralAndError(0, hist.GetNbinsX() + 1, error)
@@ -993,6 +1028,63 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             self.setup_background_hist(qcd_hist, ROOT.kYellow)
             background_hists.append(qcd_hist)
             all_hists.append(qcd_hist)
+
+        # sideband files
+        sideband_files = None
+        if self.do_sideband:
+            sideband_files = {}
+            for key, region in self.sideband_regions.items():
+                my_feature = feature.name
+                sideband_files[key] = ROOT.TFile.Open(
+                    self.input()["sideband"][key]["root"].targets[my_feature].path)
+
+            # do the qcd extrapolation
+            data_hist, bkg_hist_background_region = get_sideband("background", sideband_files)
+            _, bkg_hist_signal_region = get_sideband("signal", sideband_files)
+            n_bkg_background, n_bkg_background_error, _ = get_integral_and_error(
+                bkg_hist_background_region)
+            n_bkg_signal, n_bkg_signal_error, _ = get_integral_and_error(
+                bkg_hist_signal_region)
+
+            bkg_hist = data_hist.Clone(randomize("bkg"))
+            n_bkg_background_rel_error = n_bkg_background_error / n_bkg_background
+            n_bkg_signal_rel_error = n_bkg_signal_error / n_bkg_signal
+            new_errors_sq = []
+            for ib in range(1, bkg_hist.GetNbinsX() + 1):
+                if bkg_hist.GetBinContent(ib) > 0:
+                    bin_rel_error = bkg_hist.GetBinError(ib) / bkg_hist.GetBinContent(ib)
+                else:
+                    bin_rel_error = 0
+                new_errors_sq.append(bin_rel_error * bin_rel_error
+                    + n_bkg_background_rel_error * n_bkg_background_rel_error
+                    + n_bkg_signal_rel_error * n_bkg_signal_rel_error)
+            bkg_hist.Scale(n_bkg_signal / n_bkg_background)
+            # fix errors
+            for ib in range(1, bkg_hist.GetNbinsX() + 1):
+                bkg_hist.SetBinError(ib, bkg_hist.GetBinContent(ib)
+                    * math.sqrt(new_errors_sq[ib - 1]))
+
+            # store and style
+            yield_error = c_double(0.)
+            bkg_hist.cmt_yield = bkg_hist.IntegralAndError(
+                0, bkg_hist.GetNbinsX() + 1, yield_error)
+            bkg_hist.cmt_yield_error = yield_error.value
+            bkg_hist.cmt_bin_yield = []
+            bkg_hist.cmt_bin_yield_error = []
+            for ibin in range(1, bkg_hist.GetNbinsX() + 1):
+                bkg_hist.cmt_bin_yield.append(bkg_hist.GetBinContent(ibin))
+                bkg_hist.cmt_bin_yield_error.append(bkg_hist.GetBinError(ibin))
+            bkg_hist.cmt_scale = 1.
+            bkg_hist.cmt_process_name = "background"
+            bkg_hist.process_label = "Background"
+            bkg_hist.SetTitle("Background")
+            try:
+                bkg_color = ROOT.TColor.GetColor(*self.config.processes.get("background").color)
+            except:  # background process not defined in config
+                bkg_color = ROOT.kRed
+            self.setup_background_hist(bkg_hist, bkg_color)
+            background_hists = [bkg_hist]
+            all_hists.append(bkg_hist)
 
         if not self.hide_data:
             all_hists += data_hists
@@ -1322,6 +1414,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     self.histos["shape"]["%s_%s" % (syst, d)] = []
                 for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
                     if syst != "central" and process.isData:
+                        continue
+                    if self.do_sideband and not process.isData and not process.isSignal:
                         continue
                     process_histo = ROOT.TH1D(randomize(process.name), hist_title, *binning_args)
                     process_histo.process_label = str(process.label)

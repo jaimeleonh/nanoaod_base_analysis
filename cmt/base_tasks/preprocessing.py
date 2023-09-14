@@ -293,15 +293,11 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
 
         # create RDataFrame
         inp = self.get_input()
-        df = None
-        try:
-            if len(inp[0]) == 1:
-                return ROOT.RDataFrame(self.tree_name, self.get_path(inp))
-        except:
-            if len(inp) == 1:
-                return ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        if not self.dataset.friend_datasets:
+            df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+
         # friend tree
-        if not df:
+        else:
             tchain = ROOT.TChain()
             for elem in self.get_path(inp):
                 tchain.Add("{}/{}".format(elem, self.tree_name))
@@ -405,21 +401,17 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         ROOT = import_root()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
-        # prepare inputs and outputs
+        # create RDataFrame
         inp = self.get_input()
-        df = None
-        try:
-            if len(inp[0]) == 1:
-                df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
-        except:
-            if len(inp) == 1:
-                df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        if not self.dataset.friend_datasets:
+            df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+
         # friend tree
-        if not df:
-            tchain = ROOT.TChain("t")
+        else:
+            tchain = ROOT.TChain()
             for elem in self.get_path(inp):
                 tchain.Add("{}/{}".format(elem, self.tree_name))
-            friend_tchain = ROOT.TChain("t")
+            friend_tchain = ROOT.TChain()
             for elem in self.get_path(inp, 1):
                 friend_tchain.Add("{}/{}".format(elem, self.tree_name))
             tchain.AddFriend(friend_tchain, "friend")
@@ -748,16 +740,13 @@ class Categorization(PreprocessRDF):
         # tf = ROOT.TFile.Open(inp)
         try:
             if self.skip_preprocess:
+                # create RDataFrame
                 inp = self.get_input()
-                df = None
-                try:
-                    if len(inp[0]) == 1:
-                        df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
-                except:
-                    if len(inp) == 1:
-                        df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+                if not self.dataset.friend_datasets:
+                    df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+
                 # friend tree
-                if not df:
+                else:
                     tchain = ROOT.TChain()
                     for elem in self.get_path(inp):
                         tchain.Add("{}/{}".format(elem, self.tree_name))
