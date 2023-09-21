@@ -503,7 +503,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         number of events
     :type avoid_normalization: bool
 
-    :param blinded: (NOT YET IMPLEMENTED) whether to blind data in specified regions
+    :param blinded: whether to blind data in specified regions. The blinding ranges are specified
+        using the `blinded_range` parameter in the Feature definition. This parameter can include a
+        list ([initial, final]) or a list of lists ([[init_1, fin_1], [init_2, fin_2], ...])
     :type blinded: bool
 
     :param save_png: whether to save plots in png
@@ -1137,6 +1139,27 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             draw_hists = [background_stack] + signal_hists[::-1]
             if not self.hide_data:
+                # blinding
+                blinded_range = feature.get_aux("blinded_range", None)
+                if blinded_range:
+                    for hist in data_hists:
+                        for ib in range(1, hist.GetNbinsX() + 1):
+                            blind = False
+                            if isinstance(blinded_range[0], list):
+                                for iblinded_range in blinded_range:
+                                    if (hist.GetBinCenter(ib) >= iblinded_range[0] and
+                                            hist.GetBinCenter(ib) <= iblinded_range[1]):
+                                        blind = True
+                                        break
+                            else:
+                                if (hist.GetBinCenter(ib) >= blinded_range[0] and
+                                        hist.GetBinCenter(ib) <= blinded_range[1]):
+                                    blind = True
+
+                            if blind:
+                                hist.SetBinContent(ib, -999)
+                                hist.SetBinError(ib, 0)
+
                 draw_hists.extend(data_hists[::-1])
                 for hist in data_hists:
                     if not data_histo:
