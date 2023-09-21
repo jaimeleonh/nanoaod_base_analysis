@@ -1141,7 +1141,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if not self.hide_data:
                 # blinding
                 blinded_range = feature.get_aux("blinded_range", None)
-                if blinded_range:
+                if blinded_range and self.blinded:
                     for hist in data_hists:
                         for ib in range(1, hist.GetNbinsX() + 1):
                             blind = False
@@ -1218,7 +1218,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             dummy_hist.SetMaximum(100 * maximum)
             dummy_hist.SetMinimum(0.0011)
         else:
-            dummy_hist.SetMaximum(1.25 * maximum)
+            dummy_hist.SetMaximum(1.35 * maximum)
             dummy_hist.SetMinimum(0.001)
 
         inner_text=[self.category.label + " category"]
@@ -1228,7 +1228,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             else:
                 inner_text.append(self.region.label)
 
-        if self.normalize_signals and signal_hists:
+        if self.normalize_signals and self.stack and signal_hists:
             scale_text = []
             for hist in signal_hists:
                 scale = hist.cmt_scale
