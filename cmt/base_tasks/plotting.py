@@ -131,10 +131,23 @@ class BasePlotTask(ConfigTaskWithCategory):
             raise ValueError("No features were included. Did you spell them correctly?")
         return features
 
+    def round(self, number):
+        if number - round(number) < 0.0001:
+            return number
+        if number > 10.:
+            return round(number)
+        elif number > 1.:
+            return round(number, 1)
+        i = 1
+        while True:
+            if number > (1 / (10 ** i)):
+                return round(number, i + 1)
+            i += 1
+
     def get_binning(self, feature):
         if isinstance(feature.binning, tuple):
             y_axis_adendum = (" / %s %s" % (
-                (feature.binning[2] - feature.binning[1]) / feature.binning[0],
+                self.round((feature.binning[2] - feature.binning[1]) / feature.binning[0]),
                     feature.get_aux("units")) if feature.get_aux("units") else "")
             binning_args = tuple(feature.binning)
         else:
@@ -482,7 +495,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     :param hide_data: whether to show (False) or hide (True) the data histograms
     :type hide_data: bool
 
-    :param normalize_signals: (NOT YET IMPLEMENTED) whether to normalize signals to the
+    :param normalize_signals: whether to normalize signals to the
         total background yield (True) or not (False)
     :type normalize_signals: bool
 
@@ -640,7 +653,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 raise Exception("no real dataset passed for QCD estimation")
 
         self.sideband_regions = None
-        if self.do_sideband:
+        if self.do_sideband:  # Several fixes may be needed later for this
+            assert self.region.name == "signal"
             self.sideband_regions = {key: self.config.regions.get(key)
                 for key in ["signal", "background"]}
 
@@ -730,7 +744,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.do_sideband:
             reqs["sideband"] = {
                 key: self.req(self, region_name=region.name, blinded=False, hide_data=False,
-                    do_sideband=False, stack=True, save_root=True, save_pdf=True, save_yields=False,
+                    do_sideband=False, stack=True, save_root=True, save_pdf=False, save_yields=False,
                     remove_horns=False,_exclude=["feature_tags", "shape_region",
                     "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp"])
                 for key, region in self.sideband_regions.items()
@@ -935,6 +949,11 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             # compatible = True if integral - error <= 0 else False
             return integral, error, compatible
 
+        def get_ratio(num, den):
+            if den == 0:
+                return 0
+            return num / den
+
         background_hists = self.histos["background"]
         signal_hists = self.histos["signal"]
         data_hists = self.histos["data"]
@@ -1047,8 +1066,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 bkg_hist_signal_region)
 
             bkg_hist = data_hist.Clone(randomize("bkg"))
-            n_bkg_background_rel_error = n_bkg_background_error / n_bkg_background
-            n_bkg_signal_rel_error = n_bkg_signal_error / n_bkg_signal
+            n_bkg_background_rel_error = get_ratio(n_bkg_background_error, n_bkg_background)
+            n_bkg_signal_rel_error = get_ratio(n_bkg_signal_error, n_bkg_signal)
             new_errors_sq = []
             for ib in range(1, bkg_hist.GetNbinsX() + 1):
                 if bkg_hist.GetBinContent(ib) > 0:
@@ -1107,6 +1126,15 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 else:
                     bkg_histo.Add(hist.Clone())
             background_stack.hist_type = "background"
+
+            # Normalize signal histograms to background sum
+            if self.normalize_signals and bkg_histo:
+                for hist in signal_hists:
+                    signal_yield = hist.cmt_yield
+                    scale = (bkg_histo.Integral() / signal_yield if signal_yield != 0 else 1.)
+                    hist.Scale(scale)
+                    hist.cmt_scale = scale
+
             draw_hists = [background_stack] + signal_hists[::-1]
             if not self.hide_data:
                 draw_hists.extend(data_hists[::-1])
@@ -1176,6 +1204,20 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 inner_text += self.region.label
             else:
                 inner_text.append(self.region.label)
+
+        if self.normalize_signals and signal_hists:
+            scale_text = []
+            for hist in signal_hists:
+                scale = hist.cmt_scale
+                if scale != 1.:
+                    if scale < 100:
+                        scale = "{:.1f}".format(scale)
+                    elif scale < 10000:
+                        scale = "{}".format(int(round(scale)))
+                    else:
+                        scale = "{:.2e}".format(scale).replace("+0", "").replace("+", "")
+                    scale_text.append("{} x{}".format(hist.cmt_process_name, scale))
+            inner_text.append("#scale[0.75]{{{}}}".format(",  ".join(scale_text)))
 
         if maximum > 1e4 and not self.log_y:
             upper_left_offset = 0.05
