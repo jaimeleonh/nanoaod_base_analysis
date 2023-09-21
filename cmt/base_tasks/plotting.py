@@ -1216,7 +1216,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         scale = "{}".format(int(round(scale)))
                     else:
                         scale = "{:.2e}".format(scale).replace("+0", "").replace("+", "")
-                    scale_text.append("{} x{}".format(hist.cmt_process_name, scale))
+                    scale_text.append("{} x{}".format(hist.process_label, scale))
             inner_text.append("#scale[0.75]{{{}}}".format(",  ".join(scale_text)))
 
         if maximum > 1e4 and not self.log_y:
