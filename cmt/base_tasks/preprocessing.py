@@ -756,11 +756,12 @@ class Categorization(PreprocessRDF):
                     tchain.AddFriend(friend_tchain, "friend")
                     df = ROOT.RDataFrame(tchain)
             else:
-                tf = ROOT.TFile.Open(self.input().path)
-                tree = tf.Get(self.tree_name)
-                if tree.GetEntries() > 0:
-                    raise ReferenceError
-                tf.Close()
+                # commenting this for now, need to better understand its purpose
+                # tf = ROOT.TFile.Open(self.input().path)
+                # tree = tf.Get(self.tree_name)
+                # if tree.GetEntries() > 0:
+                #     raise ReferenceError
+                # tf.Close()
                 df = ROOT.RDataFrame(self.tree_name, inp)
 
             selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
