@@ -268,17 +268,9 @@ class DatasetWrapperTask(ConfigTask):
         dataset_names = list(self.dataset_names)
         if not dataset_names and self.process_names:
             for dataset in self.config.datasets:
-                process = dataset.process
-                if process.name in self.process_names:
+                if any([self.config.is_process_from_dataset(process, dataset=dataset)
+                        for process in self.process_names]):
                     dataset_names.append(dataset.name)
-                elif process.parent_process:
-                    while True:
-                        process = self.config.processes.get(process.parent_process)
-                        if process.name in self.process_names:
-                            dataset_names.append(dataset.name)
-                            break
-                        if not process.parent_process:
-                            break
 
         if not dataset_names and not self.dataset_tags:
             dataset_names = self.get_default_dataset_names()

@@ -717,10 +717,8 @@ class Categorization(PreprocessRDF):
             return InputData.req(self, file_index=self.branch)
 
     def output(self):
-        return {
-            "data": self.local_target(f"data_{self.addendum}{self.branch}.root"),
-            # "stats": self.local_target("data_%s.json" % self.branch)
-        }
+        return self.local_target(f"data_{self.addendum}{self.branch}.root")
+
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -756,12 +754,7 @@ class Categorization(PreprocessRDF):
                     tchain.AddFriend(friend_tchain, "friend")
                     df = ROOT.RDataFrame(tchain)
             else:
-                tf = ROOT.TFile.Open(self.input().path)
-                tree = tf.Get(self.tree_name)
-                if tree.GetEntries() > 0:
-                    raise ReferenceError
-                tf.Close()
-                df = ROOT.RDataFrame(self.tree_name, inp)
+                df = ROOT.RDataFrame(self.tree_name, self.input().path)
 
             selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
                 self.systematic, self.systematic_direction)
@@ -781,16 +774,16 @@ class Categorization(PreprocessRDF):
             for branch_name in branches:
                 branch_list.push_back(branch_name)
             filtered_df = df.Define("selection", selection).Filter("selection")
-            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["data"].path), branch_list)
+            filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
 
         except ReferenceError:  # empty ntuple
             tf.Close()
             inp = self.input().path
-            copy(inp, outp["data"].path)
+            copy(inp, outp.path)
         except AttributeError:  # empty input file
             tf.Close()
             inp = self.input().path
-            copy(inp, outp["data"].path)
+            copy(inp, outp.path)
         #copy(self.input()["stats"].path, outp["stats"].path)
 
 
@@ -877,10 +870,7 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                 branches=((start_leaf, end_leaf),), _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
-        if not self.from_preprocess:
-            return [inp["data"] for inp in inputs["collection"].targets.values()]
-        else:
-            return [inp for inp in inputs["collection"].targets.values()]
+        return [inp for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
         addendum = PreprocessRDF.get_addendum(self)

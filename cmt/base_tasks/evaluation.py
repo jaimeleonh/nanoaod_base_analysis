@@ -13,10 +13,11 @@ from collections import OrderedDict
 import law
 import luigi
 
-from hmc.tasks.base import ConfigTaskWithCategory, DatasetTaskWithCategory, HTCondorWorkflow
-from hmc.tasks.preprocessing import MergeShards, MergeCategorization
-from hmc.tasks.training import MultiSeedTrainingTask, Training
-from hmc.util import evaluate_model_on_tree
+from cmt.base_tasks.base import ConfigTaskWithCategory, DatasetTaskWithCategory, HTCondorWorkflow
+from cmt.base_tasks.preprocessing import MergeCategorization
+from cmt.base_tasks.shards import MergeShards
+from cmt.base_tasks.training import MultiSeedTrainingTask, Training
+from cmt.util import evaluate_model_on_tree
 
 
 class EvaluateTraining(ConfigTaskWithCategory, MultiSeedTrainingTask):

@@ -15,7 +15,7 @@ import tensorflow as tf
 import tabulate
 import lbn
 
-from hmc.training.losses import (
+from cmt.training.losses import (
     cross_entropy_t, symmetric_cross_entropy_t, grouped_cross_entropy_t,
     symmetric_grouped_cross_entropy_t,
 )
@@ -63,7 +63,7 @@ def create_model(arch, features, process_names, loss_name, process_group_ids=Non
     reg_weights = []
 
     # create the model
-    model = tf.keras.Sequential(name="hmc")
+    model = tf.keras.Sequential(name="cmt")
 
     # input layer for properly defining input name, shape and dtypes
     model.add(tf.keras.layers.InputLayer(input_shape=(len(features),), dtype=tf.float32,
@@ -128,7 +128,7 @@ def create_model(arch, features, process_names, loss_name, process_group_ids=Non
         all_tags = set(sum((list(feature.tags) for feature in features), []))
         features_ext = [
             feature for feature in features
-            if not feature.has_tag(["lbn_pt", "lbn_eta", "lbn_phi", "lbn_e", "lbn_aux*"], mode=any)
+            if not feature.has_tag(["lbn_pt", "lbn_eta", "lbn_phi", "lbn_e", "lbn_aux*"])
         ]
         features_vec = []
         n_aux = len([tag for tag in all_tags if tag.startswith("lbn_aux")])
@@ -146,7 +146,7 @@ def create_model(arch, features, process_names, loss_name, process_group_ids=Non
                 features_vec[-1][1] = feature
             elif feature.has_tag("lbn_phi"):
                 features_vec[-1][2] = feature
-            elif feature.has_tag("lbn_e"):
+            elif feature.has_tag("lbn_e") or feature.has_tag("lbn_m"): # FIXME
                 features_vec[-1][3] = feature
             elif feature.has_tag("lbn_aux*"):
                 for i in range(n_aux):
@@ -197,8 +197,12 @@ def create_model(arch, features, process_names, loss_name, process_group_ids=Non
         raise Exception("cannot parse architecture string '{}'".format(arch))
 
     # output layer
-    model.add(tf.keras.layers.Dense(len(process_names), activation="softmax", use_bias=True,
-        kernel_initializer="glorot_uniform", bias_initializer="zeros", name="output"))
+    if len(process_names) > 2:
+        model.add(tf.keras.layers.Dense(len(process_names), activation="softmax", use_bias=True,
+            kernel_initializer="glorot_uniform", bias_initializer="zeros", name="output"))
+    else:
+        model.add(tf.keras.layers.Dense(1, activation="sigmoid", use_bias=True,
+            kernel_initializer="glorot_uniform", bias_initializer="zeros", name="output"))
 
     # prepare arguments for loss functions for better tracing
     class_weights_t = None if class_weights is None else tf.constant(class_weights)

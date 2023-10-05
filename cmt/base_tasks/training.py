@@ -14,7 +14,7 @@ import law
 import luigi
 
 from cmt.base_tasks.base import Task, ConfigTask, HTCondorWorkflow
-from cmt.base_tasks.preprocessing import MergeShards
+from cmt.base_tasks.shards import MergeShards
 from cmt.util import parse_workflow_file
 
 
@@ -151,7 +151,7 @@ class TrainingTask(ConfigTask):
     def get_accuracy_weights(cls, processes):
         # obtain the weights for calculating the mean accuracy
         # strategy: combined signals should have the same weight as combined backgrounds
-        signal_flags = [process.x("is_signal", False) for process in processes]
+        signal_flags = [process.isSignal for process in processes]
         n_signals = sum(signal_flags)
         n_backgrounds = len(processes) - n_signals
         weights = [
@@ -193,12 +193,12 @@ class TrainingTask(ConfigTask):
 
                     # get objects
                     config = configs[config_name]
-                    training_config = config.training[training_config_name]
-                    process = config.datasets.get(dataset_name).processes.get_first()
+                    training_config = config.process_training_names[training_config_name]
+                    process = config.datasets.get(dataset_name).process
 
                     # get the corresponding training process and the label index
-                    for _label, _training_process in enumerate(training_config.processes):
-                        if _training_process == process or _training_process.has_process(process):
+                    for _label, _training_process in enumerate(self.training_processes):
+                        if config.is_process_from_dataset(_training_process.name, dataset_name):
                             training_process = _training_process
                             label = _label
                             break
@@ -301,8 +301,17 @@ class MultiConfigTrainingTask(TrainingTask):
         for name in sorted(self.data_config_names):
             if name in self.training_data_configs:
                 continue
-            cmt = __import__("cmt.config." + name)
-            self.training_data_configs[name] = getattr(cmt.config, name).config
+            try:
+                config = __import__("config." + name)
+                self.training_data_configs[name] = getattr(config, name).config
+            except ModuleNotFoundError:
+                config = __import__("cmt.config." + name)
+                self.training_data_configs[name] = getattr(config, name).config
+
+        self.training_processes = [
+            self.config.processes.get(process)
+            for process in self.config.process_training_names[self.training_config_name]["processes"]
+        ]
 
     def store_parts(self):
         parts = super(MultiConfigTrainingTask, self).store_parts()
@@ -366,7 +375,8 @@ class Training(MultiConfigTrainingTask):
                             category_name=category.name, _prefer_cli=["version"]))
                         # for dataset in config.training[self.training_config_name].datasets
                         for dataset in config.datasets
-                        if dataset.process.name in config[self.training_config_name]
+                        if any([self.config.is_process_from_dataset(process.name, dataset=dataset)
+                            for process in self.training_processes])
                     ] for config in self.training_data_configs.values()), flatten_tuple=False)
                 )
                 for category in self.expand_training_category()
@@ -420,8 +430,8 @@ class Training(MultiConfigTrainingTask):
         data_specs = self.get_data_specs(inputs["shards"], configs=self.training_data_configs)
 
         # get accuracy and class weights
-        acc_weights = self.get_accuracy_weights(self.training_config.processes)
-        class_weights = self.get_class_weights(self.training_config.processes)
+        acc_weights = self.get_accuracy_weights(self.training_processes)
+        class_weights = self.get_class_weights(self.training_processes)
 
         # when training with event weights, exactly one feature must be tagged training_event_weight
         ew_feature = None
@@ -440,7 +450,7 @@ class Training(MultiConfigTrainingTask):
         # this requires to rebalance vbf and resolved events so that their effect is equal
         # (otherwise, this would favor resolved events as they are way more frequent)
         event_weight_fn = None
-        if self.training_category.x("vr_weights", False):
+        if self.training_category.get_aux("vr_weights", False):
             print("training in VR category with balancing weights")
             import tensorflow as tf
 
@@ -763,4 +773,4 @@ class ConvertModelToGraph(MultiSeedTrainingTask):
 
 
 # trailing imports
-from cmt.tasks.evaluation import FeatureRanking
+from cmt.base_tasks.evaluation import FeatureRanking

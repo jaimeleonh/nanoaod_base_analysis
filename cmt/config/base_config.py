@@ -46,8 +46,10 @@ class Config():
         }
 
         process_training_names = {
-            "default": [
-            ]
+            "default": DotDict(
+                processes=[],
+                process_group_ids=()
+            )
         }
 
         return ObjectCollection(processes), process_group_names, process_training_names
@@ -465,3 +467,19 @@ class Config():
             except ValueError:
                 weights.append(weight)
         return "*".join(weights)
+
+    def is_process_from_dataset(self, process_name, dataset_name=None, dataset=None):
+        assert dataset_name or dataset
+        assert not (dataset_name and dataset)
+
+        if not dataset:
+            dataset = self.datasets.get(dataset_name)
+
+        process = dataset.process
+        while True:
+            if process.name == process_name:
+                return True
+            elif process.parent_process:
+                process = self.processes.get(process.parent_process)
+            else:
+                return False

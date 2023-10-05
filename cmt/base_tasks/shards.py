@@ -10,25 +10,39 @@ import os
 import law
 import luigi
 from collections import OrderedDict
-import contextlib
+
+try:
+    from contextlib import nested
+except ImportError:
+    from contextlib import ExitStack, contextmanager
 
 from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.util import iter_tree
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, InputData,
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, InputData,
     ConfigTaskWithCategory
 )
-from cmt.base_tasks.preprocessing import PreprocessRDF, DatasetCategoryWrapperTask
+from cmt.base_tasks.preprocessing import PreprocessRDF, Categorization, DatasetCategoryWrapperTask
 
 
 split_names = ["train", "valid"]
 
+@contextmanager
+def nested(*contexts):
+    with ExitStack() as stack:
+        for ctx in contexts:
+            stack.enter_context(ctx)
+        yield contexts
 
-class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):
+
+
+class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
-            "base category with the initial selection, default: base")
+        "base category with the initial selection, default: base")
+    from_categorization = luigi.BoolParameter(default=False, description="whether to use as input "
+        "Categorization, default: False")
     # regions not supported
     region_name = None
 
@@ -50,10 +64,15 @@ class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow)
             os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
 
     def workflow_requires(self):
-        return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
+        if not self.from_categorization:
+            return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
+        return {"data": Categorization.vreq(self, category_name=self.base_category_name)}
 
     def requires(self):
-        return PreprocessRDF.vreq(self, category_name=self.base_category_name,
+        if not self.from_categorization:
+            return PreprocessRDF.vreq(self, category_name=self.base_category_name,
+                branch=self.branch)
+        return Categorization.vreq(self, category_name=self.base_category_name,
             branch=self.branch)
 
     def output(self):
@@ -108,7 +127,7 @@ class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow)
         # when the input file is broken, create empty outputs
         broken = not bool(tree)
         if broken:
-            with contextlib.nested(*writers):
+            with nested(*writers):
                 pass
             stats = {"counts": {name: 0 for name in split_names}}
             outputs["stats"].dump(stats, indent=4, formatter="json")
@@ -138,7 +157,7 @@ class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow)
                         if num_par == 0:
                             elem = elem[:first_par - len(".at")] + "[" +  elem[first_par + 1:]
                             elem = elem[:(i - len(".at"))] + "]" + elem[i - len(".at") + 1:]
-                        break
+                            break
             expressions[ielem] = elem
 
         defaults = [feature.get_aux("default", -999.) for feature in features]
@@ -146,13 +165,15 @@ class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow)
         counts = [0] * len(split_names)
         progress = self.create_progress_callback(n_total)
         with self.publish_step("converting ...", runtime=True):
-            with contextlib.nested(*writers):
+            with nested(*writers):
                 n_converted = 0
                 for idx, values in iter_tree(tree, expressions, defaults, selection=selection,
                         missing_values=missing_values, yield_index=True):
                     if not np.isfinite(values).all():
                         raise Exception("not all values are finite in entry {}: {}".format(
                             idx, values))
+                    # for exp, value in zip(expressions, values):
+                        # print(exp, value)
                     example = tf_example(values)
 
                     # add the process id
@@ -221,11 +242,10 @@ class MergeShards(DatasetTaskWithCategory, law.tasks.ForestMerge):
     default_wlcg_fs = "wlcg_fs_shards"
 
     def merge_workflow_requires(self):
-        return CreateShards.req(self, _prefer_cli=["workflow"])
+        return CreateShards.vreq(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return CreateShards.req(self, branch=-1, workflow="local", start_branch=start_leaf,
-            end_branch=end_leaf)
+        return CreateShards.vreq(self, branch=-1, workflow="local", branches=((start_leaf, end_leaf),),)
 
     def trace_merge_inputs(self, inputs):
         return [inp[self.split] for inp in inputs["collection"].targets.values()]

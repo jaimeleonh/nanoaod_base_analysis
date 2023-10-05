@@ -17,13 +17,13 @@ import tabulate
 import six
 from six.moves import zip
 
-from hmc.training.models import create_model, LBNLayer
-from hmc.training.util import (
+from cmt.training.models import create_model, LBNLayer
+from cmt.training.util import (
     MultiDataset, EarlyStopper, ExampleWeightScaler, print_tensorflow_info, combine_models, npy,
     calculate_confusion_matrix_t, calculate_accuracies_t, calculate_roc_curves,
     create_tensorboard_callbacks, shuffle_feature_t,
 )
-from hmc.util import colored
+from cmt.util import colored
 
 
 def train(data_spec_train, data_spec_valid, features, arch, loss_name, learning_rate, batch_size,
@@ -96,12 +96,26 @@ def train(data_spec_train, data_spec_valid, features, arch, loss_name, learning_
                 observer_feature_indices.append(len(observer_spec) - 1)
 
     # load the datasets
-    dataset_train = MultiDataset.from_specs(data_spec_train, feature_spec,
+
+    dataset_train, train_events = MultiDataset.from_specs(data_spec_train, feature_spec,
         observer_spec=observer_spec, shuffle=(10, 40960), repeat=-1, batch_size=batch_size,
         mixed=True, seed=seed, n_threads=n_threads)
-    dataset_valid = MultiDataset.from_specs(data_spec_valid, feature_spec,
+
+    dataset_valid, valid_events = MultiDataset.from_specs(data_spec_valid, feature_spec,
         observer_spec=observer_spec, shuffle=False, repeat=1, batch_size=batch_size, mixed=False,
         seed=seed, n_threads=n_threads)
+
+    print("----------------")
+    print("Training events")
+    for elem in train_events:
+        print("%s: %s" % (elem, train_events[elem]))
+    print("----------------")
+
+    print("----------------")
+    print("Validation events")
+    for elem in valid_events:
+        print("%s: %s" % (elem, valid_events[elem]))
+    print("----------------")
 
     # helpers to add tensors and metrics to tensorboard for monitoring
     tb_log_dir = lambda kind: tensorboard_dir and os.path.join(tensorboard_dir, kind)
@@ -539,15 +553,20 @@ def log_performance(process_names, step_name, step, labels, predictions, losses,
     )
 
     # accuracy string
-    m = tf.cast(calculate_confusion_matrix_t(labels, predictions, norm=False), tf.float32)
-    m_normed = m / tf.reduce_sum(m, axis=1, keepdims=True)
-    accs = tf.linalg.tensor_diag_part(m_normed)
-    acc_mean = tf.reduce_mean(accs * acc_weights)
-    accs_str = " ".join("{}:{:05.3f}".format(*tpl) for tpl in zip(process_names, accs))
+    if len(process_names) > 2:
+        m = tf.cast(calculate_confusion_matrix_t(labels, predictions, norm=False), tf.float32)
+        m_normed = m / tf.reduce_sum(m, axis=1, keepdims=True)
+        accs = tf.linalg.tensor_diag_part(m_normed)
+        acc_mean = tf.reduce_mean(accs * acc_weights)
+        accs_str = "(%s)" % " ".join("{}:{:05.3f}".format(*tpl) for tpl in zip(process_names, accs))
+    else:
+        accs = calculate_accuracies_t(labels, predictions)
+        acc_mean = tf.reduce_mean(accs)
+        accs_str = ""
 
     # group accuracies
     accs_grouped = None
-    if process_group_ids:
+    if process_group_ids and len(process_names) > 2:
         m_grouped_v = tf.concat([
             tf.reduce_sum(tf.gather(m, ids, axis=1), axis=1, keepdims=True)
             for _, ids in process_group_ids
@@ -561,7 +580,7 @@ def log_performance(process_names, step_name, step, labels, predictions, losses,
         accs_str += " " + " ".join("g{}:{:05.3f}".format(*tpl) for tpl in enumerate(accs_grouped))
 
     # create the message
-    msg = "{}: step {:05d}, {}, acc: {:07.5f} ({})".format(
+    msg = "{}: step {:05d}, {}, acc: {:07.5f} {}".format(
         step_name, step, loss_str, acc_mean, accs_str)
     msg = colored(msg, color)
 
