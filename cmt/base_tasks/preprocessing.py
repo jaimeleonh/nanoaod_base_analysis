@@ -762,7 +762,10 @@ class Categorization(PreprocessRDF):
             if dataset_selection and dataset_selection != "1":
                 selection = jrs(dataset_selection, selection, op="and")
 
-            branches = list(df.GetColumnNames())
+            try:
+                branches = list(df.GetColumnNames())
+            except:
+                raise ReferenceError
             feature_modules = self.get_feature_modules(self.feature_modules_file)
 
             if len(feature_modules) > 0:
@@ -777,11 +780,9 @@ class Categorization(PreprocessRDF):
             filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
 
         except ReferenceError:  # empty ntuple
-            tf.Close()
             inp = self.input().path
             copy(inp, outp.path)
         except AttributeError:  # empty input file
-            tf.Close()
             inp = self.input().path
             copy(inp, outp.path)
         #copy(self.input()["stats"].path, outp["stats"].path)
