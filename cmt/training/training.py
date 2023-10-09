@@ -317,7 +317,7 @@ def train(data_spec_train, data_spec_valid, features, arch, loss_name, learning_
     if model_metrics_path:
         with open(model_metrics_path, "w") as f:
             json.dump({
-                "keys": best_model_metrics.keys(),
+                "keys": [elem for elem in best_model_metrics.keys()],
                 "metrics": best_model_metrics,
             }, f, indent=4)
 

@@ -497,11 +497,11 @@ def calculate_confusion_matrix_t(labels, predictions, norm=True):
 
 
 def calculate_accuracies_t(labels, predictions):
-    # print(labels, predictions)
     if labels.shape[1] == 1:
         den = labels.shape[0]
-        num = tf.math.multiply(tf.math.abs(tf.math.subtract(labels, predictions)), 2)
-        num = tf.cast(num, tf.int32)
+        # num = tf.math.multiply(tf.math.abs(tf.math.subtract(labels, predictions)), 2)
+        num = tf.math.abs(tf.math.subtract(labels, predictions))
+        # num = tf.cast(num, tf.int32)
         num = tf.reduce_sum(num)
         return tf.constant([float(den - num) / den])
     # accuracies are normalized diagonal entries of the confusion matrix
