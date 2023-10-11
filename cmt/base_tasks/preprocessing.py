@@ -638,13 +638,16 @@ class Categorization(PreprocessRDF):
                 tf.Close()
                 copy(inp, outp["data"].path)
 
-        except ReferenceError:  # empty ntuple
-            tf.Close()
-            copy(inp, outp["data"].path)
-        except AttributeError:  # empty input file
-            tf.Close()
-            copy(inp, outp["data"].path)
-        #copy(self.input()["stats"].path, outp["stats"].path)
+        # except ReferenceError:  # empty ntuple
+        #     tf.Close()
+        #     copy(inp, outp["data"].path)
+        # except AttributeError:  # empty input file
+        #     tf.Close()
+        #     copy(inp, outp["data"].path)
+        # #copy(self.input()["stats"].path, outp["stats"].path)
+
+        except KeyboardInterrupt:
+            print("### DEBUG Error")    
 
 
 class CategorizationWrapper(DatasetCategoryWrapperTask):
