@@ -13,7 +13,7 @@ import six
 import law
 import luigi
 
-from cmt.base_tasks.base import Task, ConfigTask, HTCondorWorkflow
+from cmt.base_tasks.base import Task, ConfigTask, HTCondorWorkflow, SGEWorkflow
 from cmt.base_tasks.shards import MergeShards
 from cmt.util import parse_workflow_file
 
@@ -50,7 +50,7 @@ class TrainingTask(ConfigTask):
     training_id = luigi.IntParameter(default=law.NO_INT, description="when given, overwrite "
         "training parameters from the training with this branch in the training_workflow_file, "
         "default: empty")
-    training_workflow_file = luigi.Parameter(default="$CMT_BASE/cmt/config/hyperopt.yml",
+    training_workflow_file = luigi.Parameter(default="config/hyperopt.yml",
         significant=False, description="file containing training workflow definitions, default: "
         "$CMT_BASE/cmt/config/hyperopt.yml")
 
@@ -69,7 +69,7 @@ class TrainingTask(ConfigTask):
         if params["training_id"] == law.NO_INT:
             return params
 
-        branch_map = parse_workflow_file(params["training_workflow_file"])[1]
+        branch_map = parse_workflow_file(self.retrieve_file(params["training_workflow_file"]))[1]
 
         param_names = cls.get_param_names()
         for name, value in branch_map[params["training_id"]].items():
@@ -560,7 +560,7 @@ class Training(MultiConfigTrainingTask):
         return False
 
 
-class TrainingWorkflowBase(Task, law.LocalWorkflow, HTCondorWorkflow):
+class TrainingWorkflowBase(Task, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
 
     training_workflow_file = TrainingTask.training_workflow_file
 
@@ -570,7 +570,8 @@ class TrainingWorkflowBase(Task, law.LocalWorkflow, HTCondorWorkflow):
         super(TrainingWorkflowBase, self).__init__(*args, **kwargs)
 
         # store the workflow file data and already the branch map
-        self.workflow_data, self._file_branch_map = parse_workflow_file(self.training_workflow_file)
+        self.workflow_data, self._file_branch_map = parse_workflow_file(
+            self.retrieve_file(self.training_workflow_file))
 
     def create_branch_map(self):
         return self._file_branch_map

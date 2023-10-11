@@ -452,14 +452,18 @@ class SGEJobFileFactory(BaseJobFileFactory):
         ) # 1st exec, 2nd bootstrap
 
         max_runtime = 60
+        additional_content = []
         if c.custom_content:
             for elem in c.custom_content:
                 if elem[0] == "max_runtime":
                     max_runtime = elem[1]
-
+                elif elem[0] == "max_memory" and elem[1] != "":
+                    additional_content.append("-l h_vmem=%sG" % elem[1])
+                elif elem[0] == "request_cpus":
+                    additional_content.append("-pe hep.pe %s" % elem[1])
         content = []
-        content.append("qsub -q hep.q -l h_rt=%s %s %s" % (
-            max_runtime, input_files[0], c.arguments)
+        content.append("qsub -q hep.q -l h_rt=%s %s %s %s" % (
+            max_runtime, " ".join(additional_content), input_files[0], c.arguments)
         )
 
         # write the job file

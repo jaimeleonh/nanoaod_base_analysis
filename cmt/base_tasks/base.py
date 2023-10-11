@@ -349,6 +349,7 @@ class SGEWorkflow(SGEWorkflowTmp):
         "that are considered complete, default: True")
     max_runtime = law.DurationParameter(default=2.0, unit="h", significant=False,
         description="maximum runtime, default unit is hours, default: 2")
+    max_memory = luigi.Parameter(default="", description="Max virtual memory to be used by each job")
     sge_central_scheduler = luigi.BoolParameter(default=False, significant=False,
         description="whether or not remote tasks should connect to the central scheduler, default: "
         "False")
@@ -380,6 +381,8 @@ class SGEWorkflow(SGEWorkflowTmp):
         # config.custom_content.append(("getenv", "true"))
         # config.custom_content.append(("log", "/dev/null"))
         config.custom_content.append(("max_runtime", int(math.floor(self.max_runtime * 3600)) - 1))
+        config.custom_content.append(("max_memory", self.max_memory))
+        config.custom_content.append(("request_cpus", self.request_cpus))
         # config.custom_content.append(("RequestCpus", self.request_cpus))
         # if self.custom_condor_tag:
             # for elem in self.custom_condor_tag:
