@@ -530,7 +530,6 @@ class RDFModuleTask():
         if not index:
             index = 0
         if not self.merging_factor and not self.threshold:
-            print(inp[index].path)
             return (inp[index].path,)
         else:
             return tuple([t[index].path for t in inp])

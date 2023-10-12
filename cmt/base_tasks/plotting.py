@@ -37,6 +37,7 @@ from cmt.base_tasks.preprocessing import (
     Categorization, MergeCategorization, MergeCategorizationStats, EventCounterDAS
 )
 
+
 cmt_style = r.styles.copy("default", "cmt_style")
 cmt_style.style.ErrorX = 0
 cmt_style.x_axis.TitleOffset = 1.22
@@ -70,7 +71,7 @@ class BasePlotTask(ConfigTaskWithCategory):
     :param apply_weights: whether to apply weights and scaling to all histograms.
     :type apply_weights: bool
 
-    :param n_bins: NOT YET IMPLEMENTED. Custom number of bins for plotting,
+    :param n_bins: Custom number of bins for plotting,
         defaults to the value configured by the feature when empty.
     :type n_bins: int
 
@@ -85,6 +86,10 @@ class BasePlotTask(ConfigTaskWithCategory):
 
     :param remove_horns: NOT YET IMPLEMENTED. Whether to remove the eta horns present in 2017
     :type remove_horns: bool
+
+    :param optimization_method: Optimization method to be used. Only `bayesian_blocks` available.
+    :type optimization_method: str
+
     """
 
     feature_names = law.CSVParameter(default=(), description="names of features to plot, uses all "
@@ -108,6 +113,8 @@ class BasePlotTask(ConfigTaskWithCategory):
         "from distributions, default: False")
     tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
         "the root file, default: Events (nanoAOD)")
+    optimization_method = luigi.ChoiceParameter(default="", choices=("", "bayesian_blocks"),
+        significant=False, description="optimization method to be used, default: none")
 
     def __init__(self, *args, **kwargs):
         super(BasePlotTask, self).__init__(*args, **kwargs)
@@ -144,16 +151,30 @@ class BasePlotTask(ConfigTaskWithCategory):
                 return round(number, i + 1)
             i += 1
 
-    def get_binning(self, feature):
-        if isinstance(feature.binning, tuple):
+    def get_binning(self, feature, ifeat=0):
+        if self.optimization_method:
+            y_axis_adendum = ""
+            binning = self.input()["bin_opt"].collection.targets[ifeat].load(formatter="json")
+            n_bins = len(binning) - 1
+            binning_args = n_bins, array.array("f", binning)
+        elif isinstance(feature.binning, tuple):
+            if self.n_bins == law.NO_INT:
+                nbins = feature.binning[0]
+            else:
+                nbins = self.n_bins
             y_axis_adendum = (" / %s %s" % (
-                self.round((feature.binning[2] - feature.binning[1]) / feature.binning[0]),
+                self.round((feature.binning[2] - feature.binning[1]) / nbins),
                     feature.get_aux("units")) if feature.get_aux("units") else "")
-            binning_args = tuple(feature.binning)
+            binning = (nbins, feature.binning[1], feature.binning[2])
+            binning_args = tuple(binning)
         else:
             y_axis_adendum = ""
-            n_bins = len(feature.binning) - 1
-            binning_args = n_bins, array.array("f", feature.binning)
+            if self.n_bins == law.NO_INT:
+                n_bins = len(feature.binning) - 1
+                binning_args = n_bins, array.array("f", feature.binning)
+            else:
+                n_bins = self.n_bins
+                binning_args = tuple(n_bins, feature.binning[0], feature.binning[-1])
 
         return binning_args, y_axis_adendum
 
@@ -181,6 +202,10 @@ class BasePlotTask(ConfigTaskWithCategory):
             postfix += "__" + self.region.name
         if not self.apply_weights:
             postfix += "__noweights"
+        if self.optimization_method == "bayesian_blocks":
+            postfix += "__opt_bb"
+        if self.n_bins != law.NO_INT:
+            postfix += "__%s_bins" % self.n_bins
         return postfix
 
 
@@ -205,6 +230,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         " MergeCategorization task, default: False")
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default=law.NO_STR)
+    dataset_names = law.CSVParameter(description="dataset_names to use for optimization",
+        default=())
 
     def __init__(self, *args, **kwargs):
         super(PrePlot, self).__init__(*args, **kwargs)
@@ -258,6 +285,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             for syst, d in itertools.product(self.syst_list, directions):
                 reqs["data"][f"{syst}_{d}"] = MergeCategorization.vreq(self, workflow="local",
                     systematic=syst, systematic_direction=d)
+        if self.optimization_method == "bayesian_blocks":
+            from cmt.base_tasks.optimization import BayesianBlocksOptimization
+            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False, 
+                _exclude=["branch", "branches", "custom_output_tag", "plot_systematics"])
         return reqs
 
     def requires(self):
@@ -276,6 +307,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             for syst, d in itertools.product(self.syst_list, directions):
                 reqs[f"{syst}_{d}"] = MergeCategorization.vreq(self, workflow="local",
                     systematic=syst, systematic_direction=d, branch=self.branch)
+        if self.optimization_method:
+            from cmt.base_tasks.optimization import BayesianBlocksOptimization
+            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False,
+                _exclude=["branch", "branches", "custom_output_tag", "plot_systematics"])
         return reqs
 
     def output(self):
@@ -304,8 +339,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
     def define_histograms(self, dfs, nentries):
         histos = []
         isMC = self.dataset.process.isMC
-        for feature in self.features:
-            binning_args, y_axis_adendum = self.get_binning(feature)
+        for ifeat, feature in enumerate(self.features):
+            binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
             x_title = (str(feature.get_aux("x_title"))
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = "Events" + y_axis_adendum
@@ -586,9 +621,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         # "optimization task to use, not used when empty, default: empty")
     # n_start_bins = luigi.IntParameter(default=10, description="number of bins to be used "
         # "as initial value for scans, default: 10")
-    # optimization_method = luigi.ChoiceParameter(default="flat_s",
-        # choices=("flat_s", "flat_b", "flat_sb", "flat_s_b", "const", "flat_mpp", "flat_mpp_sb"),
-        # significant=False, description="optimization method to be used, default: flat signal")
     # threshold = luigi.FloatParameter(default=-1., description="threshold per bin, "
         # "default: -1.")
     # threshold_method = luigi.ChoiceParameter(default="yield",
@@ -606,7 +638,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
     def __init__(self, *args, **kwargs):
         super(FeaturePlot, self).__init__(*args, **kwargs)
-
         # select processes and datasets
         assert self.process_group_name in self.config.process_group_names
         assert not (self.do_qcd and self.do_sideband)
@@ -751,7 +782,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp"])
                 for key, region in self.sideband_regions.items()
             }
-
+        if self.optimization_method:
+            from cmt.base_tasks.optimization import BayesianBlocksOptimization
+            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False)
         return reqs
 
     def get_output_postfix(self, key="pdf"):
@@ -895,7 +928,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     for x in systematics[dataset_name]]))
         return systematics
 
-    def plot(self, feature):
+    def plot(self, feature, ifeat=0):
         """
         Performs the actual plotting.
         """
@@ -963,7 +996,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.plot_systematics:
             bkg_histo_syst = self.histos["bkg_histo_syst"]
 
-        binning_args, y_axis_adendum = self.get_binning(feature)
+        binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
         x_title = (str(feature.get_aux("x_title"))
             + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
         y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
@@ -1452,10 +1485,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         self.nevents = self.get_nevents()
 
-        for feature in self.features:
+        for ifeat, feature in enumerate(self.features):
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
 
-            binning_args, y_axis_adendum = self.get_binning(feature)
+            binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
             x_title = (str(feature.get_aux("x_title"))
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
