@@ -845,12 +845,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         """
         hist.hist_type = "signal"
         hist.legend_style = "l"
-        if self.stack:
-            hist.SetLineColor(color)
-            hist.SetLineWidth(2)
-        else:
-            hist.SetLineColor(ROOT.kBlack)
-            hist.SetLineWidth(2)
+        hist.SetLineColor(color)
+        hist.SetLineWidth(2)
 
     def setup_background_hist(self, hist, color):
         """
