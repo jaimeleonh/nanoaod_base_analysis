@@ -826,9 +826,14 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
 
             # do the qcd extrapolation
+            # if "shape" in qcd_shape_files:
+            #     qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
+            #     qcd_hist.Scale(1. / qcd_hist.Integral())
             if "shape" in qcd_shape_files:
                 qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
-                qcd_hist.Scale(1. / qcd_hist.Integral())
+                n_qcd_hist, n_qcd_hist_error, n_qcd_hist_compatible = get_integral_and_error(qcd_hist)
+                if not n_qcd_hist_compatible:
+                    qcd_hist.Scale(1. / n_qcd_hist)
             else:  #sym shape
                 qcd_hist = get_qcd("shape1", qcd_shape_files).Clone(randomize("qcd"))
                 qcd_hist2 = get_qcd("shape2", qcd_shape_files).Clone(randomize("qcd"))
@@ -1265,10 +1270,12 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                 and syst == "central":
                             dataset_histo_syst = dataset_histo.Clone()
                             for ibin in range(1, dataset_histo_syst.GetNbinsX() + 1):
-                                dataset_histo_syst.SetBinError(ibin,
-                                    float(dataset_histo.GetBinContent(ibin))\
-                                        * systematics[dataset.name]
-                                )
+                                # some datasets may not have any systematics
+                                if dataset.name in systematics:
+                                    dataset_histo_syst.SetBinError(ibin,
+                                        float(dataset_histo.GetBinContent(ibin))\
+                                            * systematics[dataset.name]
+                                    )
                             self.histos["bkg_histo_syst"].Add(dataset_histo_syst)
 
                     yield_error = c_double(0.)
@@ -1346,8 +1353,8 @@ class FeaturePlotSyst(FeaturePlot):
         out = {
             key: law.SiblingFileCollection(OrderedDict(
                 ("%s_%s_%s" %(process.name, feature.name, syst), 
-                    self.local_target("{}/{}{}_{}{}.{}".format(
-                    process.name, prefix, feature.name, syst, self.get_output_postfix(key), ext)))
+                    self.local_target("{}{}_{}_{}{}.{}".format(
+                    prefix, process.name, feature.name, syst, self.get_output_postfix(key), ext)))
                 for feature in self.features 
                 for syst in self.get_unique_systs(self.get_systs(feature, True) \
                 + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
@@ -1511,8 +1518,12 @@ class FeaturePlotSyst(FeaturePlot):
                 ratio_hist_up.SetLineStyle(0)
                 ratio_hist_down.SetLineStyle(0)
                 for i in range(binning_args[0]+1):
-                    ratio_hist_up.SetBinContent(i, histo_syst_up.GetBinContent(i)/histo_syst_central.GetBinContent(i))
-                    ratio_hist_down.SetBinContent(i, histo_syst_down.GetBinContent(i)/histo_syst_central.GetBinContent(i))
+                    if histo_syst_central.GetBinContent(i) != 0:
+                        ratio_hist_up.SetBinContent(i, histo_syst_up.GetBinContent(i)/histo_syst_central.GetBinContent(i))
+                        ratio_hist_down.SetBinContent(i, histo_syst_down.GetBinContent(i)/histo_syst_central.GetBinContent(i))
+                    else: 
+                        ratio_hist_up.SetBinContent(i, EMPTY)
+                        ratio_hist_down.SetBinContent(i, EMPTY)
 
                 c.get_pad(2).cd()
                 dummy_ratio_hist.Draw()
