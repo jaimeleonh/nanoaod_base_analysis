@@ -288,7 +288,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         if self.optimization_method == "bayesian_blocks":
             from cmt.base_tasks.optimization import BayesianBlocksOptimization
             reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False, 
-                _exclude=["branch", "branches", "custom_output_tag", "plot_systematics"])
+                _exclude=["branch", "branches", "custom_output_tag", "plot_systematics", "workflow"])
         return reqs
 
     def requires(self):
@@ -310,7 +310,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         if self.optimization_method:
             from cmt.base_tasks.optimization import BayesianBlocksOptimization
             reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False,
-                _exclude=["branch", "branches", "custom_output_tag", "plot_systematics"])
+                _exclude=["branch", "branches", "custom_output_tag", "plot_systematics", "workflow"])
         return reqs
 
     def output(self):
@@ -1242,8 +1242,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
-        if do_ratio:
-            r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
+        # if do_ratio:
+        r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         dummy_hist.GetYaxis().SetMaxDigits(4)
         dummy_hist.GetYaxis().SetTitleOffset(1.22)
         maximum = max([hist.GetMaximum() for hist in draw_hists])
