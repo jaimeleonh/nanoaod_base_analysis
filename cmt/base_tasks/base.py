@@ -6,7 +6,7 @@ Base tasks.
 
 __all__ = [
     "Task", "ConfigTask", "ConfigTaskWithCategory", "DatasetTask", "DatasetTaskWithCategory",
-    "DatasetWrapperTask", "HTCondorWorkflow", "InputData",
+    "DatasetWrapperTask", "HTCondorWorkflow", "SGEWorkflow", "InputData",
 ]
 
 
@@ -20,9 +20,13 @@ import law
 
 from law.util import merge_dicts
 from law.contrib.htcondor.job import HTCondorJobFileFactory
+from cmt.sge.job import SGEJobFileFactory
+from cmt.sge.workflow import SGEWorkflow as SGEWorkflowTmp
 # from cmt.condor_tools.htcondor import HTCondorWorkflowExt
 
 from abc import abstractmethod
+
+from analysis_tools.utils import import_root
 
 law.contrib.load("cms", "git", "htcondor", "root", "tasks", "telegram", "tensorflow", "wlcg")
 
@@ -264,17 +268,9 @@ class DatasetWrapperTask(ConfigTask):
         dataset_names = list(self.dataset_names)
         if not dataset_names and self.process_names:
             for dataset in self.config.datasets:
-                process = dataset.process
-                if process.name in self.process_names:
+                if any([self.config.is_process_from_dataset(process, dataset=dataset)
+                        for process in self.process_names]):
                     dataset_names.append(dataset.name)
-                elif process.parent_process:
-                    while True:
-                        process = self.config.processes.get(process.parent_process)
-                        if process.name in self.process_names:
-                            dataset_names.append(dataset.name)
-                            break
-                        if not process.parent_process:
-                            break
 
         if not dataset_names and not self.dataset_tags:
             dataset_names = self.get_default_dataset_names()
@@ -296,8 +292,8 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
     htcondor_central_scheduler = luigi.BoolParameter(default=False, significant=False,
         description="whether or not remote tasks should connect to the central scheduler, default: "
         "False")
-    custom_condor_tag = law.CSVParameter(default=(), 
-       description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
+    # custom_condor_tag = law.CSVParameter(default=(),
+       # description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
     custom_output_tag = luigi.Parameter(default="",
        description="Custom output tag for submission and status files")
 
@@ -347,6 +343,68 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         return not self.htcondor_central_scheduler
 
 
+class SGEWorkflow(SGEWorkflowTmp):
+
+    only_missing = luigi.BoolParameter(default=True, significant=False, description="skip tasks "
+        "that are considered complete, default: True")
+    max_runtime = law.DurationParameter(default=2.0, unit="h", significant=False,
+        description="maximum runtime, default unit is hours, default: 2")
+    max_memory = luigi.Parameter(default="", description="Max virtual memory to be used by each job")
+    sge_central_scheduler = luigi.BoolParameter(default=False, significant=False,
+        description="whether or not remote tasks should connect to the central scheduler, default: "
+        "False")
+    custom_condor_tag = law.CSVParameter(default=(),
+       description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
+    custom_output_tag = luigi.Parameter(default="",
+       description="Custom output tag for submission and status files")
+
+    exclude_params_branch = {"max_runtime", "sge_central_scheduler", "custom_condor_tag"}
+
+    def sge_output_directory(self):
+        return law.LocalDirectoryTarget(self.local_path(store="$CMT_STORE_LOCAL"))
+
+    def sge_bootstrap_file(self):
+        # each job can define a bootstrap file that is executed prior to the actual job
+        # in order to setup software and environment variables
+        return os.path.expandvars("$CMT_BASE/cmt/sge/ic_sge_bootstrap.sh")
+
+    def sge_output_postfix(self):
+        return self.custom_output_tag + super(SGEWorkflow, self).sge_output_postfix()
+
+    def sge_job_config(self, config, job_num, branches):
+        # render variables
+        config.render_variables["cmt_base"] = os.environ["CMT_BASE"]
+        config.render_variables["cmt_env_path"] = os.environ["PATH"]
+
+        # custom job file content
+        # config.custom_content.append(("requirements", "(OpSysAndVer =?= \"CentOS7\")"))
+        # config.custom_content.append(("getenv", "true"))
+        # config.custom_content.append(("log", "/dev/null"))
+        config.custom_content.append(("max_runtime", int(math.floor(self.max_runtime * 3600)) - 1))
+        config.custom_content.append(("max_memory", self.max_memory))
+        config.custom_content.append(("request_cpus", self.request_cpus))
+        # config.custom_content.append(("RequestCpus", self.request_cpus))
+        # if self.custom_condor_tag:
+            # for elem in self.custom_condor_tag:
+                # config.custom_content.append((elem, None))
+
+        # print "{}/x509up".format(os.getenv("HOME"))
+        # config.custom_content.append(("Proxy_path", "{}/x509up".format(os.getenv("CMT_BASE"))))
+        #config.custom_content.append(("arguments", "$(Proxy_path)"))
+
+        return config
+
+    def sge_create_job_file_factory(self, **kwargs):
+        # job file fectory config priority: kwargs > class defaults
+        kwargs = merge_dicts(self.sge_job_file_factory_defaults, kwargs)
+
+        return SGEJobFileFactory(**kwargs)
+
+    def sge_use_local_scheduler(self):
+        return not self.sge_central_scheduler
+
+
+
 class SplittedTask():
     @abstractmethod
     def get_splitted_branches(self):
@@ -354,7 +412,7 @@ class SplittedTask():
 
 
 class RDFModuleTask():
-    def get_feature_modules(self, filename):
+    def get_feature_modules(self, filename, **kwargs):
         module_params = None
 
         # check for default modules file inside the config
@@ -394,6 +452,30 @@ class RDFModuleTask():
                 mod = module_params[tag]["path"]
                 mod = __import__(mod, fromlist=[name])
                 nargs, kwargs = eval('_args(%s)' % parameter_str)
+
+                # include systematics
+                systematic = kwargs.pop("systematic", getattr(self, "systematic", None))
+                if systematic:
+                    systematic = self.config.systematics.get(systematic)
+                    systematic_direction = kwargs.pop("systematic_direction",
+                        getattr(self, "systematic_direction", None))
+                    module_syst_type = systematic.get_aux("module_syst_type")
+                    if isinstance(module_syst_type, str) or isinstance(module_syst_type, list) :
+                        # we remove the first underscore from the syst expression, as it is
+                        # already included in the syst definition inside JetLepMetSyst
+                        expression = systematic.expression[1:]
+                        direction = eval(f"systematic.{systematic_direction}")
+                        if isinstance(module_syst_type, str):
+                            kwargs[module_syst_type] = f"{expression}{direction}"
+                        else:
+                            for syst_type in module_syst_type:
+                                kwargs[syst_type] = f"{expression}{direction}"
+                    elif isinstance(module_syst_type, dict):
+                        # assuming structure
+                        # module_syst_type={syst_name={up: up_exp, down: down_exp},}
+                        for syst_type in module_syst_type:
+                            kwargs[syst_type] = eval(f"syst_type[{systematic_direction}]")
+
                 modules.append(getattr(mod, name)(**kwargs)())
         return modules
 
@@ -427,6 +509,7 @@ class RDFModuleTask():
                     raise ValueError("Error in file %s, line '%s': " % (filename, line)
                         + "it's not a keep or drop pattern"
                     )
+
         branchStatus = [1 for branchName in branchNames]
         for pattern, stat in ops:
             for ib, b in enumerate(branchNames):
@@ -436,6 +519,42 @@ class RDFModuleTask():
 
         return [branchName for (branchName, branchStatus) in zip(branchNames, branchStatus)
             if branchStatus == 1]
+
+    def get_input(self):
+        if not self.merging_factor and not self.threshold:
+            return self.input()
+        else:
+            return tuple([f for f in self.input().values()])
+
+    def get_path(self, inp, index=None):
+        if not index:
+            index = 0
+        if not self.merging_factor and not self.threshold:
+            return (inp[index].path,)
+        else:
+            return tuple([t[index].path for t in inp])
+
+    def build_rdf(self):
+        ROOT = import_root()
+        inp = self.get_input()
+        try:
+            if len(inp[0]) == 1:
+                return ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        except:
+            if len(inp) == 1:
+                return ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+        # friend tree
+        tchain = ROOT.TChain()
+        # for elem in self.get_path(inp):
+            # tchain.Add("{}/{}".format(elem, self.tree_name))
+        tchain.Add("{}/{}".format(self.get_path(inp)[0], self.tree_name))
+
+        # considering only one friend for now
+        friend_tchain = ROOT.TChain()
+        for elem in self.get_path(inp, 1):
+            friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+        tchain.AddFriend(friend_tchain, "friend")
+        return tchain
 
 
 class InputData(DatasetTask, law.ExternalTask):
@@ -452,13 +571,26 @@ class InputData(DatasetTask, law.ExternalTask):
 
     def output(self):
         if self.file_index != law.NO_INT:
-            return self.dynamic_target(
+            out = [self.dynamic_target(
                 self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
                     index=self.file_index),
-                avoid_store=True)
+                avoid_store=True, check_empty=True)]
+            if self.dataset.friend_datasets:
+                if not isinstance(self.dataset.friend_datasets, list):
+                    friend_dataset_names = [self.dataset.friend_datasets]
+                else:
+                    friend_dataset_names = self.dataset.friend_datasets
+                for dataset_name in friend_dataset_names:
+                    out.append(self.dynamic_target(
+                        self.config.datasets.get(dataset_name).get_files(
+                            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
+                            index=self.file_index), avoid_store=True, check_empty=True)
+                    )
+            return tuple(out)
         else:
             cls = law.SiblingFileCollection
             return cls([self.dynamic_target(file_path, avoid_store=True)
                 for file_path in self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)])
+            

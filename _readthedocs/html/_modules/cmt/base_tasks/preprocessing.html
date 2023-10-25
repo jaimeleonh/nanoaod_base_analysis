@@ -6,7 +6,7 @@
   <title>cmt.base_tasks.preprocessing &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -28,18 +28,14 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="../../../index.html" class="icon icon-home">
-            nanoaod-base-analysis user guide
+            <a href="../../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -69,9 +65,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
-      <li class="breadcrumb-item active">cmt.base_tasks.preprocessing</li>
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>cmt.base_tasks.preprocessing</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -105,10 +101,11 @@
 <span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span><span class="p">,</span> <span class="n">create_file_dir</span>
 
 <span class="kn">from</span> <span class="nn">cmt.base_tasks.base</span> <span class="kn">import</span> <span class="p">(</span> 
-    <span class="n">DatasetTaskWithCategory</span><span class="p">,</span> <span class="n">DatasetWrapperTask</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">InputData</span><span class="p">,</span>
-    <span class="n">ConfigTaskWithCategory</span><span class="p">,</span> <span class="n">SplittedTask</span><span class="p">,</span> <span class="n">DatasetTask</span><span class="p">,</span> <span class="n">RDFModuleTask</span>
+    <span class="n">DatasetTaskWithCategory</span><span class="p">,</span> <span class="n">DatasetWrapperTask</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">SGEWorkflow</span><span class="p">,</span>
+    <span class="n">InputData</span><span class="p">,</span> <span class="n">ConfigTaskWithCategory</span><span class="p">,</span> <span class="n">SplittedTask</span><span class="p">,</span> <span class="n">DatasetTask</span><span class="p">,</span> <span class="n">RDFModuleTask</span>
 <span class="p">)</span>
 
+<span class="n">directions</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;up&quot;</span><span class="p">,</span> <span class="s2">&quot;down&quot;</span><span class="p">]</span>
 
 <span class="k">class</span> <span class="nc">DatasetSuperWrapperTask</span><span class="p">(</span><span class="n">DatasetWrapperTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">WrapperTask</span><span class="p">):</span>
 
@@ -125,6 +122,24 @@
         <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
             <span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">atomic_requires</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span>
+        <span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">DatasetSystWrapperTask</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
+    <span class="n">systematic_names</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;names of systematics &quot;</span>
+        <span class="s2">&quot;to run, default: central only (empty string)&quot;</span><span class="p">)</span>
+
+    <span class="n">exclude_index</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">systematic</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">systematics</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic_names</span><span class="p">,</span> <span class="n">directions</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
+            <span class="p">((</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">atomic_requires</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">dataset</span><span class="p">,</span> <span class="p">(</span><span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="n">systematics</span><span class="p">)</span>
         <span class="p">)</span>
 
 
@@ -158,7 +173,59 @@
         <span class="p">)</span>
 
 
-<div class="viewcode-block" id="PreCounter"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter">[docs]</a><span class="k">class</span> <span class="nc">PreCounter</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">LocalWorkflow</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">SplittedTask</span><span class="p">,</span> <span class="n">RDFModuleTask</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">DatasetCategoryWrapperTask</span><span class="p">(</span><span class="n">DatasetWrapperTask</span><span class="p">):</span>
+    <span class="n">category_names</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;baseline_even&quot;</span><span class="p">,),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;names of categories &quot;</span>
+        <span class="s2">&quot;to run, default: (baseline_even,)&quot;</span><span class="p">)</span>
+
+    <span class="n">exclude_index</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># tasks wrapped by this class do not allow composite categories, so split them here</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">categories</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">category_names</span><span class="p">:</span>
+            <span class="n">category</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">category</span><span class="o">.</span><span class="n">subcategories</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">category</span><span class="o">.</span><span class="n">subcategories</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">category</span><span class="p">)</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
+            <span class="p">((</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">atomic_requires</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">category</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;skip_processes&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DatasetCategorySystWrapperTask</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">WrapperTask</span><span class="p">):</span>
+    <span class="n">systematic_names</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;names of systematics &quot;</span>
+        <span class="s2">&quot;to run, default: central only (empty string)&quot;</span><span class="p">)</span>
+
+    <span class="n">exclude_index</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">systematic</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">systematics</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic_names</span><span class="p">,</span> <span class="n">directions</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
+            <span class="p">((</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">atomic_requires</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="p">(</span><span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="p">,</span> <span class="n">systematics</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">category</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;skip_processes&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="PreCounter"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter">[docs]</a><span class="k">class</span> <span class="nc">PreCounter</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">LocalWorkflow</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">SGEWorkflow</span><span class="p">,</span>
+        <span class="n">SplittedTask</span><span class="p">,</span> <span class="n">RDFModuleTask</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs a counting of the events with and without applying the necessary weights.</span>
 <span class="sd">    Weights are read from the config file.</span>
@@ -171,31 +238,61 @@
 
 <span class="sd">    :param weights_file: filename inside ``cmt/config/`` (w/o extension) with the RDF modules to run</span>
 <span class="sd">    :type weights_file: str</span>
+
+<span class="sd">    :param systematic: systematic to use for categorization.</span>
+<span class="sd">    :type systematic: str</span>
+
+<span class="sd">    :param systematic_direction: systematic direction to use for categorization.</span>
+<span class="sd">    :type systematic_direction: str</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">weights_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with modules to run RDataFrame&quot;</span><span class="p">,</span>
         <span class="n">default</span><span class="o">=</span><span class="n">law</span><span class="o">.</span><span class="n">NO_STR</span><span class="p">)</span>
+    <span class="n">systematic</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic to use for categorization, &quot;</span>
+        <span class="s2">&quot;default: None&quot;</span><span class="p">)</span>
+    <span class="n">systematic_direction</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic direction to use &quot;</span>
+        <span class="s2">&quot;for categorization, default: None&quot;</span><span class="p">)</span>
+
     <span class="c1"># regions not supported</span>
     <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="n">default_store</span> <span class="o">=</span> <span class="s2">&quot;$CMT_STORE_EOS_CATEGORIZATION&quot;</span>
     <span class="n">default_wlcg_fs</span> <span class="o">=</span> <span class="s2">&quot;wlcg_fs_categorization&quot;</span>
 
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PreCounter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addendum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_addendum</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">custom_output_tag</span> <span class="o">=</span> <span class="s2">&quot;_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">addendum</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;event_threshold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_addendum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">:</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">total_events_weights</span>
+            <span class="k">for</span> <span class="n">weight</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">feature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">weight</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span> <span class="ow">in</span> <span class="n">feature</span><span class="o">.</span><span class="n">systematics</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic_direction</span><span class="si">}</span><span class="s2">_&quot;</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">continue</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
 <div class="viewcode-block" id="PreCounter.create_branch_map"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.create_branch_map">[docs]</a>    <span class="k">def</span> <span class="nf">create_branch_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :return: number of files for the selected dataset</span>
 <span class="sd">        :rtype: int</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;event_threshold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">merging_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">merging_factor</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;event_threshold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">merging_factor</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_file_groups</span><span class="p">(</span>
                 <span class="n">path_to_look</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span>
-                <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">merging_factor</span><span class="p">:</span>
+                <span class="n">threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="n">nfiles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
             <span class="n">nbranches</span> <span class="o">=</span> <span class="n">nfiles</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">)</span>
@@ -215,22 +312,20 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Each branch requires one input file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;event_threshold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">merging_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">merging_factor</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">merging_factor</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="n">reqs</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_file_groups</span><span class="p">(</span>
                     <span class="n">path_to_look</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span>
-                    <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)[</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">]:</span>
+                    <span class="n">threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">)[</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">]:</span>
                 <span class="n">reqs</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">reqs</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">merging_factor</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="n">nfiles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
             <span class="n">reqs</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">merging_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">,</span> <span class="n">merging_factor</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">nfiles</span><span class="p">:</span>
                     <span class="k">break</span>
                 <span class="n">reqs</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
@@ -244,15 +339,19 @@
 <span class="sd">        :return: One file per input file</span>
 <span class="sd">        :rtype: `.json`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.json&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">addendum</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="si">}</span><span class="s2">.json&quot;</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">get_input</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">merging_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;event_threshold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">merging_factor</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">threshold</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">tuple</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">path</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+<div class="viewcode-block" id="PreCounter.get_weight"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.get_weight">[docs]</a>    <span class="k">def</span> <span class="nf">get_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">syst_direction</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtains the product of all weights depending on the category/channel applied.</span>
+<span class="sd">        Returns &quot;1&quot; if it&#39;s a data sample.</span>
+
+<span class="sd">        :return: Product of all weights to be applied</span>
+<span class="sd">        :rtype: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">isData</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;1&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_weights_expression</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">syst_name</span><span class="p">,</span> <span class="n">syst_direction</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="PreCounter.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounter.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
     <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -266,20 +365,39 @@
         <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
         <span class="n">ROOT</span><span class="o">.</span><span class="n">ROOT</span><span class="o">.</span><span class="n">EnableImplicitMT</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request_cpus</span><span class="p">)</span>
 
-        <span class="c1"># prepare inputs and outputs</span>
+        <span class="c1"># create RDataFrame</span>
         <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+        <span class="c1"># friend tree</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="p">:</span>
+            <span class="n">tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">):</span>
+                <span class="n">tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
+            <span class="n">tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
+            <span class="n">friend_tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">friend_tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
+            <span class="n">tchain</span><span class="o">.</span><span class="n">AddFriend</span><span class="p">(</span><span class="n">friend_tchain</span><span class="p">,</span> <span class="s2">&quot;friend&quot;</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="n">tchain</span><span class="p">)</span>
+
         <span class="n">weight_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">weight_modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">weight_modules</span><span class="p">:</span>
                 <span class="n">df</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 
-        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">total_events_weights</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weight</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">total_events_weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic_direction</span><span class="p">)</span>
+
         <span class="n">hmodel</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
         <span class="n">histo_noweight</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span><span class="n">hmodel</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">isData</span><span class="p">:</span>
-            <span class="n">histo_weight</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="s2">&quot; * &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">weights</span><span class="p">))</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span>
+            <span class="n">histo_weight</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span>
                 <span class="n">hmodel</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;weight&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">histo_weight</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Histo1D</span><span class="p">(</span><span class="n">hmodel</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">)</span>
@@ -293,7 +411,7 @@
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="PreCounterWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounterWrapper">[docs]</a><span class="k">class</span> <span class="nc">PreCounterWrapper</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
+<div class="viewcode-block" id="PreCounterWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreCounterWrapper">[docs]</a><span class="k">class</span> <span class="nc">PreCounterWrapper</span><span class="p">(</span><span class="n">DatasetSystWrapperTask</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the PreCounter task over several datasets in parallel.</span>
 
@@ -302,8 +420,9 @@
 <span class="sd">    ``law run PreCounterWrapper --version test  --config-name base_config \</span>
 <span class="sd">--dataset-names tt_dl,tt_sl --PreCounter-weights-file weight_file --workers 2``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">PreCounter</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">systematic</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PreCounter</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">systematic</span><span class="o">=</span><span class="n">systematic</span><span class="p">,</span> <span class="n">systematic_direction</span><span class="o">=</span><span class="n">direction</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="PreprocessRDF"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF">[docs]</a><span class="k">class</span> <span class="nc">PreprocessRDF</span><span class="p">(</span><span class="n">PreCounter</span><span class="p">,</span> <span class="n">DatasetTaskWithCategory</span><span class="p">):</span>
@@ -335,12 +454,19 @@
     <span class="n">default_store</span> <span class="o">=</span> <span class="s2">&quot;$CMT_STORE_EOS_PREPROCESSING&quot;</span>
     <span class="n">default_wlcg_fs</span> <span class="o">=</span> <span class="s2">&quot;wlcg_fs_categorization&quot;</span>
 
+    <span class="k">def</span> <span class="nf">get_addendum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">:</span>
+            <span class="n">systematic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">systematics</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">systematic</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;affected_categories&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic_direction</span><span class="si">}</span><span class="s2">_&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
 <div class="viewcode-block" id="PreprocessRDF.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :return: One file per input file with the tree + additional branches</span>
 <span class="sd">        :rtype: `.root`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.root&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">addendum</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="si">}</span><span class="s2">.root&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="PreprocessRDF.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDF.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
     <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -355,9 +481,26 @@
 
         <span class="c1"># prepare inputs and outputs</span>
         <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+        <span class="c1"># friend tree</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="p">:</span>
+            <span class="n">tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">):</span>
+                <span class="n">tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
+            <span class="n">friend_tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">friend_tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
+            <span class="n">tchain</span><span class="o">.</span><span class="n">AddFriend</span><span class="p">(</span><span class="n">friend_tchain</span><span class="p">,</span> <span class="s2">&quot;friend&quot;</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="n">tchain</span><span class="p">)</span>
+
         <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
+        <span class="c1"># print(outp.path)</span>
 
         <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="o">.</span><span class="n">selection</span>
         <span class="c1"># dataset_selection = self.dataset.get_aux(&quot;selection&quot;)</span>
@@ -369,12 +512,6 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span>
 
-        <span class="c1"># filtered_df = filtered_df.Filter(&quot;event == 83362796&quot;)</span>
-
-        <span class="c1"># print(filtered_df.Count().GetValue())</span>
-        <span class="c1"># import sys</span>
-        <span class="c1"># sys.exit()</span>
-
         <span class="n">modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modules_file</span><span class="p">)</span>
         <span class="n">branches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">())</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -382,13 +519,14 @@
                 <span class="n">filtered_df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">filtered_df</span><span class="p">)</span>
                 <span class="n">branches</span> <span class="o">+=</span> <span class="n">add_branches</span>
         <span class="n">branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_branches_to_save</span><span class="p">(</span><span class="n">branches</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">)</span>
+
         <span class="n">branch_list</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)()</span>
         <span class="k">for</span> <span class="n">branch_name</span> <span class="ow">in</span> <span class="n">branches</span><span class="p">:</span>
             <span class="n">branch_list</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">branch_name</span><span class="p">)</span>
         <span class="n">filtered_df</span><span class="o">.</span><span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">create_file_dir</span><span class="p">(</span><span class="n">outp</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">branch_list</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="PreprocessRDFWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDFWrapper">[docs]</a><span class="k">class</span> <span class="nc">PreprocessRDFWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
+<div class="viewcode-block" id="PreprocessRDFWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.PreprocessRDFWrapper">[docs]</a><span class="k">class</span> <span class="nc">PreprocessRDFWrapper</span><span class="p">(</span><span class="n">DatasetCategorySystWrapperTask</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the PreprocessRDF task over several datasets in parallel.</span>
 
@@ -398,8 +536,9 @@
 <span class="sd">--config-name ul_2018 --dataset-names tt_dl,tt_sl --PreprocessRDF-workflow htcondor \</span>
 <span class="sd">--PreprocessRDF-max-runtime 48h --PreprocessRDF-modules-file modulesrdf  --workers 10``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">systematic</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">systematic</span><span class="o">=</span><span class="n">systematic</span><span class="p">,</span> <span class="n">systematic_direction</span><span class="o">=</span><span class="n">direction</span><span class="p">)</span></div>
 
 
 <span class="k">class</span> <span class="nc">Preprocess</span><span class="p">(</span><span class="n">DatasetTaskWithCategory</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">LocalWorkflow</span><span class="p">,</span> <span class="n">HTCondorWorkflow</span><span class="p">,</span> <span class="n">SplittedTask</span><span class="p">):</span>
@@ -608,7 +747,6 @@
         <span class="k">return</span> <span class="n">Preprocess</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 
 
-<span class="c1"># class Categorization(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow):</span>
 <div class="viewcode-block" id="Categorization"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization">[docs]</a><span class="k">class</span> <span class="nc">Categorization</span><span class="p">(</span><span class="n">PreprocessRDF</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs the categorization step running RDF modules and applying a post-selection</span>
@@ -622,12 +760,6 @@
 <span class="sd">    :param base_category_name: category name from the PreprocessRDF requirements.</span>
 <span class="sd">    :type base_category_name: str</span>
 
-<span class="sd">    :param systematic: systematic to use for categorization.</span>
-<span class="sd">    :type systematic: str</span>
-
-<span class="sd">    :param systematic_direction: systematic direction to use for categorization.</span>
-<span class="sd">    :type systematic_direction: str</span>
-
 <span class="sd">    :param feature_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)</span>
 <span class="sd">        with the RDF modules to run</span>
 <span class="sd">    :type feature_modules_file: str</span>
@@ -638,10 +770,6 @@
 
     <span class="n">base_category_name</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;base_selection&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;the name of the &quot;</span>
         <span class="s2">&quot;base category with the initial selection, default: base&quot;</span><span class="p">)</span>
-    <span class="n">systematic</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic to use for categorization, &quot;</span>
-        <span class="s2">&quot;default: None&quot;</span><span class="p">)</span>
-    <span class="n">systematic_direction</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic direction to use &quot;</span>
-        <span class="s2">&quot;for categorization, default: None&quot;</span><span class="p">)</span>
     <span class="n">feature_modules_file</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;filename with RDataFrame modules to run&quot;</span><span class="p">,</span>
         <span class="n">default</span><span class="o">=</span><span class="n">law</span><span class="o">.</span><span class="n">NO_STR</span><span class="p">)</span>
     <span class="n">skip_preprocess</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether to skip the &quot;</span>
@@ -671,7 +799,7 @@
 
 <div class="viewcode-block" id="Categorization.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">%s</span><span class="s2">.root&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">),</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">addendum</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="si">}</span><span class="s2">.root&quot;</span><span class="p">),</span>
             <span class="c1"># &quot;stats&quot;: self.local_target(&quot;data_%s.json&quot; % self.branch)</span>
         <span class="p">}</span></div>
 
@@ -688,49 +816,69 @@
 
         <span class="c1"># prepare inputs and outputs</span>
         <span class="c1"># inp = self.input()[&quot;data&quot;].path</span>
-        <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
+        <span class="c1"># inp = self.input().path</span>
         <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
-        <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+        <span class="c1"># tf = ROOT.TFile.Open(inp)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">tree</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">tree</span><span class="o">.</span><span class="n">GetEntries</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="c1"># build the full selection</span>
-                <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_object_expression</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">isMC</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic_direction</span><span class="p">)</span>
-                <span class="n">dataset_selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">dataset_selection</span> <span class="ow">and</span> <span class="n">dataset_selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
-                    <span class="n">selection</span> <span class="o">=</span> <span class="n">jrs</span><span class="p">(</span><span class="n">dataset_selection</span><span class="p">,</span> <span class="n">selection</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;and&quot;</span><span class="p">)</span>
-
-                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
-                <span class="n">branches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">())</span>
-                <span class="n">feature_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_modules_file</span><span class="p">)</span>
-
-                <span class="c1"># df = df.Filter(&quot;event == 265939&quot;)</span>
-
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">feature_modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">feature_modules</span><span class="p">:</span>
-                        <span class="n">df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-                        <span class="n">branches</span> <span class="o">+=</span> <span class="n">add_branches</span>
-                <span class="n">branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_branches_to_save</span><span class="p">(</span><span class="n">branches</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">)</span>
-                <span class="n">branch_list</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)()</span>
-                <span class="k">for</span> <span class="n">branch_name</span> <span class="ow">in</span> <span class="n">branches</span><span class="p">:</span>
-                    <span class="n">branch_list</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">branch_name</span><span class="p">)</span>
-                <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
-                <span class="n">filtered_df</span><span class="o">.</span><span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">create_file_dir</span><span class="p">(</span><span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">branch_list</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_preprocess</span><span class="p">:</span>
+                <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+                <span class="c1"># friend tree</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="p">:</span>
+                    <span class="n">tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">):</span>
+                        <span class="n">tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
+                    <span class="n">friend_tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="n">friend_tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
+                    <span class="n">tchain</span><span class="o">.</span><span class="n">AddFriend</span><span class="p">(</span><span class="n">friend_tchain</span><span class="p">,</span> <span class="s2">&quot;friend&quot;</span><span class="p">)</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="n">tchain</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
+                <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+                <span class="n">tree</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">tree</span><span class="o">.</span><span class="n">GetEntries</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ReferenceError</span>
                 <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
-                <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
+
+            <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_object_expression</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">isMC</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic_direction</span><span class="p">)</span>
+            <span class="n">dataset_selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">dataset_selection</span> <span class="ow">and</span> <span class="n">dataset_selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+                <span class="n">selection</span> <span class="o">=</span> <span class="n">jrs</span><span class="p">(</span><span class="n">dataset_selection</span><span class="p">,</span> <span class="n">selection</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;and&quot;</span><span class="p">)</span>
+
+            <span class="n">branches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">())</span>
+            <span class="n">feature_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_modules_file</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">feature_modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">feature_modules</span><span class="p">:</span>
+                    <span class="n">df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+                    <span class="n">branches</span> <span class="o">+=</span> <span class="n">add_branches</span>
+            <span class="n">branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_branches_to_save</span><span class="p">(</span><span class="n">branches</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">)</span>
+            <span class="n">branch_list</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)()</span>
+            <span class="k">for</span> <span class="n">branch_name</span> <span class="ow">in</span> <span class="n">branches</span><span class="p">:</span>
+                <span class="n">branch_list</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">branch_name</span><span class="p">)</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
+            <span class="n">filtered_df</span><span class="o">.</span><span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">create_file_dir</span><span class="p">(</span><span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">branch_list</span><span class="p">)</span>
 
         <span class="k">except</span> <span class="ne">ReferenceError</span><span class="p">:</span>  <span class="c1"># empty ntuple</span>
             <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+            <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
             <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c1"># empty input file</span>
             <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+            <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
             <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span></div></div>
         <span class="c1">#copy(self.input()[&quot;stats&quot;].path, outp[&quot;stats&quot;].path)</span>
 
 
-<div class="viewcode-block" id="CategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.CategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">CategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
+<div class="viewcode-block" id="CategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.CategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">CategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategorySystWrapperTask</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the Categorization task over several datasets in parallel.</span>
 
@@ -741,8 +889,9 @@
 <span class="sd">--Categorization-base-category-name base_selection``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">systematic</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Categorization</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">systematic</span><span class="o">=</span><span class="n">systematic</span><span class="p">,</span> <span class="n">systematic_direction</span><span class="o">=</span><span class="n">direction</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MergeCategorization"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorization">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorization</span><span class="p">(</span><span class="n">DatasetTaskWithCategory</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">ForestMerge</span><span class="p">):</span>
@@ -771,6 +920,12 @@
 
 <span class="sd">    :param force_haddnano: whether to force ``haddnano.py`` as tool to do the merging.</span>
 <span class="sd">    :type force_haddnano: bool</span>
+
+<span class="sd">    :param systematic: systematic to use for categorization.</span>
+<span class="sd">    :type systematic: str</span>
+
+<span class="sd">    :param systematic_direction: systematic direction to use for categorization.</span>
+<span class="sd">    :type systematic_direction: str</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">from_preprocess</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether to use as input &quot;</span>
@@ -779,6 +934,10 @@
         <span class="s2">&quot;as tool to do the merging, default: False&quot;</span><span class="p">)</span>
     <span class="n">force_haddnano</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">BoolParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;whether to force haddnano.py &quot;</span>
         <span class="s2">&quot;as tool to do the merging, default: False&quot;</span><span class="p">)</span>
+    <span class="n">systematic</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic to use for categorization, &quot;</span>
+        <span class="s2">&quot;default: None&quot;</span><span class="p">)</span>
+    <span class="n">systematic_direction</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic direction to use &quot;</span>
+        <span class="s2">&quot;for categorization, default: None&quot;</span><span class="p">)</span>
 
     <span class="c1"># regions not supported</span>
     <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
@@ -808,8 +967,9 @@
             <span class="k">return</span> <span class="p">[</span><span class="n">inp</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;collection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
 
     <span class="k">def</span> <span class="nf">merge_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">addendum</span> <span class="o">=</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">get_addendum</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">law</span><span class="o">.</span><span class="n">SiblingFileCollection</span><span class="p">([</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">{}</span><span class="s2">.root&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;data_</span><span class="si">{}{}</span><span class="s2">.root&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">addendum</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_files_after_merging</span><span class="p">)</span>
         <span class="p">])</span>
 
@@ -846,7 +1006,7 @@
                 <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="n">tmp_out</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;RECREATE&quot;</span><span class="p">)</span>
                 <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="MergeCategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">):</span>
+<div class="viewcode-block" id="MergeCategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategorySystWrapperTask</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the MergeCategorizationWrapper task over several datasets in parallel.</span>
 
@@ -856,8 +1016,10 @@
 <span class="sd">--config-name base_config --dataset-names tt_dl,tt_sl --workers 10``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">MergeCategorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">systematic</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">MergeCategorization</span><span class="o">.</span><span class="n">vreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">category_name</span><span class="o">=</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">systematic</span><span class="o">=</span><span class="n">systematic</span><span class="p">,</span>
+            <span class="n">systematic_direction</span><span class="o">=</span><span class="n">direction</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MergeCategorizationStats"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStats">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationStats</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">ForestMerge</span><span class="p">):</span>
@@ -865,11 +1027,23 @@
 <span class="sd">    Merges the output from the PreCounter task in order to reduce the </span>
 <span class="sd">    parallelization entering the plotting tasks.</span>
 
+<span class="sd">    :param systematic: systematic to use for categorization.</span>
+<span class="sd">    :type systematic: str</span>
+
+<span class="sd">    :param systematic_direction: systematic direction to use for categorization.</span>
+<span class="sd">    :type systematic_direction: str</span>
+
 <span class="sd">    Example command:</span>
 
 <span class="sd">    ``law run MergeCategorizationStats --version test --config-name base_config \</span>
 <span class="sd">--dataset-name dy_high --workers 10``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">systematic</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic to use for categorization, &quot;</span>
+        <span class="s2">&quot;default: None&quot;</span><span class="p">)</span>
+    <span class="n">systematic_direction</span> <span class="o">=</span> <span class="n">luigi</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;systematic direction to use &quot;</span>
+        <span class="s2">&quot;for categorization, default: None&quot;</span><span class="p">)</span>
+
     <span class="c1"># regions not supported</span>
     <span class="n">region_name</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -890,7 +1064,8 @@
         <span class="k">return</span> <span class="p">[</span><span class="n">inp</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;collection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
 
     <span class="k">def</span> <span class="nf">merge_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="s2">&quot;stats.json&quot;</span><span class="p">)</span>
+        <span class="n">addendum</span> <span class="o">=</span> <span class="n">PreCounter</span><span class="o">.</span><span class="n">get_addendum</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;stats</span><span class="si">{</span><span class="n">addendum</span><span class="si">}</span><span class="s2">.json&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
         <span class="c1"># output content</span>
@@ -925,7 +1100,7 @@
         <span class="n">output</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">stats</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">formatter</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="MergeCategorizationStatsWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationStatsWrapper</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
+<div class="viewcode-block" id="MergeCategorizationStatsWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.MergeCategorizationStatsWrapper">[docs]</a><span class="k">class</span> <span class="nc">MergeCategorizationStatsWrapper</span><span class="p">(</span><span class="n">DatasetSystWrapperTask</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper task to run the MergeCategorizationStatsWrapper task over several datasets in parallel.</span>
 
@@ -934,8 +1109,9 @@
 <span class="sd">    ``law run MergeCategorizationStatsWrapper --version test --config-name base_config \</span>
 <span class="sd">--dataset-names tt_dl,tt_sl --workers 10``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">MergeCategorizationStats</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">atomic_requires</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">systematic</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">MergeCategorizationStats</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">systematic</span><span class="o">=</span><span class="n">systematic</span><span class="p">,</span> <span class="n">systematic_direction</span><span class="o">=</span><span class="n">direction</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="EventCounterDAS"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDAS">[docs]</a><span class="k">class</span> <span class="nc">EventCounterDAS</span><span class="p">(</span><span class="n">DatasetTask</span><span class="p">):</span>
@@ -993,6 +1169,7 @@
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">output_d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
         <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">tmpname</span><span class="p">)</span></div></div>
+
 
 <div class="viewcode-block" id="EventCounterDASWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.EventCounterDASWrapper">[docs]</a><span class="k">class</span> <span class="nc">EventCounterDASWrapper</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>

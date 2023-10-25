@@ -7,7 +7,7 @@
   <title>cmt.base_tasks.plotting &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -31,18 +31,14 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="../../index.html" class="icon icon-home">
-            nanoaod-base-analysis user guide
+            <a href="../../index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -85,10 +81,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../index.html">API Reference</a></li>
-          <li class="breadcrumb-item"><a href="index.html">cmt.base_tasks</a></li>
-      <li class="breadcrumb-item active">cmt.base_tasks.plotting</li>
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">API Reference</a> &raquo;</li>
+          <li><a href="index.html">cmt.base_tasks</a> &raquo;</li>
+      <li>cmt.base_tasks.plotting</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../_sources/api/base_tasks/plotting.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -145,7 +141,7 @@ defaults to the value configured by the feature when empty.</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.plotting.</span></span><span class="sig-name descname"><span class="pre">PrePlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/plotting.html#PrePlot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetTaskWithCategory</span></code>, <a class="reference internal" href="#cmt.base_tasks.plotting.BasePlotTask" title="cmt.base_tasks.plotting.BasePlotTask"><code class="xref py py-class docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">LocalWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">HTCondorWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">RDFModuleTask</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DatasetTaskWithCategory</span></code>, <a class="reference internal" href="#cmt.base_tasks.plotting.BasePlotTask" title="cmt.base_tasks.plotting.BasePlotTask"><code class="xref py py-class docutils literal notranslate"><span class="pre">BasePlotTask</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">LocalWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">HTCondorWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">SGEWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">RDFModuleTask</span></code></p>
 <p>Performs the filling of histograms for all features considered. If systematics are considered,
 it also produces the same histograms after applying those.</p>
 <dl class="field-list simple">
@@ -179,7 +175,7 @@ with the RDF modules to run.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="cmt.base_tasks.plotting.PrePlot.requires">
 <span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/plotting.html#PrePlot.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.plotting.PrePlot.requires" title="Permalink to this definition"></a></dt>
-<dd><p>Each branch requires one input file</p>
+<dd><p>Each branch requires one input file for the central value and two per systematic considered</p>
 </dd></dl>
 
 <dl class="py method">

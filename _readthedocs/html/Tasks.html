@@ -7,7 +7,7 @@
   <title>Executing tasks &mdash; nanoaod-base-analysis user guide 0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" type="text/css" />
+      <link rel="stylesheet" href="_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -31,18 +31,14 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="index.html" class="icon icon-home">
-            nanoaod-base-analysis user guide
+            <a href="index.html" class="icon icon-home"> nanoaod-base-analysis user guide
           </a>
               <div class="version">
                 0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -54,7 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="Configuration.html">Setting the configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Environment.html">Setting the environment</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Executing tasks</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#htcondor-jobs-submission">HTCondor Jobs submission</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#batch-submission">Batch submission</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#verifying-executions">Verifying executions</a></li>
 </ul>
 </li>
@@ -76,8 +72,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Executing tasks</li>
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Executing tasks</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/Tasks.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -136,13 +132,14 @@
 </pre></div>
 </div>
 <p>This is just an example on how to run a NanoAOD-base-analysis, but more specific information on how to run each task can be found in the <a class="reference internal" href="api/index.html#api"><span class="std std-ref">API Reference</span></a>, where more examples can be found as well. Also the available options for each task execution command can be checked with the <code class="docutils literal notranslate"><span class="pre">--help</span></code> option.</p>
-<section id="htcondor-jobs-submission">
-<h2>HTCondor Jobs submission<a class="headerlink" href="#htcondor-jobs-submission" title="Permalink to this heading"></a></h2>
-<p>This framework gives you the option to submit the jobs in different CPU’s infraestructures of HTCondor at CIEMAT and CERN. This is possible using just a couple of parameters for the <em>PreCounter</em>, <em>PreprocessRDF</em>, <em>Categorization</em> and <em>PrePlot</em> tasks, the rest of the tasks will run in the same user interface you’re using, as they don’t require so much time to be done.</p>
+<section id="batch-submission">
+<h2>Batch submission<a class="headerlink" href="#batch-submission" title="Permalink to this heading"></a></h2>
+<p>This framework gives you the option to submit the jobs in different CPU’s infraestructures of HTCondor at CIEMAT and CERN and SGE at IC. This is possible using just a couple of parameters for the <em>PreCounter</em>, <em>PreprocessRDF</em>, <em>Categorization</em> and <em>PrePlot</em> tasks, the rest of the tasks will run in the same user interface you’re using, as they don’t require so much time to be done.</p>
 <ul class="simple">
 <li><p><strong>CIEMAT CPU’s</strong>: <code class="docutils literal notranslate"><span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--htcondor-scheduler</span> <span class="pre">condorsc1.ciemat.es</span> <span class="pre">--transfer-logs</span> <span class="pre">true</span></code></p></li>
 <li><p><strong>CIEMAT gaefacil01</strong>: <code class="docutils literal notranslate"><span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--custom-condor-tag</span> <span class="pre">&quot;+CieRunInAF=True,+CieSingularityImage=cc7&quot;</span> <span class="pre">--htcondor-scheduler</span> <span class="pre">condorsc1.ciemat.es</span> <span class="pre">--transfer-logs</span> <span class="pre">true</span></code></p></li>
 <li><p><strong>CERN</strong>: <code class="docutils literal notranslate"><span class="pre">--workflow</span> <span class="pre">htcondor</span> <span class="pre">--transfer-logs</span> <span class="pre">true</span></code></p></li>
+<li><p><strong>IC</strong>: <code class="docutils literal notranslate"><span class="pre">--workflow</span> <span class="pre">sge</span></code>. Logs and errors are saved in the usual paths (under your home directory).</p></li>
 </ul>
 <p>Where the parameter <code class="docutils literal notranslate"><span class="pre">--transfer-logs</span> <span class="pre">true</span></code> saves the logs from HTCondor in your repository so you can see them in the <em>$CMT_STORE_LOCAL</em> folder. These logs are especially useful in case you need to review any error that may have occurred during the execution of the tasks.</p>
 </section>

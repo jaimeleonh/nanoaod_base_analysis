@@ -29,13 +29,14 @@ from analysis_tools.utils import (
 )
 from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, ConfigTaskWithCategory,
-    RDFModuleTask, InputData
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow,
+    ConfigTaskWithCategory, RDFModuleTask, InputData
 )
 
 from cmt.base_tasks.preprocessing import (
     Categorization, MergeCategorization, MergeCategorizationStats, EventCounterDAS
 )
+
 
 cmt_style = r.styles.copy("default", "cmt_style")
 cmt_style.style.ErrorX = 0
@@ -70,7 +71,7 @@ class BasePlotTask(ConfigTaskWithCategory):
     :param apply_weights: whether to apply weights and scaling to all histograms.
     :type apply_weights: bool
 
-    :param n_bins: NOT YET IMPLEMENTED. Custom number of bins for plotting,
+    :param n_bins: Custom number of bins for plotting,
         defaults to the value configured by the feature when empty.
     :type n_bins: int
 
@@ -85,6 +86,10 @@ class BasePlotTask(ConfigTaskWithCategory):
 
     :param remove_horns: NOT YET IMPLEMENTED. Whether to remove the eta horns present in 2017
     :type remove_horns: bool
+
+    :param optimization_method: Optimization method to be used. Only `bayesian_blocks` available.
+    :type optimization_method: str
+
     """
 
     feature_names = law.CSVParameter(default=(), description="names of features to plot, uses all "
@@ -108,6 +113,8 @@ class BasePlotTask(ConfigTaskWithCategory):
         "from distributions, default: False")
     tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
         "the root file, default: Events (nanoAOD)")
+    optimization_method = luigi.ChoiceParameter(default="", choices=("", "bayesian_blocks"),
+        significant=False, description="optimization method to be used, default: none")
 
     def __init__(self, *args, **kwargs):
         super(BasePlotTask, self).__init__(*args, **kwargs)
@@ -131,16 +138,43 @@ class BasePlotTask(ConfigTaskWithCategory):
             raise ValueError("No features were included. Did you spell them correctly?")
         return features
 
-    def get_binning(self, feature):
-        if isinstance(feature.binning, tuple):
+    def round(self, number):
+        if number - round(number) < 0.0001:
+            return number
+        if number > 10.:
+            return round(number)
+        elif number > 1.:
+            return round(number, 1)
+        i = 1
+        while True:
+            if number > (1 / (10 ** i)):
+                return round(number, i + 1)
+            i += 1
+
+    def get_binning(self, feature, ifeat=0):
+        if self.optimization_method:
+            y_axis_adendum = ""
+            binning = self.input()["bin_opt"].collection.targets[ifeat].load(formatter="json")
+            n_bins = len(binning) - 1
+            binning_args = n_bins, array.array("f", binning)
+        elif isinstance(feature.binning, tuple):
+            if self.n_bins == law.NO_INT:
+                nbins = feature.binning[0]
+            else:
+                nbins = self.n_bins
             y_axis_adendum = (" / %s %s" % (
-                (feature.binning[2] - feature.binning[1]) / feature.binning[0],
+                self.round((feature.binning[2] - feature.binning[1]) / nbins),
                     feature.get_aux("units")) if feature.get_aux("units") else "")
-            binning_args = tuple(feature.binning)
+            binning = (nbins, feature.binning[1], feature.binning[2])
+            binning_args = tuple(binning)
         else:
             y_axis_adendum = ""
-            n_bins = len(feature.binning) - 1
-            binning_args = n_bins, array.array("f", feature.binning)
+            if self.n_bins == law.NO_INT:
+                n_bins = len(feature.binning) - 1
+                binning_args = n_bins, array.array("f", feature.binning)
+            else:
+                n_bins = self.n_bins
+                binning_args = tuple(n_bins, feature.binning[0], feature.binning[-1])
 
         return binning_args, y_axis_adendum
 
@@ -168,11 +202,15 @@ class BasePlotTask(ConfigTaskWithCategory):
             postfix += "__" + self.region.name
         if not self.apply_weights:
             postfix += "__noweights"
+        if self.optimization_method == "bayesian_blocks":
+            postfix += "__opt_bb"
+        if self.n_bins != law.NO_INT:
+            postfix += "__%s_bins" % self.n_bins
         return postfix
 
 
 class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondorWorkflow,
-        RDFModuleTask):
+        SGEWorkflow, RDFModuleTask):
     """
     Performs the filling of histograms for all features considered. If systematics are considered,
     it also produces the same histograms after applying those.
@@ -192,10 +230,34 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         " MergeCategorization task, default: False")
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default=law.NO_STR)
+    dataset_names = law.CSVParameter(description="dataset_names to use for optimization",
+        default=())
 
     def __init__(self, *args, **kwargs):
         super(PrePlot, self).__init__(*args, **kwargs)
         self.custom_output_tag = "_%s" % self.region_name
+        self.threshold = self.dataset.get_aux("event_threshold", None)
+        self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+
+        self.syst_list = self.get_syst_list()
+
+    def get_syst_list(self):
+        if self.skip_processing:
+            return []
+        syst_list = []
+        isMC = self.dataset.process.isMC
+        for feature in self.features:
+            systs = self.get_unique_systs(self.get_systs(feature, isMC))
+            for syst in systs:
+                if syst in syst_list:
+                    continue
+                try:
+                    systematic = self.config.systematics.get(syst)
+                    if self.category.name in systematic.get_aux("affected_categories", []):
+                        syst_list.append(syst)
+                except:
+                    continue
+        return syst_list
 
     def create_branch_map(self):
         """
@@ -204,27 +266,52 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         """
         if self.skip_processing or self.skip_merging:
             return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False))
+                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
+                check_empty=True))
         return self.n_files_after_merging
 
     def workflow_requires(self):
         """
         """
         if self.skip_merging:
-            return {"data": Categorization.vreq(self, workflow="local")}
-        if self.skip_processing:
-            return {"data": InputData.req(self)}
-        return {"data": MergeCategorization.vreq(self, workflow="local")}
+            reqs = {"data": {"central": Categorization.vreq(self, workflow="local")}}
+            for syst, d in itertools.product(self.syst_list, directions):
+                reqs["data"][f"{syst}_{d}"] = Categorization.vreq(self, workflow="local",
+                    systematic=syst, systematic_direction=d)
+        elif self.skip_processing:
+            reqs= {"data": {"central": InputData.req(self)}}
+        else:
+            reqs = {"data": {"central": MergeCategorization.vreq(self, workflow="local")}}
+            for syst, d in itertools.product(self.syst_list, directions):
+                reqs["data"][f"{syst}_{d}"] = MergeCategorization.vreq(self, workflow="local",
+                    systematic=syst, systematic_direction=d)
+        if self.optimization_method == "bayesian_blocks":
+            from cmt.base_tasks.optimization import BayesianBlocksOptimization
+            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False, 
+                _exclude=["branch", "branches", "custom_output_tag", "plot_systematics"])
+        return reqs
 
     def requires(self):
         """
-        Each branch requires one input file
+        Each branch requires one input file for the central value and two per systematic considered
         """
         if self.skip_merging:
-            return Categorization.vreq(self, workflow="local", branch=self.branch)
-        if self.skip_processing:
-            return InputData.req(self, file_index=self.branch)
-        return MergeCategorization.vreq(self, workflow="local", branch=self.branch)
+            reqs = {"central": Categorization.vreq(self, workflow="local", branch=self.branch)}
+            for syst, d in itertools.product(self.syst_list, directions):
+                reqs[f"{syst}_{d}"] = Categorization.vreq(self, workflow="local",
+                    systematic=syst, systematic_direction=d, branch=self.branch)
+        elif self.skip_processing:
+            reqs= {"central": InputData.req(self, file_index=self.branch)}
+        else:
+            reqs = {"central": MergeCategorization.vreq(self, workflow="local", branch=self.branch)}
+            for syst, d in itertools.product(self.syst_list, directions):
+                reqs[f"{syst}_{d}"] = MergeCategorization.vreq(self, workflow="local",
+                    systematic=syst, systematic_direction=d, branch=self.branch)
+        if self.optimization_method:
+            from cmt.base_tasks.optimization import BayesianBlocksOptimization
+            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False,
+                _exclude=["branch", "branches", "custom_output_tag", "plot_systematics"])
+        return reqs
 
     def output(self):
         """
@@ -249,11 +336,11 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 self.config.weights[category], syst_name, syst_direction)
         return self.config.weights.default
 
-    def define_histograms(self, df):
+    def define_histograms(self, dfs, nentries):
         histos = []
         isMC = self.dataset.process.isMC
-        for feature in self.features:
-            binning_args, y_axis_adendum = self.get_binning(feature)
+        for ifeat, feature in enumerate(self.features):
+            binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
             x_title = (str(feature.get_aux("x_title"))
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = "Events" + y_axis_adendum
@@ -266,14 +353,20 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
             # loop over systematics and up/down variations
             for syst_name, direction in systs_directions:
+
+                # Select the appropriate RDF (input file) depending on the syst and direction
+                key = "central"
+                if f"{syst_name}_{direction}" in dfs:
+                    key = f"{syst_name}_{direction}"
+                df = dfs[key]
+
                 # apply selection if needed
                 if feature.selection:
                     feat_df = df.Define("feat_selection", self.config.get_object_expression(
                         feature.selection, isMC, syst_name, direction)).Filter("feat_selection")
                 else:
                     feat_df = df
-
-                # define tag just for histograms's name
+                # define tag just for the histogram's name
                 if syst_name != "central" and isMC:
                     tag = "_%s" % syst_name
                     if direction != "":
@@ -284,7 +377,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                     feature, isMC, syst_name, direction)
                 feature_name = feature.name + tag
                 hist_base = ROOT.TH1D(feature_name, title, *binning_args)
-                if self.nentries > 0:
+
+                if nentries[key] > 0:
                     hmodel = ROOT.RDF.TH1DModel(hist_base)
                     histos.append(
                         feat_df.Define(
@@ -297,7 +391,6 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                     histos.append(hist_base)
         return histos
 
-
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
@@ -309,53 +402,93 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
 
         # prepare inputs and outputs
         if self.skip_processing:
-            inp = self.input().path
-        elif self.skip_merging:
-            inp = self.input()["data"].path
+            inp = self.get_input()
         else:
-            inp = self.input().targets[self.branch].path
+            inp = self.input()
         outp = self.output().path
 
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
-        df = ROOT.RDataFrame(self.tree_name, inp)
 
-        modules = self.get_feature_modules(self.preplot_modules_file)
-        if len(modules) > 0:
-            for module in modules:
-                df, _ = module.run(df)
+        # create one RDF for the central value and each needed systematic
+        dfs = {}
+        nentries = {}
+        for elem in ["central"] + [f"{syst}_{d}"
+                for (syst, d) in itertools.product(self.syst_list, directions)]:
+            if self.skip_processing:
+                inp_to_consider = self.get_path(inp[elem])[0]
+                if not self.dataset.friend_datasets:
+                    dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
+                # friend tree
+                else:
+                    tchain = ROOT.TChain()
+                    for f in self.get_path(inp[elem]):
+                        tchain.Add("{}/{}".format(f, self.tree_name))
+                    friend_tchain = ROOT.TChain()
+                    for f in self.get_path(inp[elem], 1):
+                        friend_tchain.Add("{}/{}".format(f, self.tree_name))
+                    tchain.AddFriend(friend_tchain, "friend")
+                    dfs[elem] = ROOT.RDataFrame(tchain)
 
-        selection = "1"
-        dataset_selection = self.dataset.get_aux("selection")
-
-        if self.skip_processing:
-            selection = self.config.get_object_expression(self.category, self.dataset.process.isMC)
-
-        if dataset_selection and dataset_selection != "1":
-            if selection != "1":
-                selection = join_root_selection(dataset_selection, selection, op="and")
+            elif self.skip_merging:
+                inp_to_consider = inp[elem].path
+                dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
             else:
-                selection = dataset_selection
+                inp_to_consider = inp[elem].targets[self.branch].path
+                dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
 
-        if self.region_name != law.NO_STR:
-            region_selection = self.config.regions.get(self.region_name).selection
+            try:
+                tf = ROOT.TFile.Open(inp_to_consider)
+                tree = tf.Get(self.tree_name)
+                nentries[elem] = tree.GetEntries()
+                tf.Close()
+            except:  # no tree inside the file
+                nentries[elem] = 0
+
+            # applying modules according to the systematic considered
+            syst = ""
+            d = ""
+            if "_" in elem:
+                syst = elem.split("_")[0]
+                d = elem.split("_")[1]
+            modules = self.get_feature_modules(self.preplot_modules_file,
+                systematic=syst, systematic_direction=d)
+            if len(modules) > 0:
+                for module in modules:
+                    dfs[elem], _ = module.run(dfs[elem])
+
+            selection = "1"
+            dataset_selection = self.config.get_object_expression(
+                self.dataset.get_aux("selection", "1"), self.dataset.process.isMC, syst, d)
+
+            if self.skip_processing:
+                selection = self.config.get_object_expression(
+                    self.category, self.dataset.process.isMC, syst, d)
+
+            if dataset_selection and dataset_selection != "1":
+                if selection != "1":
+                    selection = join_root_selection(dataset_selection, selection, op="and")
+                else:
+                    selection = dataset_selection
+
+            if self.region_name != law.NO_STR:
+                region_selection = self.config.get_object_expression(
+                    self.config.regions.get(self.region_name).selection,
+                    self.dataset.process.isMC, syst, d)
+                if selection != "1":
+                    selection = join_root_selection(region_selection, selection, op="and")
+                else:
+                    selection = region_selection
+
             if selection != "1":
-                selection = join_root_selection(region_selection, selection, op="and")
-            else:
-                selection = region_selection
+                dfs[elem] = dfs[elem].Define("selection", selection).Filter("selection")
 
-        if selection != "1":
-            df = df.Define("selection", selection).Filter("selection")
-
-        tf = ROOT.TFile.Open(inp)
-        tree = tf.Get(self.tree_name)
-        self.nentries = tree.GetEntries()
-
-        histos = self.define_histograms(df)
+        histos = self.define_histograms(dfs, nentries)
 
         out = ROOT.TFile.Open(create_file_dir(outp), "RECREATE")
         for histo in histos:
             histo = histo.Clone()
             histo.Sumw2()
+            out.cd()
             histo.Write()
         out.Close()
 
@@ -397,7 +530,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     :param hide_data: whether to show (False) or hide (True) the data histograms
     :type hide_data: bool
 
-    :param normalize_signals: (NOT YET IMPLEMENTED) whether to normalize signals to the
+    :param normalize_signals: whether to normalize signals to the
         total background yield (True) or not (False)
     :type normalize_signals: bool
 
@@ -405,7 +538,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         number of events
     :type avoid_normalization: bool
 
-    :param blinded: (NOT YET IMPLEMENTED) whether to blind data in specified regions
+    :param blinded: whether to blind data in specified regions. The blinding ranges are specified
+        using the `blinded_range` parameter in the Feature definition. This parameter can include a
+        list ([initial, final]) or a list of lists ([[init_1, fin_1], [init_2, fin_2], ...])
     :type blinded: bool
 
     :param save_png: whether to save plots in png
@@ -454,6 +589,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "default: False")
     qcd_category_name = luigi.Parameter(default="default", description="category use "
         "for qcd regions ss_iso and ss_inviso, default=default (same as category)")
+    do_sideband = luigi.BoolParameter(default=False, description="whether to compute the background "
+        "shape from sideband region, default: False")
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
     normalize_signals = luigi.BoolParameter(default=True, description="whether to normalize "
         "signals to the total bkg yield, default: True")
@@ -484,9 +621,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         # "optimization task to use, not used when empty, default: empty")
     # n_start_bins = luigi.IntParameter(default=10, description="number of bins to be used "
         # "as initial value for scans, default: 10")
-    # optimization_method = luigi.ChoiceParameter(default="flat_s",
-        # choices=("flat_s", "flat_b", "flat_sb", "flat_s_b", "const", "flat_mpp", "flat_mpp_sb"),
-        # significant=False, description="optimization method to be used, default: flat signal")
     # threshold = luigi.FloatParameter(default=-1., description="threshold per bin, "
         # "default: -1.")
     # threshold_method = luigi.ChoiceParameter(default="yield",
@@ -504,9 +638,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
     def __init__(self, *args, **kwargs):
         super(FeaturePlot, self).__init__(*args, **kwargs)
-
         # select processes and datasets
         assert self.process_group_name in self.config.process_group_names
+        assert not (self.do_qcd and self.do_sideband)
         self.processes_datasets = {}
         self.datasets_to_run = []
 
@@ -551,6 +685,24 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if not any(dataset.process.isData for dataset in self.datasets):
                 raise Exception("no real dataset passed for QCD estimation")
 
+        self.sideband_regions = None
+        if self.do_sideband:  # Several fixes may be needed later for this
+            assert self.region.name == "signal"
+            self.sideband_regions = {key: self.config.regions.get(key)
+                for key in ["signal", "background"]}
+
+        # obtain the list of systematics that apply to the normalization only if this is done
+        self.norm_syst_list = []
+        weights = self.config.weights.total_events_weights
+        for weight in weights:
+            try:
+                feature = self.config.features.get(weight)
+                for syst in feature.systematics:
+                    if syst not in self.norm_syst_list:
+                        self.norm_syst_list.append(syst)
+            except:  # weight not defined as a feature -> no syst available
+                continue
+
     def requires(self):
         """
         All requirements needed:
@@ -576,12 +728,21 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             for dataset in self.datasets_to_run:
                 if dataset.process.isData:
                     continue
-                if dataset.get_aux("secondary_dataset", None):
-                    reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
-                        dataset_name=dataset.get_aux("secondary_dataset"))
-                else:
-                    reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
-                        dataset_name=dataset.name)
+                reqs["stats"][dataset.name] = {}
+                for elem in ["central"] + [f"{syst}_{d}"
+                        for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
+                    syst = ""
+                    d = ""
+                    if "_" in elem:
+                        syst = elem.split("_")[0]
+                        d = elem.split("_")[1]
+                    if dataset.get_aux("secondary_dataset", None):
+                        reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
+                            dataset_name=dataset.get_aux("secondary_dataset"),
+                            systematic=syst, systematic_direction=d)
+                    else:
+                        reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
+                            dataset_name=dataset.name, systematic=syst, systematic_direction=d)
 
         if self.do_qcd:
             reqs["qcd"] = {
@@ -613,6 +774,17 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         "shape_region", "qcd_category_name", "qcd_sym_shape", "bin_opt_version",
                         "qcd_signal_region_wp"])
 
+        if self.do_sideband:
+            reqs["sideband"] = {
+                key: self.req(self, region_name=region.name, blinded=False, hide_data=False,
+                    do_sideband=False, stack=True, save_root=True, save_pdf=False, save_yields=False,
+                    remove_horns=False,_exclude=["feature_tags", "shape_region",
+                    "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp"])
+                for key, region in self.sideband_regions.items()
+            }
+        if self.optimization_method:
+            from cmt.base_tasks.optimization import BayesianBlocksOptimization
+            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False)
         return reqs
 
     def get_output_postfix(self, key="pdf"):
@@ -625,6 +797,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             postfix += "__pg_" + self.process_group_name
         if self.do_qcd:
             postfix += "__qcd"
+        if self.do_sideband:
+            postfix += "__sideband"
         if self.hide_data:
             postfix += "__nodata"
         elif self.blinded and key not in ("root", "yields"):
@@ -762,7 +936,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     for x in systematics[dataset_name]]))
         return systematics
 
-    def plot(self, feature):
+    def plot(self, feature, ifeat=0):
         """
         Performs the actual plotting.
         """
@@ -792,6 +966,24 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             return qcd_hist
 
+        # helper to extract data and bkg histos in sideband and signal regions
+        def get_sideband(region, files, bin_limit=0.):
+            d_hist = files[region].Get("histograms/" + self.data_names[0]).Clone(
+                randomize("bkg_" + region))
+            if not d_hist:
+                raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
+                    self.data_names[0], region, files[region]))
+
+            b_hist = None
+            for b_name in self.background_names:
+                if not b_hist:
+                    b_hist = files[region].Get("histograms/" + b_name).Clone(
+                        randomize("bkg_" + region))
+                else:
+                    b_hist.Add(files[region].Get("histograms/" + b_name))
+
+            return d_hist, b_hist
+
         def get_integral_and_error(hist):
             error = c_double(0.)
             integral = hist.IntegralAndError(0, hist.GetNbinsX() + 1, error)
@@ -800,6 +992,11 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             # compatible = True if integral - error <= 0 else False
             return integral, error, compatible
 
+        def get_ratio(num, den):
+            if den == 0:
+                return 0
+            return num / den
+
         background_hists = self.histos["background"]
         signal_hists = self.histos["signal"]
         data_hists = self.histos["data"]
@@ -807,7 +1004,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.plot_systematics:
             bkg_histo_syst = self.histos["bkg_histo_syst"]
 
-        binning_args, y_axis_adendum = self.get_binning(feature)
+        binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
         x_title = (str(feature.get_aux("x_title"))
             + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
         y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
@@ -901,6 +1098,63 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             background_hists.append(qcd_hist)
             all_hists.append(qcd_hist)
 
+        # sideband files
+        sideband_files = None
+        if self.do_sideband:
+            sideband_files = {}
+            for key, region in self.sideband_regions.items():
+                my_feature = feature.name
+                sideband_files[key] = ROOT.TFile.Open(
+                    self.input()["sideband"][key]["root"].targets[my_feature].path)
+
+            # do the qcd extrapolation
+            data_hist, bkg_hist_background_region = get_sideband("background", sideband_files)
+            _, bkg_hist_signal_region = get_sideband("signal", sideband_files)
+            n_bkg_background, n_bkg_background_error, _ = get_integral_and_error(
+                bkg_hist_background_region)
+            n_bkg_signal, n_bkg_signal_error, _ = get_integral_and_error(
+                bkg_hist_signal_region)
+
+            bkg_hist = data_hist.Clone(randomize("bkg"))
+            n_bkg_background_rel_error = get_ratio(n_bkg_background_error, n_bkg_background)
+            n_bkg_signal_rel_error = get_ratio(n_bkg_signal_error, n_bkg_signal)
+            new_errors_sq = []
+            for ib in range(1, bkg_hist.GetNbinsX() + 1):
+                if bkg_hist.GetBinContent(ib) > 0:
+                    bin_rel_error = bkg_hist.GetBinError(ib) / bkg_hist.GetBinContent(ib)
+                else:
+                    bin_rel_error = 0
+                new_errors_sq.append(bin_rel_error * bin_rel_error
+                    + n_bkg_background_rel_error * n_bkg_background_rel_error
+                    + n_bkg_signal_rel_error * n_bkg_signal_rel_error)
+            bkg_hist.Scale(n_bkg_signal / n_bkg_background)
+            # fix errors
+            for ib in range(1, bkg_hist.GetNbinsX() + 1):
+                bkg_hist.SetBinError(ib, bkg_hist.GetBinContent(ib)
+                    * math.sqrt(new_errors_sq[ib - 1]))
+
+            # store and style
+            yield_error = c_double(0.)
+            bkg_hist.cmt_yield = bkg_hist.IntegralAndError(
+                0, bkg_hist.GetNbinsX() + 1, yield_error)
+            bkg_hist.cmt_yield_error = yield_error.value
+            bkg_hist.cmt_bin_yield = []
+            bkg_hist.cmt_bin_yield_error = []
+            for ibin in range(1, bkg_hist.GetNbinsX() + 1):
+                bkg_hist.cmt_bin_yield.append(bkg_hist.GetBinContent(ibin))
+                bkg_hist.cmt_bin_yield_error.append(bkg_hist.GetBinError(ibin))
+            bkg_hist.cmt_scale = 1.
+            bkg_hist.cmt_process_name = "background"
+            bkg_hist.process_label = "Background"
+            bkg_hist.SetTitle("Background")
+            try:
+                bkg_color = ROOT.TColor.GetColor(*self.config.processes.get("background").color)
+            except:  # background process not defined in config
+                bkg_color = ROOT.kRed
+            self.setup_background_hist(bkg_hist, bkg_color)
+            background_hists = [bkg_hist]
+            all_hists.append(bkg_hist)
+
         if not self.hide_data:
             all_hists += data_hists
 
@@ -922,8 +1176,38 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 else:
                     bkg_histo.Add(hist.Clone())
             background_stack.hist_type = "background"
+
+            # Normalize signal histograms to background sum
+            if self.normalize_signals and bkg_histo:
+                for hist in signal_hists:
+                    signal_yield = hist.cmt_yield
+                    scale = (bkg_histo.Integral() / signal_yield if signal_yield != 0 else 1.)
+                    hist.Scale(scale)
+                    hist.cmt_scale = scale
+
             draw_hists = [background_stack] + signal_hists[::-1]
             if not self.hide_data:
+                # blinding
+                blinded_range = feature.get_aux("blinded_range", None)
+                if blinded_range and self.blinded:
+                    for hist in data_hists:
+                        for ib in range(1, hist.GetNbinsX() + 1):
+                            blind = False
+                            if isinstance(blinded_range[0], list):
+                                for iblinded_range in blinded_range:
+                                    if (hist.GetBinCenter(ib) >= iblinded_range[0] and
+                                            hist.GetBinCenter(ib) <= iblinded_range[1]):
+                                        blind = True
+                                        break
+                            else:
+                                if (hist.GetBinCenter(ib) >= blinded_range[0] and
+                                        hist.GetBinCenter(ib) <= blinded_range[1]):
+                                    blind = True
+
+                            if blind:
+                                hist.SetBinContent(ib, -999)
+                                hist.SetBinError(ib, 0)
+
                 draw_hists.extend(data_hists[::-1])
                 for hist in data_hists:
                     if not data_histo:
@@ -982,7 +1266,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             dummy_hist.SetMaximum(100 * maximum)
             dummy_hist.SetMinimum(0.0011)
         else:
-            dummy_hist.SetMaximum(1.25 * maximum)
+            dummy_hist.SetMaximum(1.35 * maximum)
             dummy_hist.SetMinimum(0.001)
 
         inner_text=[self.category.label + " category"]
@@ -991,6 +1275,20 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 inner_text += self.region.label
             else:
                 inner_text.append(self.region.label)
+
+        if self.normalize_signals and self.stack and signal_hists:
+            scale_text = []
+            for hist in signal_hists:
+                scale = hist.cmt_scale
+                if scale != 1.:
+                    if scale < 100:
+                        scale = "{:.1f}".format(scale)
+                    elif scale < 10000:
+                        scale = "{}".format(int(round(scale)))
+                    else:
+                        scale = "{:.2e}".format(scale).replace("+0", "").replace("+", "")
+                    scale_text.append("{} x{}".format(hist.process_label, scale))
+            inner_text.append("#scale[0.75]{{{}}}".format(",  ".join(scale_text)))
 
         if maximum > 1e4 and not self.log_y:
             upper_left_offset = 0.05
@@ -1166,15 +1464,18 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
             if not process.isData and not self.avoid_normalization:
                 for dataset in datasets:
-                    inp = self.input()["stats"][dataset.name]
-                    with open(inp.path) as f:
-                        stats = json.load(f)
-                        # nevents += stats["nevents"]
-                        nevents[dataset.name] = stats["nweightedevents"]
+                    nevents[dataset.name] = {}
+                    for elem in ["central"] + [f"{syst}_{d}"
+                            for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
+                        inp = self.input()["stats"][dataset.name][elem]
+                        with open(inp.path) as f:
+                            stats = json.load(f)
+                            # nevents += stats["nevents"]
+                            nevents[dataset.name][elem] = stats["nweightedevents"]
         return nevents
 
-    def get_normalization_factor(self, dataset):
-        return dataset.xs * self.config.lumi_pb / self.nevents[dataset.name]
+    def get_normalization_factor(self, dataset, elem):
+        return dataset.xs * self.config.lumi_pb / self.nevents[dataset.name][elem]
 
     @law.decorator.notify
     @law.decorator.safe_output
@@ -1202,10 +1503,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         self.nevents = self.get_nevents()
 
-        for feature in self.features:
+        for ifeat, feature in enumerate(self.features):
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
 
-            binning_args, y_axis_adendum = self.get_binning(feature)
+            binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
             x_title = (str(feature.get_aux("x_title"))
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
@@ -1230,6 +1531,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
                     if syst != "central" and process.isData:
                         continue
+                    if self.do_sideband and not process.isData and not process.isSignal:
+                        continue
                     process_histo = ROOT.TH1D(randomize(process.name), hist_title, *binning_args)
                     process_histo.process_label = str(process.label)
                     process_histo.cmt_process_name = process.name
@@ -1246,8 +1549,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                 rootfile.Close()
                                 dataset_histo.Add(histo)
                             if not process.isData and not self.avoid_normalization:
-                                if self.nevents[dataset.name] != 0:
-                                    dataset_histo.Scale(self.get_normalization_factor(dataset))
+                                elem = ("central" if syst == "central" or syst not in self.norm_syst_list
+                                    else f"{syst}_{d}")
+                                if self.nevents[dataset.name][elem] != 0:
+                                    dataset_histo.Scale(self.get_normalization_factor(dataset, elem))
                                     scaling = dataset.get_aux("scaling", None)
                                     if scaling:
                                         print("Scaling {} histo by {} +- {}".format(
@@ -1623,9 +1928,29 @@ class BasePlot2DTask(BasePlotTask):
 
 
 class PrePlot2D(PrePlot, BasePlot2DTask):
-    def define_histograms(self, df):
+    def get_syst_list(self):
+        if self.skip_processing:
+            return []
+        syst_list = []
+        isMC = self.dataset.process.isMC
+        for feature_pair in self.features:
+            for feature in feature_pair:
+                systs = self.get_unique_systs(self.get_systs(feature, isMC))
+                for syst in systs:
+                    if syst in syst_list:
+                        continue
+                    try:
+                        systematic = self.config.systematics.get(syst)
+                        if self.category.name in systematic.get_aux("affected_categories", []):
+                            syst_list.append(syst)
+                    except:
+                        continue
+        return syst_list
+
+    def define_histograms(self, dfs, nentries):
         histos = []
         isMC = self.dataset.process.isMC
+
         for feature_pair in self.features:
             binning_args, _ = self.get_binning(feature_pair)
             x_title = (str(feature_pair[0].get_aux("x_title"))
@@ -1646,11 +1971,17 @@ class PrePlot2D(PrePlot, BasePlot2DTask):
 
             # loop over systematics and up/down variations
             for syst_name, direction in systs_directions:
+                # Select the appropriate RDF (input file) depending on the syst and direction
+                key = "central"
+                if f"{syst_name}_{direction}" in dfs:
+                    key = f"{syst_name}_{direction}"
+                df = dfs[key]
+
                 # apply selection if needed
                 feat_df = df
                 for ifeat, feature in enumerate(feature_pair):
                     if feature.selection:
-                        feat_df = df.Define(
+                        feat_df = feat_df.Define(
                             "feat%s_selection" % ifeat, self.config.get_object_expression(
                                 feature.selection, isMC, syst_name, direction)).Filter(
                             "feat%s_selection" % ifeat)
@@ -1670,7 +2001,7 @@ class PrePlot2D(PrePlot, BasePlot2DTask):
                 ]
                 feature_name = "_".join([feature.name for feature in feature_pair]) + tag
                 hist_base = ROOT.TH2D(feature_name, title, *binning_args)
-                if self.nentries > 0:
+                if nentries[key] > 0:
                     hmodel = ROOT.RDF.TH2DModel(hist_base)
                     histos.append(
                         feat_df.Define(
@@ -1730,12 +2061,21 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
             for dataset in self.datasets_to_run:
                 if dataset.process.isData:
                     continue
-                if dataset.get_aux("secondary_dataset", None):
-                    reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
-                        dataset_name=dataset.get_aux("secondary_dataset"))
-                else:
-                    reqs["stats"][dataset.name] = MergeCategorizationStats.vreq(self,
-                        dataset_name=dataset.name)
+                reqs["stats"][dataset.name] = {}
+                for elem in ["central"] + [f"{syst}_{d}"
+                        for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
+                    syst = ""
+                    d = ""
+                    if "_" in elem:
+                        syst = elem.split("_")[0]
+                        d = elem.split("_")[1]
+                    if dataset.get_aux("secondary_dataset", None):
+                        reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
+                            dataset_name=dataset.get_aux("secondary_dataset"),
+                            systematic=syst, systematic_direction=d)
+                    else:
+                        reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
+                            dataset_name=dataset.name, systematic=syst, systematic_direction=d)
 
         if self.do_qcd:
             reqs["qcd"] = {
@@ -2151,15 +2491,20 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
                                 rootfile.Close()
                                 dataset_histo.Add(histo)
                             if not process.isData and not self.avoid_normalization:
-                                if self.nevents[dataset.name] != 0:
-                                    dataset_histo.Scale(self.get_normalization_factor(dataset))
+                                elem = ("central"
+                                    if syst == "central" or syst not in self.norm_syst_list
+                                    else f"{syst}_{d}")
+                                if self.nevents[dataset.name][elem] != 0:
+                                    dataset_histo.Scale(
+                                        self.get_normalization_factor(dataset, elem))
                                     scaling = dataset.get_aux("scaling", None)
                                     if scaling:
                                         print("Scaling {} histo by {} +- {}".format(
                                             dataset.name, scaling[0], scaling[1]))
                                         old_errors = [[dataset_histo.GetBinError(ibinx, ibiny)\
                                                 / dataset_histo.GetBinContent(ibinx, ibiny)
-                                                if dataset_histo.GetBinContent(ibinx, ibiny) != 0 else 0
+                                                if dataset_histo.GetBinContent(ibinx, ibiny) != 0
+                                                else 0
                                                 for ibinx in range(1, dataset_histo.GetNbinsX() + 1)]
                                             for ibiny in range(1, dataset_histo.GetNbinsY() + 1)
                                         ]

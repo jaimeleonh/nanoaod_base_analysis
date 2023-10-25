@@ -68,7 +68,10 @@ class MultiDataset(object):
             @tf.function
             def parse(example):
                 # use label_index to do a simple one-hot encoding
-                labels = [0] * label_index + [1] + [0] * (n_datasets - label_index - 1)
+                if n_datasets > 2:
+                    labels = [0] * label_index + [1] + [0] * (n_datasets - label_index - 1)
+                else:
+                    labels = [label_index]
                 labels = tf.constant(labels, dtype=tf.float32)
 
                 # deserialize all features
@@ -88,6 +91,7 @@ class MultiDataset(object):
         # read data with one TFRecordDataset per input dataset
         # also, prepare dataset shuffling and batching
         datasets = OrderedDict()
+        nevents = OrderedDict()
         for (key, spec), batch_size in zip(data_spec.items(), batch_sizes):
             # shuffle shard files already
             shards = list(spec["shards"])
@@ -98,6 +102,8 @@ class MultiDataset(object):
             # create the dataset
             dataset = tf.data.TFRecordDataset(shards, num_parallel_reads=n_threads)
             dataset = dataset.map(parse(key), num_parallel_calls=n_threads)
+
+            nevents[key] = len([elem for elem in dataset])
 
             # custom mapping and filtering
             if callable(map_fn):
@@ -122,7 +128,7 @@ class MultiDataset(object):
 
             datasets[key] = dataset
 
-        return cls(datasets, mixed=mixed, n_objects=3 if observer_spec else 2)
+        return cls(datasets, mixed=mixed, n_objects=3 if observer_spec else 2), nevents
 
     def __init__(self, datasets, mixed=True, n_objects=2):
         super(MultiDataset, self).__init__()
@@ -491,8 +497,16 @@ def calculate_confusion_matrix_t(labels, predictions, norm=True):
 
 
 def calculate_accuracies_t(labels, predictions):
+    if labels.shape[1] == 1:
+        den = labels.shape[0]
+        # num = tf.math.multiply(tf.math.abs(tf.math.subtract(labels, predictions)), 2)
+        num = tf.math.abs(tf.math.subtract(labels, predictions))
+        # num = tf.cast(num, tf.int32)
+        num = tf.reduce_sum(num)
+        return tf.constant([float(den - num) / den])
     # accuracies are normalized diagonal entries of the confusion matrix
-    return tf.linalg.tensor_diag_part(calculate_confusion_matrix_t(labels, predictions))
+    else:
+        return tf.linalg.tensor_diag_part(calculate_confusion_matrix_t(labels, predictions))
 
 
 def calculate_roc_curves(labels, predictions, smoothen=None, keep_ends=True):

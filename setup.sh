@@ -332,6 +332,7 @@ action() {
             cmt_pip_install git+https://gitlab.cern.ch/cms-phys-ciemat/plotting_tools.git
             cmt_pip_install --no-deps git+https://github.com/riga/law
             cmt_pip_install --no-deps git+https://github.com/riga/plotlib
+            cmt_pip_install --no-deps git+https://github.com/riga/LBN
             cmt_pip_install --no-deps gast==0.2.2  # https://github.com/tensorflow/autograph/issues/1
             cmt_pip_install sphinx
             cmt_pip_install sphinx_rtd_theme

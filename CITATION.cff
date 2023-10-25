@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: nanoaod_base_analysis
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Jaime
+    family-names: Leon Holgado
+    email: jaime.leon.holgado@cern.ch
+    affiliation: >-
+      Centro de Investigaciones Energéticas,
+      Medioambientales y Tecnológicas
+    orcid: 'https://orcid.org/0000-0002-4156-6460'
+identifiers:
+  - type: url
+    value: >-
+      https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis
+    description: Repository
+repository-code: >-
+  https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis
+url: 'https://nanoaod-base-analysis.readthedocs.io/en/latest/'
+doi: 10.5281/zenodo.8187177
+keywords:
+  - python
+  - physics
+  - ROOT
+  - ROOT RDataFrame
+  - law
+  - CMS
+license: AGPL-3.0

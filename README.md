@@ -1,3 +1,6 @@
+[![docs](https://readthedocs.org/projects/nanoaod-base-analysis/badge/?version=latest)](https://nanoaod-base-analysis.readthedocs.io/en/latest/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8187177.svg)](https://doi.org/10.5281/zenodo.8187177)
+
 This is the main code of the NanoAOD-base-analysis, which aims to process NanoAOD datasets, allowing to generate different root files, histograms and plots with the desired selection of events, variables and branches.
 
 If you want to make some suggestions to improve this code, feel free to make a pull request!

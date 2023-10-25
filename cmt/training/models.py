@@ -15,7 +15,7 @@ import tensorflow as tf
 import tabulate
 import lbn
 
-from hmc.training.losses import (
+from cmt.training.losses import (
     cross_entropy_t, symmetric_cross_entropy_t, grouped_cross_entropy_t,
     symmetric_grouped_cross_entropy_t,
 )
@@ -63,7 +63,7 @@ def create_model(arch, features, process_names, loss_name, process_group_ids=Non
     reg_weights = []
 
     # create the model
-    model = tf.keras.Sequential(name="hmc")
+    model = tf.keras.Sequential(name="cmt")
 
     # input layer for properly defining input name, shape and dtypes
     model.add(tf.keras.layers.InputLayer(input_shape=(len(features),), dtype=tf.float32,
@@ -128,7 +128,7 @@ def create_model(arch, features, process_names, loss_name, process_group_ids=Non
         all_tags = set(sum((list(feature.tags) for feature in features), []))
         features_ext = [
             feature for feature in features
-            if not feature.has_tag(["lbn_pt", "lbn_eta", "lbn_phi", "lbn_e", "lbn_aux*"], mode=any)
+            if not feature.has_tag(["lbn_pt", "lbn_eta", "lbn_phi", "lbn_m", "lbn_aux*"])
         ]
         features_vec = []
         n_aux = len([tag for tag in all_tags if tag.startswith("lbn_aux")])
@@ -146,7 +146,7 @@ def create_model(arch, features, process_names, loss_name, process_group_ids=Non
                 features_vec[-1][1] = feature
             elif feature.has_tag("lbn_phi"):
                 features_vec[-1][2] = feature
-            elif feature.has_tag("lbn_e"):
+            elif feature.has_tag("lbn_m"):
                 features_vec[-1][3] = feature
             elif feature.has_tag("lbn_aux*"):
                 for i in range(n_aux):
@@ -197,8 +197,12 @@ def create_model(arch, features, process_names, loss_name, process_group_ids=Non
         raise Exception("cannot parse architecture string '{}'".format(arch))
 
     # output layer
-    model.add(tf.keras.layers.Dense(len(process_names), activation="softmax", use_bias=True,
-        kernel_initializer="glorot_uniform", bias_initializer="zeros", name="output"))
+    if len(process_names) > 2:
+        model.add(tf.keras.layers.Dense(len(process_names), activation="softmax", use_bias=True,
+            kernel_initializer="glorot_uniform", bias_initializer="zeros", name="output"))
+    else:
+        model.add(tf.keras.layers.Dense(1, activation="sigmoid", use_bias=True,
+            kernel_initializer="glorot_uniform", bias_initializer="zeros", name="output"))
 
     # prepare arguments for loss functions for better tracing
     class_weights_t = None if class_weights is None else tf.constant(class_weights)
@@ -357,11 +361,14 @@ class LBNLayer(lbn.LBNLayer):
         lbn_pt = tf.maximum(lbn_inputs[:, :, 0:1], 0.)
         lbn_eta = lbn_inputs[:, :, 1:2]
         lbn_phi = lbn_inputs[:, :, 2:3]
-        lbn_e = tf.maximum(lbn_inputs[:, :, 3:4], 0.)
+        # lbn_e = tf.maximum(lbn_inputs[:, :, 3:4], 0.)
+        lbn_m = tf.maximum(lbn_inputs[:, :, 3:4], 0.)
         lbn_aux = lbn_inputs[:, :, 4:]
         lbn_px = lbn_pt * tf.cos(lbn_phi)
         lbn_py = lbn_pt * tf.sin(lbn_phi)
         lbn_pz = lbn_pt * tf.sinh(lbn_eta)
+        lbn_e = tf.math.sqrt(tf.math.square(lbn_m) + tf.math.square(lbn_px)
+            + tf.math.square(lbn_py) + tf.math.square(lbn_pz))
         lbn_inputs = tf.concat([lbn_e, lbn_px, lbn_py, lbn_pz, lbn_aux], axis=-1)
         lbn_features = self.lbn(lbn_inputs)
 
@@ -376,7 +383,7 @@ class LBNLayer(lbn.LBNLayer):
 
 def print_lbn_features(features_vec, features_ext):
     # vector features
-    headers = ["pt", "eta", "phi", "e"] + ["aux" + str(i) for i in range(len(features_vec[0]) - 4)]
+    headers = ["pt", "eta", "phi", "m"] + ["aux" + str(i) for i in range(len(features_vec[0]) - 4)]
     rows = [
         [feature.name if feature else "0" for feature in features]
         for features in features_vec
