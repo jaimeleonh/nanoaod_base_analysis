@@ -222,8 +222,9 @@ class CreateDatacards(FeaturePlot):
             # Convert the shape systematics list to a dict with the systs as keys and a list of 
             # the processes affected by them (all non-data processes except the qcd if computed
             # in the code)
-            shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
+            shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names if p_name != 'qcd'] # [FIXME]
                 for shape_syst in shape_syst_list}
+            # This will be fixed when the systematics will be propagated to the QCD
 
             histos = {}
             tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
