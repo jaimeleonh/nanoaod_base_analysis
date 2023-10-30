@@ -36,12 +36,18 @@ class CreateDatacards(FeaturePlot):
 
     :param additional_lines: Additional lines to write at the end of the datacard.
     :type additional_lines: list of `str`
+
+    :param propagate_syst_qcd: whether to propagate systematics to qcd background
+    :type propagate_syst_qcd: bool
+
     """
 
     automcstats = luigi.IntParameter(default=10, description="value used for autoMCStats inside "
         "the datacard, -1 to avoid using it, default: 10")
     additional_lines = law.CSVParameter(default=(), description="addtional lines to write at the "
         "end of the datacard")
+    propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
+        "default: False")
 
     def requires(self):
         """
@@ -221,7 +227,7 @@ class CreateDatacards(FeaturePlot):
 
             # Convert the shape systematics list to a dict with the systs as keys and a list of 
             # the processes affected by them (all non-data processes)
-            if propagate_syst_qcd:
+            if self.propagate_syst_qcd:
                 shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
                     for shape_syst in shape_syst_list}
             else:
