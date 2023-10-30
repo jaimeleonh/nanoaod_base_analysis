@@ -12,6 +12,7 @@ import contextlib
 import itertools
 from collections import OrderedDict, defaultdict
 import os
+import sys
 from subprocess import call
 import json
 
@@ -310,7 +311,11 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
         weight_modules = self.get_feature_modules(self.weights_file)
         if len(weight_modules) > 0:
             for module in weight_modules:
-                df, _ = module.run(df)
+                try:
+                    df, _ = module.run(df)
+                except Exception as e:
+                    print("Exception: %s. Exiting" % e)
+                    sys.exit()
 
         weight = self.get_weight(
             self.config.weights.total_events_weights, self.systematic, self.systematic_direction)
@@ -403,6 +408,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
         # create RDataFrame
         inp = self.get_input()
+        print(inp[0].path, inp[1].path)
         if not self.dataset.friend_datasets:
             df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
 
@@ -434,7 +440,11 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         branches = list(df.GetColumnNames())
         if len(modules) > 0:
             for module in modules:
-                filtered_df, add_branches = module.run(filtered_df)
+                try:
+                    filtered_df, add_branches = module.run(filtered_df)
+                except Exception as e:
+                    print("Exception: %s. Exiting" % e)
+                    sys.exit()
                 branches += add_branches
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
 
@@ -767,10 +777,13 @@ class Categorization(PreprocessRDF):
             except:
                 raise ReferenceError
             feature_modules = self.get_feature_modules(self.feature_modules_file)
-
             if len(feature_modules) > 0:
                 for module in feature_modules:
-                    df, add_branches = module.run(df)
+                    try:
+                        df, add_branches = module.run(df)
+                    except Exception as e:
+                        print("Exception: %s. Exiting" % e)
+                        sys.exit()
                     branches += add_branches
             branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
             branch_list = ROOT.vector('string')()
