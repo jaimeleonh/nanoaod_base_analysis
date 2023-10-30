@@ -573,6 +573,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     :param log_y: whether to set y axis to log scale
     :type log_y: bool
 
+    :param propagate_syst_qcd: whether to propagate systematics to qcd background
+    :type propagate_syst_qcd: bool
+
     """
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
         "them with dataset and category weights, and normalize afterwards, default: False")
@@ -615,6 +618,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     fixed_colors = luigi.BoolParameter(default=False, description="whether to use fixed colors "
         "for plotting, default: False")
     log_y = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
+        "default: False")
+    propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
         "default: False")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
@@ -940,8 +945,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         """
         Performs the actual plotting.
         """
+
         # helper to extract the qcd shape in a region
-        def get_qcd(region, files, bin_limit=0.):
+        def get_qcd(region, files, syst='', bin_limit=0.):
             d_hist = files[region].Get("histograms/" + self.data_names[0])
             if not d_hist:
                 raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
@@ -949,13 +955,13 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             b_hists = []
             for b_name in self.background_names:
-                b_hist = files[region].Get("histograms/" + b_name)
+                b_hist = files[region].Get("histograms/" + b_name + syst)
                 if not b_hist:
                     raise Exception("background histogram '{}' not found in region '{}'".format(
                         b_name, region))
                 b_hists.append(b_hist)
 
-            qcd_hist = d_hist.Clone(randomize("qcd_" + region))
+            qcd_hist = d_hist.Clone(randomize("qcd_" + region + syst))
             for hist in b_hists:
                 qcd_hist.Add(hist, -1.)
 
@@ -997,6 +1003,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 return 0
             return num / den
 
+        # I think these are for the SIGNAL REGION ONLY
         background_hists = self.histos["background"]
         signal_hists = self.histos["signal"]
         data_hists = self.histos["data"]
@@ -1023,42 +1030,42 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
 
             # do the qcd extrapolation
-            # if "shape" in qcd_shape_files:
-            #     qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
-            #     qcd_hist.Scale(1. / qcd_hist.Integral())
             if "shape" in qcd_shape_files:
                 qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
                 n_qcd_hist, n_qcd_hist_error, n_qcd_hist_compatible = get_integral_and_error(qcd_hist)
                 if not n_qcd_hist_compatible:
                     qcd_hist.Scale(1. / n_qcd_hist)
-            else:  #sym shape
+            else: #sym shape
                 qcd_hist = get_qcd("shape1", qcd_shape_files).Clone(randomize("qcd"))
                 qcd_hist2 = get_qcd("shape2", qcd_shape_files).Clone(randomize("qcd"))
-                qcd_hist.Scale(1. / qcd_hist.Integral())
-                qcd_hist2.Scale(1. / qcd_hist2.Integral())
+                n_qcd_hist1, n_qcd_hist1_error, n_qcd_hist1_compatible = get_integral_and_error(qcd_hist)
+                n_qcd_hist2, n_qcd_hist2_error, n_qcd_hist2_compatible = get_integral_and_error(qcd_hist2)
+                qcd_hist.Scale(1. / n_qcd_hist1)
+                qcd_hist2.Scale(1. / n_qcd_hist2)
                 qcd_hist.Add(qcd_hist2)
                 qcd_hist.Scale(0.5)
 
             n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
-                get_qcd("os_inviso", qcd_shape_files, -999))
+                get_qcd("os_inviso", qcd_shape_files, bin_limit=-999)) # C
             n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
-                get_qcd("ss_iso", qcd_shape_files, -999))
+                get_qcd("ss_iso", qcd_shape_files, bin_limit=-999)) # B
             n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
-                get_qcd("ss_inviso", qcd_shape_files, -999))
+                get_qcd("ss_inviso", qcd_shape_files, bin_limit=-999)) # D
             # if not n_ss_iso or not n_ss_inviso:
             if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
                 print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")
                 qcd_scaling = 0.
-                qcd_inviso = 0.
-                qcd_inviso_error = 0.
+                # qcd_inviso = 0.
+                # qcd_inviso_error = 0.
                 qcd_hist.Scale(qcd_scaling)
             else:
-                qcd_inviso = n_os_inviso / n_ss_inviso
-                qcd_inviso_error = qcd_inviso * math.sqrt(
-                    (n_os_inviso_error / n_os_inviso) * (n_os_inviso_error / n_os_inviso)
-                    + (n_ss_inviso_error / n_ss_inviso) * (n_ss_inviso_error / n_ss_inviso)
-                )
-                qcd_scaling = n_os_inviso * n_ss_iso / n_ss_inviso
+                # qcd_inviso = n_os_inviso / n_ss_inviso # C/D
+                # qcd_inviso_error = qcd_inviso * math.sqrt(
+                #     (n_os_inviso_error / n_os_inviso) * (n_os_inviso_error / n_os_inviso)
+                #     + (n_ss_inviso_error / n_ss_inviso) * (n_ss_inviso_error / n_ss_inviso)
+                #     # + 4 * (n_ss_inviso_error / n_ss_inviso) * (n_ss_inviso_error / n_ss_inviso)
+                # )
+                qcd_scaling = n_os_inviso * n_ss_iso / n_ss_inviso # C*B/D
                 os_inviso_rel_error = n_os_inviso_error / n_os_inviso
                 ss_iso_rel_error = n_ss_iso_error / n_ss_iso
                 ss_inviso_rel_error = n_ss_inviso_error / n_ss_inviso
@@ -1097,6 +1104,62 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             self.setup_background_hist(qcd_hist, qcd_color)
             background_hists.append(qcd_hist)
             all_hists.append(qcd_hist)
+
+            if self.propagate_syst_qcd:
+                print("****INFO: Propagating shape uncertainties to QCD")
+                for syst_dir in self.histos["shape"].keys():
+                    syst_dir_name = "_{}".format(syst_dir)
+
+                    # do the qcd extrapolation
+                    if "shape" in qcd_shape_files:
+                        qcd_hist = get_qcd("shape", qcd_shape_files, syst=syst_dir_name).Clone(randomize("qcd"))
+                        n_qcd_hist, n_qcd_hist_error, n_qcd_hist_compatible = get_integral_and_error(qcd_hist)
+                        if not n_qcd_hist_compatible:
+                            qcd_hist.Scale(1. / n_qcd_hist)
+                    else: #sym shape
+                        qcd_hist = get_qcd("shape1", qcd_shape_files, syst=syst_dir_name).Clone(randomize("qcd"))
+                        qcd_hist2 = get_qcd("shape2", qcd_shape_files, syst=syst_dir_name).Clone(randomize("qcd"))
+                        n_qcd_hist1, n_qcd_hist1_error, n_qcd_hist1_compatible = get_integral_and_error(qcd_hist)
+                        n_qcd_hist2, n_qcd_hist2_error, n_qcd_hist2_compatible = get_integral_and_error(qcd_hist2)
+                        qcd_hist.Scale(1. / n_qcd_hist1)
+                        qcd_hist2.Scale(1. / n_qcd_hist2)
+                        qcd_hist.Add(qcd_hist2)
+                        qcd_hist.Scale(0.5)
+
+                    n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
+                        get_qcd("os_inviso", qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # C
+                    n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
+                        get_qcd("ss_iso", qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # B
+                    n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
+                        get_qcd("ss_inviso", qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # D
+                    # if not n_ss_iso or not n_ss_inviso:
+                    if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
+                        print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")
+                        qcd_scaling = 0.
+                        qcd_hist.Scale(qcd_scaling)
+                    else:
+                        qcd_scaling = n_os_inviso * n_ss_iso / n_ss_inviso # C*B/D
+                        os_inviso_rel_error = n_os_inviso_error / n_os_inviso
+                        ss_iso_rel_error = n_ss_iso_error / n_ss_iso
+                        ss_inviso_rel_error = n_ss_inviso_error / n_ss_inviso
+                        new_errors_sq = []
+                        for ib in range(1, qcd_hist.GetNbinsX() + 1):
+                            if qcd_hist.GetBinContent(ib) > 0:
+                                bin_rel_error = qcd_hist.GetBinError(ib) / qcd_hist.GetBinContent(ib)
+                            else:
+                                bin_rel_error = 0
+                            new_errors_sq.append(bin_rel_error * bin_rel_error
+                                + os_inviso_rel_error * os_inviso_rel_error
+                                + ss_iso_rel_error * ss_iso_rel_error
+                                + ss_inviso_rel_error * ss_inviso_rel_error)
+                        qcd_hist.Scale(qcd_scaling)
+                        # fix errors
+                        for ib in range(1, qcd_hist.GetNbinsX() + 1):
+                            qcd_hist.SetBinError(ib, qcd_hist.GetBinContent(ib)
+                                * math.sqrt(new_errors_sq[ib - 1]))
+
+                    qcd_hist.cmt_process_name = "qcd"
+                    self.histos["shape"][syst_dir].append(qcd_hist)
 
         # sideband files
         sideband_files = None
@@ -1555,7 +1618,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                     dataset_histo.Scale(self.get_normalization_factor(dataset, elem))
                                     scaling = dataset.get_aux("scaling", None)
                                     if scaling:
-                                        print("Scaling {} histo by {} +- {}".format(
+                                        print(" ### Scaling {} histo by {} +- {}".format(
                                             dataset.name, scaling[0], scaling[1]))
                                         old_errors = [dataset_histo.GetBinError(ibin)\
                                             / dataset_histo.GetBinContent(ibin)
@@ -1635,7 +1698,7 @@ class FeaturePlotSyst(FeaturePlot):
 --workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
 --dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
 --MergeCategorizationStats-version test_old``
-    
+
     """
 
     def requires(self):
@@ -1655,15 +1718,20 @@ class FeaturePlotSyst(FeaturePlot):
         if self.save_png:
             output_data.append(("png", "", "png"))
 
+        process_names = [process.name for process in self.processes_datasets.keys() 
+                        if not process.isData]
+        if self.do_qcd: 
+            process_names.append("qcd")
+
         out = {
             key: law.SiblingFileCollection(OrderedDict(
-                ("%s_%s_%s" %(process.name, feature.name, syst), 
+                ("%s_%s_%s" %(process_name, feature.name, syst), 
                     self.local_target("{}{}_{}_{}{}.{}".format(
-                    prefix, process.name, feature.name, syst, self.get_output_postfix(key), ext)))
+                    prefix, process_name, feature.name, syst, self.get_output_postfix(key), ext)))
                 for feature in self.features 
                 for syst in self.get_unique_systs(self.get_systs(feature, True) \
                 + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
-                for (process, datasets) in self.processes_datasets.items()
+                for process_name in process_names
             ))
             for key, prefix, ext in output_data
         }
@@ -1697,7 +1765,7 @@ class FeaturePlotSyst(FeaturePlot):
 
     def plot(self, feature):
 
-        for (process, datasets) in self.processes_datasets.items():
+        for process, p_label in zip(self.process_names, self.process_labels):
             # central histogram for each process
             histo_syst_central = self.histos[process]["central"]
             self.setup_syst_hist(histo_syst_central, "central")
@@ -1776,7 +1844,7 @@ class FeaturePlotSyst(FeaturePlot):
                         inner_text += self.region.label
                     else:
                         inner_text.append(self.region.label)
-                inner_text.append(process.label)
+                inner_text.append(p_label)
 
                 if maximum > 1e4 and not self.log_y:
                     upper_left_offset = 0.05
@@ -1822,18 +1890,31 @@ class FeaturePlotSyst(FeaturePlot):
                 self.setup_syst_hist(ratio_hist_down, "down")
                 ratio_hist_up.SetLineStyle(0)
                 ratio_hist_down.SetLineStyle(0)
+
+                mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
+                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+
                 for i in range(binning_args[0]+1):
+                    x = histo_syst_central.GetBinCenter(i)
+                    y = histo_syst_central.GetBinContent(i)
+                    sigma_x = histo_syst_central.GetBinWidth(i)/2.
+                    sigma_y = histo_syst_central.GetBinError(i)
                     if histo_syst_central.GetBinContent(i) != 0:
                         ratio_hist_up.SetBinContent(i, histo_syst_up.GetBinContent(i)/histo_syst_central.GetBinContent(i))
                         ratio_hist_down.SetBinContent(i, histo_syst_down.GetBinContent(i)/histo_syst_central.GetBinContent(i))
+                        mc_unc_graph.SetPoint(i, x, 1.)
+                        mc_unc_graph.SetPointError(i, sigma_x, sigma_y/y)
                     else: 
                         ratio_hist_up.SetBinContent(i, EMPTY)
                         ratio_hist_down.SetBinContent(i, EMPTY)
+                        mc_unc_graph.SetPoint(i, x, EMPTY)
 
                 c.get_pad(2).cd()
                 dummy_ratio_hist.Draw()
                 ratio_hist_up.Draw("SAME")
                 ratio_hist_down.Draw("SAME")
+                mc_unc_graph.Draw("2,SAME")
 
                 lines = []
                 for y in [0.5, 1.0, 1.5]:
@@ -1849,9 +1930,9 @@ class FeaturePlotSyst(FeaturePlot):
 
                 outputs = []
                 if self.save_png:
-                    outputs.append(self.output()["png"].targets["%s_%s_%s" %(process.name, feature.name, shape_syst)].path)
+                    outputs.append(self.output()["png"].targets["%s_%s_%s" %(process, feature.name, shape_syst)].path)
                 if self.save_pdf:
-                    outputs.append(self.output()["pdf"].targets["%s_%s_%s" %(process.name, feature.name, shape_syst)].path)
+                    outputs.append(self.output()["pdf"].targets["%s_%s_%s" %(process, feature.name, shape_syst)].path)
                 for output in outputs:
                     c.SaveAs(create_file_dir(output))
 
@@ -1865,10 +1946,12 @@ class FeaturePlotSyst(FeaturePlot):
 
         inputs = self.input()
 
-        self.non_data_names = [p.name for p in self.processes_datasets.keys() if not p.isData]
+        self.process_names = [process.name for process in self.processes_datasets.keys() if not process.isData]
+        self.process_labels = [process.label for process in self.processes_datasets.keys() if not process.isData]
 
-        if self.do_qcd:
-            self.non_data_names.append("qcd")
+        if self.do_qcd: 
+            self.process_names.append("qcd")
+            self.process_labels.append("QCD")
 
         for feature in self.features:
             self.shape_syst_list = self.get_unique_systs(self.get_systs(feature, True) \
@@ -1877,14 +1960,13 @@ class FeaturePlotSyst(FeaturePlot):
             tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
 
             self.histos = {}
-            for (process, datasets) in self.processes_datasets.items():
-                if process.isData: continue
+            for process in self.process_names:
                 self.histos[process] = {}
-                self.histos[process]["central"] = copy(tf.Get("histograms/%s" % process.name))
+                self.histos[process]["central"] = copy(tf.Get("histograms/%s" % process))
 
                 for shape_syst in self.shape_syst_list:
-                    self.histos[process]["%s_up" %shape_syst] = copy(tf.Get("histograms/%s_%s_up" % (process.name, shape_syst)))
-                    self.histos[process]["%s_down" %shape_syst] = copy(tf.Get("histograms/%s_%s_down" % (process.name, shape_syst)))
+                    self.histos[process]["%s_up" %shape_syst] = copy(tf.Get("histograms/%s_%s_up" % (process, shape_syst)))
+                    self.histos[process]["%s_down" %shape_syst] = copy(tf.Get("histograms/%s_%s_down" % (process, shape_syst)))
 
             tf.Close()
         
@@ -2499,7 +2581,7 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
                                         self.get_normalization_factor(dataset, elem))
                                     scaling = dataset.get_aux("scaling", None)
                                     if scaling:
-                                        print("Scaling {} histo by {} +- {}".format(
+                                        print(" ### Scaling {} histo by {} +- {}".format(
                                             dataset.name, scaling[0], scaling[1]))
                                         old_errors = [[dataset_histo.GetBinError(ibinx, ibiny)\
                                                 / dataset_histo.GetBinContent(ibinx, ibiny)
