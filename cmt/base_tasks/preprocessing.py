@@ -408,7 +408,6 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
         # create RDataFrame
         inp = self.get_input()
-        print(inp[0].path, inp[1].path)
         if not self.dataset.friend_datasets:
             df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
 
