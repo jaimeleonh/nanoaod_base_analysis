@@ -595,7 +595,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     do_sideband = luigi.BoolParameter(default=False, description="whether to compute the background "
         "shape from sideband region, default: False")
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
-    normalize_signals = luigi.BoolParameter(default=True, description="whether to normalize "
+    normalize_signals = luigi.BoolParameter(default=False, description="whether to normalize "
         "signals to the total bkg yield, default: True")
     avoid_normalization = luigi.BoolParameter(default=False, description="whether to avoid "
         "normalizing by cross section and initial number of events, default: False")
@@ -619,7 +619,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "for plotting, default: False")
     log_y = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
         "default: False")
-    propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
+    propagate_syst_qcd = luigi.BoolParameter(default=True, description="whether to propagate systematics to qcd background, "
         "default: False")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
@@ -1316,8 +1316,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
-        # if do_ratio:
-        r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
+        if do_ratio:
+            r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         dummy_hist.GetYaxis().SetMaxDigits(4)
         dummy_hist.GetYaxis().SetTitleOffset(1.22)
         maximum = max([hist.GetMaximum() for hist in draw_hists])
