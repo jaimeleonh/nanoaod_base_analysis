@@ -46,8 +46,8 @@ class CreateDatacards(FeaturePlot):
         "the datacard, -1 to avoid using it, default: 10")
     additional_lines = law.CSVParameter(default=(), description="addtional lines to write at the "
         "end of the datacard")
-    propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
-        "default: False")
+    propagate_syst_qcd = luigi.BoolParameter(default=True, description="whether to propagate systematics to qcd background, "
+        "default: True")
 
     def requires(self):
         """
@@ -89,8 +89,11 @@ class CreateDatacards(FeaturePlot):
 
             from cmt.analysis.systReader import systReader
             syst_folder = "files/systematics/"
-            syst = systReader(self.retrieve_file(syst_folder + "systematics_{}.cfg".format(
-                self.config.year)), all_signal_names, all_background_names, None)
+            if self.config.get_aux("isUL"):
+                syst_file = syst_folder + "systematics_UL{}.cfg".format(str(self.config.year)[-2:])
+            else:
+                syst_file = syst_folder + "systematics_{}.cfg".format(self.config.year)
+            syst = systReader(self.retrieve_file(syst_file), all_signal_names, all_background_names, None)
             syst.writeOutput(False)
             syst.verbose(False)
 
