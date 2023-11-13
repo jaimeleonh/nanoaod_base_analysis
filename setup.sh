@@ -31,11 +31,19 @@ action() {
         export CMT_ON_CIEMAT="0"
     fi
 
+    # check if we're at llr
+    if [[ "$( hostname -f )" = *.in2p3.fr ]]; then
+        export CMT_ON_LLR="1"
+        export EXTRA_CLING_ARGS=" -O2"
+    else
+        export CMT_ON_LLR="0"
+    fi
+    
     # default cern name
     if [ -z "$CMT_CERN_USER" ]; then
         if [ "$CMT_ON_LXPLUS" = "1" ]; then
             export CMT_CERN_USER="$( whoami )"
-        elif [ "$CMT_ON_CIEMAT" = "0" ]; then
+        elif [ "$CMT_ON_CIEMAT" = "0" ] && [ "$CMT_ON_LLR" = "0" ] ; then
             2>&1 echo "please set CMT_CERN_USER to your CERN user name and try again"
             return "1"
         fi
@@ -50,6 +58,16 @@ action() {
             # return "1"
         fi
     fi
+
+    # default llr name
+    if [ -z "$CMT_LLR_USER" ]; then
+        if [ "$CMT_ON_LLR" = "1" ]; then
+            export CMT_LLR_USER="$( whoami )"
+        # elif [ "$CMT_ON_LLR" = "0" ]; then
+        #     2>&1 echo "please set CMT_LLR_USER to your CIEMAT user name and try again"
+        #     return "1"
+        fi
+    fi    
 
     # default data directory
     if [ -z "$CMT_DATA" ]; then
@@ -68,6 +86,8 @@ action() {
       [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/nfs/cms/$CMT_CIEMAT_USER/cmt"
     elif [ -n "$CMT_CERN_USER" ]; then
       [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/eos/user/${CMT_CERN_USER:0:1}/$CMT_CERN_USER/cmt"
+    elif [ -n "$CMT_LLR_USER" ]; then
+      [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/data_CMS/cms/${CMT_LLR_USER:1}/cmt"
     fi
     [ -z "$CMT_STORE" ] && export CMT_STORE="$CMT_STORE_EOS"
     [ -z "$CMT_JOB_DIR" ] && export CMT_JOB_DIR="$CMT_DATA/jobs"

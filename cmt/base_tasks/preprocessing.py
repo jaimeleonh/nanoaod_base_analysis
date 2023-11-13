@@ -799,6 +799,9 @@ class Categorization(PreprocessRDF):
             copy(inp, outp.path)
         #copy(self.input()["stats"].path, outp["stats"].path)
 
+        # except KeyboardInterrupt:
+        #     print("### DEBUG Error")    
+
 
 class CategorizationWrapper(DatasetCategorySystWrapperTask):
     """

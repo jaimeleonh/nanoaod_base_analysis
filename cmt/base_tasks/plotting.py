@@ -818,6 +818,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             postfix += "__stack"
         if self.include_fit:
             postfix += "__withfit"
+        if self.log_y and key not in ("root", "yields"):
+            postfix += "__log"
         return postfix
 
     def output(self):
@@ -857,6 +859,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         hist.hist_type = "signal"
         hist.legend_style = "l"
         hist.SetLineColor(color)
+        hist.SetLineWidth(2)
 
     def setup_background_hist(self, hist, color):
         """
@@ -871,6 +874,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         else:
             hist.SetLineColor(color)
             hist.legend_style = "l"
+            hist.SetLineWidth(2)
 
     def setup_data_hist(self, hist, color):
         """
@@ -1028,9 +1032,14 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
 
             # do the qcd extrapolation
+            # if "shape" in qcd_shape_files:
+            #     qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
+            #     qcd_hist.Scale(1. / qcd_hist.Integral())
             if "shape" in qcd_shape_files:
                 qcd_hist = get_qcd("shape", qcd_shape_files).Clone(randomize("qcd"))
-                qcd_hist.Scale(1. / qcd_hist.Integral())
+                n_qcd_hist, n_qcd_hist_error, n_qcd_hist_compatible = get_integral_and_error(qcd_hist)
+                if not n_qcd_hist_compatible:
+                    qcd_hist.Scale(1. / n_qcd_hist)
             else:  #sym shape
                 qcd_hist = get_qcd("shape1", qcd_shape_files).Clone(randomize("qcd"))
                 qcd_hist2 = get_qcd("shape2", qcd_shape_files).Clone(randomize("qcd"))
@@ -1092,7 +1101,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             qcd_hist.cmt_process_name = "qcd"
             qcd_hist.process_label = "QCD"
             qcd_hist.SetTitle("QCD")
-            self.setup_background_hist(qcd_hist, ROOT.kYellow)
+            qcd_c = tuple([255, 87, 215])
+            qcd_color = ROOT.TColor.GetColor(*qcd_c)
+            self.setup_background_hist(qcd_hist, qcd_color)
             background_hists.append(qcd_hist)
             all_hists.append(qcd_hist)
 
@@ -1305,11 +1316,14 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 self.config.ecm,
             )
 
+        m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
+
         draw_labels = get_labels(
             upper_left_offset=upper_left_offset,
             upper_right=upper_right,
             scaling=label_scaling,
-            inner_text=inner_text
+            inner_text=inner_text,
+            max=m
         )
 
         dummy_hist.Draw()
@@ -1596,10 +1610,12 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                 and syst == "central":
                             dataset_histo_syst = dataset_histo.Clone()
                             for ibin in range(1, dataset_histo_syst.GetNbinsX() + 1):
-                                dataset_histo_syst.SetBinError(ibin,
-                                    float(dataset_histo.GetBinContent(ibin))\
-                                        * systematics[dataset.name]
-                                )
+                                # some datasets may not have any systematics
+                                if dataset.name in systematics:
+                                    dataset_histo_syst.SetBinError(ibin,
+                                        float(dataset_histo.GetBinContent(ibin))\
+                                            * systematics[dataset.name]
+                                    )
                             self.histos["bkg_histo_syst"].Add(dataset_histo_syst)
 
                     yield_error = c_double(0.)
@@ -1637,6 +1653,281 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             self.plot(feature)
 
+#################################################################################################################################
+#################################################################################################################################
+#################################################################################################################################
+
+class FeaturePlotSyst(FeaturePlot):
+    """
+    Performs the histogram plotting with up and down variations due to systematics: 
+    loads the histograms obtained in the FeaturePlot task, rescales them if needed 
+    and plots and saves them.
+
+    Example command:
+
+    ``law run FeaturePlotSyst --version test --category-name etau --config-name ul_2018 \
+--process-group-name etau --feature-names lep1_pt,lep1_eta \
+--workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
+--dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
+--MergeCategorizationStats-version test_old``
+    
+    """
+
+    def requires(self):
+        """
+        Needs as input the root file provided by the FeaturePlot task
+        """
+        return FeaturePlot.vreq(self, save_root=True, stack=True)
+    
+    def output(self):
+        """
+        Output files to be filled: pdf or png
+        """
+
+        output_data = []
+        if self.save_pdf:
+            output_data.append(("pdf", "", "pdf"))
+        if self.save_png:
+            output_data.append(("png", "", "png"))
+
+        out = {
+            key: law.SiblingFileCollection(OrderedDict(
+                ("%s_%s_%s" %(process.name, feature.name, syst), 
+                    self.local_target("{}{}_{}_{}{}.{}".format(
+                    prefix, process.name, feature.name, syst, self.get_output_postfix(key), ext)))
+                for feature in self.features 
+                for syst in self.get_unique_systs(self.get_systs(feature, True) \
+                + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
+                for (process, datasets) in self.processes_datasets.items()
+            ))
+            for key, prefix, ext in output_data
+        }
+
+        return out
+
+    def setup_syst_hist(self, hist, dir):
+        if dir == "central":
+            hist.SetFillStyle(0)
+            hist.SetLineColor(1)
+            hist.legend_style = "l"
+            hist.SetLineWidth(2)
+        if dir == "up":
+            hist.SetFillStyle(0)
+            hist.SetLineColor(ROOT.kAzure)
+            hist.legend_style = "l"
+            hist.SetLineWidth(2)
+            # hist.SetLineStyle(4)
+        if dir == "down":
+            hist.SetFillStyle(0)
+            hist.SetLineColor(ROOT.kMagenta)
+            hist.legend_style = "l"
+            hist.SetLineWidth(2)
+            # hist.SetLineStyle(8)
+
+    def get_syst_label(self, shape_syst):
+        if self.config.systematics.get(shape_syst).get_aux("label"):
+            return self.config.systematics.get(shape_syst).get_aux("label")
+        else:
+            return shape_syst
+
+    def plot(self, feature):
+
+        for (process, datasets) in self.processes_datasets.items():
+            # central histogram for each process
+            histo_syst_central = self.histos[process]["central"]
+            self.setup_syst_hist(histo_syst_central, "central")
+
+            for shape_syst in self.shape_syst_list:
+                # up and down variation histograms for each systematic
+                histo_syst_up = self.histos[process]["%s_up" %shape_syst]
+                histo_syst_down = self.histos[process]["%s_down" %shape_syst]
+                self.setup_syst_hist(histo_syst_up, "up")
+                self.setup_syst_hist(histo_syst_down, "down")
+
+                draw_hists = [histo_syst_central, histo_syst_up, histo_syst_down]
+                
+                shape_syst_label = self.get_syst_label(shape_syst)
+                entries = [ (histo_syst_central, "Nominal", histo_syst_central.legend_style),
+                            (histo_syst_up, shape_syst_label + " Up", histo_syst_up.legend_style),
+                            (histo_syst_down, shape_syst_label + " Down", histo_syst_down.legend_style)]
+                
+                n_entries = len(entries)
+                if n_entries <= 4:
+                    n_cols = 1
+                elif n_entries <= 8:
+                    n_cols = 2
+                else:
+                    n_cols = 3
+                if len(shape_syst_label) < 5:
+                    col_width = 0.20 
+                elif len(shape_syst_label) < 12:
+                    col_width = 0.30
+                else:
+                    col_width = 0.40
+                n_rows = math.ceil(n_entries / float(n_cols))
+                row_width = 0.06
+                legend_x2 = 0.88
+                legend_x1 = legend_x2 - n_cols * col_width
+                legend_y2 = 0.88
+                legend_y1 = legend_y2 - n_rows * row_width
+                
+                legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
+                legend.SetBorderSize(0)
+                legend.SetNColumns(1)
+                for entry in entries:
+                    legend.AddEntry(*entry)
+
+                binning_args, y_axis_adendum = self.get_binning(feature)
+                x_title = (str(feature.get_aux("x_title"))
+                    + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
+                y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
+                hist_title = "; %s; %s" % (x_title, y_title)
+                dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
+
+                # Draw
+                c = RatioCanvas()
+                dummy_hist.GetXaxis().SetLabelOffset(100)
+                dummy_hist.GetXaxis().SetTitleOffset(100)
+                c.get_pad(1).cd()
+                if self.log_y:
+                    c.get_pad(1).SetLogy()
+                label_scaling = 5./4.
+
+                r.setup_hist(dummy_hist)
+                r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
+                dummy_hist.GetYaxis().SetMaxDigits(4)
+                dummy_hist.GetYaxis().SetTitleOffset(1.22)
+                maximum = max([hist.GetMaximum() for hist in draw_hists])
+                if self.log_y:
+                    dummy_hist.SetMaximum(100 * maximum)
+                    dummy_hist.SetMinimum(0.0011)
+                else:
+                    dummy_hist.SetMaximum(1.25 * maximum)
+                    dummy_hist.SetMinimum(0.001)
+
+                inner_text=[self.category.label + " category"]
+                if self.region:
+                    if isinstance(self.region.label, list):
+                        inner_text += self.region.label
+                    else:
+                        inner_text.append(self.region.label)
+                inner_text.append(process.label)
+
+                if maximum > 1e4 and not self.log_y:
+                    upper_left_offset = 0.05
+                else:
+                    upper_left_offset = 0.0
+
+                upper_right="{} Simulation ({} TeV)".format(
+                    self.config.year,
+                    self.config.ecm,
+                )
+
+                m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
+
+                draw_labels = get_labels(
+                    upper_left_offset=upper_left_offset,
+                    upper_right=upper_right,
+                    scaling=label_scaling,
+                    inner_text=inner_text,
+                    max=m
+                )
+
+                dummy_hist.Draw()
+                histo_syst_central.Draw("HIST,SAME")
+                histo_syst_up.Draw("HIST,SAME")
+                histo_syst_down.Draw("HIST,SAME")
+
+                for label in draw_labels:
+                    label.Draw("same")
+                legend.Draw("same")
+
+                dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
+                r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
+                    props={"Minimum": 0.75, "Maximum": 1.25})
+                r.setup_y_axis(dummy_ratio_hist.GetYaxis(), pad=c.get_pad(2),
+                    props={"Ndivisions": 5})
+                dummy_ratio_hist.GetYaxis().SetTitle("Ratio")
+                dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
+                dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
+
+                ratio_hist_up = ROOT.TH1F(randomize("ratio_hist_up"), hist_title, *binning_args)
+                ratio_hist_down = ROOT.TH1F(randomize("ratio_hist_down"), hist_title, *binning_args)
+                self.setup_syst_hist(ratio_hist_up, "up")
+                self.setup_syst_hist(ratio_hist_down, "down")
+                ratio_hist_up.SetLineStyle(0)
+                ratio_hist_down.SetLineStyle(0)
+                for i in range(binning_args[0]+1):
+                    if histo_syst_central.GetBinContent(i) != 0:
+                        ratio_hist_up.SetBinContent(i, histo_syst_up.GetBinContent(i)/histo_syst_central.GetBinContent(i))
+                        ratio_hist_down.SetBinContent(i, histo_syst_down.GetBinContent(i)/histo_syst_central.GetBinContent(i))
+                    else: 
+                        ratio_hist_up.SetBinContent(i, EMPTY)
+                        ratio_hist_down.SetBinContent(i, EMPTY)
+
+                c.get_pad(2).cd()
+                dummy_ratio_hist.Draw()
+                ratio_hist_up.Draw("SAME")
+                ratio_hist_down.Draw("SAME")
+
+                lines = []
+                for y in [0.5, 1.0, 1.5]:
+                    if isinstance(feature.binning, tuple):
+                        l = ROOT.TLine(binning_args[1], y, binning_args[2], y)
+                    else:
+                        l = ROOT.TLine(binning_args[1][0], y, binning_args[1][-1], y)
+                    r.setup_line(l, props={"NDC": False, "LineStyle": 3, "LineWidth": 1,
+                        "LineColor": 1})
+                    lines.append(l)
+                for line in lines:
+                    line.Draw("same")
+
+                outputs = []
+                if self.save_png:
+                    outputs.append(self.output()["png"].targets["%s_%s_%s" %(process.name, feature.name, shape_syst)].path)
+                if self.save_pdf:
+                    outputs.append(self.output()["pdf"].targets["%s_%s_%s" %(process.name, feature.name, shape_syst)].path)
+                for output in outputs:
+                    c.SaveAs(create_file_dir(output))
+
+    def run(self):
+        """
+        Splits the processes into data and non-data. Per feature, loads the input histograms, 
+        creates the output plots with up and down variations.
+        """
+
+        ROOT.gStyle.SetOptStat(0)
+
+        inputs = self.input()
+
+        self.non_data_names = [p.name for p in self.processes_datasets.keys() if not p.isData]
+
+        if self.do_qcd:
+            self.non_data_names.append("qcd")
+
+        for feature in self.features:
+            self.shape_syst_list = self.get_unique_systs(self.get_systs(feature, True) \
+                + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
+
+            tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+
+            self.histos = {}
+            for (process, datasets) in self.processes_datasets.items():
+                if process.isData: continue
+                self.histos[process] = {}
+                self.histos[process]["central"] = copy(tf.Get("histograms/%s" % process.name))
+
+                for shape_syst in self.shape_syst_list:
+                    self.histos[process]["%s_up" %shape_syst] = copy(tf.Get("histograms/%s_%s_up" % (process.name, shape_syst)))
+                    self.histos[process]["%s_down" %shape_syst] = copy(tf.Get("histograms/%s_%s_down" % (process.name, shape_syst)))
+
+            tf.Close()
+        
+        self.plot(feature)
+
+#################################################################################################################################
+#################################################################################################################################
+#################################################################################################################################
 
 class BasePlot2DTask(BasePlotTask):
     def get_features(self):
