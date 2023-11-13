@@ -616,6 +616,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "for plotting, default: False")
     log_y = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
         "default: False")
+    include_fit = luigi.DictParameter(default={}, description="fit to be included in the plots, "
+        "default: None")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
         # "optimization task to use, not used when empty, default: empty")
@@ -785,6 +787,15 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.optimization_method:
             from cmt.base_tasks.optimization import BayesianBlocksOptimization
             reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False)
+
+        if self.include_fit:
+            from cmt.base_tasks.analysis import Fit
+            params = ", ".join([f"{param}='{value}'" for param, value in self.include_fit.items()])
+            # print(params)
+            # print(**self.include_fit)
+            # print(self.include_fit)
+            # print(f"Fit.vreq(self, {params})")
+            reqs["fit"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
         return reqs
 
     def get_output_postfix(self, key="pdf"):
@@ -805,6 +816,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             postfix += "__blinded"
         if self.stack and key not in ("root", "yields"):
             postfix += "__stack"
+        if self.include_fit:
+            postfix += "__withfit"
         return postfix
 
     def output(self):
@@ -1242,8 +1255,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
-        # if do_ratio:
-        r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
+        if do_ratio:
+            r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         dummy_hist.GetYaxis().SetMaxDigits(4)
         dummy_hist.GetYaxis().SetTitleOffset(1.22)
         maximum = max([hist.GetMaximum() for hist in draw_hists])
@@ -1261,7 +1274,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             else:
                 inner_text.append(self.region.label)
 
-        if self.normalize_signals and self.stack and signal_hists:
+        if self.normalize_signals and self.stack and signal_hists and bkg_histo:
             scale_text = []
             for hist in signal_hists:
                 scale = hist.cmt_scale
@@ -1300,6 +1313,31 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         )
 
         dummy_hist.Draw()
+
+        # Draw fit if required
+        if self.include_fit:
+            with open(self.input()["fit"][feature.name].path) as f:
+                d = json.load(f)
+            x_range = self.requires()["fit"].x_range
+            x = ROOT.RooRealVar("x", "x", float(x_range[0]), float(x_range[1]))
+            l = ROOT.RooArgList(x)
+            xframe = x.frame();
+            if self.requires()["fit"].method == "voigtian":
+                mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', float(d["mean"]))
+                sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', float(d["sigma"]))
+                gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', float(d["gamma"]))
+                fit = ROOT.RooVoigtian("fit", "fit", x, mean, gamma, sigma)
+                if self.stack:
+                    process_name = self.requires()["fit"].process_name
+                    for hist in all_hists:
+                        if hist.cmt_process_name == process_name:
+                            data = ROOT.RooDataHist("data_obs", "data_obs", l, hist)
+                            data.plotOn(xframe,
+                                ROOT.RooFit.MarkerColor(ROOT.TColor.GetColorTransparent(0, 1)),
+                                ROOT.RooFit.LineColor(ROOT.TColor.GetColorTransparent(0, 1)))
+                fit.plotOn(xframe)
+                xframe.Draw("same");
+
         for ih, hist in enumerate(draw_hists):
             option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
             hist.Draw(option)
@@ -1307,6 +1345,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         for label in draw_labels:
             label.Draw("same")
         legend.Draw("same")
+
         if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack):
             dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),

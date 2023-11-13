@@ -256,3 +256,95 @@ class CreateDatacards(FeaturePlot):
                 histo.Write(name)
 
             tf.Close()
+
+
+class Fit(FeaturePlot):
+    """
+    Task that run fits over FeaturePlot histograms
+
+    """
+
+    method = luigi.ChoiceParameter(choices=("voigtian",), default="voigtian",
+        description="fitting method to consider, default: voigtian")
+    process_name = luigi.Parameter(default="signal", description="process name to consider, "
+        "default: signal")
+    x_range = law.CSVParameter(default=("1.2", "1.5"), description="range of the x axis to consider "
+        "in the fit, default: 1.2-1.5")
+    fit_parameters = luigi.DictParameter(default={}, description="Initial values for the parameters "
+        "involved in the fit, defaults depend on the method. Should be included as "
+        "--fit-parameters '{\"mean\": \"(20, -100, 100)\"}'")
+
+    normalize_signals = False
+
+    def __init__(self, *args, **kwargs):
+        super(Fit, self).__init__(*args, **kwargs)
+        assert self.process_name in self.config.process_group_names[self.process_group_name]
+
+    def requires(self):
+        """
+        Needs as input the root file provided by the FeaturePlot task
+        """
+        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=True)
+
+    def output(self):
+        """
+        Returns, per feature, one txt storing the datacard and its corresponding root file
+        storing the histograms
+        """
+        region_name = "" if not self.region else "__{}".format(self.region.name)
+        return {
+            feature.name: self.local_target("{}__{}__{}{}.json".format(
+                feature.name, self.process_name, self.method, region_name))
+            for feature in self.features
+        }
+
+    def convert_parameters(self, d):
+        for param, val in d.items():
+            if isinstance(val, str):
+                d[param] = tuple(map(float, val[1:-1].split(', ')))
+        return d
+
+    def run(self):
+        inputs = self.input()
+        for ifeat, feature in enumerate(self.features):
+            tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+            try:
+                histo = copy(tf.Get("histograms/" + self.process_name))
+            except:
+                raise ValueError(f"The histogram has not been created for {self.process_name}")
+            x_range = (float(self.x_range[0]), float(self.x_range[1]))
+            x = ROOT.RooRealVar("x", "x", x_range[0], x_range[1])
+            l = ROOT.RooArgList(x)
+
+            # binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
+            # data = ROOT.TH1F("data1", "Histogram of data_obs__x", *binning_args)
+            # for i in range(1, histo.GetNbinsX() + 1):
+                # data.SetBinContent(i, histo.GetBinContent(i))
+                # data.SetBinError(i, histo.GetBinError(i))
+
+            data = ROOT.RooDataHist("data_obs", "data_obs", l, histo)
+            fit_parameters = {}
+            if self.method == "voigtian":
+                fit_parameters["mean"] = self.fit_parameters.get("mean",
+                    ((x_range[1] + x_range[0]) / 2, -100, 100))
+                fit_parameters["sigma"] = self.fit_parameters.get("sigma", (0.001, 0, 0.1))
+                fit_parameters["gamma"] = self.fit_parameters.get("gammma", (0.02, 0, 0.1))
+                fit_parameters = self.convert_parameters(fit_parameters)
+
+                mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
+                sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
+                gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
+                signal = ROOT.RooVoigtian("signal", "signal", x, mean, gamma, sigma)
+                signal.fitTo(data, ROOT.RooFit.SumW2Error(True));
+
+                d = {
+                    "mean": mean.getVal(),
+                    "mean_error": mean.getError(),
+                    "sigma": sigma.getVal(),
+                    "sigma_error": sigma.getError(),
+                    "gamma": gamma.getVal(),
+                    "gamma_error": gamma.getError(),
+                }
+
+                with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
+                    json.dump(d, f, indent=4)
