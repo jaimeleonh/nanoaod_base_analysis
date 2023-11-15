@@ -22,6 +22,7 @@ from analysis_tools.utils import (
 )
 
 from cmt.base_tasks.plotting import FeaturePlot
+import numpy as np
 
 ROOT = import_root()
 
@@ -328,7 +329,7 @@ class Fit(FeaturePlot):
             x_range = (float(self.x_range[0]), float(self.x_range[1]))
             x = ROOT.RooRealVar("x", "x", x_range[0], x_range[1])
             l = ROOT.RooArgList(x)
-
+            
             # binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
             # data = ROOT.TH1F("data1", "Histogram of data_obs__x", *binning_args)
             # for i in range(1, histo.GetNbinsX() + 1):
@@ -336,6 +337,14 @@ class Fit(FeaturePlot):
                 # data.SetBinError(i, histo.GetBinError(i))
 
             data = ROOT.RooDataHist("data_obs", "data_obs", l, histo)
+            frame = x.frame(ROOT.RooFit.Title("Muon SV mass"))
+            data.plotOn(frame)
+
+            n_non_zero_bins = 0
+            for i in range(1, histo.GetNbinsX()):
+                if histo.GetBinContent(i) > 0:
+                    n_non_zero_bins += 1
+
             fit_parameters = {}
             if self.method == "voigtian":
                 fit_parameters["mean"] = self.fit_parameters.get("mean",
@@ -349,6 +358,16 @@ class Fit(FeaturePlot):
                 gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
                 signal = ROOT.RooVoigtian("signal", "signal", x, mean, gamma, sigma)
                 signal.fitTo(data, ROOT.RooFit.SumW2Error(True));
+                signal.plotOn(frame)
+
+                gamma_value = gamma.getVal()
+                sigma_value = sigma.getVal()
+
+                G = 2*sigma_value*np.sqrt(2*np.log(2))
+                L = 2*gamma_value
+                HWHM = (0.5346*L + np.sqrt(0.2166*L**2 + G**2))/2
+
+                npar = signal.getParameters(data).selectByAttrib("Constant",False).getSize()
 
                 d = {
                     "mean": mean.getVal(),
@@ -357,6 +376,13 @@ class Fit(FeaturePlot):
                     "sigma_error": sigma.getError(),
                     "gamma": gamma.getVal(),
                     "gamma_error": gamma.getError(),
+                    "HWHM": HWHM,
+                    "chi2": frame.chiSquare(),
+                    "npar": npar,
+                    "chi2/ndf": frame.chiSquare(npar),
+                    "Number of non-zero bins": n_non_zero_bins,
+                    "Full chi2": frame.chiSquare()*n_non_zero_bins,
+                    "ndf": n_non_zero_bins - npar,
                 }
 
                 with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
