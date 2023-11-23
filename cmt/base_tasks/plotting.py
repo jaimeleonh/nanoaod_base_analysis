@@ -619,7 +619,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "for plotting, default: False")
     log_y = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
         "default: False")
-    include_fit = luigi.DictParameter(default={}, description="fit to be included in the plots, "
+    include_fit = luigi.Parameter(default="", description="fit to be included in the plots, "
         "default: None")
     propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
         "default: False")
@@ -794,9 +794,16 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False)
 
         if self.include_fit:
+            import yaml
+            from cmt.utils.yaml_utils import ordered_load
+            with open(self.retrieve_file("config/{}.yaml".format(self.include_fit))) as f:
+                fit_params = ordered_load(f, yaml.SafeLoader)
             from cmt.base_tasks.analysis import Fit
-            params = ", ".join([f"{param}='{value}'" for param, value in self.include_fit.items()])
-            # print(params)
+            params = ", ".join([f"{param}='{value}'"
+                for param, value in fit_params.items() if param != "fit_parameters"])
+            if "fit_parameters" in fit_params:
+                params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
+                for param, value in fit_params["fit_parameters"].items()]) + "}"
             # print(**self.include_fit)
             # print(self.include_fit)
             # print(f"Fit.vreq(self, {params})")
@@ -1404,16 +1411,22 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', float(d["sigma"]))
                 gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', float(d["gamma"]))
                 fit = ROOT.RooVoigtian("fit", "fit", x, mean, gamma, sigma)
-                if self.stack:
-                    process_name = self.requires()["fit"].process_name
-                    for hist in all_hists:
-                        if hist.cmt_process_name == process_name:
-                            data = ROOT.RooDataHist("data_obs", "data_obs", l, hist)
-                            data.plotOn(xframe,
-                                ROOT.RooFit.MarkerColor(ROOT.TColor.GetColorTransparent(0, 1)),
-                                ROOT.RooFit.LineColor(ROOT.TColor.GetColorTransparent(0, 1)))
-                fit.plotOn(xframe)
-                xframe.Draw("same");
+            elif self.requires()["fit"].method == "polynomial":
+                params = []
+                for i, (p, v) in enumerate(d.items()):
+                    params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', float(v)))
+                fit = ROOT.RooPolynomial("fit", "fit", x, ROOT.RooArgList(*params))
+
+            if self.stack:
+                process_name = self.requires()["fit"].process_name
+                for hist in all_hists:
+                    if hist.cmt_process_name == process_name:
+                        data = ROOT.RooDataHist("data_obs", "data_obs", l, hist)
+                        data.plotOn(xframe,
+                            ROOT.RooFit.MarkerColor(ROOT.TColor.GetColorTransparent(0, 1)),
+                            ROOT.RooFit.LineColor(ROOT.TColor.GetColorTransparent(0, 1)))
+            fit.plotOn(xframe)
+            xframe.Draw("same");
 
         for ih, hist in enumerate(draw_hists):
             option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"

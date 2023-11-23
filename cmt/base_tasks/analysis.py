@@ -278,7 +278,7 @@ class Fit(FeaturePlot):
 
     """
 
-    method = luigi.ChoiceParameter(choices=("voigtian",), default="voigtian",
+    method = luigi.ChoiceParameter(choices=("voigtian", "polynomial"), default="voigtian",
         description="fitting method to consider, default: voigtian")
     process_name = luigi.Parameter(default="signal", description="process name to consider, "
         "default: signal")
@@ -315,7 +315,12 @@ class Fit(FeaturePlot):
     def convert_parameters(self, d):
         for param, val in d.items():
             if isinstance(val, str):
-                d[param] = tuple(map(float, val[1:-1].split(', ')))
+                if "," not in val:
+                    d[param] = tuple([float(val)])
+                else:
+                    d[param] = tuple(map(float, val.split(', ')))
+            else:
+                d[param] = val
         return d
 
     def run(self):
@@ -385,5 +390,23 @@ class Fit(FeaturePlot):
                     "ndf": n_non_zero_bins - npar,
                 }
 
-                with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
-                    json.dump(d, f, indent=4)
+            elif self.method == "polynomial":
+                fit_parameters["order"] = int(self.fit_parameters.get("order", 1))
+                for i in range(fit_parameters["order"] + 1):
+                    fit_parameters[f"p{i}"] = self.fit_parameters.get(f"p{i}", (0, -1, 1))
+                fit_parameters = self.convert_parameters(fit_parameters)
+                fit_parameters["order"] = int(fit_parameters["order"])
+                params = []
+                for i in range(fit_parameters["order"]):
+                    if i == 0:
+                        params.append(ROOT.RooRealVar('p0', 'p0', *fit_parameters[f"p{i}"]))
+                    else:
+                        params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"]))
+
+                linear = ROOT.RooPolynomial("linear", "linear", x, ROOT.RooArgList(*params))
+                linear.fitTo(data, ROOT.RooFit.SumW2Error(True));
+                param_values = [p.getVal() for p in params]
+                d = dict(zip([f'p{i}' for i in range(fit_parameters["order"])], param_values))
+
+            with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
+                json.dump(d, f, indent=4)
