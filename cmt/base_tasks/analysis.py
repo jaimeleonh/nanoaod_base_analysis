@@ -278,8 +278,8 @@ class Fit(FeaturePlot):
 
     """
 
-    method = luigi.ChoiceParameter(choices=("voigtian", "polynomial"), default="voigtian",
-        description="fitting method to consider, default: voigtian")
+    method = luigi.ChoiceParameter(choices=("voigtian", "polynomial", "exponential", "powerlaw"),
+        default="voigtian", description="fitting method to consider, default: voigtian")
     process_name = luigi.Parameter(default="signal", description="process name to consider, "
         "default: signal")
     x_range = law.CSVParameter(default=("1.2", "1.5"), description="range of the x axis to consider "
@@ -361,18 +361,15 @@ class Fit(FeaturePlot):
                 mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
                 sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
                 gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
-                signal = ROOT.RooVoigtian("signal", "signal", x, mean, gamma, sigma)
-                signal.fitTo(data, ROOT.RooFit.SumW2Error(True));
-                signal.plotOn(frame)
+                fun = ROOT.RooVoigtian("signal", "signal", x, mean, gamma, sigma)
+                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
 
                 gamma_value = gamma.getVal()
                 sigma_value = sigma.getVal()
 
-                G = 2*sigma_value*np.sqrt(2*np.log(2))
-                L = 2*gamma_value
-                HWHM = (0.5346*L + np.sqrt(0.2166*L**2 + G**2))/2
-
-                npar = signal.getParameters(data).selectByAttrib("Constant",False).getSize()
+                G = 2 * sigma_value * np.sqrt(2 * np.log(2))
+                L = 2 * gamma_value
+                HWHM = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
 
                 d = {
                     "mean": mean.getVal(),
@@ -382,31 +379,66 @@ class Fit(FeaturePlot):
                     "gamma": gamma.getVal(),
                     "gamma_error": gamma.getError(),
                     "HWHM": HWHM,
-                    "chi2": frame.chiSquare(),
-                    "npar": npar,
-                    "chi2/ndf": frame.chiSquare(npar),
-                    "Number of non-zero bins": n_non_zero_bins,
-                    "Full chi2": frame.chiSquare()*n_non_zero_bins,
-                    "ndf": n_non_zero_bins - npar,
                 }
 
             elif self.method == "polynomial":
-                fit_parameters["order"] = int(self.fit_parameters.get("order", 1))
-                for i in range(fit_parameters["order"] + 1):
+                order = int(self.fit_parameters.get("order", 1))
+                for i in range(order):
                     fit_parameters[f"p{i}"] = self.fit_parameters.get(f"p{i}", (0, -1, 1))
                 fit_parameters = self.convert_parameters(fit_parameters)
-                fit_parameters["order"] = int(fit_parameters["order"])
                 params = []
-                for i in range(fit_parameters["order"]):
+                for i in range(order):
                     if i == 0:
-                        params.append(ROOT.RooRealVar('p0', 'p0', *fit_parameters[f"p{i}"]))
+                        params.append(ROOT.RooRealVar('p0', 'p0', *fit_parameters[f"p0"]))
                     else:
                         params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"]))
 
-                linear = ROOT.RooPolynomial("linear", "linear", x, ROOT.RooArgList(*params))
-                linear.fitTo(data, ROOT.RooFit.SumW2Error(True));
+                fun = ROOT.RooPolynomial("pol", "pol", x, ROOT.RooArgList(*params))
+                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
                 param_values = [p.getVal() for p in params]
-                d = dict(zip([f'p{i}' for i in range(fit_parameters["order"])], param_values))
+                d = dict(zip([f'p{i}' for i in range(order)], param_values))
+
+            elif self.method == "exponential":
+                # https://root.cern.ch/doc/master/classRooExponential.html
+                fit_parameters["c"] = self.fit_parameters.get("c", (0, -2, 2))
+                fit_parameters = self.convert_parameters(fit_parameters)
+                c = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
+                fun = ROOT.RooPolynomial("expo", "expo", x, c)
+                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                d = {"c": c.getVal() }
+
+            elif self.method == "powerlaw":
+                order = int(self.fit_parameters.get("order", 1))
+                for i in range(order):
+                    fit_parameters[f"a{i}"] = self.fit_parameters.get(f"a{i}", (1, 0, 2))
+                    fit_parameters[f"b{i}"] = self.fit_parameters.get(f"b{i}", (0, -2, 2))
+                fit_parameters = self.convert_parameters(fit_parameters)
+
+                params = [x]
+                for i in range(order):
+                    params.append(ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"]))
+                    params.append(ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"]))
+
+                fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
+                    for i in range(0, order, 2)])
+
+                fun = ROOT.RooGenericPdf("powerlaw", fit_fun, ROOT.RooArgList(*params))
+                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                param_values = []
+                for i in range(order):
+                    param_values.append((f"a{i}", params[1 + 2 * i].getVal()))
+                    param_values.append((f"b{i}", params[1 + 2 * i + 1].getVal()))
+                d = dict(param_values)
+
+            npar = fun.getParameters(data).selectByAttrib("Constant",False).getSize()
+
+            fun.plotOn(frame)
+            d["chi2"] = frame.chiSquare()
+            d["npar"] = npar
+            d["chi2/ndf"] = frame.chiSquare(npar)
+            d["Number of non-zero bins"] = n_non_zero_bins
+            d["Full chi2"] = frame.chiSquare() * n_non_zero_bins
+            d["ndf"] = n_non_zero_bins - npar
 
             with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
                 json.dump(d, f, indent=4)

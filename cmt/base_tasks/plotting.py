@@ -1411,11 +1411,25 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', float(d["sigma"]))
                 gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', float(d["gamma"]))
                 fit = ROOT.RooVoigtian("fit", "fit", x, mean, gamma, sigma)
+
             elif self.requires()["fit"].method == "polynomial":
-                params = []
-                for i, (p, v) in enumerate(d.items()):
-                    params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', float(v)))
+                order = int(self.requires()["fit"].fit_parameters.get("order", 1))
+                params = [ROOT.RooRealVar(f'p{i}', f'p{i}', float(d[f'p{i}'])) for i in range(order)]
                 fit = ROOT.RooPolynomial("fit", "fit", x, ROOT.RooArgList(*params))
+
+            elif self.requires()["fit"].method == "exponential":
+                p = ROOT.RooRealVar("c", "c", float(d["c"]))
+                fit = ROOT.RooExponential("fit", "fit", x, p)
+
+            elif self.requires()["fit"].method == "powerlaw":
+                order = int(self.requires()["fit"].fit_parameters.get("order", 1))
+                params = [x]
+                for i in range(order):
+                    params.append(ROOT.RooRealVar(f'a{i}', f'a{i}', d[f"a{i}"]))
+                    params.append(ROOT.RooRealVar(f'b{i}', f'b{i}', d[f"b{i}"]))
+                fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
+                    for i in range(0, order, 2)])
+                fit = ROOT.RooGenericPdf("powerlaw", fun, ROOT.RooArgList(*params))
 
             if self.stack:
                 process_name = self.requires()["fit"].process_name
