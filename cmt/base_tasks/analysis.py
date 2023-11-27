@@ -50,6 +50,17 @@ class CreateDatacards(FeaturePlot):
     fit_models = luigi.Parameter(default="", description="filename with fit models to use "
         "in the fit, default: none (binned fit)")
 
+    def __init__(self, *args, **kwargs):
+        super(CreateDatacards, self).__init__(self, *args, **kwargs)
+
+        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
+        if len(self.data_names) > 1:
+            raise ValueError("Only 1 data process can be provided inside the process group")
+        self.non_data_names = [p.name for p in self.processes_datasets.keys() if not p.isData]
+
+        if self.do_qcd:
+            self.non_data_names.append("qcd")
+
     def requires(self):
         """
         Needs as input the root file provided by the FeaturePlot task
@@ -60,16 +71,32 @@ class CreateDatacards(FeaturePlot):
             import yaml
             from cmt.utils.yaml_utils import ordered_load
             with open(self.retrieve_file("config/{}.yaml".format(self.fit_models))) as f:
-                models = ordered_load(f, yaml.SafeLoader)
+                self.models = ordered_load(f, yaml.SafeLoader)
 
             reqs = {}
-            for model, fit_params in models.items():
+            self.model_processes = []
+            for model, fit_params in self.models.items():
+                self.model_processes.append(fit_params["process_name"])
                 params = ", ".join([f"{param}='{value}'"
-                for param, value in fit_params.items() if param != "fit_parameters"])
+                    for param, value in fit_params.items() if param != "fit_parameters"])
                 if "fit_parameters" in fit_params:
                     params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                     for param, value in fit_params["fit_parameters"].items()]) + "}"
-                reqs["model"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+                reqs[fit_params["process_name"]] = eval(
+                    f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+
+            # In order to have a workspace with data_obs, we replicate the first fit
+            # (just in case the x_range is defined) for the available data process
+            assert(self.data_names)
+            fit_params = list(self.models.values())[0]
+            fit_params["process_name"] = self.data_names[0]
+            params = ", ".join([f"{param}='{value}'"
+                for param, value in fit_params.items() if param != "fit_parameters"])
+            if "fit_parameters" in fit_params:
+                params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
+                for param, value in fit_params["fit_parameters"].items()]) + "}"
+            reqs["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+            return reqs
 
     def output(self):
         """
@@ -77,19 +104,13 @@ class CreateDatacards(FeaturePlot):
         storing the histograms
         """
         region_name = "" if not self.region else "_{}".format(self.region.name)
-        if not self.fit_models:
-            return {
-                feature.name: {
-                    "txt": self.local_target("{}{}.txt".format(feature.name, region_name)),
-                    "root": self.local_target("{}{}.root".format(feature.name, region_name))
-                }
-                for feature in self.features
+        return {
+            feature.name: {
+                "txt": self.local_target("{}{}.txt".format(feature.name, region_name)),
+                "root": self.local_target("{}{}.root".format(feature.name, region_name))
             }
-        else:
-            return {
-                feature.name: self.local_target("{}{}.txt".format(feature.name, region_name))
-                for feature in self.features
-            }
+            for feature in self.features
+        }
 
     def get_norm_systematics(self):
         if self.plot_systematics:
@@ -112,7 +133,7 @@ class CreateDatacards(FeaturePlot):
         for p_name in self.non_data_names:
             try:
                 if self.config.processes.get(p_name).isSignal:
-                    line.append(signal_counter)
+                    line.append(sig_counter)
                     sig_counter -= 1
                 else:
                     line.append(bkg_counter)
@@ -161,7 +182,7 @@ class CreateDatacards(FeaturePlot):
             f.write(n_dashes * "-" + "\n")
             for i in range(4):
                 f.write(fancy_table[i] + "\n")
-            
+
             f.write(n_dashes * "-" + "\n")
             for i in range(4, len(fancy_table)):
                 f.write(fancy_table[i] + "\n")
@@ -172,20 +193,123 @@ class CreateDatacards(FeaturePlot):
             for arg in args:
                 f.write(arg + "\n")
 
+    def write_shape_datacard(self, feature, norm_systematics, shape_systematics, *args):
+        n_dashes = 50
+
+        region_name = "" if not self.region else "_{}".format(self.region.name)
+        bin_name = "{}{}".format(feature.name, region_name)
+
+        shapes_table = []
+        for name in self.non_data_names:
+            shapes_table.append(["shapes", name, bin_name, bin_name + ".root",
+                "workspace_{0}:model_{0}".format(name)])
+        for name in self.data_names:
+            if name in self.model_processes:
+                # We are extracting the background from the data, so let's label it as background
+                # but let's be sure background is not in the process_group_name
+                assert not "background" in self.processes_datasets.keys()
+                shapes_table.append(["shapes", "background", bin_name, bin_name + ".root",
+                    "workspace_{0}:model_{0}".format(name)])
+
+        # Include shape for the data
+        shapes_table.append(["shapes", "data_obs", bin_name, bin_name + ".root",
+            "workspace_data_obs:data_obs"])
+
+        table = []
+        process_names = self.non_data_names
+        for name in self.data_names:
+            if name in self.model_processes:
+                process_names.append("background")
+
+        table.append(["bin", ""] + [bin_name for i in range(len(process_names))])
+        table.append(["process", ""] + process_names)
+
+        sig_counter = 0
+        bkg_counter = 1
+        line = ["process", ""]
+        for p_name in process_names:
+            try:
+                if self.config.processes.get(p_name).isSignal:
+                    line.append(sig_counter)
+                    sig_counter -= 1
+                else:
+                    line.append(bkg_counter)
+                    bkg_counter += 1
+            except ValueError:  # qcd coming from do_qcd or background coming from data
+                line.append(bkg_counter)
+                bkg_counter += 1
+        table.append(line)
+
+        rate_line = ["rate", ""]
+        for p_name in process_names:
+            if p_name == "background":
+                # assuming it comes from data, may cause problems in certain setups
+                rate_line.append(1)
+            else:
+                filename = self.input()[p_name][feature.name]["json"].path
+                with open(filename) as f:
+                    d = json.load(f)
+                rate_line.append(d["integral"])
+        table.append(rate_line)
+
+        # normalization systematics
+        for norm_syst in norm_systematics:
+            line = [norm_syst, "lnN"]
+            for p_name in self.non_data_names:
+                if p_name in norm_systematics[norm_syst]:
+                    line.append(norm_systematics[norm_syst][p_name])
+                else:
+                    line.append("-")
+            table.append(line)
+
+        # shape systematics
+        for shape_syst in shape_systematics:
+            line = [shape_syst, "shape"]
+            for p_name in self.non_data_names:
+                if p_name in shape_systematics[shape_syst]:
+                    line.append(1)
+                else:
+                    line.append("-")
+            table.append(line)
+
+        fancy_shapes_table = tabulate.tabulate(shapes_table, tablefmt="plain").split("\n")
+        fancy_table = tabulate.tabulate(table, tablefmt="plain").split("\n")
+
+        with open(create_file_dir(self.output()[feature.name]["txt"].path), "w+") as f:
+            for letter in ["i", "j", "k"]:
+                f.write("%smax  *\n" % letter)
+
+            f.write(n_dashes * "-" + "\n")
+
+            for line in fancy_shapes_table:
+                f.write(line + "\n")
+
+            f.write(n_dashes * "-" + "\n")
+
+            f.write("{:<11}  {}\n".format("bin", bin_name))
+            f.write("observation  -1\n")
+
+            f.write(n_dashes * "-" + "\n")
+            for i in range(4):
+                f.write(fancy_table[i] + "\n")
+
+            f.write(n_dashes * "-" + "\n")
+            for i in range(4, len(fancy_table)):
+                f.write(fancy_table[i] + "\n")
+
+            # if self.automcstats != -1:
+                # f.write("*  autoMCStats  %s \n" % self.automcstats)
+
+            for arg in args:
+                f.write(arg + "\n")
+
+
     def run(self):
         """
         Splits the processes into data and non-data. Per feature, loads the input histograms, 
         creates the output histograms and the datacard inside the txt file.
         """
         inputs = self.input()
-
-        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
-        if len(self.data_names) > 1:
-            raise ValueError("Only 1 data process can be provided inside the process group")
-        self.non_data_names = [p.name for p in self.processes_datasets.keys() if not p.isData]
-
-        if self.do_qcd:
-            self.non_data_names.append("qcd")
 
         norm_systematics = self.get_norm_systematics()
 
@@ -201,37 +325,58 @@ class CreateDatacards(FeaturePlot):
             shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
                 for shape_syst in shape_syst_list}
 
-            histos = {}
-            tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
-            for name in self.data_names:
-                histos[name] = copy(tf.Get("histograms/" + name))
-            for name in self.non_data_names:
-                for (syst, d) in systs_directions:
-                    if syst == "central":
-                        name_to_save = name
-                        name_from_featureplot = name
-                    elif self.do_qcd and name == "qcd":
-                        continue
-                    else:
-                        name_to_save = "%s_%s%s" % (name, syst, d.capitalize())
-                        name_from_featureplot = "%s_%s_%s" % (name, syst, d)
-                    histos[name_to_save] = copy(tf.Get("histograms/" + name_from_featureplot))
-            tf.Close()
+            if not self.fit_models:  # unbinned fits
+                histos = {}
+                tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                for name in self.data_names:
+                    histos[name] = copy(tf.Get("histograms/" + name))
+                for name in self.non_data_names:
+                    for (syst, d) in systs_directions:
+                        if syst == "central":
+                            name_to_save = name
+                            name_from_featureplot = name
+                        elif self.do_qcd and name == "qcd":
+                            continue
+                        else:
+                            name_to_save = "%s_%s%s" % (name, syst, d.capitalize())
+                            name_from_featureplot = "%s_%s_%s" % (name, syst, d)
+                        histos[name_to_save] = copy(tf.Get("histograms/" + name_from_featureplot))
+                tf.Close()
 
-            yields = {name_central: histos[name_central].Integral()
-                for name_central in self.non_data_names}
+                yields = {name_central: histos[name_central].Integral()
+                    for name_central in self.non_data_names}
 
-            self.write_datacard(yields, feature,
-                norm_systematics, shape_systematics, *self.additional_lines)
+                self.write_datacard(yields, feature,
+                    norm_systematics, shape_systematics, *self.additional_lines)
 
-            tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
-                "RECREATE")
-            for name, histo in histos.items():
-                if "data" in name:
-                    name = "data_obs"
-                histo.Write(name)
+                tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
+                    "RECREATE")
+                for name, histo in histos.items():
+                    if "data" in name:
+                        name = "data_obs"
+                    histo.Write(name)
 
-            tf.Close()
+                tf.Close()
+            else:  # binned fits
+                tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
+                    "RECREATE")
+                for model, fit_params in self.models.items():
+                    model_tf = ROOT.TFile.Open(
+                        inputs[fit_params["process_name"]][feature.name]["root"].path)
+                    w = model_tf.Get("workspace_" + fit_params["process_name"])
+                    tf.cd()
+                    w.Write()
+                    model_tf.Close()
+                # data_obs
+                model_tf = ROOT.TFile.Open(inputs["data_obs"][feature.name]["root"].path)
+                w = model_tf.Get("workspace_" + self.data_names[0])
+                tf.cd()
+                w.Write("workspace_data_obs")
+                model_tf.Close()
+                tf.Close()
+
+                self.write_shape_datacard(feature, norm_systematics, shape_systematics,
+                    *self.additional_lines)
 
 
 class Fit(FeaturePlot):
@@ -260,7 +405,7 @@ class Fit(FeaturePlot):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=True)
+        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False)
 
     def output(self):
         """
@@ -409,12 +554,15 @@ class Fit(FeaturePlot):
             d["Number of non-zero bins"] = n_non_zero_bins
             d["Full chi2"] = frame.chiSquare() * n_non_zero_bins
             d["ndf"] = n_non_zero_bins - npar
+            d["integral"] = data.sumEntries()
 
             with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
                 json.dump(d, f, indent=4)
 
-            workspace = ROOT.RooWorkspace(self.process_name, "workspace")
+            w_name = "workspace_" + self.process_name
+            workspace = ROOT.RooWorkspace(w_name, w_name)
             getattr(workspace, "import")(fun)
+            getattr(workspace, "import")(data)
             workspace.Print()
             f = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                 "RECREATE")
@@ -422,21 +570,3 @@ class Fit(FeaturePlot):
             workspace.Write()
             f.Close()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-=======
->>>>>>> 1407d6e5607f292dab0f9d9f39132794cd6aadd5

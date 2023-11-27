@@ -573,6 +573,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     :param log_y: whether to set y axis to log scale
     :type log_y: bool
 
+    :param include_fit: YAML file inside config folder (w/o extension) including input parameters
+        for the fit
+    :type include_fit: str
+
     :param propagate_syst_qcd: whether to propagate systematics to qcd background
     :type propagate_syst_qcd: bool
 
@@ -804,9 +808,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if "fit_parameters" in fit_params:
                 params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                 for param, value in fit_params["fit_parameters"].items()]) + "}"
-            # print(**self.include_fit)
-            # print(self.include_fit)
-            # print(f"Fit.vreq(self, {params})")
             reqs["fit"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
         return reqs
 
@@ -1318,7 +1319,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
         # Draw
-        if self.hide_data or len(data_hists) == 0 or not self.stack:
+        if self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack:
             do_ratio = False
             c = Canvas()
             if self.log_y:
@@ -1400,7 +1401,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         # Draw fit if required
         if self.include_fit:
-            with open(self.input()["fit"][feature.name].path) as f:
+            with open(self.input()["fit"][feature.name]["json"].path) as f:
                 d = json.load(f)
             x_range = self.requires()["fit"].x_range
             x = ROOT.RooRealVar("x", "x", float(x_range[0]), float(x_range[1]))
