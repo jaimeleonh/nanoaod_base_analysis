@@ -13,6 +13,7 @@ import math
 import itertools
 from collections import OrderedDict
 import tabulate
+import numpy as np
 
 import law
 import luigi
@@ -21,12 +22,13 @@ from analysis_tools.utils import (
     import_root, create_file_dir, randomize
 )
 
+from cmt.base_tasks.base import ConfigTaskWithCategory
 from cmt.base_tasks.plotting import FeaturePlot
-import numpy as np
 
 ROOT = import_root()
 
 directions = ["up", "down"]
+
 
 class CreateDatacards(FeaturePlot):
     """
@@ -47,14 +49,31 @@ class CreateDatacards(FeaturePlot):
         "the datacard, -1 to avoid using it, default: 10")
     additional_lines = law.CSVParameter(default=(), description="addtional lines to write at the "
         "end of the datacard")
-    propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
-        "default: False")
+    propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate"
+        "systematics to qcd background, default: False")
+    fit_models = luigi.Parameter(default="", description="filename with fit models to use "
+        "in the fit, default: none (binned fit)")
 
     def requires(self):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True)
+        if not self.fit_models:
+            return FeaturePlot.vreq(self, save_root=True, stack=True)
+        else:
+            import yaml
+            from cmt.utils.yaml_utils import ordered_load
+            with open(self.retrieve_file("config/{}.yaml".format(self.fit_models))) as f:
+                models = ordered_load(f, yaml.SafeLoader)
+
+            reqs = {}
+            for model, fit_params in models.items():
+                params = ", ".join([f"{param}='{value}'"
+                for param, value in fit_params.items() if param != "fit_parameters"])
+                if "fit_parameters" in fit_params:
+                    params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
+                    for param, value in fit_params["fit_parameters"].items()]) + "}"
+                reqs["model"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
 
     def output(self):
         """
@@ -62,13 +81,19 @@ class CreateDatacards(FeaturePlot):
         storing the histograms
         """
         region_name = "" if not self.region else "_{}".format(self.region.name)
-        return {
-            feature.name: {
-                "txt": self.local_target("{}{}.txt".format(feature.name, region_name)),
-                "root": self.local_target("{}{}.root".format(feature.name, region_name))
+        if not self.fit_models:
+            return {
+                feature.name: {
+                    "txt": self.local_target("{}{}.txt".format(feature.name, region_name)),
+                    "root": self.local_target("{}{}.root".format(feature.name, region_name))
+                }
+                for feature in self.features
             }
-            for feature in self.features
-        }
+        else:
+            return {
+                feature.name: self.local_target("{}{}.txt".format(feature.name, region_name))
+                for feature in self.features
+            }
 
     def get_norm_systematics(self):
         """
@@ -107,8 +132,6 @@ class CreateDatacards(FeaturePlot):
             for isy, syst_name in enumerate(syst.SystNames):
                 if "CMS_scale_t" in syst.SystNames[isy] or "CMS_scale_j" in syst.SystNames[isy]:
                     continue
-                # for dataset in self.datasets:
-                    # process = dataset.process
                 for process in self.processes_datasets:
                     original_process = process
                     while True:
@@ -302,13 +325,17 @@ class Fit(FeaturePlot):
 
     def output(self):
         """
-        Returns, per feature, one txt storing the datacard and its corresponding root file
-        storing the histograms
+        Returns, per feature, one json file storing the fit results and one root file
+        storing the workspace
         """
         region_name = "" if not self.region else "__{}".format(self.region.name)
         return {
-            feature.name: self.local_target("{}__{}__{}{}.json".format(
-                feature.name, self.process_name, self.method, region_name))
+            feature.name: {
+                "json": self.local_target("{}__{}__{}{}.json".format(
+                    feature.name, self.process_name, self.method, region_name)),
+                "root": self.local_target("{}__{}__{}{}.root".format(
+                    feature.name, self.process_name, self.method, region_name))
+            }
             for feature in self.features
         }
 
@@ -361,7 +388,8 @@ class Fit(FeaturePlot):
                 mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
                 sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
                 gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
-                fun = ROOT.RooVoigtian("signal", "signal", x, mean, gamma, sigma)
+                fun = ROOT.RooVoigtian("model_%s" % self.process_name,
+                    "model_%s" % self.process_name, x, mean, gamma, sigma)
                 fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
 
                 gamma_value = gamma.getVal()
@@ -393,7 +421,8 @@ class Fit(FeaturePlot):
                     else:
                         params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"]))
 
-                fun = ROOT.RooPolynomial("pol", "pol", x, ROOT.RooArgList(*params))
+                fun = ROOT.RooPolynomial("model_%s" % self.process_name,
+                    "model_%s" % self.process_name, x, ROOT.RooArgList(*params))
                 fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
                 param_values = [p.getVal() for p in params]
                 d = dict(zip([f'p{i}' for i in range(order)], param_values))
@@ -403,7 +432,8 @@ class Fit(FeaturePlot):
                 fit_parameters["c"] = self.fit_parameters.get("c", (0, -2, 2))
                 fit_parameters = self.convert_parameters(fit_parameters)
                 c = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
-                fun = ROOT.RooPolynomial("expo", "expo", x, c)
+                fun = ROOT.RooPolynomial("model_%s" % self.process_name,
+                    "model_%s" % self.process_name, x, c)
                 fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
                 d = {"c": c.getVal() }
 
@@ -422,7 +452,8 @@ class Fit(FeaturePlot):
                 fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
                     for i in range(0, order, 2)])
 
-                fun = ROOT.RooGenericPdf("powerlaw", fit_fun, ROOT.RooArgList(*params))
+                fun = ROOT.RooGenericPdf("model_%s" % self.process_name,
+                    fit_fun, ROOT.RooArgList(*params))
                 fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
                 param_values = []
                 for i in range(order):
@@ -440,5 +471,31 @@ class Fit(FeaturePlot):
             d["Full chi2"] = frame.chiSquare() * n_non_zero_bins
             d["ndf"] = n_non_zero_bins - npar
 
-            with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
+            with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
                 json.dump(d, f, indent=4)
+
+            workspace = ROOT.RooWorkspace(self.process_name, "workspace")
+            getattr(workspace, "import")(fun)
+            workspace.Print()
+            f = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
+                "RECREATE")
+            f.cd()
+            workspace.Write()
+            f.Close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
