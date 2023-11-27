@@ -22,7 +22,6 @@ from analysis_tools.utils import (
 )
 
 from cmt.base_tasks.plotting import FeaturePlot
-import numpy as np
 
 ROOT = import_root()
 
@@ -37,24 +36,18 @@ class CreateDatacards(FeaturePlot):
 
     :param additional_lines: Additional lines to write at the end of the datacard.
     :type additional_lines: list of `str`
-
-    :param propagate_syst_qcd: whether to propagate systematics to qcd background
-    :type propagate_syst_qcd: bool
-
     """
 
     automcstats = luigi.IntParameter(default=10, description="value used for autoMCStats inside "
         "the datacard, -1 to avoid using it, default: 10")
     additional_lines = law.CSVParameter(default=(), description="addtional lines to write at the "
         "end of the datacard")
-    propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
-        "default: False")
 
     def requires(self):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True)
+        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False)
 
     def output(self):
         """
@@ -71,61 +64,9 @@ class CreateDatacards(FeaturePlot):
         }
 
     def get_norm_systematics(self):
-        """
-        Method to extract all normalization systematics from the KLUB files.
-        It considers the processes given by the process_group_name and their parents.
-        """
-        # systematics
-        systematics = {}
         if self.plot_systematics:
-            all_signal_names = []
-            all_background_names = []
-            for p in self.config.processes:
-                if p.isSignal:
-                    all_signal_names.append(p.get_aux("llr_name")
-                        if p.get_aux("llr_name", None) else p.name)
-                elif not p.isData:
-                    all_background_names.append(p.get_aux("llr_name")
-                        if p.get_aux("llr_name", None) else p.name)
-
-            from cmt.analysis.systReader import systReader
-            syst_folder = "files/systematics/"
-            syst = systReader(self.retrieve_file(syst_folder + "systematics_{}.cfg".format(
-                self.config.year)), all_signal_names, all_background_names, None)
-            syst.writeOutput(False)
-            syst.verbose(False)
-
-            channel = self.config.get_channel_from_region(self.region)
-            if(channel == "mutau"):
-                syst.addSystFile(self.retrieve_file(syst_folder
-                    + "systematics_mutau_%s.cfg" % self.config.year))
-            elif(channel == "etau"):
-                syst.addSystFile(self.retrieve_file(syst_folder
-                    + "systematics_etau_%s.cfg" % self.config.year))
-            syst.addSystFile(self.retrieve_file(syst_folder + "syst_th.cfg"))
-            syst.writeSystematics()
-            for isy, syst_name in enumerate(syst.SystNames):
-                if "CMS_scale_t" in syst.SystNames[isy] or "CMS_scale_j" in syst.SystNames[isy]:
-                    continue
-                # for dataset in self.datasets:
-                    # process = dataset.process
-                for process in self.processes_datasets:
-                    original_process = process
-                    while True:
-                        process_name = (process.get_aux("llr_name")
-                            if process.get_aux("llr_name", None) else p.name)
-                        if process_name in syst.SystProcesses[isy]:
-                            iproc = syst.SystProcesses[isy].index(process_name)
-                            systVal = syst.SystValues[isy][iproc]
-                            if syst_name not in systematics:
-                                systematics[syst_name] = {}
-                            systematics[syst_name][original_process.name] = eval(systVal)
-                            break
-                        elif process.parent_process:
-                            process=self.config.processes.get(process.parent_process)
-                        else:
-                            break
-        return systematics
+            return self.config.get_norm_systematics(self.processes_datasets, self.region)
+        return {}
 
     def write_datacard(self, yields, feature, norm_systematics, shape_systematics, *args):
         n_dashes = 50
@@ -143,7 +84,7 @@ class CreateDatacards(FeaturePlot):
         for p_name in self.non_data_names:
             try:
                 if self.config.processes.get(p_name).isSignal:
-                    line.append(sig_counter)
+                    line.append(signal_counter)
                     sig_counter -= 1
                 else:
                     line.append(bkg_counter)
@@ -227,29 +168,22 @@ class CreateDatacards(FeaturePlot):
             systs_directions += list(itertools.product(shape_syst_list, directions))
 
             # Convert the shape systematics list to a dict with the systs as keys and a list of 
-            # the processes affected by them (all non-data processes)
-            if self.propagate_syst_qcd:
-                shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
-                    for shape_syst in shape_syst_list}
-            else:
-                shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names if p_name != 'qcd']
-                    for shape_syst in shape_syst_list}
+            # the processes affected by them (all non-data processes except the qcd if computed
+            # in the code)
+            shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
+                for shape_syst in shape_syst_list}
 
             histos = {}
             tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
-            # read data histograms when hide_data is False
-            if not self.hide_data:
-                for name in self.data_names:
-                    histos[name] = copy(tf.Get("histograms/" + name))
-            # produce a dummy data hidtogram when hide_data is True (for combine)
-            else:
-                binning_args, _ = self.get_binning(feature)
-                histos['data_dummy'] = copy(ROOT.TH1D(randomize("dummy"), "data", *binning_args))
+            for name in self.data_names:
+                histos[name] = copy(tf.Get("histograms/" + name))
             for name in self.non_data_names:
                 for (syst, d) in systs_directions:
                     if syst == "central":
                         name_to_save = name
                         name_from_featureplot = name
+                    elif self.do_qcd and name == "qcd":
+                        continue
                     else:
                         name_to_save = "%s_%s%s" % (name, syst, d.capitalize())
                         name_from_featureplot = "%s_%s_%s" % (name, syst, d)
@@ -270,175 +204,3 @@ class CreateDatacards(FeaturePlot):
                 histo.Write(name)
 
             tf.Close()
-
-
-class Fit(FeaturePlot):
-    """
-    Task that run fits over FeaturePlot histograms
-
-    """
-
-    method = luigi.ChoiceParameter(choices=("voigtian", "polynomial", "exponential", "powerlaw"),
-        default="voigtian", description="fitting method to consider, default: voigtian")
-    process_name = luigi.Parameter(default="signal", description="process name to consider, "
-        "default: signal")
-    x_range = law.CSVParameter(default=("1.2", "1.5"), description="range of the x axis to consider "
-        "in the fit, default: 1.2-1.5")
-    fit_parameters = luigi.DictParameter(default={}, description="Initial values for the parameters "
-        "involved in the fit, defaults depend on the method. Should be included as "
-        "--fit-parameters '{\"mean\": \"(20, -100, 100)\"}'")
-
-    normalize_signals = False
-
-    def __init__(self, *args, **kwargs):
-        super(Fit, self).__init__(*args, **kwargs)
-        assert self.process_name in self.config.process_group_names[self.process_group_name]
-
-    def requires(self):
-        """
-        Needs as input the root file provided by the FeaturePlot task
-        """
-        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=True)
-
-    def output(self):
-        """
-        Returns, per feature, one txt storing the datacard and its corresponding root file
-        storing the histograms
-        """
-        region_name = "" if not self.region else "__{}".format(self.region.name)
-        return {
-            feature.name: self.local_target("{}__{}__{}{}.json".format(
-                feature.name, self.process_name, self.method, region_name))
-            for feature in self.features
-        }
-
-    def convert_parameters(self, d):
-        for param, val in d.items():
-            if isinstance(val, str):
-                if "," not in val:
-                    d[param] = tuple([float(val)])
-                else:
-                    d[param] = tuple(map(float, val.split(', ')))
-            else:
-                d[param] = val
-        return d
-
-    def run(self):
-        inputs = self.input()
-        for ifeat, feature in enumerate(self.features):
-            tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
-            try:
-                histo = copy(tf.Get("histograms/" + self.process_name))
-            except:
-                raise ValueError(f"The histogram has not been created for {self.process_name}")
-            x_range = (float(self.x_range[0]), float(self.x_range[1]))
-            x = ROOT.RooRealVar("x", "x", x_range[0], x_range[1])
-            l = ROOT.RooArgList(x)
-            
-            # binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
-            # data = ROOT.TH1F("data1", "Histogram of data_obs__x", *binning_args)
-            # for i in range(1, histo.GetNbinsX() + 1):
-                # data.SetBinContent(i, histo.GetBinContent(i))
-                # data.SetBinError(i, histo.GetBinError(i))
-
-            data = ROOT.RooDataHist("data_obs", "data_obs", l, histo)
-            frame = x.frame(ROOT.RooFit.Title("Muon SV mass"))
-            data.plotOn(frame)
-
-            n_non_zero_bins = 0
-            for i in range(1, histo.GetNbinsX()):
-                if histo.GetBinContent(i) > 0:
-                    n_non_zero_bins += 1
-
-            fit_parameters = {}
-            if self.method == "voigtian":
-                fit_parameters["mean"] = self.fit_parameters.get("mean",
-                    ((x_range[1] + x_range[0]) / 2, -100, 100))
-                fit_parameters["sigma"] = self.fit_parameters.get("sigma", (0.001, 0, 0.1))
-                fit_parameters["gamma"] = self.fit_parameters.get("gammma", (0.02, 0, 0.1))
-                fit_parameters = self.convert_parameters(fit_parameters)
-
-                mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
-                sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
-                gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
-                fun = ROOT.RooVoigtian("signal", "signal", x, mean, gamma, sigma)
-                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-
-                gamma_value = gamma.getVal()
-                sigma_value = sigma.getVal()
-
-                G = 2 * sigma_value * np.sqrt(2 * np.log(2))
-                L = 2 * gamma_value
-                HWHM = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
-
-                d = {
-                    "mean": mean.getVal(),
-                    "mean_error": mean.getError(),
-                    "sigma": sigma.getVal(),
-                    "sigma_error": sigma.getError(),
-                    "gamma": gamma.getVal(),
-                    "gamma_error": gamma.getError(),
-                    "HWHM": HWHM,
-                }
-
-            elif self.method == "polynomial":
-                order = int(self.fit_parameters.get("order", 1))
-                for i in range(order):
-                    fit_parameters[f"p{i}"] = self.fit_parameters.get(f"p{i}", (0, -1, 1))
-                fit_parameters = self.convert_parameters(fit_parameters)
-                params = []
-                for i in range(order):
-                    if i == 0:
-                        params.append(ROOT.RooRealVar('p0', 'p0', *fit_parameters[f"p0"]))
-                    else:
-                        params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"]))
-
-                fun = ROOT.RooPolynomial("pol", "pol", x, ROOT.RooArgList(*params))
-                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                param_values = [p.getVal() for p in params]
-                d = dict(zip([f'p{i}' for i in range(order)], param_values))
-
-            elif self.method == "exponential":
-                # https://root.cern.ch/doc/master/classRooExponential.html
-                fit_parameters["c"] = self.fit_parameters.get("c", (0, -2, 2))
-                fit_parameters = self.convert_parameters(fit_parameters)
-                c = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
-                fun = ROOT.RooPolynomial("expo", "expo", x, c)
-                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                d = {"c": c.getVal() }
-
-            elif self.method == "powerlaw":
-                order = int(self.fit_parameters.get("order", 1))
-                for i in range(order):
-                    fit_parameters[f"a{i}"] = self.fit_parameters.get(f"a{i}", (1, 0, 2))
-                    fit_parameters[f"b{i}"] = self.fit_parameters.get(f"b{i}", (0, -2, 2))
-                fit_parameters = self.convert_parameters(fit_parameters)
-
-                params = [x]
-                for i in range(order):
-                    params.append(ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"]))
-                    params.append(ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"]))
-
-                fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
-                    for i in range(0, order, 2)])
-
-                fun = ROOT.RooGenericPdf("powerlaw", fit_fun, ROOT.RooArgList(*params))
-                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                param_values = []
-                for i in range(order):
-                    param_values.append((f"a{i}", params[1 + 2 * i].getVal()))
-                    param_values.append((f"b{i}", params[1 + 2 * i + 1].getVal()))
-                d = dict(param_values)
-
-            npar = fun.getParameters(data).selectByAttrib("Constant",False).getSize()
-
-            fun.plotOn(frame)
-            d["chi2"] = frame.chiSquare()
-            d["npar"] = npar
-            d["chi2/ndf"] = frame.chiSquare(npar)
-            d["Number of non-zero bins"] = n_non_zero_bins
-            d["Full chi2"] = frame.chiSquare() * n_non_zero_bins
-            d["ndf"] = n_non_zero_bins - npar
-
-            with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
-                json.dump(d, f, indent=4)
