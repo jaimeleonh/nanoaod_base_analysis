@@ -39,10 +39,6 @@ class CreateDatacards(FeaturePlot):
 
     :param additional_lines: Additional lines to write at the end of the datacard.
     :type additional_lines: list of `str`
-
-    :param propagate_syst_qcd: whether to propagate systematics to qcd background
-    :type propagate_syst_qcd: bool
-
     """
 
     automcstats = luigi.IntParameter(default=10, description="value used for autoMCStats inside "
@@ -59,7 +55,7 @@ class CreateDatacards(FeaturePlot):
         Needs as input the root file provided by the FeaturePlot task
         """
         if not self.fit_models:
-            return FeaturePlot.vreq(self, save_root=True, stack=True)
+            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False)
         else:
             import yaml
             from cmt.utils.yaml_utils import ordered_load
@@ -96,59 +92,9 @@ class CreateDatacards(FeaturePlot):
             }
 
     def get_norm_systematics(self):
-        """
-        Method to extract all normalization systematics from the KLUB files.
-        It considers the processes given by the process_group_name and their parents.
-        """
-        # systematics
-        systematics = {}
         if self.plot_systematics:
-            all_signal_names = []
-            all_background_names = []
-            for p in self.config.processes:
-                if p.isSignal:
-                    all_signal_names.append(p.get_aux("llr_name")
-                        if p.get_aux("llr_name", None) else p.name)
-                elif not p.isData:
-                    all_background_names.append(p.get_aux("llr_name")
-                        if p.get_aux("llr_name", None) else p.name)
-
-            from cmt.analysis.systReader import systReader
-            syst_folder = "files/systematics/"
-            syst = systReader(self.retrieve_file(syst_folder + "systematics_{}.cfg".format(
-                self.config.year)), all_signal_names, all_background_names, None)
-            syst.writeOutput(False)
-            syst.verbose(False)
-
-            channel = self.config.get_channel_from_region(self.region)
-            if(channel == "mutau"):
-                syst.addSystFile(self.retrieve_file(syst_folder
-                    + "systematics_mutau_%s.cfg" % self.config.year))
-            elif(channel == "etau"):
-                syst.addSystFile(self.retrieve_file(syst_folder
-                    + "systematics_etau_%s.cfg" % self.config.year))
-            syst.addSystFile(self.retrieve_file(syst_folder + "syst_th.cfg"))
-            syst.writeSystematics()
-            for isy, syst_name in enumerate(syst.SystNames):
-                if "CMS_scale_t" in syst.SystNames[isy] or "CMS_scale_j" in syst.SystNames[isy]:
-                    continue
-                for process in self.processes_datasets:
-                    original_process = process
-                    while True:
-                        process_name = (process.get_aux("llr_name")
-                            if process.get_aux("llr_name", None) else p.name)
-                        if process_name in syst.SystProcesses[isy]:
-                            iproc = syst.SystProcesses[isy].index(process_name)
-                            systVal = syst.SystValues[isy][iproc]
-                            if syst_name not in systematics:
-                                systematics[syst_name] = {}
-                            systematics[syst_name][original_process.name] = eval(systVal)
-                            break
-                        elif process.parent_process:
-                            process=self.config.processes.get(process.parent_process)
-                        else:
-                            break
-        return systematics
+            return self.config.get_norm_systematics(self.processes_datasets, self.region)
+        return {}
 
     def write_datacard(self, yields, feature, norm_systematics, shape_systematics, *args):
         n_dashes = 50
@@ -166,7 +112,7 @@ class CreateDatacards(FeaturePlot):
         for p_name in self.non_data_names:
             try:
                 if self.config.processes.get(p_name).isSignal:
-                    line.append(sig_counter)
+                    line.append(signal_counter)
                     sig_counter -= 1
                 else:
                     line.append(bkg_counter)
@@ -250,29 +196,22 @@ class CreateDatacards(FeaturePlot):
             systs_directions += list(itertools.product(shape_syst_list, directions))
 
             # Convert the shape systematics list to a dict with the systs as keys and a list of 
-            # the processes affected by them (all non-data processes)
-            if self.propagate_syst_qcd:
-                shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
-                    for shape_syst in shape_syst_list}
-            else:
-                shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names if p_name != 'qcd']
-                    for shape_syst in shape_syst_list}
+            # the processes affected by them (all non-data processes except the qcd if computed
+            # in the code)
+            shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
+                for shape_syst in shape_syst_list}
 
             histos = {}
             tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
-            # read data histograms when hide_data is False
-            if not self.hide_data:
-                for name in self.data_names:
-                    histos[name] = copy(tf.Get("histograms/" + name))
-            # produce a dummy data hidtogram when hide_data is True (for combine)
-            else:
-                binning_args, _ = self.get_binning(feature)
-                histos['data_dummy'] = copy(ROOT.TH1D(randomize("dummy"), "data", *binning_args))
+            for name in self.data_names:
+                histos[name] = copy(tf.Get("histograms/" + name))
             for name in self.non_data_names:
                 for (syst, d) in systs_directions:
                     if syst == "central":
                         name_to_save = name
                         name_from_featureplot = name
+                    elif self.do_qcd and name == "qcd":
+                        continue
                     else:
                         name_to_save = "%s_%s%s" % (name, syst, d.capitalize())
                         name_from_featureplot = "%s_%s_%s" % (name, syst, d)
@@ -499,3 +438,5 @@ class Fit(FeaturePlot):
 
 
 
+=======
+>>>>>>> 1407d6e5607f292dab0f9d9f39132794cd6aadd5
