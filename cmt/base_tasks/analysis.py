@@ -391,6 +391,8 @@ class Fit(FeaturePlot):
         "default: signal")
     x_range = law.CSVParameter(default=("1.2", "1.5"), description="range of the x axis to consider "
         "in the fit, default: 1.2-1.5")
+    blind_range = law.CSVParameter(default=("-1", "-1"), description="range of the x axis to blind "
+        "in the fit, default: none")
     fit_parameters = luigi.DictParameter(default={}, description="Initial values for the parameters "
         "involved in the fit, defaults depend on the method. Should be included as "
         "--fit-parameters '{\"mean\": \"(20, -100, 100)\"}'")
@@ -436,137 +438,161 @@ class Fit(FeaturePlot):
 
     def run(self):
         inputs = self.input()
+        isMC = self.config.processes.get(self.process_name).isMC
         for ifeat, feature in enumerate(self.features):
-            tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
-            try:
-                histo = copy(tf.Get("histograms/" + self.process_name))
-            except:
-                raise ValueError(f"The histogram has not been created for {self.process_name}")
+            systs = self.get_unique_systs(self.get_systs(feature, isMC) \
+                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC))
+            systs_directions = [("central", "")]
+            if isMC and self.store_systematics:
+                systs_directions += list(itertools.product(systs, directions))
+
+            # fit range
             x_range = (float(self.x_range[0]), float(self.x_range[1]))
             x = ROOT.RooRealVar("x", "x", x_range[0], x_range[1])
             l = ROOT.RooArgList(x)
-            
-            # binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
-            # data = ROOT.TH1F("data1", "Histogram of data_obs__x", *binning_args)
-            # for i in range(1, histo.GetNbinsX() + 1):
-                # data.SetBinContent(i, histo.GetBinContent(i))
-                # data.SetBinError(i, histo.GetBinError(i))
 
-            data = ROOT.RooDataHist("data_obs", "data_obs", l, histo)
-            frame = x.frame(ROOT.RooFit.Title("Muon SV mass"))
-            data.plotOn(frame)
+            # blinded range
+            blind = False
+            if self.blind_range[0] != self.blind_range[1]:
+                blind = True
+                blind_range = (float(self.blind_range[0]), float(self.blind_range[1]))
+                assert(blind_range[0] >= x_range[0] and blind_range[0] < blind_range[1] and
+                    blind_range[1] <= x_range[1])
+                x.setRange("loSB", x_range[0], blind_range[0])
+                x.setRange("hiSB", blind_range[1], x_range[1])
+                x.setRange("full", x_range[0], x_range[1])
+                fit_range = "loSB,hiSB"
 
-            n_non_zero_bins = 0
-            for i in range(1, histo.GetNbinsX()):
-                if histo.GetBinContent(i) > 0:
-                    n_non_zero_bins += 1
+            d = {}
+            for syst_name, direction in systs_directions:
+                key = ""
+                if syst_name != "central":
+                    key = f"_{syst_name}_{direction}"
+                tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                try:
+                    histo = copy(tf.Get("histograms/" + self.process_name + key))
+                except:
+                    raise ValueError(f"The histogram has not been created for {self.process_name}")
 
-            fit_parameters = {}
-            if self.method == "voigtian":
-                fit_parameters["mean"] = self.fit_parameters.get("mean",
-                    ((x_range[1] + x_range[0]) / 2, -100, 100))
-                fit_parameters["sigma"] = self.fit_parameters.get("sigma", (0.001, 0, 0.1))
-                fit_parameters["gamma"] = self.fit_parameters.get("gammma", (0.02, 0, 0.1))
-                fit_parameters = self.convert_parameters(fit_parameters)
+                data = ROOT.RooDataHist("data_obs", "data_obs", l, histo)
+                frame = x.frame(ROOT.RooFit.Title("Muon SV mass"))
+                data.plotOn(frame)
 
-                mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
-                sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
-                gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
-                fun = ROOT.RooVoigtian("model_%s" % self.process_name,
-                    "model_%s" % self.process_name, x, mean, gamma, sigma)
-                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                n_non_zero_bins = 0
+                for i in range(1, histo.GetNbinsX()):
+                    if histo.GetBinContent(i) > 0:
+                        n_non_zero_bins += 1
 
-                gamma_value = gamma.getVal()
-                sigma_value = sigma.getVal()
+                fit_parameters = {}
+                if self.method == "voigtian":
+                    fit_parameters["mean"] = self.fit_parameters.get("mean",
+                        ((x_range[1] + x_range[0]) / 2, -100, 100))
+                    fit_parameters["sigma"] = self.fit_parameters.get("sigma", (0.001, 0, 0.1))
+                    fit_parameters["gamma"] = self.fit_parameters.get("gammma", (0.02, 0, 0.1))
+                    fit_parameters = self.convert_parameters(fit_parameters)
 
-                G = 2 * sigma_value * np.sqrt(2 * np.log(2))
-                L = 2 * gamma_value
-                HWHM = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
+                    mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
+                    sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
+                    gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
+                    fun = ROOT.RooVoigtian("model_%s" % self.process_name,
+                        "model_%s" % self.process_name, x, mean, gamma, sigma)
 
-                d = {
-                    "mean": mean.getVal(),
-                    "mean_error": mean.getError(),
-                    "sigma": sigma.getVal(),
-                    "sigma_error": sigma.getError(),
-                    "gamma": gamma.getVal(),
-                    "gamma_error": gamma.getError(),
-                    "HWHM": HWHM,
-                }
+                elif self.method == "polynomial":
+                    order = int(self.fit_parameters.get("order", 1))
+                    for i in range(order):
+                        fit_parameters[f"p{i}"] = self.fit_parameters.get(f"p{i}", (0, -1, 1))
+                    fit_parameters = self.convert_parameters(fit_parameters)
+                    params = []
+                    for i in range(order):
+                        if i == 0:
+                            params.append(ROOT.RooRealVar('p0', 'p0', *fit_parameters[f"p0"]))
+                        else:
+                            params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"]))
 
-            elif self.method == "polynomial":
-                order = int(self.fit_parameters.get("order", 1))
-                for i in range(order):
-                    fit_parameters[f"p{i}"] = self.fit_parameters.get(f"p{i}", (0, -1, 1))
-                fit_parameters = self.convert_parameters(fit_parameters)
-                params = []
-                for i in range(order):
-                    if i == 0:
-                        params.append(ROOT.RooRealVar('p0', 'p0', *fit_parameters[f"p0"]))
-                    else:
-                        params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"]))
+                    fun = ROOT.RooPolynomial("model_%s" % self.process_name,
+                        "model_%s" % self.process_name, x, ROOT.RooArgList(*params))
 
-                fun = ROOT.RooPolynomial("model_%s" % self.process_name,
-                    "model_%s" % self.process_name, x, ROOT.RooArgList(*params))
-                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                param_values = [p.getVal() for p in params]
-                d = dict(zip([f'p{i}' for i in range(order)], param_values))
+                elif self.method == "exponential":
+                    # https://root.cern.ch/doc/master/classRooExponential.html
+                    fit_parameters["c"] = self.fit_parameters.get("c", (0, -2, 2))
+                    fit_parameters = self.convert_parameters(fit_parameters)
+                    c = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
+                    fun = ROOT.RooPolynomial("model_%s" % self.process_name,
+                        "model_%s" % self.process_name, x, c)
 
-            elif self.method == "exponential":
-                # https://root.cern.ch/doc/master/classRooExponential.html
-                fit_parameters["c"] = self.fit_parameters.get("c", (0, -2, 2))
-                fit_parameters = self.convert_parameters(fit_parameters)
-                c = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
-                fun = ROOT.RooPolynomial("model_%s" % self.process_name,
-                    "model_%s" % self.process_name, x, c)
-                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                d = {"c": c.getVal() }
+                elif self.method == "powerlaw":
+                    order = int(self.fit_parameters.get("order", 1))
+                    for i in range(order):
+                        fit_parameters[f"a{i}"] = self.fit_parameters.get(f"a{i}", (1, 0, 2))
+                        fit_parameters[f"b{i}"] = self.fit_parameters.get(f"b{i}", (0, -2, 2))
+                    fit_parameters = self.convert_parameters(fit_parameters)
 
-            elif self.method == "powerlaw":
-                order = int(self.fit_parameters.get("order", 1))
-                for i in range(order):
-                    fit_parameters[f"a{i}"] = self.fit_parameters.get(f"a{i}", (1, 0, 2))
-                    fit_parameters[f"b{i}"] = self.fit_parameters.get(f"b{i}", (0, -2, 2))
-                fit_parameters = self.convert_parameters(fit_parameters)
+                    params = [x]
+                    for i in range(order):
+                        params.append(ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"]))
+                        params.append(ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"]))
 
-                params = [x]
-                for i in range(order):
-                    params.append(ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"]))
-                    params.append(ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"]))
+                    fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
+                        for i in range(0, order, 2)])
 
-                fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
-                    for i in range(0, order, 2)])
+                    fun = ROOT.RooGenericPdf("model_%s" % self.process_name,
+                        fit_fun, ROOT.RooArgList(*params))
 
-                fun = ROOT.RooGenericPdf("model_%s" % self.process_name,
-                    fit_fun, ROOT.RooArgList(*params))
-                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                param_values = []
-                for i in range(order):
-                    param_values.append((f"a{i}", params[1 + 2 * i].getVal()))
-                    param_values.append((f"b{i}", params[1 + 2 * i + 1].getVal()))
-                d = dict(param_values)
+                # fitting
+                if not blind:
+                    fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                else:
+                    fun.fitTo(data, ROOT.RooFit.Range(fit_range), ROOT.RooFit.SumW2Error(True))
 
-            npar = fun.getParameters(data).selectByAttrib("Constant",False).getSize()
+                npar = fun.getParameters(data).selectByAttrib("Constant",False).getSize()
 
-            fun.plotOn(frame)
-            d["chi2"] = frame.chiSquare()
-            d["npar"] = npar
-            d["chi2/ndf"] = frame.chiSquare(npar)
-            d["Number of non-zero bins"] = n_non_zero_bins
-            d["Full chi2"] = frame.chiSquare() * n_non_zero_bins
-            d["ndf"] = n_non_zero_bins - npar
-            d["integral"] = data.sumEntries()
+                # filling output dict with fitting results
+                if self.method == "voigtian":
+                    gamma_value = gamma.getVal()
+                    sigma_value = sigma.getVal()
+
+                    G = 2 * sigma_value * np.sqrt(2 * np.log(2))
+                    L = 2 * gamma_value
+                    HWHM = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
+
+                    d[key] = {
+                        "mean": mean.getVal(),
+                        "mean_error": mean.getError(),
+                        "sigma": sigma.getVal(),
+                        "sigma_error": sigma.getError(),
+                        "gamma": gamma.getVal(),
+                        "gamma_error": gamma.getError(),
+                        "HWHM": HWHM,
+                    }
+                elif self.method == "polynomial":
+                    d[key] = {"c": c.getVal()}
+                elif self.method == "powerlaw":
+                    param_values = []
+                    for i in range(order):
+                        param_values.append((f"a{i}", params[1 + 2 * i].getVal()))
+                        param_values.append((f"b{i}", params[1 + 2 * i + 1].getVal()))
+                    d[key] = dict(param_values)
+
+                fun.plotOn(frame)
+                d[key]["chi2"] = frame.chiSquare()
+                d[key]["npar"] = npar
+                d[key]["chi2/ndf"] = frame.chiSquare(npar)
+                d[key]["Number of non-zero bins"] = n_non_zero_bins
+                d[key]["Full chi2"] = frame.chiSquare() * n_non_zero_bins
+                d[key]["ndf"] = n_non_zero_bins - npar
+                d[key]["integral"] = data.sumEntries()
+
+                w_name = "workspace_" + self.process_name + key
+                workspace = ROOT.RooWorkspace(w_name, w_name)
+                getattr(workspace, "import")(fun)
+                getattr(workspace, "import")(data)
+                workspace.Print()
+                f = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
+                    "UPDATE")
+                f.cd()
+                workspace.Write()
+                f.Close()
 
             with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
                 json.dump(d, f, indent=4)
-
-            w_name = "workspace_" + self.process_name
-            workspace = ROOT.RooWorkspace(w_name, w_name)
-            getattr(workspace, "import")(fun)
-            getattr(workspace, "import")(data)
-            workspace.Print()
-            f = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
-                "RECREATE")
-            f.cd()
-            workspace.Write()
-            f.Close()
 

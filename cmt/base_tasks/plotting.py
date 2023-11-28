@@ -1403,6 +1403,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.include_fit:
             with open(self.input()["fit"][feature.name]["json"].path) as f:
                 d = json.load(f)
+            d = d[""]
             x_range = self.requires()["fit"].x_range
             x = ROOT.RooRealVar("x", "x", float(x_range[0]), float(x_range[1]))
             l = ROOT.RooArgList(x)
@@ -1451,7 +1452,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             label.Draw("same")
         legend.Draw("same")
 
-        if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack):
+        if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0
+                or not self.stack):
             dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
                 props={"Minimum": 0.25, "Maximum": 1.75})
@@ -1577,10 +1579,14 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if bkg_histo:
                 yields["background"] = {
                     "Total yield": sum([hist.cmt_yield for hist in background_hists]),
-                    "Total yield error": math.sqrt(sum([(hist.cmt_yield_error)**2 for hist in background_hists])),
+                    "Total yield error": math.sqrt(sum([(hist.cmt_yield_error)**2
+                        for hist in background_hists])),
                     "Entries": getattr(bkg_histo, "cmt_entries", bkg_histo.GetEntries()),
-                    "Binned yield": [sum([hist.cmt_bin_yield[i] for hist in background_hists]) for i in range(0, background_hists[0].GetNbinsX())],
-                    "Binned yield error": [math.sqrt(sum([(hist.cmt_bin_yield_error[i])**2 for hist in background_hists])) for i in range(0, background_hists[0].GetNbinsX())],
+                    "Binned yield": [sum([hist.cmt_bin_yield[i] for hist in background_hists])
+                        for i in range(0, background_hists[0].GetNbinsX())],
+                    "Binned yield error": [math.sqrt(sum([(hist.cmt_bin_yield_error[i])**2
+                        for hist in background_hists]))
+                        for i in range(0, background_hists[0].GetNbinsX())],
                 }
             with open(create_file_dir(self.output()["yields"].targets[feature.name].path), "w") as f:
                 json.dump(yields, f, indent=4)
@@ -1744,9 +1750,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             self.plot(feature)
 
-#################################################################################################################################
-#################################################################################################################################
-#################################################################################################################################
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
 
 class FeaturePlotSyst(FeaturePlot):
     """
