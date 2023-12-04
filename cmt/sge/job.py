@@ -28,7 +28,8 @@ _cfg = Config.instance()
 class SGEJobManager(BaseJobManager):
 
     # whether to merge jobs files for batched submission
-    merge_job_files = _cfg.get_expanded_bool("job", "sge_merge_job_files")
+    merge_job_files = False
+    #merge_job_files = _cfg.get_expanded_bool("job", "sge_merge_job_files")
 
     # chunking settings
     chunk_size_submit = (
@@ -36,8 +37,10 @@ class SGEJobManager(BaseJobManager):
         if merge_job_files
         else 0
     )
-    chunk_size_cancel = _cfg.get_expanded_int("job", "sge_chunk_size_cancel")
-    chunk_size_query = _cfg.get_expanded_int("job", "sge_chunk_size_query")
+    chunk_size_cancel = 25
+    #chunk_size_cancel = _cfg.get_expanded_int("job", "sge_chunk_size_cancel")
+    chunk_size_query = 25
+    #chunk_size_query = _cfg.get_expanded_int("job", "sge_chunk_size_query")
 
     submission_job_id_cre = re.compile(r'Your job (\d+) \(\"(.*)\"\) .*$')
     long_block_cre = re.compile(r"(\w+) \= \"?([^\"\n]*)\"?\n")
