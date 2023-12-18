@@ -361,7 +361,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 df = dfs[key]
 
                 # apply selection if needed
-                if feature.selection:
+                if feature.selection and nentries[key] > 0:
                     feat_df = df.Define("feat_selection", self.config.get_object_expression(
                         feature.selection, isMC, syst_name, direction)).Filter("feat_selection")
                 else:
@@ -414,6 +414,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         nentries = {}
         for elem in ["central"] + [f"{syst}_{d}"
                 for (syst, d) in itertools.product(self.syst_list, directions)]:
+
             if self.skip_processing:
                 inp_to_consider = self.get_path(inp[elem])[0]
                 if not self.dataset.friend_datasets:
@@ -479,7 +480,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 else:
                     selection = region_selection
 
-            if selection != "1":
+            if selection != "1" and nentries[elem] > 0:
                 dfs[elem] = dfs[elem].Define("selection", selection).Filter("selection")
 
         histos = self.define_histograms(dfs, nentries)
@@ -573,6 +574,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     :param log_y: whether to set y axis to log scale
     :type log_y: bool
 
+    :param log_x: whether to set y axis to log scale
+    :type log_x: bool
+
     :param propagate_syst_qcd: whether to propagate systematics to qcd background
     :type propagate_syst_qcd: bool
 
@@ -618,6 +622,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     fixed_colors = luigi.BoolParameter(default=False, description="whether to use fixed colors "
         "for plotting, default: False")
     log_y = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
+        "default: False")
+    log_x = luigi.BoolParameter(default=False, description="set logarithmic scale for X axis, "
         "default: False")
     propagate_syst_qcd = luigi.BoolParameter(default=True, description="whether to propagate systematics to qcd background, "
         "default: False")
@@ -811,7 +817,11 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.stack and key not in ("root", "yields"):
             postfix += "__stack"
         if self.log_y and key not in ("root", "yields"):
-            postfix += "__log"
+            postfix += "__logY"
+        if self.log_x and key not in ("root", "yields"):
+            postfix += "__logX"
+        if self.normalize_signals and key not in ("root", "yields"):
+            postfix += "__norm_sig"
         return postfix
 
     def output(self):
@@ -1303,6 +1313,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             c = Canvas()
             if self.log_y:
                 c.SetLogy()
+            if self.log_x:
+                c.SetLogx()
             label_scaling = 1
         else:
             do_ratio = True
@@ -1312,6 +1324,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             c.get_pad(1).cd()
             if self.log_y:
                 c.get_pad(1).SetLogy()
+            if self.log_x:
+                c.get_pad(1).SetLogx()
             label_scaling = 5./4.
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
@@ -1820,6 +1834,8 @@ class FeaturePlotSyst(FeaturePlot):
                 c.get_pad(1).cd()
                 if self.log_y:
                     c.get_pad(1).SetLogy()
+                if self.log_x:
+                    c.get_pad(1).SetLogx()
                 label_scaling = 5./4.
 
                 r.setup_hist(dummy_hist)
