@@ -371,11 +371,16 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     :param keep_and_drop_file: filename inside ``cmt/config/`` or "../config/" (w/o extension)
         with the RDF columns to save in the output file
     :type keep_and_drop_file: str
+
+    :param compute_filter_efficiency: compute efficiency of each filter applied
+    :type compute_filter_efficiency: bool
     """
 
     modules_file = luigi.Parameter(description="filename with RDF modules", default=law.NO_STR)
     keep_and_drop_file = luigi.Parameter(description="filename with branches to save, empty: all",
         default="")
+    compute_filter_efficiency = luigi.BoolParameter(description="compute efficiency of each filter applied, default: False",
+        default=False)
     weights_file = None
 
     default_store = "$CMT_STORE_EOS_PREPROCESSING"
@@ -393,7 +398,11 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         :return: One file per input file with the tree + additional branches
         :rtype: `.root`
         """
-        return self.local_target(f"data_{self.addendum}{self.branch}.root")
+        out = {"root" : self.local_target(f"data_{self.addendum}{self.branch}.root")}
+        if self.compute_filter_efficiency:
+            out["cut_flow"] = self.local_target(f"cutflow_{self.addendum}{self.branch}.json")
+        out = law.SiblingFileCollection(out)
+        return out
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -422,7 +431,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             tchain.AddFriend(friend_tchain, "friend")
             df = ROOT.RDataFrame(tchain)
 
-        outp = self.output()
+        outp = self.output()['root']
         # print(outp.path)
 
         selection = self.category.selection
@@ -431,7 +440,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             # selection = jrs(dataset_selection, selection, op="and")
 
         if selection != "":
-            filtered_df = df.Define("selection", selection).Filter("selection")
+            filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
         else:
             filtered_df = df
 
@@ -450,7 +459,14 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         branch_list = ROOT.vector('string')()
         for branch_name in branches:
             branch_list.push_back(branch_name)
+        if self.compute_filter_efficiency == True:
+            report = filtered_df.Report()
         filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
+        if self.compute_filter_efficiency == True:
+            json_res = {cutReport.GetName() : {"pass": cutReport.GetPass(), "all": cutReport.GetAll()} for cutReport in report.GetValue()}
+            with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                json.dump(json_res, f, indent=4)
+
 
 
 class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
@@ -763,7 +779,7 @@ class Categorization(PreprocessRDF):
                     tchain.AddFriend(friend_tchain, "friend")
                     df = ROOT.RDataFrame(tchain)
             else:
-                df = ROOT.RDataFrame(self.tree_name, self.input().path)
+                df = ROOT.RDataFrame(self.tree_name, self.input()["root"].path)
 
             selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
                 self.systematic, self.systematic_direction)
@@ -788,19 +804,19 @@ class Categorization(PreprocessRDF):
             branch_list = ROOT.vector('string')()
             for branch_name in branches:
                 branch_list.push_back(branch_name)
-            filtered_df = df.Define("selection", selection).Filter("selection")
+            filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
             filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
 
         except ReferenceError:  # empty ntuple
-            inp = self.input().path
+            inp = self.input()["root"].path
             copy(inp, outp.path)
         except AttributeError:  # empty input file
-            inp = self.input().path
+            inp = self.input()["root"].path
             copy(inp, outp.path)
         #copy(self.input()["stats"].path, outp["stats"].path)
 
         # except KeyboardInterrupt:
-        #     print("### DEBUG Error")    
+        #     print("### DEBUG Error")
 
 
 class CategorizationWrapper(DatasetCategorySystWrapperTask):
@@ -943,6 +959,57 @@ class MergeCategorizationWrapper(DatasetCategorySystWrapperTask):
             category_name=category.name, systematic=systematic,
             systematic_direction=direction)
 
+class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
+    """
+    Merges the output from the PreProcessRDF task if the option
+    compute-filter-efficiency is used.
+    """ 
+
+    # regions not supported
+    region_name = None
+
+    merge_factor = -1
+
+    def merge_workflow_requires(self):
+        return PreprocessRDF.vreq(self, compute_filter_efficiency=True, 
+                _prefer_cli=["workflow"])
+
+    def merge_requires(self, start_leaf, end_leaf):
+        return PreprocessRDF.vreq(self, compute_filter_efficiency=True, 
+                workflow="local", branches=((start_leaf, end_leaf),), _exclude={"branch"})
+
+    def trace_merge_inputs(self, inputs):
+        return [inp for inp in inputs["collection"].targets.values()]
+
+    def merge_output(self):
+        return self.local_target(f"cut_flow.json")
+
+    def merge(self, inputs, output):
+        # output content
+        stats = defaultdict(lambda: {"pass": 0, "all": 0})
+
+        # merge
+        for inp in inputs:
+            try:
+                if "json" in inp["cut_flow"].path:
+                    _stats = inp["cut_flow"].load(formatter="json")
+                else:
+                    continue
+            except:
+                print("error leading input target {}".format(inp["cut_flow"]))
+                raise
+
+            # add pass and all
+            if "json" in inp["cut_flow"].path:
+                for cutName, cutEffs in _stats.items():
+                    for keyPassAll, val in cutEffs.items():
+                        stats[cutName][keyPassAll] += val
+            else:
+                continue
+
+        output.parent.touch()
+        output.dump(stats, indent=4, formatter="json")
+
 
 class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
     """
@@ -982,7 +1049,6 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
             _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
-        # return [inp["data"] for inp in inputs["collection"].targets.values()]
         return [inp for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
