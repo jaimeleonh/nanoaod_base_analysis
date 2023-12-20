@@ -1010,6 +1010,19 @@ class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
         output.parent.touch()
         output.dump(stats, indent=4, formatter="json")
 
+class MergeCutFlowWrapper(DatasetCategorySystWrapperTask):
+    """
+    Wrapper task to run the MergeCutFlow task over several datasets in parallel.
+
+    Example command:
+
+    ``law run MergeCutFlowWrapper --version test --category-names etau \
+--config-name base_config --dataset-names tt_dl,tt_sl --workers 10``
+    """
+
+    def atomic_requires(self, dataset, category, systematic, direction):
+        return MergeCutFlow.vreq(self, dataset_name=dataset.name,
+            category_name=category.name)
 
 class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
     """
