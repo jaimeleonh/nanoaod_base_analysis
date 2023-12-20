@@ -576,6 +576,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
     :param log_x: whether to set y axis to log scale
     :type log_x: bool
+    
+    :param include_fit: YAML file inside config folder (w/o extension) including input parameters
+        for the fit
+    :type include_fit: str
 
     :param propagate_syst_qcd: whether to propagate systematics to qcd background
     :type propagate_syst_qcd: bool
@@ -625,7 +629,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "default: False")
     log_x = luigi.BoolParameter(default=False, description="set logarithmic scale for X axis, "
         "default: False")
-    propagate_syst_qcd = luigi.BoolParameter(default=True, description="whether to propagate systematics to qcd background, "
+    include_fit = luigi.Parameter(default="", description="fit to be included in the plots, "
+        "default: None")
+    propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
         "default: False")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
@@ -796,6 +802,19 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         if self.optimization_method:
             from cmt.base_tasks.optimization import BayesianBlocksOptimization
             reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False)
+
+        if self.include_fit:
+            import yaml
+            from cmt.utils.yaml_utils import ordered_load
+            with open(self.retrieve_file("config/{}.yaml".format(self.include_fit))) as f:
+                fit_params = ordered_load(f, yaml.SafeLoader)
+            from cmt.base_tasks.analysis import Fit
+            params = ", ".join([f"{param}='{value}'"
+                for param, value in fit_params.items() if param != "fit_parameters"])
+            if "fit_parameters" in fit_params:
+                params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
+                for param, value in fit_params["fit_parameters"].items()]) + "}"
+            reqs["fit"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
         return reqs
 
     def get_output_postfix(self, key="pdf"):
@@ -816,6 +835,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             postfix += "__blinded"
         if self.stack and key not in ("root", "yields"):
             postfix += "__stack"
+        if self.include_fit:
+            postfix += "__withfit"
         if self.log_y and key not in ("root", "yields"):
             postfix += "__logY"
         if self.log_x and key not in ("root", "yields"):
@@ -1308,7 +1329,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
         # Draw
-        if self.hide_data or len(data_hists) == 0 or not self.stack:
+        if self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack:
             do_ratio = False
             c = Canvas()
             if self.log_y:
@@ -1349,7 +1370,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             else:
                 inner_text.append(self.region.label)
 
-        if self.normalize_signals and self.stack and signal_hists:
+        if self.normalize_signals and self.stack and signal_hists and bkg_histo:
             scale_text = []
             for hist in signal_hists:
                 scale = hist.cmt_scale
@@ -1391,6 +1412,52 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         )
 
         dummy_hist.Draw()
+
+        # Draw fit if required
+        if self.include_fit:
+            with open(self.input()["fit"][feature.name]["json"].path) as f:
+                d = json.load(f)
+            d = d[""]
+            x_range = self.requires()["fit"].x_range
+            x = ROOT.RooRealVar("x", "x", float(x_range[0]), float(x_range[1]))
+            l = ROOT.RooArgList(x)
+            xframe = x.frame();
+            if self.requires()["fit"].method == "voigtian":
+                mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', float(d["mean"]))
+                sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', float(d["sigma"]))
+                gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', float(d["gamma"]))
+                fit = ROOT.RooVoigtian("fit", "fit", x, mean, gamma, sigma)
+
+            elif self.requires()["fit"].method == "polynomial":
+                order = int(self.requires()["fit"].fit_parameters.get("order", 1))
+                params = [ROOT.RooRealVar(f'p{i}', f'p{i}', float(d[f'p{i}'])) for i in range(order)]
+                fit = ROOT.RooPolynomial("fit", "fit", x, ROOT.RooArgList(*params))
+
+            elif self.requires()["fit"].method == "exponential":
+                p = ROOT.RooRealVar("c", "c", float(d["c"]))
+                fit = ROOT.RooExponential("fit", "fit", x, p)
+
+            elif self.requires()["fit"].method == "powerlaw":
+                order = int(self.requires()["fit"].fit_parameters.get("order", 1))
+                params = [x]
+                for i in range(order):
+                    params.append(ROOT.RooRealVar(f'a{i}', f'a{i}', d[f"a{i}"]))
+                    params.append(ROOT.RooRealVar(f'b{i}', f'b{i}', d[f"b{i}"]))
+                fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
+                    for i in range(0, order, 2)])
+                fit = ROOT.RooGenericPdf("powerlaw", fun, ROOT.RooArgList(*params))
+
+            if self.stack:
+                process_name = self.requires()["fit"].process_name
+                for hist in all_hists:
+                    if hist.cmt_process_name == process_name:
+                        data = ROOT.RooDataHist("data_obs", "data_obs", l, hist)
+                        data.plotOn(xframe,
+                            ROOT.RooFit.MarkerColor(ROOT.TColor.GetColorTransparent(0, 1)),
+                            ROOT.RooFit.LineColor(ROOT.TColor.GetColorTransparent(0, 1)))
+            fit.plotOn(xframe)
+            xframe.Draw("same");
+
         for ih, hist in enumerate(draw_hists):
             option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
             hist.Draw(option)
@@ -1398,7 +1465,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         for label in draw_labels:
             label.Draw("same")
         legend.Draw("same")
-        if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack):
+
+        if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0
+                or not self.stack):
             dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
                 props={"Minimum": 0.25, "Maximum": 1.75})
@@ -1524,10 +1593,14 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
             if bkg_histo:
                 yields["background"] = {
                     "Total yield": sum([hist.cmt_yield for hist in background_hists]),
-                    "Total yield error": math.sqrt(sum([(hist.cmt_yield_error)**2 for hist in background_hists])),
+                    "Total yield error": math.sqrt(sum([(hist.cmt_yield_error)**2
+                        for hist in background_hists])),
                     "Entries": getattr(bkg_histo, "cmt_entries", bkg_histo.GetEntries()),
-                    "Binned yield": [sum([hist.cmt_bin_yield[i] for hist in background_hists]) for i in range(0, background_hists[0].GetNbinsX())],
-                    "Binned yield error": [math.sqrt(sum([(hist.cmt_bin_yield_error[i])**2 for hist in background_hists])) for i in range(0, background_hists[0].GetNbinsX())],
+                    "Binned yield": [sum([hist.cmt_bin_yield[i] for hist in background_hists])
+                        for i in range(0, background_hists[0].GetNbinsX())],
+                    "Binned yield error": [math.sqrt(sum([(hist.cmt_bin_yield_error[i])**2
+                        for hist in background_hists]))
+                        for i in range(0, background_hists[0].GetNbinsX())],
                 }
             with open(create_file_dir(self.output()["yields"].targets[feature.name].path), "w") as f:
                 json.dump(yields, f, indent=4)
@@ -1691,9 +1764,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             self.plot(feature)
 
-#################################################################################################################################
-#################################################################################################################################
-#################################################################################################################################
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
 
 class FeaturePlotSyst(FeaturePlot):
     """
