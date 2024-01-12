@@ -457,6 +457,9 @@ class Config():
                     continue
         return systematics
 
+    def get_norm_systematics(self, process_datasets, region):
+        return []
+
     def get_weights_expression(self, list_of_weights, syst_name="central", systematic_direction=""):
         weights = []
         for weight in list_of_weights:

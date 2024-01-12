@@ -901,62 +901,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
     def get_norm_systematics(self):
-        """
-        Method to extract all normalization systematics from the KLUB files.
-        It considers the processes given by the process_group_name and their parents.
-        """
-        # systematics
-        systematics = {}
-        if self.plot_systematics:
-            all_signal_names = []
-            all_background_names = []
-            for p in self.config.processes:
-                if p.isSignal:
-                    all_signal_names.append(p.get_aux("llr_name")
-                        if p.get_aux("llr_name", None) else p.name)
-                elif not p.isData:
-                    all_background_names.append(p.get_aux("llr_name")
-                        if p.get_aux("llr_name", None) else p.name)
-
-            from cmt.analysis.systReader import systReader
-            syst_folder = "files/systematics/"
-            syst = systReader(self.retrieve_file(syst_folder + "systematics_{}.cfg".format(
-                self.config.year)), all_signal_names, all_background_names, None)
-            syst.writeOutput(False)
-            syst.verbose(False)
-
-            channel = self.config.get_channel_from_region(self.region)
-            if(channel == "mutau"):
-                syst.addSystFile(self.retrieve_file(syst_folder
-                    + "systematics_mutau_%s.cfg" % self.config.year))
-            elif(channel == "etau"):
-                syst.addSystFile(self.retrieve_file(syst_folder
-                    + "systematics_etau_%s.cfg" % self.config.year))
-            syst.addSystFile(self.retrieve_file(syst_folder + "syst_th.cfg"))
-            syst.writeSystematics()
-            for isy, syst_name in enumerate(syst.SystNames):
-                if "CMS_scale_t" in syst.SystNames[isy] or "CMS_scale_j" in syst.SystNames[isy]:
-                    continue
-                for dataset in self.datasets:
-                    process = dataset.process
-                    while True:
-                        process_name = (process.get_aux("llr_name")
-                            if process.get_aux("llr_name", None) else p.name)
-                        if process_name in syst.SystProcesses[isy]:
-                            iproc = syst.SystProcesses[isy].index(process_name)
-                            systVal = syst.SystValues[isy][iproc]
-                            if dataset.name not in systematics:
-                                systematics[dataset.name] = []
-                            systematics[dataset.name].append((syst_name, eval(systVal) - 1))
-                            break
-                        elif process.parent_process:
-                            process=self.config.processes.get(process.parent_process)
-                        else:
-                            break
-            for dataset_name in systematics:
-                systematics[dataset_name] = math.sqrt(sum([x[1] * x[1]
-                    for x in systematics[dataset_name]]))
-        return systematics
+        return self.config.get_norm_systematics(self.processes_datasets, self.region)
 
     def plot(self, feature, ifeat=0):
         """
