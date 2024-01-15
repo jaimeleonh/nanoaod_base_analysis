@@ -473,10 +473,11 @@ class RDFModuleTask():
                     elif isinstance(module_syst_type, dict):
                         # assuming structure
                         # module_syst_type={syst_name={up: up_exp, down: down_exp},}
-                        for syst_type in module_syst_type:
-                            kwargs[syst_type] = eval(f"syst_type[{systematic_direction}]")
+                        for syst_type, syst_expr in module_syst_type.items():
+                            kwargs[syst_type] = eval(f"syst_expr['{systematic_direction}']")
 
                 modules.append(getattr(mod, name)(**kwargs)())
+
         return modules
 
     def get_branches_to_save(self, branchNames, keep_and_drop_file):
