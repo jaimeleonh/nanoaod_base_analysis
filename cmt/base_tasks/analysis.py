@@ -596,3 +596,60 @@ class Fit(FeaturePlot):
             with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
                 json.dump(d, f, indent=4)
 
+
+class InspectFitSyst(Fit):
+    def requires(self):
+        """
+        Needs as input the json file provided by the Fit task
+        """
+        return Fit.vreq(self)
+
+    def output(self):
+        """
+        Returns, per feature, one json file storing the fit results and one root file
+        storing the workspace
+        """
+        region_name = "" if not self.region else "__{}".format(self.region.name)
+        return {
+            feature.name: {
+                "json": self.local_target("{}__{}__{}{}.json".format(
+                    feature.name, self.process_name, self.method, region_name)),
+                "txt": self.local_target("{}__{}__{}{}.txt".format(
+                    feature.name, self.process_name, self.method, region_name))
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        inputs = self.input()
+        isMC = self.config.processes.get(self.process_name).isMC
+        for ifeat, feature in enumerate(self.features):
+            systs = self.get_unique_systs(self.get_systs(feature, isMC) \
+                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC))
+
+            params = ["integral"]
+            if self.method == "voigtian":
+                params += ["mean", "sigma", "gamma"]
+            with open(inputs[feature.name]["json"].path) as f:
+                d = json.load(f)
+
+            table = []
+            out = {}
+            for syst in systs:
+                line = [syst]
+                out[syst] = {}
+                for param in params:
+                    out[syst][param] = {}
+                    out[syst][param]["up"] = (d[f"_{syst}_up"][param] - d[""][param]) / d[""][param]
+                    out[syst][param]["down"] = (d[f"_{syst}_down"][param] - d[""][param]) /\
+                        d[""][param]
+                    line.append((d[f"_{syst}_up"][param] - d[""][param]) / d[""][param])
+                    line.append((d[f"_{syst}_down"][param] - d[""][param]) / d[""][param])
+                table.append(line)
+            txt = tabulate.tabulate(table, headers=["syst name"] + list(
+                itertools.product(params, directions)))
+            print(txt)
+            with open(create_file_dir(self.output()[feature.name]["txt"].path), "w+") as f:
+                f.write(txt)
+            with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
+                json.dump(out, f, indent=4)
