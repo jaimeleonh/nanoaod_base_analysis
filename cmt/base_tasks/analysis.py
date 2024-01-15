@@ -315,8 +315,7 @@ class CreateDatacards(FeaturePlot):
 
         for feature in self.features:
             systs_directions = [("central", "")]
-            shape_syst_list = self.get_unique_systs(self.get_systs(feature, True) \
-                + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
+            shape_syst_list = self.get_systs(feature, True)
             systs_directions += list(itertools.product(shape_syst_list, directions))
 
             # Convert the shape systematics list to a dict with the systs as keys and a list of 
@@ -440,10 +439,9 @@ class Fit(FeaturePlot):
         inputs = self.input()
         isMC = self.config.processes.get(self.process_name).isMC
         for ifeat, feature in enumerate(self.features):
-            systs = self.get_unique_systs(self.get_systs(feature, isMC) \
-                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC))
             systs_directions = [("central", "")]
             if isMC and self.store_systematics:
+                systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
 
             # fit range
@@ -565,6 +563,9 @@ class Fit(FeaturePlot):
                         "HWHM": HWHM,
                     }
                 elif self.method == "polynomial":
+                    param_values = [p.getVal() for p in params]
+                    d = dict(zip([f'p{i}' for i in range(order)], param_values))
+                elif self.method == "exponential":
                     d[key] = {"c": c.getVal()}
                 elif self.method == "powerlaw":
                     param_values = []
