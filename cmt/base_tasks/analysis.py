@@ -50,6 +50,10 @@ class CreateDatacards(FeaturePlot):
     fit_models = luigi.Parameter(default="", description="filename with fit models to use "
         "in the fit, default: none (binned fit)")
 
+    # additional_scaling = luigi.DictParameter(description="dict with scalings to be "
+        # "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
+    additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
+
     def __init__(self, *args, **kwargs):
         super(CreateDatacards, self).__init__(self, *args, **kwargs)
 
@@ -249,7 +253,10 @@ class CreateDatacards(FeaturePlot):
                 filename = self.input()[p_name][feature.name]["json"].path
                 with open(filename) as f:
                     d = json.load(f)
-                rate_line.append(d[""]["integral"])
+                rate = d[""]["integral"]
+                if self.additional_scaling.get(p_name, False):
+                    rate *= float(self.additional_scaling.get(p_name))
+                rate_line.append(rate)
         table.append(rate_line)
 
         # normalization systematics
@@ -406,7 +413,7 @@ class Fit(FeaturePlot):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False)
+        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False, save_yields=True)
 
     def output(self):
         """
@@ -515,7 +522,7 @@ class Fit(FeaturePlot):
                     fit_parameters["c"] = self.fit_parameters.get("c", (0, -2, 2))
                     fit_parameters = self.convert_parameters(fit_parameters)
                     c = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
-                    fun = ROOT.RooPolynomial("model_%s" % self.process_name,
+                    fun = ROOT.RooExponential("model_%s" % self.process_name,
                         "model_%s" % self.process_name, x, c)
 
                 elif self.method == "powerlaw":
@@ -582,6 +589,9 @@ class Fit(FeaturePlot):
                 d[key]["Full chi2"] = frame.chiSquare() * n_non_zero_bins
                 d[key]["ndf"] = n_non_zero_bins - npar
                 d[key]["integral"] = data.sumEntries()
+
+                print("\n" * 20)
+                print(self.x_range)
 
                 w_name = "workspace_" + self.process_name + key
                 workspace = ROOT.RooWorkspace(w_name, w_name)
