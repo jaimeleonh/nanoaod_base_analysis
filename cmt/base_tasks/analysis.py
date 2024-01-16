@@ -66,7 +66,7 @@ class CreateDatacards(FeaturePlot):
         Needs as input the root file provided by the FeaturePlot task
         """
         if not self.fit_models:
-            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False)
+            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False)
         else:
             import yaml
             from cmt.utils.yaml_utils import ordered_load
@@ -88,7 +88,7 @@ class CreateDatacards(FeaturePlot):
             # In order to have a workspace with data_obs, we replicate the first fit
             # (just in case the x_range is defined) for the available data process
             assert(self.data_names)
-            fit_params = list(self.models.values())[0]
+            fit_params = copy(list(self.models.values())[0])
             fit_params["process_name"] = self.data_names[0]
             params = ", ".join([f"{param}='{value}'"
                 for param, value in fit_params.items() if param != "fit_parameters"])
@@ -242,14 +242,14 @@ class CreateDatacards(FeaturePlot):
 
         rate_line = ["rate", ""]
         for p_name in process_names:
-            if p_name == "background":
+            if p_name == "background" and self.data_names[0] in self.model_processes:
                 # assuming it comes from data, may cause problems in certain setups
                 rate_line.append(1)
             else:
                 filename = self.input()[p_name][feature.name]["json"].path
                 with open(filename) as f:
                     d = json.load(f)
-                rate_line.append(d["integral"])
+                rate_line.append(d[""]["integral"])
         table.append(rate_line)
 
         # normalization systematics
@@ -262,15 +262,15 @@ class CreateDatacards(FeaturePlot):
                     line.append("-")
             table.append(line)
 
-        # shape systematics
-        for shape_syst in shape_systematics:
-            line = [shape_syst, "shape"]
-            for p_name in self.non_data_names:
-                if p_name in shape_systematics[shape_syst]:
-                    line.append(1)
-                else:
-                    line.append("-")
-            table.append(line)
+        # # # shape systematics
+        # # for shape_syst in shape_systematics:
+            # # line = [shape_syst, "shape"]
+            # # for p_name in self.non_data_names:
+                # # if p_name in shape_systematics[shape_syst]:
+                    # # line.append(1)
+                # # else:
+                    # # line.append("-")
+            # # table.append(line)
 
         fancy_shapes_table = tabulate.tabulate(shapes_table, tablefmt="plain").split("\n")
         fancy_table = tabulate.tabulate(table, tablefmt="plain").split("\n")
@@ -406,7 +406,7 @@ class Fit(FeaturePlot):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False)
+        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False)
 
     def output(self):
         """
@@ -564,7 +564,7 @@ class Fit(FeaturePlot):
                     }
                 elif self.method == "polynomial":
                     param_values = [p.getVal() for p in params]
-                    d = dict(zip([f'p{i}' for i in range(order)], param_values))
+                    d[key] = dict(zip([f'p{i}' for i in range(order)], param_values))
                 elif self.method == "exponential":
                     d[key] = {"c": c.getVal()}
                 elif self.method == "powerlaw":
