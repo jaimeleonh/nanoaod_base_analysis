@@ -39,6 +39,12 @@ class CreateDatacards(FeaturePlot):
 
     :param additional_lines: Additional lines to write at the end of the datacard.
     :type additional_lines: list of `str`
+
+    :param fit_models: filename with fit models to use in the fit
+    :type fit_models: str
+
+    :param counting: whether the datacard should consider a counting experiment
+    :type counting: bool
     """
 
     automcstats = luigi.IntParameter(default=10, description="value used for autoMCStats inside "
@@ -49,6 +55,8 @@ class CreateDatacards(FeaturePlot):
         "systematics to qcd background, default: False")
     fit_models = luigi.Parameter(default="", description="filename with fit models to use "
         "in the fit, default: none (binned fit)")
+    counting = luigi.BoolParameter(default=False, description="whether the datacard should consider "
+        "a counting experiment, default: False")
 
     # additional_scaling = luigi.DictParameter(description="dict with scalings to be "
         # "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
@@ -69,9 +77,9 @@ class CreateDatacards(FeaturePlot):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        if not self.fit_models:
+        if not self.fit_models and not self.counting:
             return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False)
-        else:
+        else:  # FIXME allow counting datacards starting from FeaturePlot
             import yaml
             from cmt.utils.yaml_utils import ordered_load
             with open(self.retrieve_file("config/{}.yaml".format(self.fit_models))) as f:
@@ -108,13 +116,17 @@ class CreateDatacards(FeaturePlot):
         storing the histograms
         """
         region_name = "" if not self.region else "_{}".format(self.region.name)
+        keys = ["txt"]
+        if not self.counting:
+            keys.append("root")
         return {
             feature.name: {
-                "txt": self.local_target("{}{}.txt".format(feature.name, region_name)),
-                "root": self.local_target("{}{}.root".format(feature.name, region_name))
+                key: self.local_target("{}{}.{}".format(feature.name, region_name, key))
+                for key in keys
             }
             for feature in self.features
         }
+        return reqs
 
     def get_norm_systematics(self):
         if self.plot_systematics:
@@ -311,6 +323,102 @@ class CreateDatacards(FeaturePlot):
                 f.write(arg + "\n")
 
 
+    def write_counting_datacard(self, feature, norm_systematics, shape_systematics, *args):
+        n_dashes = 50
+
+        region_name = "" if not self.region else "_{}".format(self.region.name)
+        bin_name = "{}{}".format(feature.name, region_name)
+
+        table = []
+        process_names = self.non_data_names
+        for name in self.data_names:
+            if name in self.model_processes:
+                process_names.append("background")
+
+        table.append(["bin", ""] + [bin_name for i in range(len(process_names))])
+        table.append(["process", ""] + process_names)
+
+        sig_counter = 0
+        bkg_counter = 1
+        line = ["process", ""]
+        for p_name in process_names:
+            try:
+                if self.config.processes.get(p_name).isSignal:
+                    line.append(sig_counter)
+                    sig_counter -= 1
+                else:
+                    line.append(bkg_counter)
+                    bkg_counter += 1
+            except ValueError:  # qcd coming from do_qcd or background coming from data
+                line.append(bkg_counter)
+                bkg_counter += 1
+        table.append(line)
+
+        rate_line = ["rate", ""]
+        for p_name in process_names:
+            if p_name == "background" and self.data_names[0] in self.model_processes:
+                # assuming it comes from data, may cause problems in certain setups
+                rate_line.append(1)
+            else:
+                filename = self.input()[p_name][feature.name]["json"].path
+                with open(filename) as f:
+                    d = json.load(f)
+                rate = d[""]["integral"]
+                if self.additional_scaling.get(p_name, False):
+                    rate *= float(self.additional_scaling.get(p_name))
+                rate_line.append(rate)
+        table.append(rate_line)
+
+        # # # normalization systematics
+        # # for norm_syst in norm_systematics:
+            # # line = [norm_syst, "lnN"]
+            # # for p_name in self.non_data_names:
+                # # if p_name in norm_systematics[norm_syst]:
+                    # # line.append(norm_systematics[norm_syst][p_name])
+                # # else:
+                    # # line.append("-")
+            # # table.append(line)
+
+        # # # shape systematics
+        # # for shape_syst in shape_systematics:
+            # # line = [shape_syst, "shape"]
+            # # for p_name in self.non_data_names:
+                # # if p_name in shape_systematics[shape_syst]:
+                    # # line.append(1)
+                # # else:
+                    # # line.append("-")
+            # # table.append(line)
+
+        fancy_table = tabulate.tabulate(table, tablefmt="plain").split("\n")
+
+        with open(create_file_dir(self.output()[feature.name]["txt"].path), "w+") as f:
+            for letter in ["i", "j", "k"]:
+                f.write("%smax  *\n" % letter)
+
+            f.write(n_dashes * "-" + "\n")
+
+            f.write("{:<11}  {}\n".format("bin", bin_name))
+            filename = self.input()["data_obs"][feature.name]["json"].path
+            with open(filename) as f_data:
+                d = json.load(f_data)
+            rate = d[""]["integral"]
+            f.write("observation  %s\n" % rate)
+
+            f.write(n_dashes * "-" + "\n")
+            for i in range(4):
+                f.write(fancy_table[i] + "\n")
+
+            f.write(n_dashes * "-" + "\n")
+            for i in range(4, len(fancy_table)):
+                f.write(fancy_table[i] + "\n")
+
+            # if self.automcstats != -1:
+                # f.write("*  autoMCStats  %s \n" % self.automcstats)
+
+            for arg in args:
+                f.write(arg + "\n")
+
+
     def run(self):
         """
         Splits the processes into data and non-data. Per feature, loads the input histograms, 
@@ -331,7 +439,7 @@ class CreateDatacards(FeaturePlot):
             shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
                 for shape_syst in shape_syst_list}
 
-            if not self.fit_models:  # unbinned fits
+            if not self.fit_models and not self.counting:  # binned fits
                 histos = {}
                 tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
                 for name in self.data_names:
@@ -363,7 +471,7 @@ class CreateDatacards(FeaturePlot):
                     histo.Write(name)
 
                 tf.Close()
-            else:  # binned fits
+            elif not self.counting:  # unbinned fits
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
                 for model, fit_params in self.models.items():
@@ -381,7 +489,8 @@ class CreateDatacards(FeaturePlot):
                 model_tf.Close()
                 tf.Close()
 
-                self.write_shape_datacard(feature, norm_systematics, shape_systematics,
+            else:  # counting experiment
+                self.write_counting_datacard(feature, norm_systematics, shape_systematics,
                     *self.additional_lines)
 
 
