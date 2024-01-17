@@ -62,6 +62,9 @@ class CreateDatacards(FeaturePlot):
         # "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
 
+    norm_syst_threshold = 0.01
+    norm_syst_threshold_sym = 0.01
+
     def __init__(self, *args, **kwargs):
         super(CreateDatacards, self).__init__(self, *args, **kwargs)
 
@@ -85,7 +88,7 @@ class CreateDatacards(FeaturePlot):
             with open(self.retrieve_file("config/{}.yaml".format(self.fit_models))) as f:
                 self.models = ordered_load(f, yaml.SafeLoader)
 
-            reqs = {}
+            reqs = {"fits": {}, "inspections": {}}
             self.model_processes = []
             for model, fit_params in self.models.items():
                 self.model_processes.append(fit_params["process_name"])
@@ -94,8 +97,10 @@ class CreateDatacards(FeaturePlot):
                 if "fit_parameters" in fit_params:
                     params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                     for param, value in fit_params["fit_parameters"].items()]) + "}"
-                reqs[fit_params["process_name"]] = eval(
+                reqs["fits"][fit_params["process_name"]] = eval(
                     f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+                reqs["inspections"][fit_params["process_name"]] = eval(
+                    f"InspectFitSyst.vreq(self, {params}, _exclude=['include_fit'])")
 
             # In order to have a workspace with data_obs, we replicate the first fit
             # (just in case the x_range is defined) for the available data process
@@ -107,7 +112,7 @@ class CreateDatacards(FeaturePlot):
             if "fit_parameters" in fit_params:
                 params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                 for param, value in fit_params["fit_parameters"].items()]) + "}"
-            reqs["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+            reqs["fits"]["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
             return reqs
 
     def output(self):
@@ -132,6 +137,28 @@ class CreateDatacards(FeaturePlot):
         if self.plot_systematics:
             return self.config.get_norm_systematics(self.processes_datasets, self.region)
         return {}
+
+    def get_norm_systematics_from_inspect(self, feature_name):
+        # structure: systematics[syst_name][process_name] = syst_value
+        systematics = {}
+        for name in self.non_data_names:
+            path = self.input()["inspections"][name][feature_name]["json"].path
+            with open(path) as f:
+                d = json.load(f)
+            for syst_name, values in d.items():
+                up_value = values["integral"]["up"]
+                down_value = values["integral"]["down"]
+                if abs(up_value) > self.norm_syst_threshold or \
+                        abs(down_value) > self.norm_syst_threshold:
+                    if syst_name not in systematics:
+                        systematics[syst_name] = {}
+                    # symmetric?
+                    if abs(up_value + down_value) < self.norm_syst_threshold_sym:
+                        systematics[syst_name][name] = "{:.2f}".format(1 + up_value)
+                    else:
+                        systematics[syst_name][name] = "{:.2f}/{.:2f}".format(1 + up_value,
+                            1 + down_value)
+        return systematics
 
     def write_datacard(self, yields, feature, norm_systematics, shape_systematics, *args):
         n_dashes = 50
@@ -262,7 +289,7 @@ class CreateDatacards(FeaturePlot):
                 # assuming it comes from data, may cause problems in certain setups
                 rate_line.append(1)
             else:
-                filename = self.input()[p_name][feature.name]["json"].path
+                filename = self.input()["fits"][p_name][feature.name]["json"].path
                 with open(filename) as f:
                     d = json.load(f)
                 rate = d[""]["integral"]
@@ -360,7 +387,7 @@ class CreateDatacards(FeaturePlot):
                 # assuming it comes from data, may cause problems in certain setups
                 rate_line.append(1)
             else:
-                filename = self.input()[p_name][feature.name]["json"].path
+                filename = self.input()["fits"][p_name][feature.name]["json"].path
                 with open(filename) as f:
                     d = json.load(f)
                 rate = d[""]["integral"]
@@ -369,15 +396,15 @@ class CreateDatacards(FeaturePlot):
                 rate_line.append(rate)
         table.append(rate_line)
 
-        # # # normalization systematics
-        # # for norm_syst in norm_systematics:
-            # # line = [norm_syst, "lnN"]
-            # # for p_name in self.non_data_names:
-                # # if p_name in norm_systematics[norm_syst]:
-                    # # line.append(norm_systematics[norm_syst][p_name])
-                # # else:
-                    # # line.append("-")
-            # # table.append(line)
+        # normalization systematics
+        for norm_syst in norm_systematics:
+            line = [norm_syst, "lnN"]
+            for p_name in self.non_data_names:
+                if p_name in norm_systematics[norm_syst]:
+                    line.append(norm_systematics[norm_syst][p_name])
+                else:
+                    line.append("-")
+            table.append(line)
 
         # # # shape systematics
         # # for shape_syst in shape_systematics:
@@ -398,7 +425,7 @@ class CreateDatacards(FeaturePlot):
             f.write(n_dashes * "-" + "\n")
 
             f.write("{:<11}  {}\n".format("bin", bin_name))
-            filename = self.input()["data_obs"][feature.name]["json"].path
+            filename = self.input()["fits"]["data_obs"][feature.name]["json"].path
             with open(filename) as f_data:
                 d = json.load(f_data)
             rate = d[""]["integral"]
@@ -476,21 +503,30 @@ class CreateDatacards(FeaturePlot):
                     "RECREATE")
                 for model, fit_params in self.models.items():
                     model_tf = ROOT.TFile.Open(
-                        inputs[fit_params["process_name"]][feature.name]["root"].path)
+                        inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
                     w = model_tf.Get("workspace_" + fit_params["process_name"])
                     tf.cd()
                     w.Write()
                     model_tf.Close()
                 # data_obs
-                model_tf = ROOT.TFile.Open(inputs["data_obs"][feature.name]["root"].path)
+                model_tf = ROOT.TFile.Open(inputs["fits"]["data_obs"][feature.name]["root"].path)
                 w = model_tf.Get("workspace_" + self.data_names[0])
                 tf.cd()
                 w.Write("workspace_data_obs")
                 model_tf.Close()
                 tf.Close()
 
+                norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
+                norm_systematics_feature.update(norm_systematics)
+
+                self.write_shape_datacard(feature, norm_systematics_feature, shape_systematics,
+                    *self.additional_lines)
+
             else:  # counting experiment
-                self.write_counting_datacard(feature, norm_systematics, shape_systematics,
+                norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
+                norm_systematics_feature.update(norm_systematics)
+
+                self.write_counting_datacard(feature, norm_systematics_feature, shape_systematics,
                     *self.additional_lines)
 
 
