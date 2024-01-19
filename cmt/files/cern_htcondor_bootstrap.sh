@@ -11,6 +11,10 @@ action() {
     export X509_USER_PROXY="{{cmt_base}}/x509up"
 
     # source the main setup
-    source "{{cmt_base}}/../setup.sh" ""
+    #source "{{cmt_base}}/../setup.sh" "" # DIEGO: Comment this line and add the following 4 to run in htcondor linux7
+    oldpwd=$PWD
+    cd "{{cmt_base}}/../"
+    source setup.sh ""
+    cd $oldpwd
 }
 action "$@"
