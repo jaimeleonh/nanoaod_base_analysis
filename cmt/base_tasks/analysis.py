@@ -121,12 +121,15 @@ class CreateDatacards(FeaturePlot):
         storing the histograms
         """
         region_name = "" if not self.region else "_{}".format(self.region.name)
+        process_group_name = "" if self.process_group_name == "default" else "_{}".format(
+            self.process_group_name)
         keys = ["txt"]
         if not self.counting:
             keys.append("root")
         return {
             feature.name: {
-                key: self.local_target("{}{}.{}".format(feature.name, region_name, key))
+                key: self.local_target("{}{}{}.{}".format(feature.name, process_group_name,
+                    region_name, key))
                 for key in keys
             }
             for feature in self.features
@@ -217,7 +220,8 @@ class CreateDatacards(FeaturePlot):
 
             f.write(n_dashes * "-" + "\n")
 
-            f.write("shapes  *  {0}  {0}.root  $PROCESS  $PROCESS_$SYSTEMATIC\n".format(bin_name))
+            f.write("shapes  *  {0}  {1}  $PROCESS  $PROCESS_$SYSTEMATIC\n".format(bin_name,
+                self.output()[feature.name]["root"].path))
 
             f.write(n_dashes * "-" + "\n")
 
@@ -246,18 +250,18 @@ class CreateDatacards(FeaturePlot):
 
         shapes_table = []
         for name in self.non_data_names:
-            shapes_table.append(["shapes", name, bin_name, bin_name + ".root",
+            shapes_table.append(["shapes", name, bin_name, self.output()[feature.name]["root"].path,
                 "workspace_{0}:model_{0}".format(name)])
         for name in self.data_names:
             if name in self.model_processes:
                 # We are extracting the background from the data, so let's label it as background
                 # but let's be sure background is not in the process_group_name
                 assert not "background" in self.processes_datasets.keys()
-                shapes_table.append(["shapes", "background", bin_name, bin_name + ".root",
+                shapes_table.append(["shapes", "background", bin_name, self.output()[feature.name]["root"].path,
                     "workspace_{0}:model_{0}".format(name)])
 
         # Include shape for the data
-        shapes_table.append(["shapes", "data_obs", bin_name, bin_name + ".root",
+        shapes_table.append(["shapes", "data_obs", bin_name, self.output()[feature.name]["root"].path,
             "workspace_data_obs:data_obs"])
 
         table = []
@@ -815,3 +819,48 @@ class InspectFitSyst(Fit):
                 f.write(txt)
             with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
                 json.dump(out, f, indent=4)
+
+
+class CombineDatacards(CreateDatacards):
+    category_names = law.CSVParameter(default=("base",), description="names of categories "
+        "to run, default: (base,)")
+
+    category_name = "base"
+
+    def store_parts(self):
+        parts = super(CombineDatacards, self).store_parts()
+        del parts["category_name"]
+        return parts
+
+    def requires(self):
+        return {
+            category_name: CreateDatacards.vreq(self, category_name=category_name,
+                _exclude=["category_names", "log_file"])
+            for category_name in self.category_names
+        }
+
+    def output(self):
+        region_name = "" if not self.region else "_{}".format(self.region.name)
+        process_group_name = "" if self.process_group_name == "default" else "_{}".format(
+            self.process_group_name)
+        return {
+            feature.name: self.local_target("{}{}{}.txt".format(feature.name, process_group_name, region_name))
+            for feature in self.features
+        }
+
+    def run(self):
+        cmd = "combineCards.py "
+        inputs = self.input()
+        for feature in self.features:
+            force_shape = False
+            for category_name in self.category_names:
+                cmd += f"{category_name}={inputs[category_name][feature.name]['txt'].path} "
+                with open(inputs[category_name][feature.name]['txt'].path) as f:
+                    text = f.read()
+                if "shapes" in text:
+                    force_shape = True
+            if force_shape:
+                cmd += "--force-shape "
+            cmd += f"> {self.output()[feature.name].path}"
+            create_file_dir(f"{self.output()[feature.name].path}")
+            os.system(cmd)
