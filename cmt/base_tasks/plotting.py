@@ -459,6 +459,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 inp_to_consider = inp[elem].targets[self.branch].path
                 dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
 
+            empty_file = False
             try:
                 tf = ROOT.TFile.Open(inp_to_consider)
                 tree = tf.Get(self.tree_name)
@@ -466,6 +467,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 tf.Close()
             except:  # no tree inside the file
                 nentries[elem] = 0
+                empty_file = True
 
             # applying modules according to the systematic considered
             syst = ""
@@ -473,37 +475,38 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             if "_" in elem:
                 syst = elem.split("_")[0]
                 d = elem.split("_")[1]
-            modules = self.get_feature_modules(self.preplot_modules_file,
-                systematic=syst, systematic_direction=d)
-            if len(modules) > 0:
-                for module in modules:
-                    dfs[elem], _ = module.run(dfs[elem])
+            if not empty_file:
+                modules = self.get_feature_modules(self.preplot_modules_file,
+                    systematic=syst, systematic_direction=d)
+                if len(modules) > 0:
+                    for module in modules:
+                        dfs[elem], _ = module.run(dfs[elem])
 
-            selection = "1"
-            dataset_selection = self.config.get_object_expression(
-                self.dataset.get_aux("selection", "1"), self.dataset.process.isMC, syst, d)
+                selection = "1"
+                dataset_selection = self.config.get_object_expression(
+                    self.dataset.get_aux("selection", "1"), self.dataset.process.isMC, syst, d)
 
-            if self.skip_processing:
-                selection = self.config.get_object_expression(
-                    self.category, self.dataset.process.isMC, syst, d)
+                if self.skip_processing:
+                    selection = self.config.get_object_expression(
+                        self.category, self.dataset.process.isMC, syst, d)
 
-            if dataset_selection and dataset_selection != "1":
+                if dataset_selection and dataset_selection != "1":
+                    if selection != "1":
+                        selection = join_root_selection(dataset_selection, selection, op="and")
+                    else:
+                        selection = dataset_selection
+
+                if self.region_name != law.NO_STR:
+                    region_selection = self.config.get_object_expression(
+                        self.config.regions.get(self.region_name).selection,
+                        self.dataset.process.isMC, syst, d)
+                    if selection != "1":
+                        selection = join_root_selection(region_selection, selection, op="and")
+                    else:
+                        selection = region_selection
+
                 if selection != "1":
-                    selection = join_root_selection(dataset_selection, selection, op="and")
-                else:
-                    selection = dataset_selection
-
-            if self.region_name != law.NO_STR:
-                region_selection = self.config.get_object_expression(
-                    self.config.regions.get(self.region_name).selection,
-                    self.dataset.process.isMC, syst, d)
-                if selection != "1":
-                    selection = join_root_selection(region_selection, selection, op="and")
-                else:
-                    selection = region_selection
-
-            if selection != "1":
-                dfs[elem] = dfs[elem].Define("selection", selection).Filter("selection")
+                    dfs[elem] = dfs[elem].Define("selection", selection).Filter("selection")
 
         histos = self.define_histograms(dfs, nentries)
 
@@ -669,6 +672,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     # remove_horns = False
 
     default_process_group_name = "default"
+
+    additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
 
     def __init__(self, *args, **kwargs):
         super(FeaturePlot, self).__init__(*args, **kwargs)
@@ -1680,6 +1685,9 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                             * systematics[dataset.name]
                                     )
                             self.histos["bkg_histo_syst"].Add(dataset_histo_syst)
+
+                    if process.name in self.additional_scaling:
+                        process_histo.Scale(self.additional_scaling[process.name])
 
                     yield_error = c_double(0.)
                     process_histo.cmt_yield = process_histo.IntegralAndError(0,

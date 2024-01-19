@@ -148,6 +148,8 @@ class CreateDatacards(FeaturePlot):
             for syst_name, values in d.items():
                 up_value = values["integral"]["up"]
                 down_value = values["integral"]["down"]
+                if up_value == -999 or down_value == -999:
+                    continue
                 if abs(up_value) > self.norm_syst_threshold or \
                         abs(down_value) > self.norm_syst_threshold:
                     if syst_name not in systematics:
@@ -156,7 +158,7 @@ class CreateDatacards(FeaturePlot):
                     if abs(up_value + down_value) < self.norm_syst_threshold_sym:
                         systematics[syst_name][name] = "{:.2f}".format(1 + up_value)
                     else:
-                        systematics[syst_name][name] = "{:.2f}/{.:2f}".format(1 + up_value,
+                        systematics[syst_name][name] = "{:.2f}/{:.2f}".format(1 + up_value,
                             1 + down_value)
         return systematics
 
@@ -796,11 +798,15 @@ class InspectFitSyst(Fit):
                 out[syst] = {}
                 for param in params:
                     out[syst][param] = {}
-                    out[syst][param]["up"] = (d[f"_{syst}_up"][param] - d[""][param]) / d[""][param]
-                    out[syst][param]["down"] = (d[f"_{syst}_down"][param] - d[""][param]) /\
-                        d[""][param]
-                    line.append((d[f"_{syst}_up"][param] - d[""][param]) / d[""][param])
-                    line.append((d[f"_{syst}_down"][param] - d[""][param]) / d[""][param])
+                    if d[""][param] == 0:
+                        out[syst][param]["up"] = -999
+                        out[syst][param]["down"] = -999
+                    else:
+                        out[syst][param]["up"] = (d[f"_{syst}_up"][param] - d[""][param]) / d[""][param]
+                        out[syst][param]["down"] = (d[f"_{syst}_down"][param] - d[""][param]) /\
+                            d[""][param]
+                    line.append(out[syst][param]["up"])
+                    line.append(out[syst][param]["down"])
                 table.append(line)
             txt = tabulate.tabulate(table, headers=["syst name"] + list(
                 itertools.product(params, directions)))
