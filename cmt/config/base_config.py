@@ -443,6 +443,19 @@ class Config():
         else:
             return get_expression(feature)
 
+    def get_systematics_from_expression(self, expression):
+        systs = []
+        while "{{" in expression:
+            initial = expression.find("{{")
+            final = expression.find("}}")
+            feature_name_to_look = expression[initial + 2: final]
+            feature_to_look = self.features.get(feature_name_to_look)
+            feature_to_look_expression = feature_to_look.expression
+            expression = expression.replace(expression[initial: final + 2], "")
+            systs += (feature_to_look.systematics + self.get_systematics_from_expression(
+                feature_to_look_expression))
+        return systs
+
     def get_weights_systematics(self, list_of_weights, isMC=False):
         systematics = []
         config_systematics = self.systematics.names()
@@ -456,6 +469,9 @@ class Config():
                 except ValueError:
                     continue
         return systematics
+
+    def get_norm_systematics(self, process_datasets, region):
+        return []
 
     def get_weights_expression(self, list_of_weights, syst_name="central", systematic_direction=""):
         weights = []

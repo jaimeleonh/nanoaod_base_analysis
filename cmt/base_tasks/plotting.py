@@ -182,12 +182,14 @@ class BasePlotTask(ConfigTaskWithCategory):
         return feature.systematics
 
     def get_systs(self, feature, isMC):
-        systs = []
         if not isMC:
-            return systs
-        for syst in self.get_feature_systematics(feature):
-            systs.append(syst)
-        return systs
+            return []
+        systs = self.get_feature_systematics(feature) \
+            + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC)
+        systs += self.config.get_systematics_from_expression(self.category.selection)
+        if self.region:
+            systs += self.config.get_systematics_from_expression(self.region.selection)
+        return self.get_unique_systs(systs)
 
     def get_unique_systs(self, systs):
         unique_systs = []
@@ -242,6 +244,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         self.syst_list = self.get_syst_list()
 
     def get_syst_list(self):
+        """
+        Returns a list of systematic names that affect present or past selections, so dedicated
+        input ntuples are needed as requirements
+        """
         if self.skip_processing:
             return []
         syst_list = []
@@ -257,6 +263,19 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                         syst_list.append(syst)
                 except:
                     continue
+        other_systs = self.config.get_systematics_from_expression(self.category.selection)
+        if self.region:
+            other_systs += self.config.get_systematics_from_expression(self.region.selection)
+        for syst in other_systs:
+            if syst in syst_list:
+                continue
+            try:
+                systematic = self.config.systematics.get(syst)
+                if self.category.name in systematic.get_aux("affected_categories", []):
+                    syst_list.append(syst)
+            except:
+                continue
+
         return syst_list
 
     def create_branch_map(self):
@@ -275,16 +294,18 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         """
         if self.skip_merging:
             reqs = {"data": {"central": Categorization.vreq(self, workflow="local")}}
-            for syst, d in itertools.product(self.syst_list, directions):
-                reqs["data"][f"{syst}_{d}"] = Categorization.vreq(self, workflow="local",
-                    systematic=syst, systematic_direction=d)
+            if self.store_systematics:
+                for syst, d in itertools.product(self.syst_list, directions):
+                    reqs["data"][f"{syst}_{d}"] = Categorization.vreq(self, workflow="local",
+                        systematic=syst, systematic_direction=d)
         elif self.skip_processing:
             reqs= {"data": {"central": InputData.req(self)}}
         else:
             reqs = {"data": {"central": MergeCategorization.vreq(self, workflow="local")}}
-            for syst, d in itertools.product(self.syst_list, directions):
-                reqs["data"][f"{syst}_{d}"] = MergeCategorization.vreq(self, workflow="local",
-                    systematic=syst, systematic_direction=d)
+            if self.store_systematics:
+                for syst, d in itertools.product(self.syst_list, directions):
+                    reqs["data"][f"{syst}_{d}"] = MergeCategorization.vreq(self, workflow="local",
+                        systematic=syst, systematic_direction=d)
         if self.optimization_method == "bayesian_blocks":
             from cmt.base_tasks.optimization import BayesianBlocksOptimization
             reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False, 
@@ -297,16 +318,18 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         """
         if self.skip_merging:
             reqs = {"central": Categorization.vreq(self, workflow="local", branch=self.branch)}
-            for syst, d in itertools.product(self.syst_list, directions):
-                reqs[f"{syst}_{d}"] = Categorization.vreq(self, workflow="local",
-                    systematic=syst, systematic_direction=d, branch=self.branch)
+            if self.store_systematics:
+                for syst, d in itertools.product(self.syst_list, directions):
+                    reqs[f"{syst}_{d}"] = Categorization.vreq(self, workflow="local",
+                        systematic=syst, systematic_direction=d, branch=self.branch)
         elif self.skip_processing:
             reqs= {"central": InputData.req(self, file_index=self.branch)}
         else:
             reqs = {"central": MergeCategorization.vreq(self, workflow="local", branch=self.branch)}
-            for syst, d in itertools.product(self.syst_list, directions):
-                reqs[f"{syst}_{d}"] = MergeCategorization.vreq(self, workflow="local",
-                    systematic=syst, systematic_direction=d, branch=self.branch)
+            if self.store_systematics:
+                for syst, d in itertools.product(self.syst_list, directions):
+                    reqs[f"{syst}_{d}"] = MergeCategorization.vreq(self, workflow="local",
+                        systematic=syst, systematic_direction=d, branch=self.branch)
         if self.optimization_method:
             from cmt.base_tasks.optimization import BayesianBlocksOptimization
             reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False,
@@ -345,10 +368,10 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
             y_title = "Events" + y_axis_adendum
             title = "; %s; %s" % (x_title, y_title)
-            systs = self.get_unique_systs(self.get_systs(feature, isMC) \
-                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC))
+
             systs_directions = [("central", "")]
             if isMC and self.store_systematics:
+                systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
 
             # loop over systematics and up/down variations
@@ -901,62 +924,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
     def get_norm_systematics(self):
-        """
-        Method to extract all normalization systematics from the KLUB files.
-        It considers the processes given by the process_group_name and their parents.
-        """
-        # systematics
-        systematics = {}
-        if self.plot_systematics:
-            all_signal_names = []
-            all_background_names = []
-            for p in self.config.processes:
-                if p.isSignal:
-                    all_signal_names.append(p.get_aux("llr_name")
-                        if p.get_aux("llr_name", None) else p.name)
-                elif not p.isData:
-                    all_background_names.append(p.get_aux("llr_name")
-                        if p.get_aux("llr_name", None) else p.name)
-
-            from cmt.analysis.systReader import systReader
-            syst_folder = "files/systematics/"
-            syst = systReader(self.retrieve_file(syst_folder + "systematics_{}.cfg".format(
-                self.config.year)), all_signal_names, all_background_names, None)
-            syst.writeOutput(False)
-            syst.verbose(False)
-
-            channel = self.config.get_channel_from_region(self.region)
-            if(channel == "mutau"):
-                syst.addSystFile(self.retrieve_file(syst_folder
-                    + "systematics_mutau_%s.cfg" % self.config.year))
-            elif(channel == "etau"):
-                syst.addSystFile(self.retrieve_file(syst_folder
-                    + "systematics_etau_%s.cfg" % self.config.year))
-            syst.addSystFile(self.retrieve_file(syst_folder + "syst_th.cfg"))
-            syst.writeSystematics()
-            for isy, syst_name in enumerate(syst.SystNames):
-                if "CMS_scale_t" in syst.SystNames[isy] or "CMS_scale_j" in syst.SystNames[isy]:
-                    continue
-                for dataset in self.datasets:
-                    process = dataset.process
-                    while True:
-                        process_name = (process.get_aux("llr_name")
-                            if process.get_aux("llr_name", None) else p.name)
-                        if process_name in syst.SystProcesses[isy]:
-                            iproc = syst.SystProcesses[isy].index(process_name)
-                            systVal = syst.SystValues[isy][iproc]
-                            if dataset.name not in systematics:
-                                systematics[dataset.name] = []
-                            systematics[dataset.name].append((syst_name, eval(systVal) - 1))
-                            break
-                        elif process.parent_process:
-                            process=self.config.processes.get(process.parent_process)
-                        else:
-                            break
-            for dataset_name in systematics:
-                systematics[dataset_name] = math.sqrt(sum([x[1] * x[1]
-                    for x in systematics[dataset_name]]))
-        return systematics
+        return self.config.get_norm_systematics(self.processes_datasets, self.region)
 
     def plot(self, feature, ifeat=0):
         """
@@ -1650,9 +1618,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     randomize("syst"), hist_title, *binning_args)
             if self.store_systematics:
                 self.histos["shape"] = {}
-                shape_systematics = self.get_unique_systs(self.get_systs(feature, True) \
-                    + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
-
+                shape_systematics = self.get_systs(feature, True)
                 systs_directions += list(itertools.product(shape_systematics, directions))
 
             for (syst, d) in systs_directions:

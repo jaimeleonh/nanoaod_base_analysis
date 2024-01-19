@@ -39,6 +39,12 @@ class CreateDatacards(FeaturePlot):
 
     :param additional_lines: Additional lines to write at the end of the datacard.
     :type additional_lines: list of `str`
+
+    :param fit_models: filename with fit models to use in the fit
+    :type fit_models: str
+
+    :param counting: whether the datacard should consider a counting experiment
+    :type counting: bool
     """
 
     automcstats = luigi.IntParameter(default=10, description="value used for autoMCStats inside "
@@ -49,6 +55,15 @@ class CreateDatacards(FeaturePlot):
         "systematics to qcd background, default: False")
     fit_models = luigi.Parameter(default="", description="filename with fit models to use "
         "in the fit, default: none (binned fit)")
+    counting = luigi.BoolParameter(default=False, description="whether the datacard should consider "
+        "a counting experiment, default: False")
+
+    # additional_scaling = luigi.DictParameter(description="dict with scalings to be "
+        # "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
+    additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
+
+    norm_syst_threshold = 0.01
+    norm_syst_threshold_sym = 0.01
 
     def __init__(self, *args, **kwargs):
         super(CreateDatacards, self).__init__(self, *args, **kwargs)
@@ -65,15 +80,15 @@ class CreateDatacards(FeaturePlot):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        if not self.fit_models:
-            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False)
-        else:
+        if not self.fit_models and not self.counting:
+            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False)
+        else:  # FIXME allow counting datacards starting from FeaturePlot
             import yaml
             from cmt.utils.yaml_utils import ordered_load
             with open(self.retrieve_file("config/{}.yaml".format(self.fit_models))) as f:
                 self.models = ordered_load(f, yaml.SafeLoader)
 
-            reqs = {}
+            reqs = {"fits": {}, "inspections": {}}
             self.model_processes = []
             for model, fit_params in self.models.items():
                 self.model_processes.append(fit_params["process_name"])
@@ -82,20 +97,22 @@ class CreateDatacards(FeaturePlot):
                 if "fit_parameters" in fit_params:
                     params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                     for param, value in fit_params["fit_parameters"].items()]) + "}"
-                reqs[fit_params["process_name"]] = eval(
+                reqs["fits"][fit_params["process_name"]] = eval(
                     f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+                reqs["inspections"][fit_params["process_name"]] = eval(
+                    f"InspectFitSyst.vreq(self, {params}, _exclude=['include_fit'])")
 
             # In order to have a workspace with data_obs, we replicate the first fit
             # (just in case the x_range is defined) for the available data process
             assert(self.data_names)
-            fit_params = list(self.models.values())[0]
+            fit_params = copy(list(self.models.values())[0])
             fit_params["process_name"] = self.data_names[0]
             params = ", ".join([f"{param}='{value}'"
                 for param, value in fit_params.items() if param != "fit_parameters"])
             if "fit_parameters" in fit_params:
                 params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                 for param, value in fit_params["fit_parameters"].items()]) + "}"
-            reqs["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+            reqs["fits"]["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
             return reqs
 
     def output(self):
@@ -104,18 +121,44 @@ class CreateDatacards(FeaturePlot):
         storing the histograms
         """
         region_name = "" if not self.region else "_{}".format(self.region.name)
+        keys = ["txt"]
+        if not self.counting:
+            keys.append("root")
         return {
             feature.name: {
-                "txt": self.local_target("{}{}.txt".format(feature.name, region_name)),
-                "root": self.local_target("{}{}.root".format(feature.name, region_name))
+                key: self.local_target("{}{}.{}".format(feature.name, region_name, key))
+                for key in keys
             }
             for feature in self.features
         }
+        return reqs
 
     def get_norm_systematics(self):
         if self.plot_systematics:
             return self.config.get_norm_systematics(self.processes_datasets, self.region)
         return {}
+
+    def get_norm_systematics_from_inspect(self, feature_name):
+        # structure: systematics[syst_name][process_name] = syst_value
+        systematics = {}
+        for name in self.non_data_names:
+            path = self.input()["inspections"][name][feature_name]["json"].path
+            with open(path) as f:
+                d = json.load(f)
+            for syst_name, values in d.items():
+                up_value = values["integral"]["up"]
+                down_value = values["integral"]["down"]
+                if abs(up_value) > self.norm_syst_threshold or \
+                        abs(down_value) > self.norm_syst_threshold:
+                    if syst_name not in systematics:
+                        systematics[syst_name] = {}
+                    # symmetric?
+                    if abs(up_value + down_value) < self.norm_syst_threshold_sym:
+                        systematics[syst_name][name] = "{:.2f}".format(1 + up_value)
+                    else:
+                        systematics[syst_name][name] = "{:.2f}/{.:2f}".format(1 + up_value,
+                            1 + down_value)
+        return systematics
 
     def write_datacard(self, yields, feature, norm_systematics, shape_systematics, *args):
         n_dashes = 50
@@ -242,14 +285,17 @@ class CreateDatacards(FeaturePlot):
 
         rate_line = ["rate", ""]
         for p_name in process_names:
-            if p_name == "background":
+            if p_name == "background" and self.data_names[0] in self.model_processes:
                 # assuming it comes from data, may cause problems in certain setups
                 rate_line.append(1)
             else:
-                filename = self.input()[p_name][feature.name]["json"].path
+                filename = self.input()["fits"][p_name][feature.name]["json"].path
                 with open(filename) as f:
                     d = json.load(f)
-                rate_line.append(d["integral"])
+                rate = d[""]["integral"]
+                if self.additional_scaling.get(p_name, False):
+                    rate *= float(self.additional_scaling.get(p_name))
+                rate_line.append(rate)
         table.append(rate_line)
 
         # normalization systematics
@@ -262,15 +308,15 @@ class CreateDatacards(FeaturePlot):
                     line.append("-")
             table.append(line)
 
-        # shape systematics
-        for shape_syst in shape_systematics:
-            line = [shape_syst, "shape"]
-            for p_name in self.non_data_names:
-                if p_name in shape_systematics[shape_syst]:
-                    line.append(1)
-                else:
-                    line.append("-")
-            table.append(line)
+        # # # shape systematics
+        # # for shape_syst in shape_systematics:
+            # # line = [shape_syst, "shape"]
+            # # for p_name in self.non_data_names:
+                # # if p_name in shape_systematics[shape_syst]:
+                    # # line.append(1)
+                # # else:
+                    # # line.append("-")
+            # # table.append(line)
 
         fancy_shapes_table = tabulate.tabulate(shapes_table, tablefmt="plain").split("\n")
         fancy_table = tabulate.tabulate(table, tablefmt="plain").split("\n")
@@ -304,6 +350,102 @@ class CreateDatacards(FeaturePlot):
                 f.write(arg + "\n")
 
 
+    def write_counting_datacard(self, feature, norm_systematics, shape_systematics, *args):
+        n_dashes = 50
+
+        region_name = "" if not self.region else "_{}".format(self.region.name)
+        bin_name = "{}{}".format(feature.name, region_name)
+
+        table = []
+        process_names = self.non_data_names
+        for name in self.data_names:
+            if name in self.model_processes:
+                process_names.append("background")
+
+        table.append(["bin", ""] + [bin_name for i in range(len(process_names))])
+        table.append(["process", ""] + process_names)
+
+        sig_counter = 0
+        bkg_counter = 1
+        line = ["process", ""]
+        for p_name in process_names:
+            try:
+                if self.config.processes.get(p_name).isSignal:
+                    line.append(sig_counter)
+                    sig_counter -= 1
+                else:
+                    line.append(bkg_counter)
+                    bkg_counter += 1
+            except ValueError:  # qcd coming from do_qcd or background coming from data
+                line.append(bkg_counter)
+                bkg_counter += 1
+        table.append(line)
+
+        rate_line = ["rate", ""]
+        for p_name in process_names:
+            if p_name == "background" and self.data_names[0] in self.model_processes:
+                # assuming it comes from data, may cause problems in certain setups
+                rate_line.append(1)
+            else:
+                filename = self.input()["fits"][p_name][feature.name]["json"].path
+                with open(filename) as f:
+                    d = json.load(f)
+                rate = d[""]["integral"]
+                if self.additional_scaling.get(p_name, False):
+                    rate *= float(self.additional_scaling.get(p_name))
+                rate_line.append(rate)
+        table.append(rate_line)
+
+        # normalization systematics
+        for norm_syst in norm_systematics:
+            line = [norm_syst, "lnN"]
+            for p_name in self.non_data_names:
+                if p_name in norm_systematics[norm_syst]:
+                    line.append(norm_systematics[norm_syst][p_name])
+                else:
+                    line.append("-")
+            table.append(line)
+
+        # # # shape systematics
+        # # for shape_syst in shape_systematics:
+            # # line = [shape_syst, "shape"]
+            # # for p_name in self.non_data_names:
+                # # if p_name in shape_systematics[shape_syst]:
+                    # # line.append(1)
+                # # else:
+                    # # line.append("-")
+            # # table.append(line)
+
+        fancy_table = tabulate.tabulate(table, tablefmt="plain").split("\n")
+
+        with open(create_file_dir(self.output()[feature.name]["txt"].path), "w+") as f:
+            for letter in ["i", "j", "k"]:
+                f.write("%smax  *\n" % letter)
+
+            f.write(n_dashes * "-" + "\n")
+
+            f.write("{:<11}  {}\n".format("bin", bin_name))
+            filename = self.input()["fits"]["data_obs"][feature.name]["json"].path
+            with open(filename) as f_data:
+                d = json.load(f_data)
+            rate = d[""]["integral"]
+            f.write("observation  %s\n" % rate)
+
+            f.write(n_dashes * "-" + "\n")
+            for i in range(4):
+                f.write(fancy_table[i] + "\n")
+
+            f.write(n_dashes * "-" + "\n")
+            for i in range(4, len(fancy_table)):
+                f.write(fancy_table[i] + "\n")
+
+            # if self.automcstats != -1:
+                # f.write("*  autoMCStats  %s \n" % self.automcstats)
+
+            for arg in args:
+                f.write(arg + "\n")
+
+
     def run(self):
         """
         Splits the processes into data and non-data. Per feature, loads the input histograms, 
@@ -315,8 +457,7 @@ class CreateDatacards(FeaturePlot):
 
         for feature in self.features:
             systs_directions = [("central", "")]
-            shape_syst_list = self.get_unique_systs(self.get_systs(feature, True) \
-                + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
+            shape_syst_list = self.get_systs(feature, True)
             systs_directions += list(itertools.product(shape_syst_list, directions))
 
             # Convert the shape systematics list to a dict with the systs as keys and a list of 
@@ -325,7 +466,7 @@ class CreateDatacards(FeaturePlot):
             shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
                 for shape_syst in shape_syst_list}
 
-            if not self.fit_models:  # unbinned fits
+            if not self.fit_models and not self.counting:  # binned fits
                 histos = {}
                 tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
                 for name in self.data_names:
@@ -357,25 +498,35 @@ class CreateDatacards(FeaturePlot):
                     histo.Write(name)
 
                 tf.Close()
-            else:  # binned fits
+            elif not self.counting:  # unbinned fits
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
                 for model, fit_params in self.models.items():
                     model_tf = ROOT.TFile.Open(
-                        inputs[fit_params["process_name"]][feature.name]["root"].path)
+                        inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
                     w = model_tf.Get("workspace_" + fit_params["process_name"])
                     tf.cd()
                     w.Write()
                     model_tf.Close()
                 # data_obs
-                model_tf = ROOT.TFile.Open(inputs["data_obs"][feature.name]["root"].path)
+                model_tf = ROOT.TFile.Open(inputs["fits"]["data_obs"][feature.name]["root"].path)
                 w = model_tf.Get("workspace_" + self.data_names[0])
                 tf.cd()
                 w.Write("workspace_data_obs")
                 model_tf.Close()
                 tf.Close()
 
-                self.write_shape_datacard(feature, norm_systematics, shape_systematics,
+                norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
+                norm_systematics_feature.update(norm_systematics)
+
+                self.write_shape_datacard(feature, norm_systematics_feature, shape_systematics,
+                    *self.additional_lines)
+
+            else:  # counting experiment
+                norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
+                norm_systematics_feature.update(norm_systematics)
+
+                self.write_counting_datacard(feature, norm_systematics_feature, shape_systematics,
                     *self.additional_lines)
 
 
@@ -407,7 +558,7 @@ class Fit(FeaturePlot):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False)
+        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False, save_yields=True)
 
     def output(self):
         """
@@ -440,10 +591,9 @@ class Fit(FeaturePlot):
         inputs = self.input()
         isMC = self.config.processes.get(self.process_name).isMC
         for ifeat, feature in enumerate(self.features):
-            systs = self.get_unique_systs(self.get_systs(feature, isMC) \
-                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC))
             systs_directions = [("central", "")]
             if isMC and self.store_systematics:
+                systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
 
             # fit range
@@ -517,7 +667,7 @@ class Fit(FeaturePlot):
                     fit_parameters["c"] = self.fit_parameters.get("c", (0, -2, 2))
                     fit_parameters = self.convert_parameters(fit_parameters)
                     c = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
-                    fun = ROOT.RooPolynomial("model_%s" % self.process_name,
+                    fun = ROOT.RooExponential("model_%s" % self.process_name,
                         "model_%s" % self.process_name, x, c)
 
                 elif self.method == "powerlaw":
@@ -565,6 +715,9 @@ class Fit(FeaturePlot):
                         "HWHM": HWHM,
                     }
                 elif self.method == "polynomial":
+                    param_values = [p.getVal() for p in params]
+                    d[key] = dict(zip([f'p{i}' for i in range(order)], param_values))
+                elif self.method == "exponential":
                     d[key] = {"c": c.getVal()}
                 elif self.method == "powerlaw":
                     param_values = []
@@ -582,6 +735,9 @@ class Fit(FeaturePlot):
                 d[key]["ndf"] = n_non_zero_bins - npar
                 d[key]["integral"] = data.sumEntries()
 
+                print("\n" * 20)
+                print(self.x_range)
+
                 w_name = "workspace_" + self.process_name + key
                 workspace = ROOT.RooWorkspace(w_name, w_name)
                 getattr(workspace, "import")(fun)
@@ -596,3 +752,60 @@ class Fit(FeaturePlot):
             with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
                 json.dump(d, f, indent=4)
 
+
+class InspectFitSyst(Fit):
+    def requires(self):
+        """
+        Needs as input the json file provided by the Fit task
+        """
+        return Fit.vreq(self)
+
+    def output(self):
+        """
+        Returns, per feature, one json file storing the fit results and one root file
+        storing the workspace
+        """
+        region_name = "" if not self.region else "__{}".format(self.region.name)
+        return {
+            feature.name: {
+                "json": self.local_target("{}__{}__{}{}.json".format(
+                    feature.name, self.process_name, self.method, region_name)),
+                "txt": self.local_target("{}__{}__{}{}.txt".format(
+                    feature.name, self.process_name, self.method, region_name))
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        inputs = self.input()
+        isMC = self.config.processes.get(self.process_name).isMC
+        for ifeat, feature in enumerate(self.features):
+            systs = self.get_unique_systs(self.get_systs(feature, isMC) \
+                + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC))
+
+            params = ["integral"]
+            if self.method == "voigtian":
+                params += ["mean", "sigma", "gamma"]
+            with open(inputs[feature.name]["json"].path) as f:
+                d = json.load(f)
+
+            table = []
+            out = {}
+            for syst in systs:
+                line = [syst]
+                out[syst] = {}
+                for param in params:
+                    out[syst][param] = {}
+                    out[syst][param]["up"] = (d[f"_{syst}_up"][param] - d[""][param]) / d[""][param]
+                    out[syst][param]["down"] = (d[f"_{syst}_down"][param] - d[""][param]) /\
+                        d[""][param]
+                    line.append((d[f"_{syst}_up"][param] - d[""][param]) / d[""][param])
+                    line.append((d[f"_{syst}_down"][param] - d[""][param]) / d[""][param])
+                table.append(line)
+            txt = tabulate.tabulate(table, headers=["syst name"] + list(
+                itertools.product(params, directions)))
+            print(txt)
+            with open(create_file_dir(self.output()[feature.name]["txt"].path), "w+") as f:
+                f.write(txt)
+            with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
+                json.dump(out, f, indent=4)

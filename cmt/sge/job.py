@@ -280,13 +280,16 @@ class SGEJobFileFactory(BaseJobFileFactory):
         cfg = Config.instance()
         if kwargs.get("dir") is None:
             kwargs["dir"] = cfg.get_expanded("job", cfg.find_option("job",
-                "sge_job_file_dir", "job_file_dir"))
+                "job_file_dir"))
+                #"sge_job_file_dir", "job_file_dir"))
         if kwargs.get("mkdtemp") is None:
             kwargs["mkdtemp"] = cfg.get_expanded_bool("job", cfg.find_option("job",
-                "sge_job_file_dir_mkdtemp", "job_file_dir_mkdtemp"))
+                "job_file_dir_mkdtemp"))
+                #"sge_job_file_dir_mkdtemp", "job_file_dir_mkdtemp"))
         if kwargs.get("cleanup") is None:
             kwargs["cleanup"] = cfg.get_expanded_bool("job", cfg.find_option("job",
-                "sge_job_file_dir_cleanup", "job_file_dir_cleanup"))
+                "job_file_dir_cleanup"))
+                #"sge_job_file_dir_cleanup", "job_file_dir_cleanup"))
 
         super(SGEJobFileFactory, self).__init__(**kwargs)
 

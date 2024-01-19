@@ -29,6 +29,7 @@ from cmt.base_tasks.base import (
 
 directions = ["up", "down"]
 
+
 class DatasetSuperWrapperTask(DatasetWrapperTask, law.WrapperTask):
 
     exclude_index = True
@@ -45,6 +46,7 @@ class DatasetSuperWrapperTask(DatasetWrapperTask, law.WrapperTask):
             (dataset.name, self.atomic_requires(dataset))
             for dataset in self.datasets
         )
+
 
 class DatasetSystWrapperTask(DatasetSuperWrapperTask):
     systematic_names = law.CSVParameter(default=(), description="names of systematics "
@@ -138,7 +140,7 @@ class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask
     def requires(self):
         systematics = [("", "")]
         if self.systematic_names:
-            list(itertools.product(self.systematic_names, directions))
+            systematics += list(itertools.product(self.systematic_names, directions))
         return OrderedDict(
             ((dataset.name, category.name, syst, d),
                 self.atomic_requires(dataset, category, syst, d))
@@ -421,6 +423,8 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                 friend_tchain.Add("{}/{}".format(elem, self.tree_name))
             tchain.AddFriend(friend_tchain, "friend")
             df = ROOT.RDataFrame(tchain)
+
+        print(self.get_path(inp))
 
         outp = self.output()
         # print(outp.path)
