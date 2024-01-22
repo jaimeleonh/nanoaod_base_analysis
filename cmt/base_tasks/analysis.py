@@ -359,6 +359,18 @@ class CreateDatacards(FeaturePlot):
             for arg in args:
                 f.write(arg + "\n")
 
+    def get_process_rate_for_counting(self, p_name, feature):
+        if p_name == "background" and self.data_names[0] in self.model_processes:
+            # assuming it comes from data, may cause problems in certain setups
+            return 1
+        else:
+            filename = self.input()["fits"][p_name][feature.name]["json"].path
+            with open(filename) as f:
+                d = json.load(f)
+            rate = d[""]["integral"]
+            if self.additional_scaling.get(p_name, False):
+                rate *= float(self.additional_scaling.get(p_name))
+            return rate
 
     def write_counting_datacard(self, feature, norm_systematics, shape_systematics, *args):
         n_dashes = 50
@@ -393,17 +405,7 @@ class CreateDatacards(FeaturePlot):
 
         rate_line = ["rate", ""]
         for p_name in process_names:
-            if p_name == "background" and self.data_names[0] in self.model_processes:
-                # assuming it comes from data, may cause problems in certain setups
-                rate_line.append(1)
-            else:
-                filename = self.input()["fits"][p_name][feature.name]["json"].path
-                with open(filename) as f:
-                    d = json.load(f)
-                rate = d[""]["integral"]
-                if self.additional_scaling.get(p_name, False):
-                    rate *= float(self.additional_scaling.get(p_name))
-                rate_line.append(rate)
+            rate_line.append(self.get_process_rate_for_counting(p_name, feature))
         table.append(rate_line)
 
         # normalization systematics
@@ -610,7 +612,6 @@ class Fit(FeaturePlot):
             # fit range
             x_range = (float(self.x_range[0]), float(self.x_range[1]))
             x = ROOT.RooRealVar("x", "x", x_range[0], x_range[1])
-            l = ROOT.RooArgList(x)
 
             # blinded range
             blind = False
@@ -623,6 +624,11 @@ class Fit(FeaturePlot):
                 x.setRange("hiSB", blind_range[1], x_range[1])
                 x.setRange("full", x_range[0], x_range[1])
                 fit_range = "loSB,hiSB"
+            l = ROOT.RooArgList(x)
+
+            if blind:
+                x_blind = ROOT.RooRealVar("x_blind", "x_blind", blind_range[0], blind_range[1])
+                l_blind = ROOT.RooArgList(x_blind)
 
             d = {}
             for syst_name, direction in systs_directions:
@@ -636,6 +642,8 @@ class Fit(FeaturePlot):
                     raise ValueError(f"The histogram has not been created for {self.process_name}")
 
                 data = ROOT.RooDataHist("data_obs", "data_obs", l, histo)
+                if blind:
+                    data_blind = ROOT.RooDataHist("data_obs_blind", "data_obs_blind", l_blind, histo)
                 frame = x.frame(ROOT.RooFit.Title("Muon SV mass"))
                 data.plotOn(frame)
 
@@ -745,6 +753,10 @@ class Fit(FeaturePlot):
                 d[key]["Full chi2"] = frame.chiSquare() * n_non_zero_bins
                 d[key]["ndf"] = n_non_zero_bins - npar
                 d[key]["integral"] = data.sumEntries()
+                d[key]["fit_range"] = self.x_range
+                d[key]["blind_range"] = "None" if not blind else blind_range
+                num_entries = data.sumEntries() - (0 if not blind else data_blind.sumEntries())
+                d[key]["integral"] = num_entries
 
                 w_name = "workspace_" + self.process_name + key
                 workspace = ROOT.RooWorkspace(w_name, w_name)
