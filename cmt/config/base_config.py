@@ -499,3 +499,19 @@ class Config():
                 process = self.processes.get(process.parent_process)
             else:
                 return False
+
+    def get_children_from_process(self, original_process_name):
+        processes = []
+        for process in self.processes:
+            child = process
+            if process.name == original_process_name:
+                continue
+            while True:
+                if process.parent_process == original_process_name:
+                    processes.append(child)
+                    break
+                elif process.parent_process:
+                    process=self.processes.get(process.parent_process)
+                else:
+                    break
+        return processes

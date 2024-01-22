@@ -741,9 +741,6 @@ class Fit(FeaturePlot):
                 d[key]["ndf"] = n_non_zero_bins - npar
                 d[key]["integral"] = data.sumEntries()
 
-                print("\n" * 20)
-                print(self.x_range)
-
                 w_name = "workspace_" + self.process_name + key
                 workspace = ROOT.RooWorkspace(w_name, w_name)
                 getattr(workspace, "import")(fun)
