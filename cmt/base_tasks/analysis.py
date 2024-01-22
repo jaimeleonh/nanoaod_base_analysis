@@ -7,6 +7,7 @@ Analysis tasks.
 __all__ = []
 
 import os
+from shutil import move
 from copy import deepcopy as copy
 import json
 import math
@@ -58,15 +59,15 @@ class CreateDatacards(FeaturePlot):
     counting = luigi.BoolParameter(default=False, description="whether the datacard should consider "
         "a counting experiment, default: False")
 
-    # additional_scaling = luigi.DictParameter(description="dict with scalings to be "
-        # "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
+    additional_scaling = luigi.DictParameter(description="dict with scalings to be "
+        "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
 
     norm_syst_threshold = 0.01
     norm_syst_threshold_sym = 0.01
 
     def __init__(self, *args, **kwargs):
-        super(CreateDatacards, self).__init__(self, *args, **kwargs)
+        super(CreateDatacards, self).__init__(*args, **kwargs)
 
         self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
         if len(self.data_names) > 1:
@@ -115,21 +116,24 @@ class CreateDatacards(FeaturePlot):
             reqs["fits"]["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
             return reqs
 
+    def get_output_postfix(self):
+        process_group_name = "" if self.process_group_name == "default" else "_{}".format(
+            self.process_group_name)
+        region_name = "" if not self.region else "_{}".format(self.region.name)
+        return process_group_name + region_name
+
     def output(self):
         """
         Returns, per feature, one txt storing the datacard and its corresponding root file
         storing the histograms
         """
-        region_name = "" if not self.region else "_{}".format(self.region.name)
-        process_group_name = "" if self.process_group_name == "default" else "_{}".format(
-            self.process_group_name)
         keys = ["txt"]
         if not self.counting:
             keys.append("root")
         return {
             feature.name: {
-                key: self.local_target("{}{}{}.{}".format(feature.name, process_group_name,
-                    region_name, key))
+                key: self.local_target("{}{}.{}".format(feature.name, self.get_output_postfix(),
+                    key))
                 for key in keys
             }
             for feature in self.features
@@ -564,7 +568,8 @@ class Fit(FeaturePlot):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False, save_yields=True)
+        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False,
+            normalize_signals=False, save_yields=True)
 
     def output(self):
         """
@@ -826,22 +831,20 @@ class CombineDatacards(CreateDatacards):
 
     def store_parts(self):
         parts = super(CombineDatacards, self).store_parts()
-        del parts["category_name"]
+        parts["category_name"] = "cat_combined"
         return parts
 
     def requires(self):
         return {
             category_name: CreateDatacards.vreq(self, category_name=category_name,
-                _exclude=["category_names", "log_file"])
+                _exclude=["category_names"])
             for category_name in self.category_names
         }
 
     def output(self):
-        region_name = "" if not self.region else "_{}".format(self.region.name)
-        process_group_name = "" if self.process_group_name == "default" else "_{}".format(
-            self.process_group_name)
         return {
-            feature.name: self.local_target("{}{}{}.txt".format(feature.name, process_group_name, region_name))
+            feature.name: self.local_target("{}{}.txt".format(
+                feature.name, self.get_output_postfix()))
             for feature in self.features
         }
 
@@ -861,3 +864,83 @@ class CombineDatacards(CreateDatacards):
             cmd += f"> {self.output()[feature.name].path}"
             create_file_dir(f"{self.output()[feature.name].path}")
             os.system(cmd)
+
+
+class CreateWorkspace(CreateDatacards):
+    category_names = law.CSVParameter(default=("base",), description="names of categories "
+        "to run, default: (base,)")
+    higgs_mass = luigi.IntParameter(default=125, description="Higgs mass to be used inside "
+        "combine, default:125")
+
+    def __init__(self, *args, **kwargs):
+        super(CreateWorkspace, self).__init__(*args, **kwargs)
+        self.is_combination = (len(self.category_names) > 1)
+
+    def requires(self):
+        if self.is_combination:
+            return CombineDatacards.vreq(self)
+        return CreateDatacards.vreq(self)
+
+    def store_parts(self):
+        parts = super(CreateWorkspace, self).store_parts()
+        if not self.is_combination:
+            parts["category_name"] = "cat_" + self.category_name
+        return parts
+
+    def output(self):
+        return {
+            feature.name: self.local_target("workspace_{}{}.root".format(
+                feature.name, self.get_output_postfix()))
+            for feature in self.features
+        }
+
+    def run(self):
+        inputs = self.input()
+        for feature in self.features:
+            if not self.is_combination:
+                inp = inputs[feature.name]['txt'].path
+            else:
+                inp = inputs[feature.name].path
+            cmd = "text2workspace.py {} -m {} -o {}".format(
+                inp, self.higgs_mass, create_file_dir(self.output()[feature.name].path))
+            os.system(cmd)
+
+
+class RunCombine(CreateWorkspace):
+    method = luigi.ChoiceParameter(choices=("limits",), default="limits",
+        description="combine method to be considered, default: False")
+    unblind = luigi.BoolParameter(default=False, description="whether to run combine unblinded, "
+        "default: False")
+
+    def requires(self):
+        return CreateWorkspace.vreq(self)
+
+    def output(self):
+        return {
+            feature.name: {
+                key: self.local_target("results_{}{}.{}".format(
+                    feature.name, self.get_output_postfix(), key))
+                for key in ["txt", "root"]
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        if self.method == "limits":
+            out_file = "higgsCombine{}.AsymptoticLimits.mH{}.root"
+
+        inputs = self.input()
+        for feature in self.features:
+            test_name = randomize("Test")
+            cmd = "combine -M "
+            if self.method == "limits":
+                cmd += "AsymptoticLimits "
+            cmd += f"--name {test_name} "
+            if not self.unblind:  # not sure if this is only for AsymptoticLimits
+                cmd += "--run blind "
+            cmd += f"-m {self.higgs_mass} "
+            cmd += inputs[feature.name].path
+            cmd += f" > {create_file_dir(self.output()[feature.name]['txt'].path)}"
+            os.system(cmd)
+            move(out_file.format(test_name, self.higgs_mass),
+                self.output()[feature.name]["root"].path)
