@@ -77,6 +77,12 @@ class CreateDatacards(FeaturePlot):
         if self.do_qcd:
             self.non_data_names.append("qcd")
 
+        if self.fit_models:
+            import yaml
+            from cmt.utils.yaml_utils import ordered_load
+            with open(self.retrieve_file("config/{}.yaml".format(self.fit_models))) as f:
+                self.models = ordered_load(f, yaml.SafeLoader)
+
     def requires(self):
         """
         Needs as input the root file provided by the FeaturePlot task
@@ -84,11 +90,6 @@ class CreateDatacards(FeaturePlot):
         if not self.fit_models and not self.counting:
             return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False)
         else:  # FIXME allow counting datacards starting from FeaturePlot
-            import yaml
-            from cmt.utils.yaml_utils import ordered_load
-            with open(self.retrieve_file("config/{}.yaml".format(self.fit_models))) as f:
-                self.models = ordered_load(f, yaml.SafeLoader)
-
             reqs = {"fits": {}, "inspections": {}}
             self.model_processes = []
             for model, fit_params in self.models.items():
@@ -564,7 +565,6 @@ class Fit(FeaturePlot):
 
     def __init__(self, *args, **kwargs):
         super(Fit, self).__init__(*args, **kwargs)
-        assert self.process_name in self.config.process_group_names[self.process_group_name]
 
     def requires(self):
         """
@@ -578,7 +578,7 @@ class Fit(FeaturePlot):
         Returns, per feature, one json file storing the fit results and one root file
         storing the workspace
         """
-        region_name = "" if not self.region else "__{}".format(self.region.name)
+        region_name = "" if not self.region_name else "__{}".format(self.region_name)
         return {
             feature.name: {
                 "json": self.local_target("{}__{}__{}{}.json".format(
@@ -602,6 +602,9 @@ class Fit(FeaturePlot):
 
     def run(self):
         inputs = self.input()
+
+        assert self.process_name in self.config.process_group_names[self.process_group_name]
+
         isMC = self.config.processes.get(self.process_name).isMC
         for ifeat, feature in enumerate(self.features):
             systs_directions = [("central", "")]
