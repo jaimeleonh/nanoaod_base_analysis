@@ -404,6 +404,20 @@ class SGEWorkflow(SGEWorkflowTmp):
         return not self.sge_central_scheduler
 
 
+class CategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
+    category_names = law.CSVParameter(default=(), description="names of categories "
+        "to run, default: none")
+
+    @abstractmethod
+    def atomic_requires(self, category_name):
+        return None
+
+    def requires(self):
+        return OrderedDict(
+            (category_name, self.atomic_requires(category_name))
+            for category_name in self.category_names
+        )
+
 
 class SplittedTask():
     @abstractmethod
