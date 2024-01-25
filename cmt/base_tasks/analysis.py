@@ -117,7 +117,9 @@ class CreateDatacards(FeaturePlot):
             reqs["fits"]["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
             return reqs
 
-    def get_output_postfix(self):
+    def get_output_postfix(self, process_group_name=None):
+        if process_group_name:
+            self.process_group_name = process_group_name
         process_group_name = "" if self.process_group_name == "default" else "_{}".format(
             self.process_group_name)
         region_name = "" if not self.region else "_{}".format(self.region.name)
@@ -578,13 +580,20 @@ class Fit(FeaturePlot):
         Returns, per feature, one json file storing the fit results and one root file
         storing the workspace
         """
+
+        x0 = str(self.x_range[0]).replace(".", "p")
+        x1 = str(self.x_range[1]).replace(".", "p")
+        x = f"{x0}_{x1}".replace(" ", "")
+        blind = ("" if float(self.blind_range[0]) == -1. and float(self.blind_range[1]) == -1.
+            else "__blinded")
         region_name = "" if not self.region_name else "__{}".format(self.region_name)
+
         return {
             feature.name: {
-                "json": self.local_target("{}__{}__{}{}.json".format(
-                    feature.name, self.process_name, self.method, region_name)),
-                "root": self.local_target("{}__{}__{}{}.root".format(
-                    feature.name, self.process_name, self.method, region_name))
+                key: self.local_target("{}__{}__{}__{}_{}{}.{}".format(
+                    feature.name, self.process_name, self.method, x, blind, region_name, key
+                ))
+                for key in ["json", "root"]
             }
             for feature in self.features
         }
