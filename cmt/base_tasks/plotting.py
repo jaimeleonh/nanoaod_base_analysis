@@ -679,7 +679,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     filtered_processes.append(process)
             if len(filtered_processes) > 1:
                 raise Exception("%s process group name includes not orthogonal processes %s"
-                    % (self.process_group_name, ", ".join(filtered_processes.names)))
+                    % (self.process_group_name, ", ".join(filtered_processes.names())))
             elif len(filtered_processes) == 1:
                 process = filtered_processes[0]
                 if process not in self.processes_datasets:

@@ -413,6 +413,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         """
         from shutil import copy
         ROOT = import_root()
+        verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # create RDataFrame
@@ -710,6 +711,8 @@ class Categorization(PreprocessRDF):
 
     :param skip_preprocess: whether to skip the PreprocessRDF task
     :type skip_preprocess: bool
+
+    You can add categorization_max_events as dataset parameter, this will split the dataset output from PreprocessRDF further into different files having at most the given number of events (the last one will have less)
     """
 
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
@@ -727,6 +730,75 @@ class Categorization(PreprocessRDF):
 
     def __init__(self, *args, **kwargs):
         super(Categorization, self).__init__(*args, **kwargs)
+        self.max_events = self.dataset.get_aux("categorization_max_events", None)
+        if sum((x is not None for x in [self.dataset.get_aux("categorization_max_events"), self.dataset.get_aux("preprocess_merging_factor"), self.dataset.get_aux("event_threshold")])) > 1:
+            raise RuntimeError(f"Dataset {self.dataset.name} error : you can only specify one of categorization_max_events, preprocess_merging_factor, event_threshold a the same time")
+        if self.dataset.get_aux("categorization_max_events") is not None and self.request_cpus > 1:
+            raise RuntimeError(f"Dataset.categorization_max_events is not compatible with request_cpus > 1 (in dataset {self.dataset.name}), due to RDataFrame limitation") # RDataFrame.Range is not compatible with multithreading
+        if self.max_events is not None:
+            if not hasattr(self, "splitted_branches") and self.is_workflow():
+                self.splitted_branches = self.build_splitted_branches()
+            elif not hasattr(self, "splitted_branches"):
+                self.splitted_branches = self.get_splitted_branches # not exactly sure what this is supposed to do, copied over from Preprocess
+    
+    def get_n_events(self, fil):
+        ROOT = import_root()
+        for trial in range(10): 
+            try:
+                f = ROOT.TFile.Open(fil)
+                tree = f.Get(self.tree_name)
+                nevents = tree.GetEntries()
+                return nevents
+            except:
+                print("Failed opening %s, %s/10 trials" % (fil, trial + 1))
+            finally:
+                if 'f' in locals():
+                    f.Close()
+        raise RuntimeError("Failed opening %s" % fil)
+    
+    def build_splitted_branches(self):
+        if not os.path.exists(
+                os.path.expandvars("$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                    self.config_name, self.max_events, self.dataset.name))):
+            ROOT = import_root()
+            files = [target["root"].path for target in self.get_input()["data"]["collection"].targets.values()]
+            branches = []
+            for ifil, fil in enumerate(files):
+                nevents = -1
+                print("Analyzing file %s" % fil)
+                nevents = self.get_n_events(fil)
+                initial_event = 0
+                isplit = 0
+                while initial_event < nevents:
+                    max_events = min(initial_event + self.max_events, int(nevents))
+                    branches.append({
+                        "filenumber": ifil,
+                        "split": isplit,
+                        "initial_event": initial_event,
+                        "max_events": max_events,
+                    })
+                    initial_event += self.max_events
+                    isplit += 1
+            with open(create_file_dir(os.path.expandvars(
+                    "$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                    self.config_name, self.max_events, self.dataset.name))), "w+") as f:
+                json.dump(branches, f, indent=4)
+        else:
+             with open(create_file_dir(os.path.expandvars(
+                    "$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                    self.config_name, self.max_events, self.dataset.name)))) as f:
+                branches = json.load(f)
+        return branches
+
+    @law.workflow_property
+    def get_splitted_branches(self):
+        return self.splitted_branches
+    
+    def create_branch_map(self):
+        if self.max_events is not None:
+            return len(self.splitted_branches)
+        else:
+            return super().create_branch_map()
 
     def workflow_requires(self):
         if not self.skip_preprocess:
@@ -735,11 +807,15 @@ class Categorization(PreprocessRDF):
             return {"data": InputData.req(self)}
 
     def requires(self):
+        if self.max_events is not None:
+            preprocess_branch = self.splitted_branches[self.branch]["filenumber"]
+        else:
+            preprocess_branch = self.branch
         if not self.skip_preprocess:
             return PreprocessRDF.vreq(self, category_name=self.base_category_name,
-                branch=self.branch)
+                branch=preprocess_branch)
         else:
-            return InputData.req(self, file_index=self.branch)
+            return InputData.req(self, file_index=preprocess_branch)
 
     def output(self):
         return self.local_target(f"data_{self.addendum}{self.branch}.root")
@@ -754,7 +830,11 @@ class Categorization(PreprocessRDF):
         """
         from shutil import copy
         ROOT = import_root()
-        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+        verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
+        if self.request_cpus > 1:
+            ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+        else:
+            ROOT.ROOT.DisableImplicitMT() # probably not needed
 
         # prepare inputs and outputs
         # inp = self.input()["data"].path
@@ -780,6 +860,11 @@ class Categorization(PreprocessRDF):
                     df = ROOT.RDataFrame(tchain)
             else:
                 df = ROOT.RDataFrame(self.tree_name, self.input()["root"].path)
+            
+            # restricting number of events
+            if self.max_events is not None:
+                df = df.Range(self.splitted_branches[self.branch]["initial_event"],
+                    self.splitted_branches[self.branch]["max_events"])
 
             selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
                 self.systematic, self.systematic_direction)
