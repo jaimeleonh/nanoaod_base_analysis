@@ -15,6 +15,7 @@ import itertools
 from collections import OrderedDict
 import tabulate
 import numpy as np
+from ctypes import c_double
 
 import law
 import luigi
@@ -31,7 +32,90 @@ ROOT = import_root()
 directions = ["up", "down"]
 
 
-class CreateDatacards(FeaturePlot):
+class FitBase():
+    def convert_parameters(self, d):
+        for param, val in d.items():
+            if isinstance(val, str):
+                if "," not in val:
+                    d[param] = tuple([float(val)])
+                else:
+                    d[param] = tuple(map(float, val.split(', ')))
+            else:
+                d[param] = val
+        return d
+
+    def get_x(self, x_range, blind_range=None, name="x"):
+        # fit range
+        x_range = (float(x_range[0]), float(x_range[1]))
+        x = ROOT.RooRealVar(name, name, x_range[0], x_range[1])
+
+        # blinded range
+        blind = False
+        if not blind_range:
+            return x, False
+        if blind_range[0] != blind_range[1]:
+            blind = True
+            blind_range = (float(self.blind_range[0]), float(self.blind_range[1]))
+            assert(blind_range[0] >= x_range[0] and blind_range[0] < blind_range[1] and
+                blind_range[1] <= x_range[1])
+            x.setRange("loSB", x_range[0], blind_range[0])
+            x.setRange("hiSB", blind_range[1], x_range[1])
+            x.setRange("full", x_range[0], x_range[1])
+            fit_range = "loSB,hiSB"
+        return x, blind
+
+    def get_fit(self, name, parameters, x, **kwargs):
+        fit_parameters = {}
+        params = OrderedDict()
+        fit_name = kwargs.pop("fit_name", "model")
+
+        if name == "voigtian":
+            fit_parameters["mean"] = parameters.get("mean", (0, -100, 100))
+            fit_parameters["gamma"] = parameters.get("gamma", (0.02, 0, 0.1))
+            fit_parameters["sigma"] = parameters.get("sigma", (0.001, 0, 0.1))
+            fit_parameters = self.convert_parameters(fit_parameters)
+
+            params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
+            params["gamma"] = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
+            params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
+            fun = ROOT.RooVoigtian(fit_name, fit_name, x,
+                params["mean"], params["gamma"], params["sigma"])
+
+        elif name == "polynomial":
+            order = int(parameters.get("order", 1))
+            for i in range(order):
+                fit_parameters[f"p{i}"] = parameters.get(f"p{i}", (0, -5, 5))
+            fit_parameters = self.convert_parameters(fit_parameters)
+            for i in range(order):
+                params[f"p{i}"] = ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"])
+            fun = ROOT.RooPolynomial(fit_name, fit_name, x, ROOT.RooArgList(*list(params.values())))
+
+        elif name == "exponential":
+            # https://root.cern.ch/doc/master/classRooExponential.html
+            fit_parameters["c"] = parameters.get("c", (0, -2, 2))
+            fit_parameters = self.convert_parameters(fit_parameters)
+            params["c"] = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
+            fun = ROOT.RooExponential(fit_name, fit_name, x, params["c"])
+
+        elif name == "powerlaw":
+            order = int(self.fit_parameters.get("order", 1))
+            for i in range(order):
+                fit_parameters[f"a{i}"] = parameters.get(f"a{i}", (1, 0, 2))
+                fit_parameters[f"b{i}"] = parameters.get(f"b{i}", (0, -2, 2))
+            fit_parameters = self.convert_parameters(fit_parameters)
+
+            for i in range(order):
+                params[f'a{i}'] = ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"])
+                params[f'b{i}'] = ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"])
+
+            fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
+                for i in range(0, order, 2)])
+            fun = ROOT.RooGenericPdf(fit_name, fit_fun, ROOT.RooArgList(*list(params.values())))
+
+        return fun, params
+
+
+class CreateDatacards(FeaturePlot, FitBase):
     """
     Task that creates datacards for its use inside the combine framework
 
@@ -115,6 +199,7 @@ class CreateDatacards(FeaturePlot):
                 params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                 for param, value in fit_params["fit_parameters"].items()]) + "}"
             reqs["fits"]["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+
             return reqs
 
     def get_output_postfix(self, process_group_name=None):
@@ -170,6 +255,36 @@ class CreateDatacards(FeaturePlot):
                     else:
                         systematics[syst_name][name] = "{:.2f}/{:.2f}".format(1 + up_value,
                             1 + down_value)
+        return systematics
+
+    def get_shape_systematics_from_inspect(self, feature_name):
+        def round_unc(num):
+            exp = 0
+            while True:
+                if num * 10 ** exp > 1:
+                    return round(num, exp + 1)
+                exp += 1
+        # structure: systematics[syst_name][process_name][parameter] = syst_value
+        systematics = {}
+        for name in self.non_data_names:
+            path = self.input()["inspections"][name][feature_name]["json"].path
+            with open(path) as f:
+                d = json.load(f)
+            for syst_name, values in d.items():
+                for param in values:
+                    if param == "integral":
+                        continue
+                    up_value = round_unc(abs(values[param]["up"]))
+                    down_value = round_unc(abs(values[param]["down"]))
+                    if up_value == -999 or down_value == -999:
+                        continue
+                    if abs(up_value) > self.norm_syst_threshold or \
+                            abs(down_value) > self.norm_syst_threshold:
+                        if name not in systematics:
+                            systematics[name] = {}
+                        if param not in systematics[name]:
+                            systematics[name][param] = {}
+                        systematics[name][param][syst_name] = max(up_value, down_value)
         return systematics
 
     def write_datacard(self, yields, feature, norm_systematics, shape_systematics, *args):
@@ -249,7 +364,8 @@ class CreateDatacards(FeaturePlot):
             for arg in args:
                 f.write(arg + "\n")
 
-    def write_shape_datacard(self, feature, norm_systematics, shape_systematics, *args):
+    def write_shape_datacard(self, feature, norm_systematics, shape_systematics,
+            datacard_syst_params, *args):
         n_dashes = 50
 
         region_name = "" if not self.region else "_{}".format(self.region.name)
@@ -321,15 +437,9 @@ class CreateDatacards(FeaturePlot):
                     line.append("-")
             table.append(line)
 
-        # # # shape systematics
-        # # for shape_syst in shape_systematics:
-            # # line = [shape_syst, "shape"]
-            # # for p_name in self.non_data_names:
-                # # if p_name in shape_systematics[shape_syst]:
-                    # # line.append(1)
-                # # else:
-                    # # line.append("-")
-            # # table.append(line)
+        # shape systematics
+        for syst_param in datacard_syst_params:
+            table.append([syst_param, "param", 0.0, 1.0])
 
         fancy_shapes_table = tabulate.tabulate(shapes_table, tablefmt="plain").split("\n")
         fancy_table = tabulate.tabulate(table, tablefmt="plain").split("\n")
@@ -371,15 +481,47 @@ class CreateDatacards(FeaturePlot):
             with open(filename) as f:
                 d = json.load(f)
             rate = d[""]["integral"]
+            weight = (0 if d[""]["integral_error"] == 0
+                else rate / (d[""]["integral_error"] * d[""]["integral_error"]))
             if self.additional_scaling.get(p_name, False):
                 rate *= float(self.additional_scaling.get(p_name))
-            return rate
+                weight /= float(self.additional_scaling.get(p_name))
+            return rate, weight
+
+    def get_stat_unc_lines(self, feature, rates, process_names=None):
+        def round_unc(num):
+            exp = 0
+            while True:
+                if num * 10 ** exp > 1:
+                    return round(num, exp + 1)
+                exp += 1
+
+        if not process_names:
+            process_names = self.non_data_names
+        table = []
+        for p_name in process_names:
+            # line = [f"{p_name}_norm", "gmN {:.2f}".format(rates[p_name][0] * rates[p_name][1])]
+            line = [f"{p_name}_{self.category_name}_norm",
+                "gmN {}".format(int(round(rates[p_name][0] * rates[p_name][1])))]
+            append_line = False
+            for name in self.non_data_names:
+                if name == p_name or \
+                        p_name in [p.name for p in self.config.get_children_from_process(name)]:
+                    if rates[p_name][1] > 0.001:
+                        append_line = True
+                        # line.append("{:.4f}".format(1. / rates[p_name][1]))
+                        line.append(round_unc(1. / rates[p_name][1]))
+                else:
+                    line.append("-")
+            if append_line:
+                table.append(line)
+        return table
 
     def write_counting_datacard(self, feature, norm_systematics, shape_systematics, *args):
         n_dashes = 50
 
         region_name = "" if not self.region else "_{}".format(self.region.name)
-        bin_name = "{}{}".format(feature.name, region_name)
+        bin_name = "{}".format(region_name)
 
         table = []
         process_names = self.non_data_names
@@ -407,8 +549,12 @@ class CreateDatacards(FeaturePlot):
         table.append(line)
 
         rate_line = ["rate", ""]
+        rates = {}
         for p_name in process_names:
-            rate_line.append(self.get_process_rate_for_counting(p_name, feature))
+            rates[p_name] = self.get_process_rate_for_counting(p_name, feature)
+            if not self.config.processes.get(p_name).isSignal and rates[p_name][0] < 0.001:
+                rates[p_name] = (0.001, rates[p_name][1])
+            rate_line.append(round(rates[p_name][0], 3))
         table.append(rate_line)
 
         # normalization systematics
@@ -420,6 +566,10 @@ class CreateDatacards(FeaturePlot):
                 else:
                     line.append("-")
             table.append(line)
+
+        # statistical uncertainty
+        stat_unc_lines = self.get_stat_unc_lines(feature, rates)
+        table += stat_unc_lines
 
         # # # shape systematics
         # # for shape_syst in shape_systematics:
@@ -453,9 +603,6 @@ class CreateDatacards(FeaturePlot):
             f.write(n_dashes * "-" + "\n")
             for i in range(4, len(fancy_table)):
                 f.write(fancy_table[i] + "\n")
-
-            # if self.automcstats != -1:
-                # f.write("*  autoMCStats  %s \n" % self.automcstats)
 
             for arg in args:
                 f.write(arg + "\n")
@@ -511,18 +658,100 @@ class CreateDatacards(FeaturePlot):
                     if "data" in name:
                         name = "data_obs"
                     histo.Write(name)
-
                 tf.Close()
+
             elif not self.counting:  # unbinned fits
+                shape_systematics_feature = self.get_shape_systematics_from_inspect(feature.name)
+                # shape_systematics_feature = {}
+                datacard_syst_params = []
+
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
                 for model, fit_params in self.models.items():
                     model_tf = ROOT.TFile.Open(
                         inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
                     w = model_tf.Get("workspace_" + fit_params["process_name"])
-                    tf.cd()
-                    w.Write()
-                    model_tf.Close()
+                    if fit_params["process_name"] not in shape_systematics_feature:
+                        # directly extract the workspace from the inputs
+                        tf.cd()
+                        w.Write()
+                        model_tf.Close()
+                    else:
+                        # create a new workspace with the dedicated systematics
+                        x_range = fit_params.get("x_range", Fit.x_range._default)
+                        if type(x_range) == str:
+                            x_range = x_range.split(", ")
+                        blind_range = fit_params.get("blind_range", Fit.blind_range._default)
+                        method = fit_params.get("method")
+
+                        x, blind = self.get_x(x_range, blind_range)
+                        data = w.data("data_obs")
+                        fit_parameters = fit_params.get("fit_parameters", {})
+                        _, params = self.get_fit(method, fit_parameters, x)
+                        # for param in params:
+                            # param.setConstant(True)
+
+                        # let's build the RooFormulaVar for each param (w/ or w/o systematics)
+                        param_syst = OrderedDict()
+                        systs = OrderedDict()
+                        for param, value in params.items():
+                            if param not in shape_systematics_feature[fit_params["process_name"]]:
+                                # no systematics to add, only need to consider the actual parameter
+                                param_syst[param] = value
+                            else:
+                                systs[param] = []
+                                syst_values = []
+                                for syst, syst_value in \
+                                        shape_systematics_feature[fit_params["process_name"]][param].items():
+                                    systs[param].append(ROOT.RooRealVar(f"d{param}_{syst}",
+                                        f"d{param}_{syst}", 0, -5, 5))
+                                    systs[param][-1].setConstant(True)
+                                    syst_values.append(syst_value)
+                                    datacard_syst_params.append(f"d{param}_{syst}")
+                                param_syst[param] = ROOT.RooFormulaVar(
+                                    f"{param}_syst", f"{param}_syst",
+                                    "@0*" + "*".join([f"(1+{syst_values[i]}*@{i+1})"
+                                        for i in range(len(syst_values))]),
+                                    ROOT.RooArgList(value, *systs[param]))
+
+                        # Create the new fitting function
+                        if method == "voigtian":
+                            fun = ROOT.RooVoigtian("model_%s" % fit_params["process_name"],
+                                "model_%s" % fit_params["process_name"], x,
+                                param_syst["mean"], param_syst["gamma"], param_syst["sigma"])
+                        elif method == "polynomial":
+                            fun = ROOT.RooPolynomial("model_%s" % fit_params["process_name"],
+                                "model_%s" % fit_params["process_name"], x,
+                                ROOT.RooArgList(*list(param_syst.values())))
+                        elif method == "exponential":
+                            fun = ROOT.RooExponential("model_%s" % fit_params["process_name"],
+                                "model_%s" % fit_params["process_name"], x, param_syst["c"])
+                        elif method == "powerlaw":
+                            order = len(params.values())
+                            fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
+                                for i in range(0, order, 2)])
+                            fun = ROOT.RooGenericPdf("model_%s" % self.process_name,
+                                fit_fun, ROOT.RooArgList(*list(params.values())))
+
+                        # Refit
+                        if not blind:
+                            fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                        else:
+                            fun.fitTo(data, ROOT.RooFit.Range(fit_range),
+                                ROOT.RooFit.SumW2Error(True))
+
+                        for value in params.values():
+                            value.setConstant(True)
+
+                        # save the function inside the workspace
+                        w_name = "workspace_syst"
+                        workspace_syst = ROOT.RooWorkspace(w_name, w_name)
+                        getattr(workspace_syst, "import")(fun)
+                        getattr(workspace_syst, "import")(data)
+                        tf.cd()
+                        workspace_syst.Write("workspace_" + fit_params["process_name"])
+                        model_tf.Close()
+
                 # data_obs
                 model_tf = ROOT.TFile.Open(inputs["fits"]["data_obs"][feature.name]["root"].path)
                 w = model_tf.Get("workspace_" + self.data_names[0])
@@ -535,7 +764,7 @@ class CreateDatacards(FeaturePlot):
                 norm_systematics_feature.update(norm_systematics)
 
                 self.write_shape_datacard(feature, norm_systematics_feature, shape_systematics,
-                    *self.additional_lines)
+                    datacard_syst_params, *self.additional_lines)
 
             else:  # counting experiment
                 norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
@@ -545,7 +774,7 @@ class CreateDatacards(FeaturePlot):
                     *self.additional_lines)
 
 
-class Fit(FeaturePlot):
+class Fit(FeaturePlot, FitBase):
     """
     Task that run fits over FeaturePlot histograms
 
@@ -598,17 +827,6 @@ class Fit(FeaturePlot):
             for feature in self.features
         }
 
-    def convert_parameters(self, d):
-        for param, val in d.items():
-            if isinstance(val, str):
-                if "," not in val:
-                    d[param] = tuple([float(val)])
-                else:
-                    d[param] = tuple(map(float, val.split(', ')))
-            else:
-                d[param] = val
-        return d
-
     def run(self):
         inputs = self.input()
 
@@ -622,24 +840,11 @@ class Fit(FeaturePlot):
                 systs_directions += list(itertools.product(systs, directions))
 
             # fit range
-            x_range = (float(self.x_range[0]), float(self.x_range[1]))
-            x = ROOT.RooRealVar("x", "x", x_range[0], x_range[1])
-
-            # blinded range
-            blind = False
-            if self.blind_range[0] != self.blind_range[1]:
-                blind = True
-                blind_range = (float(self.blind_range[0]), float(self.blind_range[1]))
-                assert(blind_range[0] >= x_range[0] and blind_range[0] < blind_range[1] and
-                    blind_range[1] <= x_range[1])
-                x.setRange("loSB", x_range[0], blind_range[0])
-                x.setRange("hiSB", blind_range[1], x_range[1])
-                x.setRange("full", x_range[0], x_range[1])
-                fit_range = "loSB,hiSB"
+            x, blind = self.get_x(self.x_range, self.blind_range)
             l = ROOT.RooArgList(x)
 
             if blind:
-                x_blind = ROOT.RooRealVar("x_blind", "x_blind", blind_range[0], blind_range[1])
+                x_blind, _ = self.get_x(self.blind_range)
                 l_blind = ROOT.RooArgList(x_blind)
 
             d = {}
@@ -656,7 +861,8 @@ class Fit(FeaturePlot):
                 data = ROOT.RooDataHist("data_obs", "data_obs", l, histo)
                 if blind:
                     data_blind = ROOT.RooDataHist("data_obs_blind", "data_obs_blind", l_blind, histo)
-                frame = x.frame(ROOT.RooFit.Title("Muon SV mass"))
+
+                frame = x.frame()
                 data.plotOn(frame)
 
                 n_non_zero_bins = 0
@@ -664,60 +870,9 @@ class Fit(FeaturePlot):
                     if histo.GetBinContent(i) > 0:
                         n_non_zero_bins += 1
 
-                fit_parameters = {}
-                if self.method == "voigtian":
-                    fit_parameters["mean"] = self.fit_parameters.get("mean",
-                        ((x_range[1] + x_range[0]) / 2, -100, 100))
-                    fit_parameters["sigma"] = self.fit_parameters.get("sigma", (0.001, 0, 0.1))
-                    fit_parameters["gamma"] = self.fit_parameters.get("gammma", (0.02, 0, 0.1))
-                    fit_parameters = self.convert_parameters(fit_parameters)
-
-                    mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
-                    sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
-                    gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
-                    fun = ROOT.RooVoigtian("model_%s" % self.process_name,
-                        "model_%s" % self.process_name, x, mean, gamma, sigma)
-
-                elif self.method == "polynomial":
-                    order = int(self.fit_parameters.get("order", 1))
-                    for i in range(order):
-                        fit_parameters[f"p{i}"] = self.fit_parameters.get(f"p{i}", (0, -1, 1))
-                    fit_parameters = self.convert_parameters(fit_parameters)
-                    params = []
-                    for i in range(order):
-                        if i == 0:
-                            params.append(ROOT.RooRealVar('p0', 'p0', *fit_parameters[f"p0"]))
-                        else:
-                            params.append(ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"]))
-
-                    fun = ROOT.RooPolynomial("model_%s" % self.process_name,
-                        "model_%s" % self.process_name, x, ROOT.RooArgList(*params))
-
-                elif self.method == "exponential":
-                    # https://root.cern.ch/doc/master/classRooExponential.html
-                    fit_parameters["c"] = self.fit_parameters.get("c", (0, -2, 2))
-                    fit_parameters = self.convert_parameters(fit_parameters)
-                    c = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
-                    fun = ROOT.RooExponential("model_%s" % self.process_name,
-                        "model_%s" % self.process_name, x, c)
-
-                elif self.method == "powerlaw":
-                    order = int(self.fit_parameters.get("order", 1))
-                    for i in range(order):
-                        fit_parameters[f"a{i}"] = self.fit_parameters.get(f"a{i}", (1, 0, 2))
-                        fit_parameters[f"b{i}"] = self.fit_parameters.get(f"b{i}", (0, -2, 2))
-                    fit_parameters = self.convert_parameters(fit_parameters)
-
-                    params = [x]
-                    for i in range(order):
-                        params.append(ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"]))
-                        params.append(ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"]))
-
-                    fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
-                        for i in range(0, order, 2)])
-
-                    fun = ROOT.RooGenericPdf("model_%s" % self.process_name,
-                        fit_fun, ROOT.RooArgList(*params))
+                # get function to fit and its parameters
+                fun, params = self.get_fit(self.method, self.fit_parameters, x,
+                    fit_name="model_" + self.process_name)
 
                 # fitting
                 if not blind:
@@ -725,38 +880,32 @@ class Fit(FeaturePlot):
                 else:
                     fun.fitTo(data, ROOT.RooFit.Range(fit_range), ROOT.RooFit.SumW2Error(True))
 
-                npar = fun.getParameters(data).selectByAttrib("Constant",False).getSize()
+                npar = fun.getParameters(data).selectByAttrib("Constant", False).getSize()
 
                 # filling output dict with fitting results
+                d[key] = {}
+                for param, value in params.items():
+                    d[key][param] = value.getVal()
+                    # setting the parameter as constant before saving it in the workspace
+                    d[key][param].setConstant(True)  # needs further studying
                 if self.method == "voigtian":
-                    gamma_value = gamma.getVal()
-                    sigma_value = sigma.getVal()
-
+                    gamma_value = params["gamma"].getVal()
+                    sigma_value = params["sigma"].getVal()
                     G = 2 * sigma_value * np.sqrt(2 * np.log(2))
                     L = 2 * gamma_value
-                    HWHM = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
+                    d[key]["HWHM"] = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
 
-                    d[key] = {
-                        "mean": mean.getVal(),
-                        "mean_error": mean.getError(),
-                        "sigma": sigma.getVal(),
-                        "sigma_error": sigma.getError(),
-                        "gamma": gamma.getVal(),
-                        "gamma_error": gamma.getError(),
-                        "HWHM": HWHM,
-                    }
-                elif self.method == "polynomial":
-                    param_values = [p.getVal() for p in params]
-                    d[key] = dict(zip([f'p{i}' for i in range(order)], param_values))
-                elif self.method == "exponential":
-                    d[key] = {"c": c.getVal()}
-                elif self.method == "powerlaw":
-                    param_values = []
-                    for i in range(order):
-                        param_values.append((f"a{i}", params[1 + 2 * i].getVal()))
-                        param_values.append((f"b{i}", params[1 + 2 * i + 1].getVal()))
-                    d[key] = dict(param_values)
+                histo_new = data.createHistogram("histo_new", x)
+                error = c_double(0.)
+                integral = histo_new.IntegralAndError(
+                    0, histo_new.GetNbinsX() + 1, error)
+                if blind:
+                    histo_blind = data_blind.createHistogram("histo_blind", x_blind)
+                    error_blind = c_double(0.)
+                    integral_blind = histo_blind.IntegralAndError(
+                        0, histo_blind.GetNbinsX() + 1, error_blind)
 
+                # Additional results to include in the output dict
                 fun.plotOn(frame)
                 d[key]["chi2"] = frame.chiSquare()
                 d[key]["npar"] = npar
@@ -767,8 +916,10 @@ class Fit(FeaturePlot):
                 d[key]["integral"] = data.sumEntries()
                 d[key]["fit_range"] = self.x_range
                 d[key]["blind_range"] = "None" if not blind else blind_range
-                num_entries = data.sumEntries() - (0 if not blind else data_blind.sumEntries())
-                d[key]["integral"] = num_entries
+                d[key]["sum_entries"] = data.sumEntries() - (
+                    0 if not blind else data_blind.sumEntries())
+                d[key]["integral"] = integral - (0 if not blind else integral_blind)
+                d[key]["integral_error"] = error.value - (0 if not blind else error_blind.value)
 
                 w_name = "workspace_" + self.process_name + key
                 workspace = ROOT.RooWorkspace(w_name, w_name)
@@ -818,6 +969,15 @@ class InspectFitSyst(Fit):
             params = ["integral"]
             if self.method == "voigtian":
                 params += ["mean", "sigma", "gamma"]
+            elif self.method == "exponential":
+                params += ["c"]
+            else:
+                order = int(self.fit_parameters.get("order", 1))
+                if self.method == "polynomial":
+                    params += [f'p{i}' for i in range(order)]
+                elif self.method == "powerlaw":
+                    params += [f'a{i}' for i in range(order)] + [f'b{i}' for i in range(order)]
+
             with open(inputs[feature.name]["json"].path) as f:
                 d = json.load(f)
 
