@@ -1693,7 +1693,8 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                                 rootfile = ROOT.TFile.Open(elem.path)
                                 histo = copy(rootfile.Get(feature_name))
                                 rootfile.Close()
-                                dataset_histo.Add(histo)
+                                if histo.GetEntries() != 0:
+                                    dataset_histo.Add(histo)
                             if not process.isData and not self.avoid_normalization:
                                 elem = ("central" if syst == "central" or syst not in self.norm_syst_list
                                     else f"{syst}_{d}")
