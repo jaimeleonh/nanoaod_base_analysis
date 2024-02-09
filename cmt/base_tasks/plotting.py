@@ -264,11 +264,23 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         :return: number of files after merging (usually 1) unless skip_processing == True
         :rtype: int
         """
-        if self.skip_processing or self.skip_merging:
-            return len(self.dataset.get_files(
+        # number of files of InputData. In a lambda to not compute i unless needed
+        input_data_count = lambda : len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
                 check_empty=True))
-        return self.n_files_after_merging
+        if self.skip_processing:
+            return input_data_count()
+        elif self.skip_merging:
+            categorization_max_events = self.dataset.get_aux("categorization_max_events", None)
+            if categorization_max_events is None:
+                return input_data_count()
+            else:
+                # in case we have used the Categorization splitting output
+                with open(create_file_dir(os.path.expandvars(
+                        "$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                        self.config_name, categorization_max_events, self.dataset.name)))) as f:
+                    return len(json.load(f))
+        return self.n_files_after_merging # in case we use MergeCategorization
 
     def workflow_requires(self):
         """
