@@ -24,7 +24,7 @@ from analysis_tools.utils import (
     import_root, create_file_dir, randomize
 )
 
-from cmt.base_tasks.base import ConfigTaskWithCategory
+from cmt.base_tasks.base import ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow
 from cmt.base_tasks.plotting import FeaturePlot
 
 ROOT = import_root()
@@ -202,9 +202,8 @@ class CreateDatacards(FeaturePlot, FitBase):
 
             return reqs
 
-    def get_output_postfix(self, process_group_name=None):
-        if process_group_name:
-            self.process_group_name = process_group_name
+    def get_output_postfix(self, **kwargs):
+        self.process_group_name = kwargs.pop("process_group_name", self.process_group_name)
         process_group_name = "" if self.process_group_name == "default" else "_{}".format(
             self.process_group_name)
         region_name = "" if not self.region else "_{}".format(self.region.name)
@@ -737,7 +736,8 @@ class CreateDatacards(FeaturePlot, FitBase):
                         if not blind:
                             fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
                         else:
-                            fun.fitTo(data, ROOT.RooFit.Range(fit_range),
+                            fun.fitTo(data, ROOT.RooFit.Range(
+                                float(self.x_range[0]), float(self.x_range[1])),
                                 ROOT.RooFit.SumW2Error(True))
 
                         for value in params.values():
@@ -878,7 +878,9 @@ class Fit(FeaturePlot, FitBase):
                 if not blind:
                     fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
                 else:
-                    fun.fitTo(data, ROOT.RooFit.Range(fit_range), ROOT.RooFit.SumW2Error(True))
+                    fun.fitTo(data, ROOT.RooFit.Range(
+                        float(self.x_range[0]), float(self.x_range[1])),
+                        ROOT.RooFit.SumW2Error(True))
 
                 npar = fun.getParameters(data).selectByAttrib("Constant", False).getSize()
 
@@ -887,7 +889,7 @@ class Fit(FeaturePlot, FitBase):
                 for param, value in params.items():
                     d[key][param] = value.getVal()
                     # setting the parameter as constant before saving it in the workspace
-                    d[key][param].setConstant(True)  # needs further studying
+                    value.setConstant(True)  # needs further studying
                 if self.method == "voigtian":
                     gamma_value = params["gamma"].getVal()
                     sigma_value = params["sigma"].getVal()
@@ -915,7 +917,7 @@ class Fit(FeaturePlot, FitBase):
                 d[key]["ndf"] = n_non_zero_bins - npar
                 d[key]["integral"] = data.sumEntries()
                 d[key]["fit_range"] = self.x_range
-                d[key]["blind_range"] = "None" if not blind else blind_range
+                d[key]["blind_range"] = "None" if not blind else self.blind_range
                 d[key]["sum_entries"] = data.sumEntries() - (
                     0 if not blind else data_blind.sumEntries())
                 d[key]["integral"] = integral - (0 if not blind else integral_blind)
@@ -1015,7 +1017,8 @@ class CombineDatacards(CreateDatacards):
 
     def store_parts(self):
         parts = super(CombineDatacards, self).store_parts()
-        parts["category_name"] = "cat_combined"
+        # parts["category_name"] = "cat_combined"
+        del parts["category_name"]
         return parts
 
     def requires(self):
@@ -1050,39 +1053,65 @@ class CombineDatacards(CreateDatacards):
             os.system(cmd)
 
 
-class CreateWorkspace(CreateDatacards):
+class CreateWorkspace(CreateDatacards, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
     category_names = law.CSVParameter(default=("base",), description="names of categories "
         "to run, default: (base,)")
     higgs_mass = luigi.IntParameter(default=125, description="Higgs mass to be used inside "
-        "combine, default:125")
+        "combine, default: 125")
+    combine_categories = luigi.BoolParameter(default=False, description="whether to run on the "
+        "combined datacard or per category, default: False (per category)")
 
     def __init__(self, *args, **kwargs):
         super(CreateWorkspace, self).__init__(*args, **kwargs)
-        self.is_combination = (len(self.category_names) > 1)
+
+    def create_branch_map(self):
+        if self.combine_categories:
+            return 1
+        return len(self.category_names)
 
     def requires(self):
-        if self.is_combination:
+        if self.combine_categories:
             return CombineDatacards.vreq(self)
-        return CreateDatacards.vreq(self)
+        return {
+            category_name: CreateDatacards.vreq(self, category_name=category_name)
+            for category_name in self.category_names
+        }
+
+    def workflow_requires(self):
+        if self.combine_categories:
+            return {"data": CombineDatacards.vreq(self)}
+        return {
+            "data": {
+                category_name: CreateDatacards.vreq(self, category_name=category_name)
+                for category_name in self.category_names
+            }
+        }
 
     def store_parts(self):
-        parts = super(CreateWorkspace, self).store_parts()
-        if not self.is_combination:
-            parts["category_name"] = "cat_" + self.category_name
-        return parts
+        # if self.combine_categories:
+        return CombineDatacards.store_parts(self)
+        # return CreateDatacards.store_parts(self)
+
+    def get_output_postfix(self, **kwargs):
+        postfix = super(CreateWorkspace, self).get_output_postfix()
+        if not self.combine_categories:
+            postfix += "_" + list(self.category_names)[self.branch]
+        return postfix
 
     def output(self):
+        assert not self.combine_categories or (
+            self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: self.local_target("workspace_{}{}.root".format(
-                feature.name, self.get_output_postfix()))
+                feature.name, self.get_output_postfix() ))
             for feature in self.features
         }
 
     def run(self):
         inputs = self.input()
         for feature in self.features:
-            if not self.is_combination:
-                inp = inputs[feature.name]['txt'].path
+            if not self.combine_categories:
+                inp = inputs[list(self.category_names)[self.branch]][feature.name]['txt'].path
             else:
                 inp = inputs[feature.name].path
             cmd = "text2workspace.py {} -m {} -o {}".format(
@@ -1096,10 +1125,15 @@ class RunCombine(CreateWorkspace):
     unblind = luigi.BoolParameter(default=False, description="whether to run combine unblinded, "
         "default: False")
 
+    def workflow_requires(self):
+        return {"data": CreateWorkspace.vreq(self)}
+
     def requires(self):
         return CreateWorkspace.vreq(self)
 
     def output(self):
+        assert not self.combine_categories or (
+            self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
                 key: self.local_target("results_{}{}.{}".format(
