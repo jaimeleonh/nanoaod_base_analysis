@@ -16,6 +16,7 @@ from collections import OrderedDict
 import tabulate
 import numpy as np
 from ctypes import c_double
+import uproot
 
 import law
 import luigi
@@ -1124,6 +1125,8 @@ class RunCombine(CreateWorkspace):
         description="combine method to be considered, default: False")
     unblind = luigi.BoolParameter(default=False, description="whether to run combine unblinded, "
         "default: False")
+    pois = law.CSVParameter(default=("r",), description="parameters of interest to be considered, "
+        "default: r")
 
     def workflow_requires(self):
         return {"data": CreateWorkspace.vreq(self)}
@@ -1162,3 +1165,87 @@ class RunCombine(CreateWorkspace):
             os.system(cmd)
             move(out_file.format(test_name, self.higgs_mass),
                 self.output()[feature.name]["root"].path)
+
+
+class PullsAndImpacts(RunCombine):
+    def get_selected_nuisances(self, nuisances):
+        return nuisances
+
+    def extract_nuisance_names(self, path):
+        tf = ROOT.TFile.Open(path)
+        w = tf.Get("w")
+        config = w.genobj("ModelConfig")
+        all_params = config.GetPdf().getParameters(config.GetObservables())
+        return [param.GetName() for param in all_params
+            if (isinstance(param, ROOT.RooRealVar) and not param.isConstant()
+                and param.GetName() not in self.pois)]
+
+    @law.workflow_property(setter=False, empty_value=law.no_value, cache=True)
+    def workspace_parameters(self):
+        ws_input = CreateWorkspace.vreq(self, branch=0).output()[self.features[0].name]
+        if not ws_input.exists():
+            return law.no_value
+        return self.extract_nuisance_names(ws_input.path)
+
+    def __init__(self, *args, **kwargs):
+        super(PullsAndImpacts, self).__init__(*args, **kwargs)
+
+    def create_branch_map(self):
+        self.nuisance_names = [self.pois[0]]
+        params = self.get_selected_nuisances(self.workspace_parameters)
+        if params:
+            self.nuisance_names.extend(params)
+            self.cache_branch_map = True
+        return self.nuisance_names
+
+    def workflow_requires(self):
+        return {"data": CreateWorkspace.vreq(self, _exclude=["branches", "branch"])}
+
+    def requires(self):
+        return CreateWorkspace.vreq(self, _exclude=["branches", "branch"])
+
+    def output(self):
+        assert(self.combine_categories or self.category_names == 1)
+        return {
+            feature.name: {
+                key: self.local_target("results_{}{}__{}.{}".format(
+                feature.name, self.get_output_postfix(), self.branch_data, key))
+                for key in ["log", "root", "json"]
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        assert(self.combine_categories or self.category_names == 1)
+        inp = self.input()["collection"].targets[0]
+        for feature in self.features:
+            w_path = inp[feature.name].path
+
+            if self.branch == 0:
+                cmd = ("combine -M MultiDimFit -n _initialFit --algo singles "
+                    "--redefineSignalPOIs {poi} {toys} -m {mass} -d {workspace} > {log_file}")
+                out_file = "higgsCombine_initialFit.MultiDimFit.mH{mass}.root"
+            else:
+                cmd = ("combine -M MultiDimFit -n _paramFit_Test_{param} --algo impact "
+                    "--redefineSignalPOIs {poi} -P {param} --floatOtherPOIs 1 --saveInactivePOI 1 "
+                    "{toys} -m {mass} -d {workspace} > {log_file}")
+                out_file = "higgsCombine_paramFit_Test_{param}.MultiDimFit.mH{mass}.root"
+
+            toys = "--toys -1"
+            if self.unblind:
+                toys = ""
+            log_file = randomize("log")
+
+            cmd = cmd.format(poi=self.pois[0], toys=toys, mass=self.higgs_mass,
+                workspace=w_path, param=self.branch_data, log_file=log_file)
+            print("Running " + cmd)
+            os.system(cmd)
+
+            move(log_file, create_file_dir(self.output()[feature.name]["log"].path))
+            move(out_file.format(param=self.branch_data, mass=self.higgs_mass),
+                create_file_dir(self.output()[feature.name]["root"].path))
+
+            tree = uproot.open(self.output()[feature.name]["root"].path)["limit"]
+            values = tree[self.branch_data].array().tolist()
+            with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
+                json.dump({"results": values}, f)
