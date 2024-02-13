@@ -1575,8 +1575,10 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                         inp = self.input()["stats"][dataset.name][elem]
                         with open(inp.path) as f:
                             stats = json.load(f)
-                            # nevents += stats["nevents"]
-                            nevents[dataset.name][elem] = stats["nweightedevents"]
+                            if self.apply_weights:
+                                nevents[dataset.name][elem] = stats["nweightedevents"]
+                            else:
+                                nevents[dataset.name][elem] = stats["nevents"]
         return nevents
 
     def get_normalization_factor(self, dataset, elem):

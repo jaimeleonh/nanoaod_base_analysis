@@ -600,7 +600,7 @@ class InputData(DatasetTask, law.ExternalTask):
                     out.append(self.dynamic_target(
                         self.config.datasets.get(dataset_name).get_files(
                             os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
-                            index=self.file_index), avoid_store=True, check_empty=True)
+                            index=self.file_index, check_empty=True), avoid_store=True)
                     )
             return tuple(out)
         else:

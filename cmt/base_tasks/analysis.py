@@ -116,7 +116,55 @@ class FitBase():
         return fun, params
 
 
-class CreateDatacards(FeaturePlot, FitBase):
+class CombineBase(FeaturePlot, FitBase):
+    """
+    Base task for all combine-related tasks
+
+    :param pois: Parameters-of-interest to be considered
+    :type pois: list of `str`
+
+    :param higgs_mass: Higgs mass to be considered inside combine
+    :type higgs_mass: int
+
+    :param fit_models: filename with fit models to use in the fit
+    :type fit_models: str
+    """
+
+    pois = law.CSVParameter(default=("r",), description="parameters of interest to be considered, "
+        "default: r")
+    higgs_mass = luigi.IntParameter(default=125, description="Higgs mass to be used inside "
+        "combine, default: 125")
+    fit_models = luigi.Parameter(default="", description="filename with fit models to use "
+        "in the fit, default: none (binned fit)")
+
+    def get_output_postfix(self, **kwargs):
+        self.process_group_name = kwargs.pop("process_group_name", self.process_group_name)
+        process_group_name = "" if self.process_group_name == "default" else "_{}".format(
+            self.process_group_name)
+        region_name = "" if not self.region else "_{}".format(self.region.name)
+        return process_group_name + region_name
+
+
+class CombineCategoriesTask(CombineBase):
+    category_names = law.CSVParameter(default=("base",), description="names of categories "
+        "to run, default: (base,)")
+    combine_categories = luigi.BoolParameter(default=False, description="whether to run on the "
+        "combined datacard or per category, default: False (per category)")
+
+    def get_output_postfix(self, **kwargs):
+        postfix = super(CombineCategoriesTask, self).get_output_postfix()
+        if not self.combine_categories:
+            postfix += "_" + list(self.category_names)[self.branch]
+        return postfix
+
+    def store_parts(self):
+        parts = super(CombineCategoriesTask, self).store_parts()
+        # parts["category_name"] = "cat_combined"
+        del parts["category_name"]
+        return parts
+
+
+class CreateDatacards(CombineBase):
     """
     Task that creates datacards for its use inside the combine framework
 
@@ -125,9 +173,6 @@ class CreateDatacards(FeaturePlot, FitBase):
 
     :param additional_lines: Additional lines to write at the end of the datacard.
     :type additional_lines: list of `str`
-
-    :param fit_models: filename with fit models to use in the fit
-    :type fit_models: str
 
     :param counting: whether the datacard should consider a counting experiment
     :type counting: bool
@@ -139,8 +184,6 @@ class CreateDatacards(FeaturePlot, FitBase):
         "end of the datacard")
     propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate"
         "systematics to qcd background, default: False")
-    fit_models = luigi.Parameter(default="", description="filename with fit models to use "
-        "in the fit, default: none (binned fit)")
     counting = luigi.BoolParameter(default=False, description="whether the datacard should consider "
         "a counting experiment, default: False")
 
@@ -202,13 +245,6 @@ class CreateDatacards(FeaturePlot, FitBase):
             reqs["fits"]["data_obs"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
 
             return reqs
-
-    def get_output_postfix(self, **kwargs):
-        self.process_group_name = kwargs.pop("process_group_name", self.process_group_name)
-        process_group_name = "" if self.process_group_name == "default" else "_{}".format(
-            self.process_group_name)
-        region_name = "" if not self.region else "_{}".format(self.region.name)
-        return process_group_name + region_name
 
     def output(self):
         """
@@ -1010,17 +1046,10 @@ class InspectFitSyst(Fit):
                 json.dump(out, f, indent=4)
 
 
-class CombineDatacards(CreateDatacards):
-    category_names = law.CSVParameter(default=("base",), description="names of categories "
-        "to run, default: (base,)")
+class CombineDatacards(CombineCategoriesTask):
 
     category_name = "base"
-
-    def store_parts(self):
-        parts = super(CombineDatacards, self).store_parts()
-        # parts["category_name"] = "cat_combined"
-        del parts["category_name"]
-        return parts
+    combine_categories = True
 
     def requires(self):
         return {
@@ -1054,16 +1083,10 @@ class CombineDatacards(CreateDatacards):
             os.system(cmd)
 
 
-class CreateWorkspace(CreateDatacards, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
-    category_names = law.CSVParameter(default=("base",), description="names of categories "
-        "to run, default: (base,)")
-    higgs_mass = luigi.IntParameter(default=125, description="Higgs mass to be used inside "
-        "combine, default: 125")
-    combine_categories = luigi.BoolParameter(default=False, description="whether to run on the "
-        "combined datacard or per category, default: False (per category)")
+class CreateWorkspace(CreateDatacards, CombineCategoriesTask,
+        law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
 
-    def __init__(self, *args, **kwargs):
-        super(CreateWorkspace, self).__init__(*args, **kwargs)
+    category_name = "base"
 
     def create_branch_map(self):
         if self.combine_categories:
@@ -1087,17 +1110,6 @@ class CreateWorkspace(CreateDatacards, law.LocalWorkflow, HTCondorWorkflow, SGEW
                 for category_name in self.category_names
             }
         }
-
-    def store_parts(self):
-        # if self.combine_categories:
-        return CombineDatacards.store_parts(self)
-        # return CreateDatacards.store_parts(self)
-
-    def get_output_postfix(self, **kwargs):
-        postfix = super(CreateWorkspace, self).get_output_postfix()
-        if not self.combine_categories:
-            postfix += "_" + list(self.category_names)[self.branch]
-        return postfix
 
     def output(self):
         assert not self.combine_categories or (
@@ -1125,8 +1137,6 @@ class RunCombine(CreateWorkspace):
         description="combine method to be considered, default: False")
     unblind = luigi.BoolParameter(default=False, description="whether to run combine unblinded, "
         "default: False")
-    pois = law.CSVParameter(default=("r",), description="parameters of interest to be considered, "
-        "default: r")
 
     def workflow_requires(self):
         return {"data": CreateWorkspace.vreq(self)}
@@ -1168,17 +1178,76 @@ class RunCombine(CreateWorkspace):
 
 
 class PullsAndImpacts(RunCombine):
+    # based on https://gitlab.cern.ch/hh/tools/inference/-/blob/master/dhi/tasks/pulls_impacts.py
     def get_selected_nuisances(self, nuisances):
         return nuisances
 
     def extract_nuisance_names(self, path):
+        def prepare_prefit_var(var, pdf, epsilon=0.001):
+            """
+            Prepares a RooRealVar *var* for the extraction of its prefit values using the corresponding
+            *pdf* object. Internally, this is done using a made-up fit with precision *epsilon* following a
+            recipe in the CombineHarvester (see
+            https://github.com/cms-analysis/CombineHarvester/blob/f1029e160701140ce3a1c1f44a991315fd272886/CombineTools/python/combine/utils.py#L87-L95).  # noqa
+            *var* is returned.
+            """
+
+            if var and pdf:
+                nll = ROOT.RooConstraintSum("NLL", "", ROOT.RooArgSet(pdf), ROOT.RooArgSet(var))
+                minimizer = ROOT.RooMinimizer(nll)
+                minimizer.setEps(epsilon)
+                minimizer.setErrorLevel(0.5)
+                minimizer.setPrintLevel(-1)
+                minimizer.setVerbose(False)
+                minimizer.minimize("Minuit2", "migrad")
+                minimizer.minos(ROOT.RooArgSet(var))
+
+            return var
+
         tf = ROOT.TFile.Open(path)
         w = tf.Get("w")
         config = w.genobj("ModelConfig")
         all_params = config.GetPdf().getParameters(config.GetObservables())
-        return [param.GetName() for param in all_params
-            if (isinstance(param, ROOT.RooRealVar) and not param.isConstant()
-                and param.GetName() not in self.pois)]
+        params = {}
+        for param in all_params:
+            if not (isinstance(param, ROOT.RooRealVar) and not param.isConstant()
+                    and param.GetName() not in self.pois):
+                continue
+
+            pdf = w.pdf(f"{param.GetName()}_Pdf")
+            gobs = w.var(f"{param.GetName()}_In")
+            if pdf and gobs:
+                prepare_prefit_var(param, pdf)
+                nom = param.getVal()
+                prefit = [nom + param.getErrorLo(), nom, nom + param.getErrorHi()]
+                if isinstance(pdf, ROOT.RooGaussian):
+                    pdf_type = "Gaussian"
+                elif isinstance(pdf, ROOT.RooPoisson):
+                    pdf_type = "Poisson"
+                elif isinstance(pdf, ROOT.RooBifurGauss):
+                    pdf_type = "AsymmetricGaussian"
+                else:
+                    pdf_type = "Unrecognised"
+            elif not pdf or isinstance(pdf, ROOT.RooUniform):
+                pdf_type = "Unconstrained"
+                nom = param.getVal()
+                prefit = [nom, nom, nom]
+
+            # get groups
+            start = "group_"
+            groups = [attr.replace(start, "")
+                for attr in param.attributes() if attr.startswith(start)]
+
+            # store it
+            params[param.GetName()] = {
+                "name": param.GetName(),
+                "type": pdf_type,
+                "groups": groups,
+                "prefit": prefit,
+            }
+
+        tf.Close()
+        return params
 
     @law.workflow_property(setter=False, empty_value=law.no_value, cache=True)
     def workspace_parameters(self):
@@ -1194,7 +1263,7 @@ class PullsAndImpacts(RunCombine):
         self.nuisance_names = [self.pois[0]]
         params = self.get_selected_nuisances(self.workspace_parameters)
         if params:
-            self.nuisance_names.extend(params)
+            self.nuisance_names.extend(list(params.keys()))
             self.cache_branch_map = True
         return self.nuisance_names
 
@@ -1216,7 +1285,6 @@ class PullsAndImpacts(RunCombine):
         }
 
     def run(self):
-        assert(self.combine_categories or self.category_names == 1)
         inp = self.input()["collection"].targets[0]
         for feature in self.features:
             w_path = inp[feature.name].path
@@ -1246,6 +1314,85 @@ class PullsAndImpacts(RunCombine):
                 create_file_dir(self.output()[feature.name]["root"].path))
 
             tree = uproot.open(self.output()[feature.name]["root"].path)["limit"]
-            values = tree[self.branch_data].array().tolist()
+            results = {
+                self.branch_data: tree[self.branch_data].array().tolist()
+            }
+            if self.branch_data != self.pois[0]:
+                results[self.pois[0]] = tree[self.pois[0]].array().tolist()
+                results["prefit"] = self.workspace_parameters[self.branch_data]["prefit"]
+                results["groups"] = self.workspace_parameters[self.branch_data]["groups"]
+                results["type"] = self.workspace_parameters[self.branch_data]["type"]
+
             with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
-                json.dump({"results": values}, f)
+                json.dump(results, f)
+
+
+class MergePullsAndImpacts(CombineCategoriesTask):
+    category_name = "base"
+
+    def requires(self):
+        return PullsAndImpacts.vreq(self)
+
+    def output(self):
+        assert(self.combine_categories or self.category_names == 1)
+        return {
+            feature.name: self.local_target("results_{}{}.json".format(
+                feature.name, self.get_output_postfix()))
+            for feature in self.features
+        }
+
+    def run(self):
+        inp = self.input()["collection"].targets
+        nuisance_names = list(self.requires().get_branch_map().values())  # includes POI
+        for feature in self.features:
+            res = {"POIs": [], "params": []}
+            with open(inp[0][feature.name]["json"].path) as f:
+                d = json.load(f)
+            res["POIs"].append({
+                "name": nuisance_names[0],
+                "fit": [d[self.pois[0]][1], d[self.pois[0]][0], d[self.pois[0]][2]]
+            })
+
+            for inuis, nuisance_name in enumerate(nuisance_names[1:]):
+                res["params"].append({"name": nuisance_name})
+                with open(inp[inuis + 1][feature.name]["json"].path) as f:
+                    d = json.load(f)
+                res["params"][-1]["fit"] = [
+                    d[nuisance_name][1], d[nuisance_name][0], d[nuisance_name][2]
+                ]
+                res["params"][-1][self.pois[0]] = [
+                    d[self.pois[0]][1], d[self.pois[0]][0], d[self.pois[0]][2]
+                ]
+                res["params"][-1]["impact_" + self.pois[0]] = max(
+                    list(map(abs, (res["params"][-1][self.pois[0]][1] -
+                        res["params"][-1][self.pois[0]][i] for i in [0, 2])))
+                )
+                res["params"][-1]["prefit"] = d["prefit"]
+                res["params"][-1]["groups"] = d["groups"]
+                res["params"][-1]["type"] = d["type"]
+
+            with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
+                json.dump(res, f, indent=4)
+
+
+class PlotPullsAndImpacts(MergePullsAndImpacts):
+    def requires(self):
+        return MergePullsAndImpacts.vreq(self)
+
+    def output(self):
+        assert(self.combine_categories or self.category_names == 1)
+        return {
+            feature.name: self.local_target("impacts_{}{}.pdf".format(
+                feature.name, self.get_output_postfix()))
+            for feature in self.features
+        }
+
+    def run(self):
+        inp = self.input()
+        for feature in self.features:
+            out = randomize("impacts")
+            os.system("plotImpacts.py -i {} -o {}".format(
+                inp[feature.name].path,
+                out
+            ))
+            move(out + ".pdf", self.output()[feature.name].path)
