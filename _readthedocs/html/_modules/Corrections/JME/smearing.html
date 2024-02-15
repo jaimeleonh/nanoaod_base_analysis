@@ -82,6 +82,7 @@
 <span class="kn">import</span> <span class="nn">tempfile</span>
 
 <span class="kn">from</span> <span class="nn">analysis_tools.utils</span> <span class="kn">import</span> <span class="n">import_root</span>
+<span class="kn">from</span> <span class="nn">Base.Modules.baseModules</span> <span class="kn">import</span> <span class="n">JetLepMetSyst</span>
 
 <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
 
@@ -105,16 +106,17 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span> <span class="o">=</span> <span class="n">jerInputFileName</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">jerUncertaintyInputFileName</span> <span class="o">=</span> <span class="n">jerUncertaintyInputFileName</span>
 
-            <span class="k">if</span> <span class="s2">&quot;/libCorrectionsJME.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
-                <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libCorrectionsJME.so&quot;</span><span class="p">)</span>
-            <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Corrections/JME&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/jetSmearer.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
-
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span>
-                <span class="s1">&#39;auto jet_smearer = jetSmearer(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;);&#39;</span> <span class="o">%</span> <span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerUncertaintyInputFileName</span><span class="p">)</span>
-            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;_jetSmearer&quot;</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;_jetSmearer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;jetSmearer&quot;</span>
+                <span class="k">if</span> <span class="s2">&quot;/libCorrectionsJME.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
+                    <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libCorrectionsJME.so&quot;</span><span class="p">)</span>
+                <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Corrections/JME&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/jetSmearer.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span>
+                    <span class="s1">&#39;auto jet_smearer = jetSmearer(&quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;, &quot;</span><span class="si">%s</span><span class="s1">&quot;);&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFilePath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerInputFileName</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jerUncertaintyInputFileName</span><span class="p">)</span>
+                <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
@@ -233,32 +235,44 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">jetVarRDFProducer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
-
-<span class="k">class</span> <span class="nc">metSmearerRDFProducer</span><span class="p">():</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">metSmearerRDFProducer</span><span class="p">(</span><span class="n">JetLepMetSyst</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isMC</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span> <span class="o">=</span> <span class="n">isMC</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
             <span class="k">if</span> <span class="s2">&quot;/libCorrectionsJME.so&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">GetLibraries</span><span class="p">():</span>
                 <span class="n">ROOT</span><span class="o">.</span><span class="n">gSystem</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="s2">&quot;libCorrectionsJME.so&quot;</span><span class="p">)</span>
             <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/src/Corrections/JME&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_BASE&quot;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMT_CMSSW_VERSION&quot;</span><span class="p">))</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/metSmearer.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
-            <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s1">&#39;auto met_smearer = metSmearer();&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;_METShift&quot;</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;_METShift&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;METShift&quot;</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gROOT</span><span class="o">.</span><span class="n">ProcessLine</span><span class="p">(</span><span class="s2">&quot;.L </span><span class="si">{}</span><span class="s2">/interface/metShift.h&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">))</span>
+                <span class="n">ROOT</span><span class="o">.</span><span class="n">gInterpreter</span><span class="o">.</span><span class="n">Declare</span><span class="p">(</span><span class="s1">&#39;auto met_shifter = metShift();&#39;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
         <span class="n">branches</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MET_smeared_pt&quot;</span><span class="p">,</span> <span class="s2">&quot;MET_smeared_phi&quot;</span><span class="p">]</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met&quot;</span><span class="p">,</span> <span class="s2">&quot;met_smearer.get_smeared_met(&quot;</span>
-            <span class="s2">&quot;Jet_pt, Jet_eta, Jet_phi, Jet_mass, MET_pt, MET_phi, jet_smear_factor)&quot;</span><span class="p">)</span>
+        <span class="n">branches_up</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MET_smeared_pt_up&quot;</span><span class="p">,</span> <span class="s2">&quot;MET_smeared_phi_up&quot;</span><span class="p">]</span>
+        <span class="n">branches_down</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MET_smeared_pt_down&quot;</span><span class="p">,</span> <span class="s2">&quot;MET_smeared_phi_down&quot;</span><span class="p">]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Jet_eta, Jet_phi, Jet_pt, Jet_mass, Jet_pt_nom, Jet_mass_nom, MET_pt, MET_phi)&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met_up&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Jet_eta, Jet_phi, Jet_pt, Jet_mass, Jet_pt_smeared_up, Jet_mass_smeared_up, MET_pt, MET_phi)&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met_down&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Jet_eta, Jet_phi, Jet_pt, Jet_mass, Jet_pt_smeared_down, Jet_mass_smeared_down, MET_pt, MET_phi)&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">branches</span><span class="p">):</span>
             <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch</span><span class="p">,</span> <span class="s2">&quot;smeared_met[</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="n">ib</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span>
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">branches_up</span><span class="p">):</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch</span><span class="p">,</span> <span class="s2">&quot;smeared_met_up[</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="n">ib</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ib</span><span class="p">,</span> <span class="n">branch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">branches_down</span><span class="p">):</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branch</span><span class="p">,</span> <span class="s2">&quot;smeared_met_down[</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="n">ib</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span> <span class="o">+</span> <span class="n">branches_up</span> <span class="o">+</span> <span class="n">branches_down</span>
 
 
 <div class="viewcode-block" id="metSmearerRDF"><a class="viewcode-back" href="../../../modules/JME/smearing.html#Corrections.JME.smearing.metSmearerRDF">[docs]</a><span class="k">def</span> <span class="nf">metSmearerRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Module to compute MET pt and phi after applying smearing to all jets</span>
+<span class="sd">    and up and down variations</span>
 
 <span class="sd">    YAML sintaxis:</span>
 
@@ -272,7 +286,61 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">metSmearerRDFProducer</span><span class="p">(</span><span class="n">isMC</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">);</span></div>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">metSmearerRDFProducer</span><span class="p">(</span><span class="n">isMC</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<span class="k">class</span> <span class="nc">metJetTauSmearerRDFProducer</span><span class="p">(</span><span class="n">metSmearerRDFProducer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isMC</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="p">[]</span>
+        <span class="n">branches</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MET_smeared_pt&quot;</span><span class="p">,</span> <span class="s2">&quot;MET_smeared_phi&quot;</span><span class="p">]</span>
+        <span class="n">branches_up</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MET_smeared_pt_up&quot;</span><span class="p">,</span> <span class="s2">&quot;MET_smeared_phi_up&quot;</span><span class="p">]</span>
+        <span class="n">branches_down</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MET_smeared_pt_down&quot;</span><span class="p">,</span> <span class="s2">&quot;MET_smeared_phi_down&quot;</span><span class="p">]</span>
+        <span class="n">branches_tes_up</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MET_smeared_pt_corr_up&quot;</span><span class="p">,</span> <span class="s2">&quot;MET_smeared_phi_corr_up&quot;</span><span class="p">]</span>
+        <span class="n">branches_tes_down</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MET_smeared_pt_corr_down&quot;</span><span class="p">,</span> <span class="s2">&quot;MET_smeared_phi_corr_down&quot;</span><span class="p">]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Jet_eta, Jet_phi, Jet_pt, Jet_mass, Jet_pt_nom, Jet_mass_nom, MET_pt, MET_phi)&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;tes_smeared_met&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Tau_eta, Tau_phi, Tau_pt, Tau_mass, Tau_pt_corr, Tau_mass_corr, smeared_met[0], smeared_met[1])&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;MET_smeared_pt&quot;</span><span class="p">,</span> <span class="s2">&quot;tes_smeared_met[0]&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;MET_smeared_phi&quot;</span><span class="p">,</span> <span class="s2">&quot;tes_smeared_met[1]&quot;</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met_up&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Jet_eta, Jet_phi, Jet_pt_nom, Jet_mass_nom, Jet_pt_smeared_up, Jet_mass_smeared_up, MET_smeared_pt, MET_smeared_phi)&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met_down&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Jet_eta, Jet_phi, Jet_pt_nom, Jet_mass_nom, Jet_pt_smeared_down, Jet_mass_smeared_down, MET_smeared_pt, MET_smeared_phi)&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met_corr_up&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Tau_eta, Tau_phi, Tau_pt_corr, Tau_mass_corr, Tau_pt_corr_up, Tau_mass_corr_up, MET_smeared_pt, MET_smeared_phi)&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;smeared_met_corr_down&quot;</span><span class="p">,</span> <span class="s2">&quot;met_shifter.get_shifted_met(&quot;</span>
+            <span class="s2">&quot;Tau_eta, Tau_phi, Tau_pt_corr, Tau_mass_corr, Tau_pt_corr_down, Tau_mass_corr_down, MET_smeared_pt, MET_smeared_phi)&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches_up</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;smeared_met_up[0]&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches_up</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;smeared_met_up[1]&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches_down</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;smeared_met_down[0]&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches_down</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;smeared_met_down[1]&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches_tes_up</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;smeared_met_corr_up[0]&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches_tes_up</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;smeared_met_corr_up[1]&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches_tes_down</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;smeared_met_corr_down[0]&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="n">branches_tes_down</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;smeared_met_corr_down[1]&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">branches</span> <span class="o">+</span> <span class="n">branches_up</span> <span class="o">+</span> <span class="n">branches_down</span> <span class="o">+</span> <span class="n">branches_tes_up</span> <span class="o">+</span> <span class="n">branches_tes_down</span>
+
+<span class="k">def</span> <span class="nf">metJetTauSmearerRDF</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Module to compute MET pt and phi after applying smearing to all jets and tau energy scale</span>
+<span class="sd">    and up and down variations</span>
+
+<span class="sd">    YAML sintaxis:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        codename:</span>
+<span class="sd">            name: metJetTauSmearerRDF</span>
+<span class="sd">            path: Base.Modules.smearing</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                isMC: self.dataset.process.isMC</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">isMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;isMC&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">metJetTauSmearerRDFProducer</span><span class="p">(</span><span class="n">isMC</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </pre></div>
 
            </div>

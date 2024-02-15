@@ -42,3 +42,8 @@ Usage
   the different sites by typing on your terminal (here for the european redirector) 
   ``xrdfs xrootd-cms.infn.it locate -h /one_of_the_files_from_DAS_dataset.root``. The ones where it says ``Server`` are valid.
   TIP: If you're running on lxplus, try to use the T2_CH_CERN prefix when possible. It also runs much faster.
+
+.. dropdown:: The documentation doesn't compile, It gets this error:
+   ``Could not import extension sphinx.builders.linkcheck (exception: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'OpenSSL 1.0.2k-fips  26 Jan 2017'. See: https://github.com/urllib3/urllib3/issues/2168) make: *** [Makefile:20: html] Error 2``
+
+  Run ``cmt_pip_install urllib3==1.26.6`` and try again. 
