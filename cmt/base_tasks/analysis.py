@@ -146,6 +146,16 @@ class CombineBase(FeaturePlot, FitBase):
 
 
 class CombineCategoriesTask(CombineBase):
+    """
+    Base task for all combine-related tasks with multiple categories
+
+    :param category_names: names of categories to run
+    :type category_names: list of `str`
+
+    :param combine_categories: whether to run on the combined datacard or per category
+    :type combine_categories: bool
+
+    """
     category_names = law.CSVParameter(default=("base",), description="names of categories "
         "to run, default: (base,)")
     combine_categories = luigi.BoolParameter(default=False, description="whether to run on the "
@@ -174,6 +184,9 @@ class CreateDatacards(CombineBase):
     :param additional_lines: Additional lines to write at the end of the datacard.
     :type additional_lines: list of `str`
 
+    :param propagate_syst_qcd: Whether to propagate systematics to estimated qcd background.
+    :type propagate_syst_qcd: bool
+
     :param counting: whether the datacard should consider a counting experiment
     :type counting: bool
     """
@@ -183,7 +196,7 @@ class CreateDatacards(CombineBase):
     additional_lines = law.CSVParameter(default=(), description="addtional lines to write at the "
         "end of the datacard")
     propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate"
-        "systematics to qcd background, default: False")
+        "systematics to estimated qcd background, default: False")
     counting = luigi.BoolParameter(default=False, description="whether the datacard should consider "
         "a counting experiment, default: False")
 
@@ -815,6 +828,22 @@ class Fit(FeaturePlot, FitBase):
     """
     Task that run fits over FeaturePlot histograms
 
+    :param method: Fitting method to consider. To choose between `voigtian`, `polynomial`,
+        `exponential`, `powerlaw`.
+    :type method: str
+
+    :param process_name: Process name to consider.
+    :type process_name: str
+
+    :param x_range: Range of the x axis to consider in the fitting.
+    :type x_range: Two comma-separated `float`.
+
+    :param blind_range: Range of the x axis to blind in the fitting.
+    :type blind_range: Two comma-separated `float`.
+
+    :param fit_parameters: Initial values for the parameters involved in the fit.
+    :type fit_parameters: `str` representing a dict (e.g. '{\"mean\": \"(20, -100, 100)\"}').
+
     """
 
     method = luigi.ChoiceParameter(choices=("voigtian", "polynomial", "exponential", "powerlaw"),
@@ -865,6 +894,9 @@ class Fit(FeaturePlot, FitBase):
         }
 
     def run(self):
+        """
+        Obtains the fits per feature and systematic.
+        """
         inputs = self.input()
 
         assert self.process_name in self.config.process_group_names[self.process_group_name]
@@ -976,6 +1008,11 @@ class Fit(FeaturePlot, FitBase):
 
 
 class InspectFitSyst(Fit):
+    """
+    Task that extracts systematic effects on the fits.
+
+    """
+
     def requires(self):
         """
         Needs as input the json file provided by the Fit task
@@ -984,8 +1021,7 @@ class InspectFitSyst(Fit):
 
     def output(self):
         """
-        Returns, per feature, one json file storing the fit results and one root file
-        storing the workspace
+        Returns, per feature, one json file and one txt file storing the inspection results
         """
         region_name = "" if not self.region else "__{}".format(self.region.name)
         return {
@@ -1047,11 +1083,18 @@ class InspectFitSyst(Fit):
 
 
 class CombineDatacards(CombineCategoriesTask):
+    """
+    Task that combines datacards coming from :class:`.CreateDatacards`.
+
+    """
 
     category_name = "base"
     combine_categories = True
 
     def requires(self):
+        """
+        Needs as input the datacards provided by the CreateDatacards task for each category
+        """
         return {
             category_name: CreateDatacards.vreq(self, category_name=category_name,
                 _exclude=["category_names"])
@@ -1059,6 +1102,9 @@ class CombineDatacards(CombineCategoriesTask):
         }
 
     def output(self):
+        """
+        Outputs a txt file with the merged datacard
+        """
         return {
             feature.name: self.local_target("{}{}.txt".format(
                 feature.name, self.get_output_postfix()))
@@ -1066,6 +1112,9 @@ class CombineDatacards(CombineCategoriesTask):
         }
 
     def run(self):
+        """
+        Combines all datacards using combine's combineCards.py
+        """
         cmd = "combineCards.py "
         inputs = self.input()
         for feature in self.features:
@@ -1085,15 +1134,27 @@ class CombineDatacards(CombineCategoriesTask):
 
 class CreateWorkspace(CreateDatacards, CombineCategoriesTask,
         law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
+    """
+    Task that creates the Combine workspace from the datacards obtained from
+    :class:`.CreateDatacards` or :class:`.CombineDatacards`.
+
+    """
 
     category_name = "base"
 
     def create_branch_map(self):
+        """
+        Returns one branch if categories are combined or one branch per category
+        """
         if self.combine_categories:
             return 1
         return len(self.category_names)
 
     def requires(self):
+        """
+        Requires the datacard coming from CombineDatacards or one datacard per category obtained by
+        CreateDatacards.
+        """
         if self.combine_categories:
             return CombineDatacards.vreq(self)
         return {
@@ -1102,6 +1163,10 @@ class CreateWorkspace(CreateDatacards, CombineCategoriesTask,
         }
 
     def workflow_requires(self):
+        """
+        Requires the datacard coming from CombineDatacards or one datacard per category obtained by
+        CreateDatacards.
+        """
         if self.combine_categories:
             return {"data": CombineDatacards.vreq(self)}
         return {
@@ -1112,6 +1177,9 @@ class CreateWorkspace(CreateDatacards, CombineCategoriesTask,
         }
 
     def output(self):
+        """
+        Outputs one root file with the workspace if categories are combined or one per category.
+        """
         assert not self.combine_categories or (
             self.combine_categories and len(self.category_names) > 1)
         return {
@@ -1121,6 +1189,9 @@ class CreateWorkspace(CreateDatacards, CombineCategoriesTask,
         }
 
     def run(self):
+        """
+        Obtains the workspace for each provided datacard.
+        """
         inputs = self.input()
         for feature in self.features:
             if not self.combine_categories:
@@ -1133,18 +1204,41 @@ class CreateWorkspace(CreateDatacards, CombineCategoriesTask,
 
 
 class RunCombine(CreateWorkspace):
+    """
+    Task that runs the combine tool over the workspace created by
+    :class:`.CreateWorkspace`.
+
+    :param method: Combine method to consider. Only `limits` (AsymptoticLimits) is implemented for
+        now.
+    :type method: str
+
+    :param unblind: Whether to run combine unblinded.
+    :type method: bool
+
+    """
+
     method = luigi.ChoiceParameter(choices=("limits",), default="limits",
         description="combine method to be considered, default: False")
     unblind = luigi.BoolParameter(default=False, description="whether to run combine unblinded, "
         "default: False")
 
     def workflow_requires(self):
+        """
+        Requires the workspace coming from CreateWorkspace.
+        """
         return {"data": CreateWorkspace.vreq(self)}
 
     def requires(self):
+        """
+        Requires the workspace coming from CreateWorkspace.
+        """
         return CreateWorkspace.vreq(self)
 
     def output(self):
+        """
+        Outputs one txt file and one root file in total or one of each per category with the results
+        of running combine
+        """
         assert not self.combine_categories or (
             self.combine_categories and len(self.category_names) > 1)
         return {
@@ -1157,6 +1251,9 @@ class RunCombine(CreateWorkspace):
         }
 
     def run(self):
+        """
+        Runs combine over the provided workspaces.
+        """
         if self.method == "limits":
             out_file = "higgsCombine{}.AsymptoticLimits.mH{}.root"
 
@@ -1178,7 +1275,12 @@ class RunCombine(CreateWorkspace):
 
 
 class PullsAndImpacts(RunCombine):
-    # based on https://gitlab.cern.ch/hh/tools/inference/-/blob/master/dhi/tasks/pulls_impacts.py
+    """
+    Task that obtains the pulls and impacts over the workspace created by :class:`.CreateWorkspace`.
+    Based on https://gitlab.cern.ch/hh/tools/inference/-/blob/master/dhi/tasks/pulls_impacts.py
+
+    """
+
     def get_selected_nuisances(self, nuisances):
         return nuisances
 
@@ -1260,6 +1362,9 @@ class PullsAndImpacts(RunCombine):
         super(PullsAndImpacts, self).__init__(*args, **kwargs)
 
     def create_branch_map(self):
+        """
+        Returns the nuisance parameters considered in the fit
+        """
         self.nuisance_names = [self.pois[0]]
         params = self.get_selected_nuisances(self.workspace_parameters)
         if params:
@@ -1268,12 +1373,21 @@ class PullsAndImpacts(RunCombine):
         return self.nuisance_names
 
     def workflow_requires(self):
+        """
+        Requires the workspace coming from CreateWorkspace.
+        """
         return {"data": CreateWorkspace.vreq(self, _exclude=["branches", "branch"])}
 
     def requires(self):
+        """
+        Requires the workspace coming from CreateWorkspace.
+        """
         return CreateWorkspace.vreq(self, _exclude=["branches", "branch"])
 
     def output(self):
+        """
+        Outputs one log, root file, and json per nuisance paramter.
+        """
         assert(self.combine_categories or self.category_names == 1)
         return {
             feature.name: {
@@ -1285,6 +1399,9 @@ class PullsAndImpacts(RunCombine):
         }
 
     def run(self):
+        """
+        Runs the combine commands needed for pulls and impacts computations.
+        """
         inp = self.input()["collection"].targets[0]
         for feature in self.features:
             w_path = inp[feature.name].path
@@ -1328,12 +1445,24 @@ class PullsAndImpacts(RunCombine):
 
 
 class MergePullsAndImpacts(CombineCategoriesTask):
+    """
+    Task that merges the pulls and impacts for each systematic obtained by :class:`.PullsAndImpacts`.
+
+    """
+
     category_name = "base"
 
     def requires(self):
+        """
+        Requires the json files coming from PullsAndImpacts.
+        """
         return PullsAndImpacts.vreq(self)
 
     def output(self):
+        """
+        Outputs one json file (in CombineHarvester format) with the results for all
+        nuisance parameters.
+        """
         assert(self.combine_categories or self.category_names == 1)
         return {
             feature.name: self.local_target("results_{}{}.json".format(
@@ -1342,6 +1471,9 @@ class MergePullsAndImpacts(CombineCategoriesTask):
         }
 
     def run(self):
+        """
+        Merges the results from the PullsAndImpacts task into one json file
+        """
         inp = self.input()["collection"].targets
         nuisance_names = list(self.requires().get_branch_map().values())  # includes POI
         for feature in self.features:
@@ -1376,10 +1508,21 @@ class MergePullsAndImpacts(CombineCategoriesTask):
 
 
 class PlotPullsAndImpacts(MergePullsAndImpacts):
+    """
+    Task that plots pulls and impacts coming from :class:`.MergePullsAndImpacts`.
+
+    """
+
     def requires(self):
+        """
+        Requires the json file with all pulls and impacts obtained by MergePullsAndImpacts.
+        """
         return MergePullsAndImpacts.vreq(self)
 
     def output(self):
+        """
+        Outputs one pdf with the pulls and impacts obtained by CombineHarvester.
+        """
         assert(self.combine_categories or self.category_names == 1)
         return {
             feature.name: self.local_target("impacts_{}{}.pdf".format(
@@ -1388,6 +1531,9 @@ class PlotPullsAndImpacts(MergePullsAndImpacts):
         }
 
     def run(self):
+        """
+        Plots the pulls and impacts using CombineHarvester's plotImpacts.py
+        """
         inp = self.input()
         for feature in self.features:
             out = randomize("impacts")
