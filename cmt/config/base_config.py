@@ -62,16 +62,15 @@ class Config():
 
 
     def add_datasets(self):
-        datasets = [
-            Dataset("example_ggf_sm",
-                    dataset="/GluGlutoHHto2B2Tau_kl-1p00_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/"
-                            "Run3Summer22EENanoAODv12-Poisson60KeepRAW_130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM",
-                    process=self.processes.get("example_ggf_sm"),
-                    # prefix="xrootd-cms.infn.it//",
-                    xs=0.03105,
-                    tags=["NanoAODv12"])
+        datasets = []
+        # Dataset("example_ggf_sm",
+        #         dataset="/GluGlutoHHto2B2Tau_kl-1p00_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/"
+        #                 "Run3Summer22EENanoAODv12-Poisson60KeepRAW_130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM",
+        #         process=self.processes.get("example_ggf_sm"),
+        #         # prefix="xrootd-cms.infn.it//",
+        #         xs=0.03443,
+        #         tags=["NanoAODv12"])
 
-        ]
         return ObjectCollection(datasets)
 
     def add_features(self):
