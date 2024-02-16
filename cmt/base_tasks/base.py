@@ -28,7 +28,7 @@ from abc import abstractmethod
 
 from analysis_tools.utils import import_root
 
-law.contrib.load("cms", "git", "htcondor", "root", "tasks", "telegram", "tensorflow", "wlcg")
+law.contrib.load("cms", "git", "htcondor", "slurm", "root", "tasks", "telegram", "tensorflow", "wlcg")
 
 class Target():
     def __init__(self, path, *args, **kwargs):
@@ -233,6 +233,7 @@ class DatasetTaskWithCategory(ConfigTaskWithCategory, DatasetTask):
         else:
             self.n_files_after_merging = 1
 
+
 class DatasetWrapperTask(ConfigTask):
 
     dataset_names = law.CSVParameter(default=(), description="names or name "
@@ -341,6 +342,58 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
 
     def htcondor_use_local_scheduler(self):
         return not self.htcondor_central_scheduler
+
+
+class SlurmWorkflow(law.slurm.SlurmWorkflow):
+    """
+    Batch systems are typically very heterogeneous by design, and so is Slurm. Law does not aim
+    to "magically" adapt to all possible Slurm setups which would certainly end in a mess.
+    Therefore we have to configure the base Slurm workflow in law.contrib.slurm to work with
+    the Maxwell cluster environment. In most cases, like in this example, only a minimal amount of
+    configuration is required.
+    """
+
+    slurm_partition = luigi.Parameter(
+        default="standard",
+        significant=False,
+        description="target queue partition; default: standard",
+    )
+    max_runtime = law.DurationParameter(
+        default=1.0,
+        unit="h",
+        significant=False,
+        description="the maximum job runtime; default unit is hours; default: 1h",
+    )
+
+    def slurm_output_directory(self):
+        # the directory where submission meta data should be stored
+        return law.LocalDirectoryTarget(self.local_path(store="$CMT_JOB_META_DIR"))
+
+    def slurm_bootstrap_file(self):
+        # each job can define a bootstrap file that is executed prior to the actual job
+        # configure it to be shared across jobs and rendered as part of the job itself
+        bootstrap_file = os.path.expandvars("$CMT_BASE/cmt/slurm_tools/bootstrap.sh")
+        return law.JobInputFile(bootstrap_file, share=True, render_job=True)
+
+    def slurm_job_config(self, config, job_num, branches):
+        # render_variables are rendered into all files sent with a job
+        config.render_variables["cmt_base"] = os.environ["CMT_BASE"]
+        config.render_variables["cmt_env_path"] = os.environ["PATH"]
+
+        # useful defaults
+        job_time = law.util.human_duration(
+            seconds=law.util.parse_duration(self.max_runtime, input_unit="h") - 1,
+            colon_format=True,
+        )
+        config.custom_content.append(("time", job_time))
+        config.custom_content.append(("nodes", 1))
+
+        # replace default slurm-SLURM_JOB_ID.out and slurm-SLURM_JOB_ID.err;
+        # %x is a job-name (or script name when there is no job-name)
+        config.custom_content.append("#SBATCH -o %x-%j.out")
+        config.custom_content.append("#SBATCH -e %x-%j.err")
+
+        return config
 
 
 class SGEWorkflow(SGEWorkflowTmp):
