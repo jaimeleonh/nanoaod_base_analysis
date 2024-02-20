@@ -55,7 +55,18 @@
 <li class="toctree-l3"><a class="reference internal" href="preprocessing.html">cmt.base_tasks.preprocessing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="plotting.html">cmt.base_tasks.plotting</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">cmt.base_tasks.analysis</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#class-fitbase">Class <code class="docutils literal notranslate"><span class="pre">FitBase</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-combinebase">Class <code class="docutils literal notranslate"><span class="pre">CombineBase</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-combinecategoriestask">Class <code class="docutils literal notranslate"><span class="pre">CombineCategoriesTask</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#class-createdatacards">Class <code class="docutils literal notranslate"><span class="pre">CreateDatacards</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-fit">Class <code class="docutils literal notranslate"><span class="pre">Fit</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-inspectfitsyst">Class <code class="docutils literal notranslate"><span class="pre">InspectFitSyst</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-combinedatacards">Class <code class="docutils literal notranslate"><span class="pre">CombineDatacards</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-createworkspace">Class <code class="docutils literal notranslate"><span class="pre">CreateWorkspace</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-runcombine">Class <code class="docutils literal notranslate"><span class="pre">RunCombine</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-pullsandimpacts">Class <code class="docutils literal notranslate"><span class="pre">PullsAndImpacts</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-mergepullsandimpacts">Class <code class="docutils literal notranslate"><span class="pre">MergePullsAndImpacts</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#class-plotpullsandimpacts">Class <code class="docutils literal notranslate"><span class="pre">PlotPullsAndImpacts</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -100,23 +111,108 @@
 <ul class="simple">
 <li><p><a class="reference internal" href="#module-cmt.base_tasks.analysis" id="id1">cmt.base_tasks.analysis</a></p>
 <ul>
-<li><p><a class="reference internal" href="#class-createdatacards" id="id2">Class <code class="docutils literal notranslate"><span class="pre">CreateDatacards</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-fitbase" id="id2">Class <code class="docutils literal notranslate"><span class="pre">FitBase</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-combinebase" id="id3">Class <code class="docutils literal notranslate"><span class="pre">CombineBase</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-combinecategoriestask" id="id4">Class <code class="docutils literal notranslate"><span class="pre">CombineCategoriesTask</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-createdatacards" id="id5">Class <code class="docutils literal notranslate"><span class="pre">CreateDatacards</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-fit" id="id6">Class <code class="docutils literal notranslate"><span class="pre">Fit</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-inspectfitsyst" id="id7">Class <code class="docutils literal notranslate"><span class="pre">InspectFitSyst</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-combinedatacards" id="id8">Class <code class="docutils literal notranslate"><span class="pre">CombineDatacards</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-createworkspace" id="id9">Class <code class="docutils literal notranslate"><span class="pre">CreateWorkspace</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-runcombine" id="id10">Class <code class="docutils literal notranslate"><span class="pre">RunCombine</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-pullsandimpacts" id="id11">Class <code class="docutils literal notranslate"><span class="pre">PullsAndImpacts</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-mergepullsandimpacts" id="id12">Class <code class="docutils literal notranslate"><span class="pre">MergePullsAndImpacts</span></code></a></p></li>
+<li><p><a class="reference internal" href="#class-plotpullsandimpacts" id="id13">Class <code class="docutils literal notranslate"><span class="pre">PlotPullsAndImpacts</span></code></a></p></li>
 </ul>
 </li>
 </ul>
 </nav>
+<section id="class-fitbase">
+<h2><a class="toc-backref" href="#id2" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">FitBase</span></code></a><a class="headerlink" href="#class-fitbase" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.FitBase">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">FitBase</span></span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#FitBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.FitBase" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+</dd></dl>
+
+</section>
+<section id="class-combinebase">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">CombineBase</span></code></a><a class="headerlink" href="#class-combinebase" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CombineBase">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">CombineBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CombineBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CombineBase" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="plotting.html#cmt.base_tasks.plotting.FeaturePlot" title="cmt.base_tasks.plotting.FeaturePlot"><code class="xref py py-class docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a>, <a class="reference internal" href="#cmt.base_tasks.analysis.FitBase" title="cmt.base_tasks.analysis.FitBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">FitBase</span></code></a></p>
+<p>Base task for all combine-related tasks</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pois</strong> (list of <cite>str</cite>) – Parameters-of-interest to be considered</p></li>
+<li><p><strong>higgs_mass</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><em>int</em></a>) – Higgs mass to be considered inside combine</p></li>
+<li><p><strong>fit_models</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a>) – filename with fit models to use in the fit</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CombineBase.get_output_postfix">
+<span class="sig-name descname"><span class="pre">get_output_postfix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CombineBase.get_output_postfix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CombineBase.get_output_postfix" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>string to be included in the output filenames</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-combinecategoriestask">
+<h2><a class="toc-backref" href="#id4" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">CombineCategoriesTask</span></code></a><a class="headerlink" href="#class-combinecategoriestask" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CombineCategoriesTask">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">CombineCategoriesTask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CombineCategoriesTask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CombineCategoriesTask" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.CombineBase" title="cmt.base_tasks.analysis.CombineBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">CombineBase</span></code></a></p>
+<p>Base task for all combine-related tasks with multiple categories</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>category_names</strong> (list of <cite>str</cite>) – names of categories to run</p></li>
+<li><p><strong>combine_categories</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><em>bool</em></a>) – whether to run on the combined datacard or per category</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CombineCategoriesTask.get_output_postfix">
+<span class="sig-name descname"><span class="pre">get_output_postfix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CombineCategoriesTask.get_output_postfix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CombineCategoriesTask.get_output_postfix" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>string to be included in the output filenames</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="class-createdatacards">
-<h2><a class="toc-backref" href="#id2" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">CreateDatacards</span></code></a><a class="headerlink" href="#class-createdatacards" title="Permalink to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id5" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">CreateDatacards</span></code></a><a class="headerlink" href="#class-createdatacards" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateDatacards">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">CreateDatacards</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateDatacards"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateDatacards" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="plotting.html#cmt.base_tasks.plotting.FeaturePlot" title="cmt.base_tasks.plotting.FeaturePlot"><code class="xref py py-class docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.CombineBase" title="cmt.base_tasks.analysis.CombineBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">CombineBase</span></code></a></p>
 <p>Task that creates datacards for its use inside the combine framework</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>automcstats</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – Value used for autoMCStats inside the datacard, -1 to avoid using it.</p></li>
+<li><p><strong>automcstats</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><em>int</em></a>) – Value used for autoMCStats inside the datacard, -1 to avoid using it.</p></li>
 <li><p><strong>additional_lines</strong> (list of <cite>str</cite>) – Additional lines to write at the end of the datacard.</p></li>
+<li><p><strong>propagate_syst_qcd</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><em>bool</em></a>) – Whether to propagate systematics to estimated qcd background.</p></li>
+<li><p><strong>counting</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><em>bool</em></a>) – whether the datacard should consider a counting experiment</p></li>
 </ul>
 </dd>
 </dl>
@@ -134,17 +230,293 @@ storing the histograms</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateDatacards.get_norm_systematics">
-<span class="sig-name descname"><span class="pre">get_norm_systematics</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateDatacards.get_norm_systematics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateDatacards.get_norm_systematics" title="Permalink to this definition"></a></dt>
-<dd><p>Method to extract all normalization systematics from the KLUB files.
-It considers the processes given by the process_group_name and their parents.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateDatacards.run">
 <span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateDatacards.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateDatacards.run" title="Permalink to this definition"></a></dt>
 <dd><p>Splits the processes into data and non-data. Per feature, loads the input histograms, 
 creates the output histograms and the datacard inside the txt file.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-fit">
+<h2><a class="toc-backref" href="#id6" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">Fit</span></code></a><a class="headerlink" href="#class-fit" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.Fit">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">Fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#Fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.Fit" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="plotting.html#cmt.base_tasks.plotting.FeaturePlot" title="cmt.base_tasks.plotting.FeaturePlot"><code class="xref py py-class docutils literal notranslate"><span class="pre">FeaturePlot</span></code></a>, <a class="reference internal" href="#cmt.base_tasks.analysis.FitBase" title="cmt.base_tasks.analysis.FitBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">FitBase</span></code></a></p>
+<p>Task that run fits over FeaturePlot histograms</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a>) – Fitting method to consider. To choose between <cite>voigtian</cite>, <cite>polynomial</cite>,
+<cite>exponential</cite>, <cite>powerlaw</cite>.</p></li>
+<li><p><strong>process_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a>) – Process name to consider.</p></li>
+<li><p><strong>x_range</strong> (Two comma-separated <cite>float</cite>.) – Range of the x axis to consider in the fitting.</p></li>
+<li><p><strong>blind_range</strong> (Two comma-separated <cite>float</cite>.) – Range of the x axis to blind in the fitting.</p></li>
+<li><p><strong>fit_parameters</strong> (<cite>str</cite> representing a dict (e.g. ‘{“mean”: “(20, -100, 100)”}’).) – Initial values for the parameters involved in the fit.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.Fit.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#Fit.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.Fit.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Needs as input the root file provided by the FeaturePlot task</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.Fit.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#Fit.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.Fit.output" title="Permalink to this definition"></a></dt>
+<dd><p>Returns, per feature, one json file storing the fit results and one root file
+storing the workspace</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.Fit.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#Fit.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.Fit.run" title="Permalink to this definition"></a></dt>
+<dd><p>Obtains the fits per feature and systematic.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-inspectfitsyst">
+<h2><a class="toc-backref" href="#id7" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">InspectFitSyst</span></code></a><a class="headerlink" href="#class-inspectfitsyst" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.InspectFitSyst">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">InspectFitSyst</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#InspectFitSyst"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.InspectFitSyst" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.Fit" title="cmt.base_tasks.analysis.Fit"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fit</span></code></a></p>
+<p>Task that extracts systematic effects on the fits.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.InspectFitSyst.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#InspectFitSyst.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.InspectFitSyst.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Needs as input the json file provided by the Fit task</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.InspectFitSyst.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#InspectFitSyst.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.InspectFitSyst.output" title="Permalink to this definition"></a></dt>
+<dd><p>Returns, per feature, one json file and one txt file storing the inspection results</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.InspectFitSyst.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#InspectFitSyst.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.InspectFitSyst.run" title="Permalink to this definition"></a></dt>
+<dd><p>Obtains the fits per feature and systematic.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-combinedatacards">
+<h2><a class="toc-backref" href="#id8" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">CombineDatacards</span></code></a><a class="headerlink" href="#class-combinedatacards" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CombineDatacards">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">CombineDatacards</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CombineDatacards"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CombineDatacards" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.CombineCategoriesTask" title="cmt.base_tasks.analysis.CombineCategoriesTask"><code class="xref py py-class docutils literal notranslate"><span class="pre">CombineCategoriesTask</span></code></a></p>
+<p>Task that combines datacards coming from <a class="reference internal" href="#cmt.base_tasks.analysis.CreateDatacards" title="cmt.base_tasks.analysis.CreateDatacards"><code class="xref py py-class docutils literal notranslate"><span class="pre">CreateDatacards</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CombineDatacards.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CombineDatacards.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CombineDatacards.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Needs as input the datacards provided by the CreateDatacards task for each category</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CombineDatacards.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CombineDatacards.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CombineDatacards.output" title="Permalink to this definition"></a></dt>
+<dd><p>Outputs a txt file with the merged datacard</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CombineDatacards.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CombineDatacards.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CombineDatacards.run" title="Permalink to this definition"></a></dt>
+<dd><p>Combines all datacards using combine’s combineCards.py</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-createworkspace">
+<h2><a class="toc-backref" href="#id9" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">CreateWorkspace</span></code></a><a class="headerlink" href="#class-createworkspace" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateWorkspace">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">CreateWorkspace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateWorkspace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateWorkspace" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.CreateDatacards" title="cmt.base_tasks.analysis.CreateDatacards"><code class="xref py py-class docutils literal notranslate"><span class="pre">CreateDatacards</span></code></a>, <a class="reference internal" href="#cmt.base_tasks.analysis.CombineCategoriesTask" title="cmt.base_tasks.analysis.CombineCategoriesTask"><code class="xref py py-class docutils literal notranslate"><span class="pre">CombineCategoriesTask</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">LocalWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">HTCondorWorkflow</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">SGEWorkflow</span></code></p>
+<p>Task that creates the Combine workspace from the datacards obtained from
+<a class="reference internal" href="#cmt.base_tasks.analysis.CreateDatacards" title="cmt.base_tasks.analysis.CreateDatacards"><code class="xref py py-class docutils literal notranslate"><span class="pre">CreateDatacards</span></code></a> or <a class="reference internal" href="#cmt.base_tasks.analysis.CombineDatacards" title="cmt.base_tasks.analysis.CombineDatacards"><code class="xref py py-class docutils literal notranslate"><span class="pre">CombineDatacards</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateWorkspace.create_branch_map">
+<span class="sig-name descname"><span class="pre">create_branch_map</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateWorkspace.create_branch_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateWorkspace.create_branch_map" title="Permalink to this definition"></a></dt>
+<dd><p>Returns one branch if categories are combined or one branch per category</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateWorkspace.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateWorkspace.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateWorkspace.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Requires the datacard coming from CombineDatacards or one datacard per category obtained by
+CreateDatacards.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateWorkspace.workflow_requires">
+<span class="sig-name descname"><span class="pre">workflow_requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateWorkspace.workflow_requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateWorkspace.workflow_requires" title="Permalink to this definition"></a></dt>
+<dd><p>Requires the datacard coming from CombineDatacards or one datacard per category obtained by
+CreateDatacards.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateWorkspace.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateWorkspace.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateWorkspace.output" title="Permalink to this definition"></a></dt>
+<dd><p>Outputs one root file with the workspace if categories are combined or one per category.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.CreateWorkspace.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#CreateWorkspace.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.CreateWorkspace.run" title="Permalink to this definition"></a></dt>
+<dd><p>Obtains the workspace for each provided datacard.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-runcombine">
+<h2><a class="toc-backref" href="#id10" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">RunCombine</span></code></a><a class="headerlink" href="#class-runcombine" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.RunCombine">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">RunCombine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#RunCombine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.RunCombine" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.CreateWorkspace" title="cmt.base_tasks.analysis.CreateWorkspace"><code class="xref py py-class docutils literal notranslate"><span class="pre">CreateWorkspace</span></code></a></p>
+<p>Task that runs the combine tool over the workspace created by
+<a class="reference internal" href="#cmt.base_tasks.analysis.CreateWorkspace" title="cmt.base_tasks.analysis.CreateWorkspace"><code class="xref py py-class docutils literal notranslate"><span class="pre">CreateWorkspace</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><em>bool</em></a>) – Combine method to consider. Only <cite>limits</cite> (AsymptoticLimits) is implemented for
+now.</p></li>
+<li><p><strong>unblind</strong> – Whether to run combine unblinded.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.RunCombine.workflow_requires">
+<span class="sig-name descname"><span class="pre">workflow_requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#RunCombine.workflow_requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.RunCombine.workflow_requires" title="Permalink to this definition"></a></dt>
+<dd><p>Requires the workspace coming from CreateWorkspace.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.RunCombine.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#RunCombine.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.RunCombine.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Requires the workspace coming from CreateWorkspace.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.RunCombine.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#RunCombine.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.RunCombine.output" title="Permalink to this definition"></a></dt>
+<dd><p>Outputs one txt file and one root file in total or one of each per category with the results
+of running combine</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.RunCombine.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#RunCombine.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.RunCombine.run" title="Permalink to this definition"></a></dt>
+<dd><p>Runs combine over the provided workspaces.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-pullsandimpacts">
+<h2><a class="toc-backref" href="#id11" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">PullsAndImpacts</span></code></a><a class="headerlink" href="#class-pullsandimpacts" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PullsAndImpacts">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">PullsAndImpacts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PullsAndImpacts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PullsAndImpacts" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.RunCombine" title="cmt.base_tasks.analysis.RunCombine"><code class="xref py py-class docutils literal notranslate"><span class="pre">RunCombine</span></code></a></p>
+<p>Task that obtains the pulls and impacts over the workspace created by <a class="reference internal" href="#cmt.base_tasks.analysis.CreateWorkspace" title="cmt.base_tasks.analysis.CreateWorkspace"><code class="xref py py-class docutils literal notranslate"><span class="pre">CreateWorkspace</span></code></a>.
+Based on <a class="reference external" href="https://gitlab.cern.ch/hh/tools/inference/-/blob/master/dhi/tasks/pulls_impacts.py">https://gitlab.cern.ch/hh/tools/inference/-/blob/master/dhi/tasks/pulls_impacts.py</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PullsAndImpacts.create_branch_map">
+<span class="sig-name descname"><span class="pre">create_branch_map</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PullsAndImpacts.create_branch_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PullsAndImpacts.create_branch_map" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the nuisance parameters considered in the fit</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PullsAndImpacts.workflow_requires">
+<span class="sig-name descname"><span class="pre">workflow_requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PullsAndImpacts.workflow_requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PullsAndImpacts.workflow_requires" title="Permalink to this definition"></a></dt>
+<dd><p>Requires the workspace coming from CreateWorkspace.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PullsAndImpacts.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PullsAndImpacts.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PullsAndImpacts.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Requires the workspace coming from CreateWorkspace.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PullsAndImpacts.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PullsAndImpacts.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PullsAndImpacts.output" title="Permalink to this definition"></a></dt>
+<dd><p>Outputs one log, root file, and json per nuisance paramter.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PullsAndImpacts.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PullsAndImpacts.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PullsAndImpacts.run" title="Permalink to this definition"></a></dt>
+<dd><p>Runs the combine commands needed for pulls and impacts computations.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-mergepullsandimpacts">
+<h2><a class="toc-backref" href="#id12" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">MergePullsAndImpacts</span></code></a><a class="headerlink" href="#class-mergepullsandimpacts" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.MergePullsAndImpacts">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">MergePullsAndImpacts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#MergePullsAndImpacts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.MergePullsAndImpacts" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.CombineCategoriesTask" title="cmt.base_tasks.analysis.CombineCategoriesTask"><code class="xref py py-class docutils literal notranslate"><span class="pre">CombineCategoriesTask</span></code></a></p>
+<p>Task that merges the pulls and impacts for each systematic obtained by <a class="reference internal" href="#cmt.base_tasks.analysis.PullsAndImpacts" title="cmt.base_tasks.analysis.PullsAndImpacts"><code class="xref py py-class docutils literal notranslate"><span class="pre">PullsAndImpacts</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.MergePullsAndImpacts.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#MergePullsAndImpacts.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.MergePullsAndImpacts.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Requires the json files coming from PullsAndImpacts.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.MergePullsAndImpacts.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#MergePullsAndImpacts.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.MergePullsAndImpacts.output" title="Permalink to this definition"></a></dt>
+<dd><p>Outputs one json file (in CombineHarvester format) with the results for all
+nuisance parameters.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.MergePullsAndImpacts.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#MergePullsAndImpacts.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.MergePullsAndImpacts.run" title="Permalink to this definition"></a></dt>
+<dd><p>Merges the results from the PullsAndImpacts task into one json file</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="class-plotpullsandimpacts">
+<h2><a class="toc-backref" href="#id13" role="doc-backlink">Class <code class="docutils literal notranslate"><span class="pre">PlotPullsAndImpacts</span></code></a><a class="headerlink" href="#class-plotpullsandimpacts" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PlotPullsAndImpacts">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cmt.base_tasks.analysis.</span></span><span class="sig-name descname"><span class="pre">PlotPullsAndImpacts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PlotPullsAndImpacts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PlotPullsAndImpacts" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cmt.base_tasks.analysis.MergePullsAndImpacts" title="cmt.base_tasks.analysis.MergePullsAndImpacts"><code class="xref py py-class docutils literal notranslate"><span class="pre">MergePullsAndImpacts</span></code></a></p>
+<p>Task that plots pulls and impacts coming from <a class="reference internal" href="#cmt.base_tasks.analysis.MergePullsAndImpacts" title="cmt.base_tasks.analysis.MergePullsAndImpacts"><code class="xref py py-class docutils literal notranslate"><span class="pre">MergePullsAndImpacts</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PlotPullsAndImpacts.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PlotPullsAndImpacts.requires"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PlotPullsAndImpacts.requires" title="Permalink to this definition"></a></dt>
+<dd><p>Requires the json file with all pulls and impacts obtained by MergePullsAndImpacts.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PlotPullsAndImpacts.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PlotPullsAndImpacts.output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PlotPullsAndImpacts.output" title="Permalink to this definition"></a></dt>
+<dd><p>Outputs one pdf with the pulls and impacts obtained by CombineHarvester.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cmt.base_tasks.analysis.PlotPullsAndImpacts.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/cmt/base_tasks/analysis.html#PlotPullsAndImpacts.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cmt.base_tasks.analysis.PlotPullsAndImpacts.run" title="Permalink to this definition"></a></dt>
+<dd><p>Plots the pulls and impacts using CombineHarvester’s plotImpacts.py</p>
 </dd></dl>
 
 </dd></dl>

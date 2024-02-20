@@ -91,6 +91,7 @@
 <span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">call</span>
 <span class="kn">import</span> <span class="nn">json</span>
 
@@ -106,6 +107,7 @@
 <span class="p">)</span>
 
 <span class="n">directions</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;up&quot;</span><span class="p">,</span> <span class="s2">&quot;down&quot;</span><span class="p">]</span>
+
 
 <span class="k">class</span> <span class="nc">DatasetSuperWrapperTask</span><span class="p">(</span><span class="n">DatasetWrapperTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">WrapperTask</span><span class="p">):</span>
 
@@ -124,8 +126,9 @@
             <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span>
         <span class="p">)</span>
 
+
 <span class="k">class</span> <span class="nc">DatasetSystWrapperTask</span><span class="p">(</span><span class="n">DatasetSuperWrapperTask</span><span class="p">):</span>
-    <span class="n">systematic_names</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;names of systematics &quot;</span>
+    <span class="n">systematic_names</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;names of systematics &quot;</span>
         <span class="s2">&quot;to run, default: central only (empty string)&quot;</span><span class="p">)</span>
 
     <span class="n">exclude_index</span> <span class="o">=</span> <span class="kc">True</span>
@@ -204,7 +207,7 @@
 
 
 <span class="k">class</span> <span class="nc">DatasetCategorySystWrapperTask</span><span class="p">(</span><span class="n">DatasetCategoryWrapperTask</span><span class="p">,</span> <span class="n">law</span><span class="o">.</span><span class="n">WrapperTask</span><span class="p">):</span>
-    <span class="n">systematic_names</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;names of systematics &quot;</span>
+    <span class="n">systematic_names</span> <span class="o">=</span> <span class="n">law</span><span class="o">.</span><span class="n">CSVParameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;names of systematics &quot;</span>
         <span class="s2">&quot;to run, default: central only (empty string)&quot;</span><span class="p">)</span>
 
     <span class="n">exclude_index</span> <span class="o">=</span> <span class="kc">True</span>
@@ -214,7 +217,9 @@
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">requires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">systematics</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic_names</span><span class="p">,</span> <span class="n">directions</span><span class="p">))</span>
+        <span class="n">systematics</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic_names</span><span class="p">:</span>
+            <span class="n">systematics</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">systematic_names</span><span class="p">,</span> <span class="n">directions</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
             <span class="p">((</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">),</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">atomic_requires</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
@@ -287,14 +292,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">check_empty</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_file_groups</span><span class="p">(</span>
                 <span class="n">path_to_look</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span>
                 <span class="n">threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">))</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="n">nfiles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">check_empty</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
             <span class="n">nbranches</span> <span class="o">=</span> <span class="n">nfiles</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">nfiles</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_aux</span><span class="p">(</span><span class="s2">&quot;preprocess_merging_factor&quot;</span><span class="p">):</span>
                 <span class="n">nbranches</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -323,7 +330,8 @@
             <span class="k">return</span> <span class="n">reqs</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span><span class="p">:</span>
             <span class="n">nfiles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">check_empty</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
             <span class="n">reqs</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">merging_factor</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">nfiles</span><span class="p">:</span>
@@ -367,19 +375,14 @@
 
         <span class="c1"># create RDataFrame</span>
         <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">friend_datasets</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+
         <span class="c1"># friend tree</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="p">:</span>
+        <span class="k">else</span><span class="p">:</span>
             <span class="n">tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">):</span>
                 <span class="n">tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
-            <span class="n">tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
             <span class="n">friend_tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">friend_tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
@@ -389,7 +392,11 @@
         <span class="n">weight_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">weight_modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">weight_modules</span><span class="p">:</span>
-                <span class="n">df</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">df</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exception: </span><span class="si">%s</span><span class="s2">. Exiting&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
 
         <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weight</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">total_events_weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic_direction</span><span class="p">)</span>
@@ -405,8 +412,9 @@
         <span class="n">d</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;nevents&quot;</span><span class="p">:</span> <span class="n">histo_noweight</span><span class="o">.</span><span class="n">Integral</span><span class="p">(),</span>
             <span class="s2">&quot;nweightedevents&quot;</span><span class="p">:</span> <span class="n">histo_weight</span><span class="o">.</span><span class="n">Integral</span><span class="p">(),</span>
-            <span class="s2">&quot;filenames&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">inp</span><span class="p">]</span>
+            <span class="s2">&quot;filenames&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))]</span>
         <span class="p">}</span>
+
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">create_file_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span></div></div>
 
@@ -479,25 +487,23 @@
         <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
         <span class="n">ROOT</span><span class="o">.</span><span class="n">ROOT</span><span class="o">.</span><span class="n">EnableImplicitMT</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request_cpus</span><span class="p">)</span>
 
-        <span class="c1"># prepare inputs and outputs</span>
+        <span class="c1"># create RDataFrame</span>
         <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">friend_datasets</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+
         <span class="c1"># friend tree</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="p">:</span>
-            <span class="n">tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">):</span>
                 <span class="n">tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
-            <span class="n">friend_tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">)</span>
+            <span class="n">friend_tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">friend_tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
             <span class="n">tchain</span><span class="o">.</span><span class="n">AddFriend</span><span class="p">(</span><span class="n">friend_tchain</span><span class="p">,</span> <span class="s2">&quot;friend&quot;</span><span class="p">)</span>
             <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="n">tchain</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
 
         <span class="n">outp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">()</span>
         <span class="c1"># print(outp.path)</span>
@@ -516,7 +522,11 @@
         <span class="n">branches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">())</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">modules</span><span class="p">:</span>
-                <span class="n">filtered_df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">filtered_df</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">filtered_df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">filtered_df</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exception: </span><span class="si">%s</span><span class="s2">. Exiting&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
                 <span class="n">branches</span> <span class="o">+=</span> <span class="n">add_branches</span>
         <span class="n">branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_branches_to_save</span><span class="p">(</span><span class="n">branches</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">)</span>
 
@@ -593,7 +603,8 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_events</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">))):</span>
             <span class="n">ROOT</span> <span class="o">=</span> <span class="n">import_root</span><span class="p">()</span>
             <span class="n">files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$CMT_TMP_DIR/</span><span class="si">%s</span><span class="s2">/&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_name</span><span class="p">),</span> <span class="n">add_prefix</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">check_empty</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">ifil</span><span class="p">,</span> <span class="n">fil</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
                 <span class="n">nevents</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
@@ -798,10 +809,8 @@
             <span class="k">return</span> <span class="n">InputData</span><span class="o">.</span><span class="n">req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Categorization.output"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.output">[docs]</a>    <span class="k">def</span> <span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">addendum</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="si">}</span><span class="s2">.root&quot;</span><span class="p">),</span>
-            <span class="c1"># &quot;stats&quot;: self.local_target(&quot;data_%s.json&quot; % self.branch)</span>
-        <span class="p">}</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">addendum</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">branch</span><span class="si">}</span><span class="s2">.root&quot;</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="Categorization.run"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.Categorization.run">[docs]</a>    <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">notify</span>
     <span class="nd">@law</span><span class="o">.</span><span class="n">decorator</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -821,16 +830,13 @@
         <span class="c1"># tf = ROOT.TFile.Open(inp)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_preprocess</span><span class="p">:</span>
+                <span class="c1"># create RDataFrame</span>
                 <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
-                <span class="k">except</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">friend_datasets</span><span class="p">:</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">))</span>
+
                 <span class="c1"># friend tree</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="p">:</span>
+                <span class="k">else</span><span class="p">:</span>
                     <span class="n">tchain</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TChain</span><span class="p">()</span>
                     <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">inp</span><span class="p">):</span>
                         <span class="n">tchain</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">))</span>
@@ -840,12 +846,7 @@
                     <span class="n">tchain</span><span class="o">.</span><span class="n">AddFriend</span><span class="p">(</span><span class="n">friend_tchain</span><span class="p">,</span> <span class="s2">&quot;friend&quot;</span><span class="p">)</span>
                     <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="n">tchain</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">tf</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">TFile</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
-                <span class="n">tree</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">tree</span><span class="o">.</span><span class="n">GetEntries</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ReferenceError</span>
-                <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">inp</span><span class="p">)</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">RDataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
 
             <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get_object_expression</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">category</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">isMC</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">systematic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">systematic_direction</span><span class="p">)</span>
@@ -853,29 +854,36 @@
             <span class="k">if</span> <span class="n">dataset_selection</span> <span class="ow">and</span> <span class="n">dataset_selection</span> <span class="o">!=</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
                 <span class="n">selection</span> <span class="o">=</span> <span class="n">jrs</span><span class="p">(</span><span class="n">dataset_selection</span><span class="p">,</span> <span class="n">selection</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;and&quot;</span><span class="p">)</span>
 
-            <span class="n">branches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">())</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">branches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">GetColumnNames</span><span class="p">())</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ReferenceError</span>
             <span class="n">feature_modules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_feature_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_modules_file</span><span class="p">)</span>
-
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">feature_modules</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">feature_modules</span><span class="p">:</span>
-                    <span class="n">df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">df</span><span class="p">,</span> <span class="n">add_branches</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exception: </span><span class="si">%s</span><span class="s2">. Exiting&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+                        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
                     <span class="n">branches</span> <span class="o">+=</span> <span class="n">add_branches</span>
             <span class="n">branches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_branches_to_save</span><span class="p">(</span><span class="n">branches</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_and_drop_file</span><span class="p">)</span>
             <span class="n">branch_list</span> <span class="o">=</span> <span class="n">ROOT</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)()</span>
             <span class="k">for</span> <span class="n">branch_name</span> <span class="ow">in</span> <span class="n">branches</span><span class="p">:</span>
                 <span class="n">branch_list</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">branch_name</span><span class="p">)</span>
             <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">Define</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">,</span> <span class="n">selection</span><span class="p">)</span><span class="o">.</span><span class="n">Filter</span><span class="p">(</span><span class="s2">&quot;selection&quot;</span><span class="p">)</span>
-            <span class="n">filtered_df</span><span class="o">.</span><span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">create_file_dir</span><span class="p">(</span><span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">branch_list</span><span class="p">)</span>
+            <span class="n">filtered_df</span><span class="o">.</span><span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree_name</span><span class="p">,</span> <span class="n">create_file_dir</span><span class="p">(</span><span class="n">outp</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">branch_list</span><span class="p">)</span>
 
         <span class="k">except</span> <span class="ne">ReferenceError</span><span class="p">:</span>  <span class="c1"># empty ntuple</span>
-            <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
             <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
-            <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c1"># empty input file</span>
-            <span class="n">tf</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
             <span class="n">inp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">()</span><span class="o">.</span><span class="n">path</span>
-            <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">)</span></div></div>
+            <span class="n">copy</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="o">.</span><span class="n">path</span><span class="p">)</span></div></div>
         <span class="c1">#copy(self.input()[&quot;stats&quot;].path, outp[&quot;stats&quot;].path)</span>
+
+        <span class="c1"># except KeyboardInterrupt:</span>
+        <span class="c1">#     print(&quot;### DEBUG Error&quot;)    </span>
 
 
 <div class="viewcode-block" id="CategorizationWrapper"><a class="viewcode-back" href="../../../api/base_tasks/preprocessing.html#cmt.base_tasks.preprocessing.CategorizationWrapper">[docs]</a><span class="k">class</span> <span class="nc">CategorizationWrapper</span><span class="p">(</span><span class="n">DatasetCategorySystWrapperTask</span><span class="p">):</span>
@@ -961,10 +969,7 @@
                 <span class="n">branches</span><span class="o">=</span><span class="p">((</span><span class="n">start_leaf</span><span class="p">,</span> <span class="n">end_leaf</span><span class="p">),),</span> <span class="n">_exclude</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;branch&quot;</span><span class="p">})</span>
 
     <span class="k">def</span> <span class="nf">trace_merge_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_preprocess</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">[</span><span class="n">inp</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;collection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">[</span><span class="n">inp</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;collection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">inp</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;collection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">targets</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
 
     <span class="k">def</span> <span class="nf">merge_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">addendum</span> <span class="o">=</span> <span class="n">PreprocessRDF</span><span class="o">.</span><span class="n">get_addendum</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
