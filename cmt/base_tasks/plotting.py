@@ -1199,28 +1199,6 @@ class FeaturePlot(BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
                     else:
                         data_histo.Add(hist.Clone())
 
-        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
-        n_entries = len(entries)
-        if n_entries <= 4:
-            n_cols = 1
-        elif n_entries <= 8:
-            n_cols = 2
-        else:
-            n_cols = 3
-        col_width = 0.125
-        n_rows = math.ceil(n_entries / float(n_cols))
-        row_width = 0.06
-        legend_x2 = 0.88
-        legend_x1 = legend_x2 - n_cols * col_width
-        legend_y2 = 0.88
-        legend_y1 = legend_y2 - n_rows * row_width
-
-        legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
-        legend.SetBorderSize(0)
-        legend.SetNColumns(n_cols)
-        for entry in entries:
-            legend.AddEntry(*entry)
-
         dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
         # Draw
         if self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack:
@@ -1303,47 +1281,21 @@ class FeaturePlot(BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
 
         dummy_hist.Draw()
 
-        # Draw fit if required
-        if self.include_fit:
-            with open(self.input()["fit"][feature.name]["json"].path) as f:
-                d = json.load(f)
-            d = d[""]
-            x_range = self.requires()["fit"].x_range
-            x = ROOT.RooRealVar("x", "x", float(x_range[0]), float(x_range[1]))
-            l = ROOT.RooArgList(x)
-            xframe = x.frame();
-
-            if self.stack:
-                process_name = self.requires()["fit"].process_name
-                for hist in all_hists:
-                    if hist.cmt_process_name == process_name:
-                        data = ROOT.RooDataHist("data_obs", "data_obs", l, hist)
-                        data.plotOn(xframe,
-                            ROOT.RooFit.MarkerColor(ROOT.TColor.GetColorTransparent(0, 1)),
-                            ROOT.RooFit.LineColor(ROOT.TColor.GetColorTransparent(0, 1)))
-
-            if self.requires()["fit"].method != "envelope":
-                fit, _ = self.get_fit(self.requires()["fit"].method, d, x)
-                fit.plotOn(xframe, ROOT.RooFit.LineColor(color))
-            else:
-                colors = [2, 3, 4, 6]
-                for im, method in enumerate(self.requires()["fit"].functions):
-                    fit, _ = self.get_fit(method.strip(), d, x)
-                    name = self.requires()["fit"].functions[im].strip()
-                    color = colors[im]
-                    fit.plotOn(xframe, ROOT.RooFit.LineColor(color), ROOT.RooFit.Name(name))
-            xframe.Draw("same");
-
         for ih, hist in enumerate(draw_hists):
             option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
             hist.Draw(option)
 
         for label in draw_labels:
             label.Draw("same")
-        legend.Draw("same")
 
-        if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0
-                or not self.stack):
+        # Define entries object to be used later when filling the legend
+        # Can be updated with the fits and the uncertainty bands
+        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
+
+        show_ratio = not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0
+            or not self.stack)
+
+        if show_ratio:
             dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
                 props={"Minimum": 0.25, "Maximum": 1.75})
@@ -1362,17 +1314,23 @@ class FeaturePlot(BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
 
             ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
             mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
+            setattr(mc_unc_graph, "title", "MC stat.")
             r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
             r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
                 "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+            entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
             if self.plot_systematics:
                 syst_graph = hist_to_graph(bkg_histo_syst, remove_zeros=False, errors=True,
                     asymm=True, overflow=False, underflow=False,
                     attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
                 syst_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                setattr(syst_unc_graph, "title", "Norm. syst.")
                 r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
+                # entries.append((syst_unc_graph, syst_unc_graph.title, "f"))
                 all_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                setattr(all_unc_graph, "title", "Norm. syst. + MC Stat.")
+                entries.append((all_unc_graph, all_unc_graph.title, "f"))
                 r.setup_graph(all_unc_graph, props={"FillStyle": 3007, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
 
@@ -1428,6 +1386,69 @@ class FeaturePlot(BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
                 lines.append(l)
             for line in lines:
                 line.Draw("same")
+
+        if show_ratio:
+            c.get_pad(1).cd()
+
+        # Draw fit if required
+        fits = []
+        if self.include_fit:
+            with open(self.input()["fit"][feature.name]["json"].path) as f:
+                d = json.load(f)
+            d = d[""]
+
+            fit_task = self.requires()["fit"]
+            x_range = fit_task.x_range
+            x = ROOT.RooRealVar("x", "x", float(x_range[0]), float(x_range[1]))
+            l = ROOT.RooArgList(x)
+            xframe = x.frame()
+            process_name = fit_task.process_name
+            if self.stack:
+                for hist in all_hists:
+                    if hist.cmt_process_name == process_name:
+                        data = ROOT.RooDataHist("data_obs", "data_obs", l, hist)
+                        data.plotOn(xframe,
+                            ROOT.RooFit.MarkerColor(ROOT.TColor.GetColorTransparent(0, 0.0)),
+                            ROOT.RooFit.LineColor(ROOT.TColor.GetColorTransparent(0, 0.0)))
+
+            colors = [2, 3, 4, 6]
+            if fit_task.method != "envelope":
+                fit, _ = self.get_fit(fit_task.method, d, x)
+                fit.plotOn(xframe, ROOT.RooFit.LineColor(colors[0]), ROOT.RooFit.Name(f"{fit_task.method} fit"))
+                entries.append((f"{fit_task.method} fit", f"{fit_task.method} fit", "l"))
+            else:
+                for im, method in enumerate(fit_task.functions):
+                    fit, _ = self.get_fit(method.strip(), d, x)
+                    fits.append(fit)
+                    name = fit_task.functions[im].strip() + " fit"
+                    color = colors[im]
+                    fits[-1].plotOn(xframe, ROOT.RooFit.LineColor(color), ROOT.RooFit.Name(name))
+                    entries.append((name, name, "l"))
+            xframe.Draw("same");
+
+        n_entries = len(entries)
+        if n_entries <= 4:
+            n_cols = 1
+            col_width = 0.2
+        elif n_entries <= 8:
+            n_cols = 2
+            col_width = 0.15
+        else:
+            n_cols = 3
+            col_width = 0.1
+        n_rows = math.ceil(n_entries / float(n_cols))
+        row_width = 0.06
+        legend_x2 = 0.88
+        legend_x1 = legend_x2 - n_cols * col_width
+        legend_y2 = 0.88
+        legend_y1 = legend_y2 - n_rows * row_width
+
+        legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
+        legend.SetBorderSize(0)
+        legend.SetNColumns(n_cols)
+        for entry in entries:
+            legend.AddEntry(*entry)
+        legend.Draw("same")
 
         outputs = []
         if self.save_png:
