@@ -26,6 +26,7 @@ from cmt.sge.workflow import SGEWorkflow as SGEWorkflowTmp
 
 from abc import abstractmethod
 
+from analysis_tools import ObjectCollection
 from analysis_tools.utils import import_root
 
 law.contrib.load("cms", "git", "htcondor", "root", "tasks", "telegram", "tensorflow", "wlcg")
@@ -609,3 +610,192 @@ class InputData(DatasetTask, law.ExternalTask):
                 for file_path in self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)])
             
+
+class FitBase(ConfigTask):
+    def convert_parameters(self, d):
+        for param, val in d.items():
+            if isinstance(val, str):
+                if "," not in val:
+                    d[param] = tuple([float(val)])
+                else:
+                    d[param] = tuple(map(float, val.split(', ')))
+            else:
+                d[param] = val
+        return d
+
+    def get_x(self, x_range, blind_range=None, name="x"):
+        from analysis_tools.utils import import_root
+        ROOT = import_root()
+        # fit range
+        x_range = (float(x_range[0]), float(x_range[1]))
+        x = ROOT.RooRealVar(name, name, x_range[0], x_range[1])
+
+        # blinded range
+        blind = False
+        if not blind_range:
+            return x, False
+        if blind_range[0] != blind_range[1]:
+            blind = True
+            blind_range = (float(self.blind_range[0]), float(self.blind_range[1]))
+            assert(blind_range[0] >= x_range[0] and blind_range[0] < blind_range[1] and
+                blind_range[1] <= x_range[1])
+            x.setRange("loSB", x_range[0], blind_range[0])
+            x.setRange("hiSB", blind_range[1], x_range[1])
+            x.setRange("full", x_range[0], x_range[1])
+            fit_range = "loSB,hiSB"
+        return x, blind
+
+    def get_fit(self, name, parameters, x, **kwargs):
+        from analysis_tools.utils import import_root
+        ROOT = import_root()
+        fit_parameters = {}
+        params = OrderedDict()
+        fit_name = kwargs.pop("fit_name", "model")
+
+        if name == "voigtian":
+            fit_parameters["mean"] = parameters.get("mean", (0, -100, 100))
+            fit_parameters["gamma"] = parameters.get("gamma", (0.02, 0, 0.1))
+            fit_parameters["sigma"] = parameters.get("sigma", (0.001, 0, 0.1))
+            fit_parameters = self.convert_parameters(fit_parameters)
+
+            try:
+                params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian',
+                    *fit_parameters["mean"])
+                params["gamma"] = ROOT.RooRealVar('gamma', 'Gamma of Voigtian',
+                    *fit_parameters["gamma"])
+                params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian',
+                    *fit_parameters["sigma"])
+            except TypeError:
+                params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian',
+                    fit_parameters["mean"])
+                params["gamma"] = ROOT.RooRealVar('gamma', 'Gamma of Voigtian',
+                    fit_parameters["gamma"])
+                params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian',
+                    fit_parameters["sigma"])
+
+            fun = ROOT.RooVoigtian(fit_name, fit_name, x,
+                params["mean"], params["gamma"], params["sigma"])
+
+        elif name == "polynomial":
+            order = int(parameters.get("polynomial_order", 1))
+            for i in range(order):
+                fit_parameters[f"p{i}"] = parameters.get(f"p{i}", (0, -5, 5))
+            fit_parameters = self.convert_parameters(fit_parameters)
+            for i in range(order):
+                try:
+                    params[f"p{i}"] = ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"])
+                except TypeError:
+                    params[f"p{i}"] = ROOT.RooRealVar(f'p{i}', f'p{i}', fit_parameters[f"p{i}"])
+            fun = ROOT.RooPolynomial(fit_name, fit_name, x, ROOT.RooArgList(*list(params.values())))
+
+        elif name == "exponential":
+            # https://root.cern.ch/doc/master/classRooExponential.html
+            fit_parameters["c"] = parameters.get("c", (0, -2, 2))
+            fit_parameters = self.convert_parameters(fit_parameters)
+            try:
+                params["c"] = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
+            except TypeError:
+                params["c"] = ROOT.RooRealVar('c', 'c', fit_parameters["c"])
+            fun = ROOT.RooExponential(fit_name, fit_name, x, params["c"])
+
+        elif name == "powerlaw":
+            order = int(fit_parameters.get("powerlaw_order", 1))
+            for i in range(order):
+                fit_parameters[f"a{i}"] = parameters.get(f"a{i}", (1, 0, 2))
+                fit_parameters[f"b{i}"] = parameters.get(f"b{i}", (0, -2, 2))
+            fit_parameters = self.convert_parameters(fit_parameters)
+
+            for i in range(order):
+                try:
+                    params[f'a{i}'] = ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"])
+                    params[f'b{i}'] = ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"])
+                except TypeError:
+                    params[f'a{i}'] = ROOT.RooRealVar(f'a{i}', f'a{i}', fit_parameters[f"a{i}"])
+                    params[f'b{i}'] = ROOT.RooRealVar(f'b{i}', f'b{i}', fit_parameters[f"b{i}"])
+
+            fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
+                for i in range(0, order, 2)])
+            fun = ROOT.RooGenericPdf(fit_name, fit_fun, ROOT.RooArgList(
+                *([x] + list(params.values()))))
+
+        return fun, params
+
+
+class ProcessGroupNameTask(DatasetWrapperTask):
+
+    process_group_name = luigi.Parameter(default="default", description="the name of the process "
+        "grouping, only encoded into output paths when changed, default: default")
+
+    def __init__(self, *args, **kwargs):
+        super(ProcessGroupNameTask, self).__init__(*args, **kwargs)
+        assert self.process_group_name in self.config.process_group_names
+        self.processes_datasets = {}
+        self.datasets_to_run = []
+
+        def get_processes(dataset=None, process=None):
+            processes = ObjectCollection()
+            if dataset and not process:
+                process = self.config.processes.get(dataset.process.name)
+            processes.append(process)
+            if process.parent_process:
+                processes += get_processes(process=self.config.processes.get(
+                    process.parent_process))
+            return processes
+
+        for dataset in self.datasets:
+            processes = get_processes(dataset=dataset)
+            filtered_processes = ObjectCollection()
+            for process in processes:
+                if process.name in self.config.process_group_names[self.process_group_name]:
+                    filtered_processes.append(process)
+            if len(filtered_processes) > 1:
+                raise Exception("%s process group name includes not orthogonal processes %s"
+                    % (self.process_group_name, ", ".join(filtered_processes.names)))
+            elif len(filtered_processes) == 1:
+                process = filtered_processes[0]
+                if process not in self.processes_datasets:
+                    self.processes_datasets[process] = []
+                self.processes_datasets[process].append(dataset)
+                self.datasets_to_run.append(dataset)
+        if len(self.datasets_to_run) == 0:
+            raise ValueError("No datasets were selected. Are you sure you want to use"
+                " %s as process_group_name?" % self.process_group_name)
+
+
+class QCDABCDTask(law.Task):
+
+    """
+    :param do_qcd: whether to estimate QCD using the ABCD method
+    :type do_qcd: bool
+
+    :param qcd_wp: working point to use for QCD estimation
+    :type qcd_wp: str from choice list
+
+    :param qcd_signal_region_wp: region to use as signal region for QCD estimation
+    :type qcd_signal_region_wp: str
+
+    :param shape_region: region to use as shape region for QCD estimation
+    :type shape_region: str from choice list
+
+    :param qcd_sym_shape: whether to symmetrise the shape coming from both possible shape regions
+    :type qcd_sym_shape: bool
+
+    :param qcd_category_name: category name used for the same sign regions in QCD estimation
+    :type qcd_category_name: str
+    """
+
+    do_qcd = luigi.BoolParameter(default=False, description="whether to compute the QCD shape, "
+        "default: False")
+    qcd_wp = luigi.ChoiceParameter(default=law.NO_STR,
+        choices=(law.NO_STR, "vvvl_vvl", "vvl_vl", "vl_l", "l_m"), significant=False,
+        description="working points to use for qcd computation, default: empty (vvvl - m)")
+    qcd_signal_region_wp = luigi.Parameter(default="os_iso", description="signal region wp, "
+        "default: os_iso")
+    shape_region = luigi.ChoiceParameter(default="os_inviso", choices=("os_inviso", "ss_iso"),
+        significant=True, description="shape region default: os_inviso")
+    qcd_sym_shape = luigi.BoolParameter(default=False, description="symmetrize QCD shape, "
+        "default: False")
+    qcd_category_name = luigi.Parameter(default="default", description="category use "
+        "for qcd regions ss_iso and ss_inviso, default=default (same as category)")
+    do_sideband = luigi.BoolParameter(default=False, description="whether to compute the background "
+        "shape from sideband region, default: False")
