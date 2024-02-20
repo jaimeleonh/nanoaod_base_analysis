@@ -356,6 +356,15 @@ action() {
             mkdir -p "$CMT_SOFTWARE"
 
             cmt_pip_install pip
+            cmt_pip_install wheel
+            cmt_pip_install setuptools
+            cmt_pip_install libclang
+            cmt_pip_install overrides
+            cmt_pip_install build
+            cmt_pip_install installer
+            cmt_pip_install pyproject-hooks
+            cmt_pip_install Flask
+            cmt_pip_install ordereddict
             cmt_pip_install flake8
             cmt_pip_install luigi==2.8.13
             cmt_pip_install tabulate
@@ -365,10 +374,11 @@ action() {
             cmt_pip_install --no-deps git+https://github.com/riga/plotlib
             cmt_pip_install --no-deps git+https://github.com/riga/LBN
             cmt_pip_install --no-deps gast==0.2.2  # https://github.com/tensorflow/autograph/issues/1
-            cmt_pip_install sphinx
+            cmt_pip_install sphinx==5.2.2
             cmt_pip_install sphinx_rtd_theme
             cmt_pip_install sphinx_design
             cmt_pip_install urllib3==1.26.6
+            cmt_pip_install envyaml
         fi
 
         # gfal python bindings
