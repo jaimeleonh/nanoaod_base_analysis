@@ -11,6 +11,9 @@ action() {
     export X509_USER_PROXY="{{cmt_base}}/x509up"
 
     # source the main setup
-    source "{{cmt_base}}/../setup.sh" ""
+    oldpwd=$PWD
+    cd "{{cmt_base}}/../"
+    source setup.sh ""
+    cd $oldpwd
 }
 action "$@"

@@ -324,6 +324,7 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         config.custom_content.append(("log", "/dev/null"))
         config.custom_content.append(("+MaxRuntime", int(math.floor(self.max_runtime * 3600)) - 1))
         config.custom_content.append(("RequestCpus", self.request_cpus))
+        config.custom_content.append(("MY.WantOS", '"el7"'))
         if self.custom_condor_tag:
             for elem in self.custom_condor_tag:
                 config.custom_content.append((elem, None))
