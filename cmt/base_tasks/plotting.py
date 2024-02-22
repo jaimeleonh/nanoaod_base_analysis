@@ -22,21 +22,18 @@ from cmt.util import hist_to_array, hist_to_graph, get_graph_maximum, update_gra
 
 from ctypes import c_double
 
-
-from analysis_tools import ObjectCollection
 from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
 from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow,
-    ConfigTaskWithCategory, RDFModuleTask, InputData
+    DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow,
+    ConfigTaskWithCategory, RDFModuleTask, InputData, FitBase, QCDABCDTask
 )
 
 from cmt.base_tasks.preprocessing import (
     Categorization, MergeCategorization, MergeCategorizationStats, EventCounterDAS
 )
-
 
 cmt_style = r.styles.copy("default", "cmt_style")
 cmt_style.style.ErrorX = 0
@@ -519,7 +516,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         out.Close()
 
 
-class FeaturePlot(BasePlotTask, DatasetWrapperTask):
+class FeaturePlot(BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
     """
     Performs the actual histogram plotting: loads the histograms obtained in the PrePlot tasks,
     rescales them if needed and plots and saves them.
@@ -535,23 +532,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     :param stack: whether to show all backgrounds stacked (True) or normalized to 1 (False)
     :type stack: bool
 
-    :param do_qcd: whether to estimate QCD using the ABCD method
-    :type do_qcd: bool
-
-    :param qcd_wp: working point to use for QCD estimation
-    :type qcd_wp: str from choice list
-
-    :param qcd_signal_region_wp: region to use as signal region for QCD estimation
-    :type qcd_signal_region_wp: str
-
-    :param shape_region: region to use as shape region for QCD estimation
-    :type shape_region: str from choice list
-
-    :param qcd_sym_shape: whether to symmetrise the shape coming from both possible shape regions
-    :type qcd_sym_shape: bool
-
-    :param qcd_category_name: category name used for the same sign regions in QCD estimation
-    :type qcd_category_name: str
 
     :param hide_data: whether to show (False) or hide (True) the data histograms
     :type hide_data: bool
@@ -609,21 +589,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     """
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
         "them with dataset and category weights, and normalize afterwards, default: False")
-    do_qcd = luigi.BoolParameter(default=False, description="whether to compute the QCD shape, "
-        "default: False")
-    qcd_wp = luigi.ChoiceParameter(default=law.NO_STR,
-        choices=(law.NO_STR, "vvvl_vvl", "vvl_vl", "vl_l", "l_m"), significant=False,
-        description="working points to use for qcd computation, default: empty (vvvl - m)")
-    qcd_signal_region_wp = luigi.Parameter(default="os_iso", description="signal region wp, "
-        "default: os_iso")
-    shape_region = luigi.ChoiceParameter(default="os_inviso", choices=("os_inviso", "ss_iso"),
-        significant=True, description="shape region default: os_inviso")
-    qcd_sym_shape = luigi.BoolParameter(default=False, description="symmetrize QCD shape, "
-        "default: False")
-    qcd_category_name = luigi.Parameter(default="default", description="category use "
-        "for qcd regions ss_iso and ss_inviso, default=default (same as category)")
-    do_sideband = luigi.BoolParameter(default=False, description="whether to compute the background "
-        "shape from sideband region, default: False")
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
     normalize_signals = luigi.BoolParameter(default=True, description="whether to normalize "
         "signals to the total bkg yield, default: True")
@@ -639,8 +604,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
         "in root files, default: False")
     save_yields = luigi.BoolParameter(default=False, description="whether to save event yields per "
         "process, default: False")
-    process_group_name = luigi.Parameter(default="default", description="the name of the process "
-        "grouping, only encoded into output paths when changed, default: default")
     bins_in_x_axis = luigi.BoolParameter(default=False, description="whether to show in the x axis "
         "bin numbers instead of the feature value, default: False")
     plot_systematics = luigi.BoolParameter(default=True, description="whether plot systematics, "
@@ -678,39 +641,7 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
     def __init__(self, *args, **kwargs):
         super(FeaturePlot, self).__init__(*args, **kwargs)
         # select processes and datasets
-        assert self.process_group_name in self.config.process_group_names
         assert not (self.do_qcd and self.do_sideband)
-        self.processes_datasets = {}
-        self.datasets_to_run = []
-
-        def get_processes(dataset=None, process=None):
-            processes = ObjectCollection()
-            if dataset and not process:
-                process = self.config.processes.get(dataset.process.name)
-            processes.append(process)
-            if process.parent_process:
-                processes += get_processes(process=self.config.processes.get(
-                    process.parent_process))
-            return processes
-
-        for dataset in self.datasets:
-            processes = get_processes(dataset=dataset)
-            filtered_processes = ObjectCollection()
-            for process in processes:
-                if process.name in self.config.process_group_names[self.process_group_name]:
-                    filtered_processes.append(process)
-            if len(filtered_processes) > 1:
-                raise Exception("%s process group name includes not orthogonal processes %s"
-                    % (self.process_group_name, ", ".join(filtered_processes.names)))
-            elif len(filtered_processes) == 1:
-                process = filtered_processes[0]
-                if process not in self.processes_datasets:
-                    self.processes_datasets[process] = []
-                self.processes_datasets[process].append(dataset)
-                self.datasets_to_run.append(dataset)
-        if len(self.datasets_to_run) == 0:
-            raise ValueError("No datasets were selected. Are you sure you want to use"
-                " %s as process_group_name?" % self.process_group_name)
 
         # get QCD regions when requested
         self.qcd_regions = None
@@ -1268,28 +1199,6 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                     else:
                         data_histo.Add(hist.Clone())
 
-        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
-        n_entries = len(entries)
-        if n_entries <= 4:
-            n_cols = 1
-        elif n_entries <= 8:
-            n_cols = 2
-        else:
-            n_cols = 3
-        col_width = 0.125
-        n_rows = math.ceil(n_entries / float(n_cols))
-        row_width = 0.06
-        legend_x2 = 0.88
-        legend_x1 = legend_x2 - n_cols * col_width
-        legend_y2 = 0.88
-        legend_y1 = legend_y2 - n_rows * row_width
-
-        legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
-        legend.SetBorderSize(0)
-        legend.SetNColumns(n_cols)
-        for entry in entries:
-            legend.AddEntry(*entry)
-
         dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
         # Draw
         if self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack:
@@ -1372,61 +1281,21 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
         dummy_hist.Draw()
 
-        # Draw fit if required
-        if self.include_fit:
-            with open(self.input()["fit"][feature.name]["json"].path) as f:
-                d = json.load(f)
-            d = d[""]
-            x_range = self.requires()["fit"].x_range
-            x = ROOT.RooRealVar("x", "x", float(x_range[0]), float(x_range[1]))
-            l = ROOT.RooArgList(x)
-            xframe = x.frame();
-            if self.requires()["fit"].method == "voigtian":
-                mean = ROOT.RooRealVar('mean', 'Mean of Voigtian', float(d["mean"]))
-                sigma = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', float(d["sigma"]))
-                gamma = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', float(d["gamma"]))
-                fit = ROOT.RooVoigtian("fit", "fit", x, mean, gamma, sigma)
-
-            elif self.requires()["fit"].method == "polynomial":
-                order = int(self.requires()["fit"].fit_parameters.get("order", 1))
-                params = [ROOT.RooRealVar(f'p{i}', f'p{i}', float(d[f'p{i}'])) for i in range(order)]
-                fit = ROOT.RooPolynomial("fit", "fit", x, ROOT.RooArgList(*params))
-
-            elif self.requires()["fit"].method == "exponential":
-                p = ROOT.RooRealVar("c", "c", float(d["c"]))
-                fit = ROOT.RooExponential("fit", "fit", x, p)
-
-            elif self.requires()["fit"].method == "powerlaw":
-                order = int(self.requires()["fit"].fit_parameters.get("order", 1))
-                params = [x]
-                for i in range(order):
-                    params.append(ROOT.RooRealVar(f'a{i}', f'a{i}', d[f"a{i}"]))
-                    params.append(ROOT.RooRealVar(f'b{i}', f'b{i}', d[f"b{i}"]))
-                fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
-                    for i in range(0, order, 2)])
-                fit = ROOT.RooGenericPdf("powerlaw", fun, ROOT.RooArgList(*params))
-
-            if self.stack:
-                process_name = self.requires()["fit"].process_name
-                for hist in all_hists:
-                    if hist.cmt_process_name == process_name:
-                        data = ROOT.RooDataHist("data_obs", "data_obs", l, hist)
-                        data.plotOn(xframe,
-                            ROOT.RooFit.MarkerColor(ROOT.TColor.GetColorTransparent(0, 1)),
-                            ROOT.RooFit.LineColor(ROOT.TColor.GetColorTransparent(0, 1)))
-            fit.plotOn(xframe)
-            xframe.Draw("same");
-
         for ih, hist in enumerate(draw_hists):
             option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
             hist.Draw(option)
 
         for label in draw_labels:
             label.Draw("same")
-        legend.Draw("same")
 
-        if not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0
-                or not self.stack):
+        # Define entries object to be used later when filling the legend
+        # Can be updated with the fits and the uncertainty bands
+        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
+
+        show_ratio = not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0
+            or not self.stack)
+
+        if show_ratio:
             dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
                 props={"Minimum": 0.25, "Maximum": 1.75})
@@ -1445,17 +1314,23 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
 
             ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
             mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
+            setattr(mc_unc_graph, "title", "MC stat.")
             r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
             r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
                 "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+            entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
             if self.plot_systematics:
                 syst_graph = hist_to_graph(bkg_histo_syst, remove_zeros=False, errors=True,
                     asymm=True, overflow=False, underflow=False,
                     attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
                 syst_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                setattr(syst_unc_graph, "title", "Norm. syst.")
                 r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
+                # entries.append((syst_unc_graph, syst_unc_graph.title, "f"))
                 all_unc_graph = ROOT.TGraphErrors(binning_args[0])
+                setattr(all_unc_graph, "title", "Norm. syst. + MC Stat.")
+                entries.append((all_unc_graph, all_unc_graph.title, "f"))
                 r.setup_graph(all_unc_graph, props={"FillStyle": 3007, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
 
@@ -1511,6 +1386,69 @@ class FeaturePlot(BasePlotTask, DatasetWrapperTask):
                 lines.append(l)
             for line in lines:
                 line.Draw("same")
+
+        if show_ratio:
+            c.get_pad(1).cd()
+
+        # Draw fit if required
+        fits = []
+        if self.include_fit:
+            with open(self.input()["fit"][feature.name]["json"].path) as f:
+                d = json.load(f)
+            d = d[""]
+
+            fit_task = self.requires()["fit"]
+            x_range = fit_task.x_range
+            x = ROOT.RooRealVar("x", "x", float(x_range[0]), float(x_range[1]))
+            l = ROOT.RooArgList(x)
+            xframe = x.frame()
+            process_name = fit_task.process_name
+            if self.stack:
+                for hist in all_hists:
+                    if hist.cmt_process_name == process_name:
+                        data = ROOT.RooDataHist("data_obs", "data_obs", l, hist)
+                        data.plotOn(xframe,
+                            ROOT.RooFit.MarkerColor(ROOT.TColor.GetColorTransparent(0, 0.0)),
+                            ROOT.RooFit.LineColor(ROOT.TColor.GetColorTransparent(0, 0.0)))
+
+            colors = [2, 3, 4, 6]
+            if fit_task.method != "envelope":
+                fit, _ = self.get_fit(fit_task.method, d, x)
+                fit.plotOn(xframe, ROOT.RooFit.LineColor(colors[0]), ROOT.RooFit.Name(f"{fit_task.method} fit"))
+                entries.append((f"{fit_task.method} fit", f"{fit_task.method} fit", "l"))
+            else:
+                for im, method in enumerate(fit_task.functions):
+                    fit, _ = self.get_fit(method.strip(), d, x)
+                    fits.append(fit)
+                    name = fit_task.functions[im].strip() + " fit"
+                    color = colors[im]
+                    fits[-1].plotOn(xframe, ROOT.RooFit.LineColor(color), ROOT.RooFit.Name(name))
+                    entries.append((name, name, "l"))
+            xframe.Draw("same");
+
+        n_entries = len(entries)
+        if n_entries <= 4:
+            n_cols = 1
+            col_width = 0.2
+        elif n_entries <= 8:
+            n_cols = 2
+            col_width = 0.15
+        else:
+            n_cols = 3
+            col_width = 0.1
+        n_rows = math.ceil(n_entries / float(n_cols))
+        row_width = 0.06
+        legend_x2 = 0.88
+        legend_x1 = legend_x2 - n_cols * col_width
+        legend_y2 = 0.88
+        legend_y1 = legend_y2 - n_rows * row_width
+
+        legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
+        legend.SetBorderSize(0)
+        legend.SetNColumns(n_cols)
+        for entry in entries:
+            legend.AddEntry(*entry)
+        legend.Draw("same")
 
         outputs = []
         if self.save_png:

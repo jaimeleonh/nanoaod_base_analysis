@@ -25,98 +25,18 @@ from analysis_tools.utils import (
     import_root, create_file_dir, randomize
 )
 
-from cmt.base_tasks.base import ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow
-from cmt.base_tasks.plotting import FeaturePlot
+from cmt.base_tasks.base import (
+    ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow, DatasetWrapperTask, FitBase,
+    ProcessGroupNameTask, QCDABCDTask
+)
+from cmt.base_tasks.plotting import BasePlotTask, FeaturePlot
 
 ROOT = import_root()
 
 directions = ["up", "down"]
 
 
-class FitBase():
-    def convert_parameters(self, d):
-        for param, val in d.items():
-            if isinstance(val, str):
-                if "," not in val:
-                    d[param] = tuple([float(val)])
-                else:
-                    d[param] = tuple(map(float, val.split(', ')))
-            else:
-                d[param] = val
-        return d
-
-    def get_x(self, x_range, blind_range=None, name="x"):
-        # fit range
-        x_range = (float(x_range[0]), float(x_range[1]))
-        x = ROOT.RooRealVar(name, name, x_range[0], x_range[1])
-
-        # blinded range
-        blind = False
-        if not blind_range:
-            return x, False
-        if blind_range[0] != blind_range[1]:
-            blind = True
-            blind_range = (float(self.blind_range[0]), float(self.blind_range[1]))
-            assert(blind_range[0] >= x_range[0] and blind_range[0] < blind_range[1] and
-                blind_range[1] <= x_range[1])
-            x.setRange("loSB", x_range[0], blind_range[0])
-            x.setRange("hiSB", blind_range[1], x_range[1])
-            x.setRange("full", x_range[0], x_range[1])
-            fit_range = "loSB,hiSB"
-        return x, blind
-
-    def get_fit(self, name, parameters, x, **kwargs):
-        fit_parameters = {}
-        params = OrderedDict()
-        fit_name = kwargs.pop("fit_name", "model")
-
-        if name == "voigtian":
-            fit_parameters["mean"] = parameters.get("mean", (0, -100, 100))
-            fit_parameters["gamma"] = parameters.get("gamma", (0.02, 0, 0.1))
-            fit_parameters["sigma"] = parameters.get("sigma", (0.001, 0, 0.1))
-            fit_parameters = self.convert_parameters(fit_parameters)
-
-            params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian', *fit_parameters["mean"])
-            params["gamma"] = ROOT.RooRealVar('gamma', 'Gamma of Voigtian', *fit_parameters["gamma"])
-            params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian', *fit_parameters["sigma"])
-            fun = ROOT.RooVoigtian(fit_name, fit_name, x,
-                params["mean"], params["gamma"], params["sigma"])
-
-        elif name == "polynomial":
-            order = int(parameters.get("order", 1))
-            for i in range(order):
-                fit_parameters[f"p{i}"] = parameters.get(f"p{i}", (0, -5, 5))
-            fit_parameters = self.convert_parameters(fit_parameters)
-            for i in range(order):
-                params[f"p{i}"] = ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"])
-            fun = ROOT.RooPolynomial(fit_name, fit_name, x, ROOT.RooArgList(*list(params.values())))
-
-        elif name == "exponential":
-            # https://root.cern.ch/doc/master/classRooExponential.html
-            fit_parameters["c"] = parameters.get("c", (0, -2, 2))
-            fit_parameters = self.convert_parameters(fit_parameters)
-            params["c"] = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
-            fun = ROOT.RooExponential(fit_name, fit_name, x, params["c"])
-
-        elif name == "powerlaw":
-            order = int(self.fit_parameters.get("order", 1))
-            for i in range(order):
-                fit_parameters[f"a{i}"] = parameters.get(f"a{i}", (1, 0, 2))
-                fit_parameters[f"b{i}"] = parameters.get(f"b{i}", (0, -2, 2))
-            fit_parameters = self.convert_parameters(fit_parameters)
-
-            for i in range(order):
-                params[f'a{i}'] = ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"])
-                params[f'b{i}'] = ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"])
-
-            fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
-                for i in range(0, order, 2)])
-            fun = ROOT.RooGenericPdf(fit_name, fit_fun, ROOT.RooArgList(*list(params.values())))
-
-        return fun, params
-
-
-class CombineBase(FeaturePlot, FitBase):
+class CombineBase(BasePlotTask, FitBase):
     """
     Base task for all combine-related tasks
 
@@ -162,7 +82,7 @@ class CombineCategoriesTask(CombineBase):
         "combined datacard or per category, default: False (per category)")
 
     def get_output_postfix(self, **kwargs):
-        postfix = super(CombineCategoriesTask, self).get_output_postfix()
+        postfix = super(CombineCategoriesTask, self).get_output_postfix(**kwargs)
         if not self.combine_categories:
             postfix += "_" + list(self.category_names)[self.branch]
         return postfix
@@ -174,7 +94,7 @@ class CombineCategoriesTask(CombineBase):
         return parts
 
 
-class CreateDatacards(CombineBase):
+class CreateDatacards(CombineBase, FeaturePlot):
     """
     Task that creates datacards for its use inside the combine framework
 
@@ -229,7 +149,8 @@ class CreateDatacards(CombineBase):
         Needs as input the root file provided by the FeaturePlot task
         """
         if not self.fit_models and not self.counting:
-            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False, normalize_signals=False)
+            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False,
+                normalize_signals=False)
         else:  # FIXME allow counting datacards starting from FeaturePlot
             reqs = {"fits": {}, "inspections": {}}
             self.model_processes = []
@@ -414,7 +335,7 @@ class CreateDatacards(CombineBase):
                 f.write(arg + "\n")
 
     def write_shape_datacard(self, feature, norm_systematics, shape_systematics,
-            datacard_syst_params, *args):
+            datacard_syst_params, datacard_env_cats, *args):
         n_dashes = 50
 
         region_name = "" if not self.region else "_{}".format(self.region.name)
@@ -489,6 +410,10 @@ class CreateDatacards(CombineBase):
         # shape systematics
         for syst_param in datacard_syst_params:
             table.append([syst_param, "param", 0.0, 1.0])
+
+        # datacard envelope categories
+        for cat in datacard_env_cats:
+            table.append([cat, "discrete"])
 
         fancy_shapes_table = tabulate.tabulate(shapes_table, tablefmt="plain").split("\n")
         fancy_table = tabulate.tabulate(table, tablefmt="plain").split("\n")
@@ -712,7 +637,8 @@ class CreateDatacards(CombineBase):
             elif not self.counting:  # unbinned fits
                 shape_systematics_feature = self.get_shape_systematics_from_inspect(feature.name)
                 # shape_systematics_feature = {}
-                datacard_syst_params = []
+                datacard_syst_params = []  # list of systematics to be included later in the datacard
+                datacard_env_cats = []  # list of categories for envelope fits to be included later in the datacard
 
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
@@ -725,6 +651,10 @@ class CreateDatacards(CombineBase):
                         tf.cd()
                         w.Write()
                         model_tf.Close()
+                        # if it's an envelope function, we also need to
+                        # store the category in the datacard
+                        datacard_env_cats.append(
+                            f"pdf_index_{self.category_name}_" + fit_params["process_name"])
                     else:
                         # create a new workspace with the dedicated systematics
                         x_range = fit_params.get("x_range", Fit.x_range._default)
@@ -732,71 +662,102 @@ class CreateDatacards(CombineBase):
                             x_range = x_range.split(", ")
                         blind_range = fit_params.get("blind_range", Fit.blind_range._default)
                         method = fit_params.get("method")
+                        if method != "envelope":
+                            functions = [method]
+                        else:
+                            functions = [e.strip() for e in fit_params.get("functions").split(",")]
 
                         x, blind = self.get_x(x_range, blind_range)
                         data = w.data("data_obs")
                         fit_parameters = fit_params.get("fit_parameters", {})
-                        _, params = self.get_fit(method, fit_parameters, x)
-                        # for param in params:
-                            # param.setConstant(True)
 
-                        # let's build the RooFormulaVar for each param (w/ or w/o systematics)
-                        param_syst = OrderedDict()
-                        systs = OrderedDict()
-                        for param, value in params.items():
-                            if param not in shape_systematics_feature[fit_params["process_name"]]:
-                                # no systematics to add, only need to consider the actual parameter
-                                param_syst[param] = value
+                        # Loop over the different functions (1 if not an envelope)
+                        params = {}  # parameters in the fit
+                        param_syst = {}  # parameters after shifting
+                        systs = {}  # RooRealVar with the systematics
+                        funs = []  # functions used for fitting (size 1 if not an envelope)
+                        for function in functions:
+                            _, params[function] = self.get_fit(function, fit_parameters, x)
+                            # for param in params[function]:
+                                # param.setConstant(True)
+                            param_syst[function] = OrderedDict()
+                            systs[function] = OrderedDict()
+
+                            for param, value in params[function].items():
+                                if param not in shape_systematics_feature[fit_params["process_name"]]:
+                                    # no systematics to add, only need to consider the actual parameter
+                                    param_syst[function][param] = value
+                                else:
+                                    systs[function][param] = []
+                                    syst_values = []
+                                    for syst, syst_value in \
+                                            shape_systematics_feature[fit_params["process_name"]][param].items():
+                                        systs[function][param].append(ROOT.RooRealVar(f"d{param}_{syst}",
+                                            f"d{param}_{syst}", 0, -5, 5))
+                                        systs[function][param][-1].setConstant(True)
+                                        syst_values.append(syst_value)
+                                        datacard_syst_params.append(f"d{param}_{syst}")
+                                    param_syst[function][param] = ROOT.RooFormulaVar(
+                                        f"{param}_syst", f"{param}_syst",
+                                        "@0*" + "*".join([f"(1+{syst_values[i]}*@{i+1})"
+                                            for i in range(len(syst_values))]),
+                                        ROOT.RooArgList(value, *systs[function][param]))
+
+                            # Create the new fitting function
+                            if method != "envelope":
+                                fit_name = "model_" + fit_params["process_name"]
                             else:
-                                systs[param] = []
-                                syst_values = []
-                                for syst, syst_value in \
-                                        shape_systematics_feature[fit_params["process_name"]][param].items():
-                                    systs[param].append(ROOT.RooRealVar(f"d{param}_{syst}",
-                                        f"d{param}_{syst}", 0, -5, 5))
-                                    systs[param][-1].setConstant(True)
-                                    syst_values.append(syst_value)
-                                    datacard_syst_params.append(f"d{param}_{syst}")
-                                param_syst[param] = ROOT.RooFormulaVar(
-                                    f"{param}_syst", f"{param}_syst",
-                                    "@0*" + "*".join([f"(1+{syst_values[i]}*@{i+1})"
-                                        for i in range(len(syst_values))]),
-                                    ROOT.RooArgList(value, *systs[param]))
+                                fit_name = f"model_{function.strip()}" + fit_params["process_name"]
 
-                        # Create the new fitting function
-                        if method == "voigtian":
-                            fun = ROOT.RooVoigtian("model_%s" % fit_params["process_name"],
-                                "model_%s" % fit_params["process_name"], x,
-                                param_syst["mean"], param_syst["gamma"], param_syst["sigma"])
-                        elif method == "polynomial":
-                            fun = ROOT.RooPolynomial("model_%s" % fit_params["process_name"],
-                                "model_%s" % fit_params["process_name"], x,
-                                ROOT.RooArgList(*list(param_syst.values())))
-                        elif method == "exponential":
-                            fun = ROOT.RooExponential("model_%s" % fit_params["process_name"],
-                                "model_%s" % fit_params["process_name"], x, param_syst["c"])
-                        elif method == "powerlaw":
-                            order = len(params.values())
-                            fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
-                                for i in range(0, order, 2)])
-                            fun = ROOT.RooGenericPdf("model_%s" % self.process_name,
-                                fit_fun, ROOT.RooArgList(*list(params.values())))
+                            if function == "voigtian":
+                                fun = ROOT.RooVoigtian(fit_name, fit_name, x,
+                                    param_syst[function]["mean"],
+                                    param_syst[function]["gamma"],
+                                    param_syst[function]["sigma"])
+                            elif function == "polynomial":
+                                fun = ROOT.RooPolynomial(fit_name, fit_name, x,
+                                    ROOT.RooArgList(*list(param_syst[function].values())))
+                            elif function == "exponential":
+                                fun = ROOT.RooExponential(fit_name, fit_name, x,
+                                    param_syst[function]["c"])
+                            elif function == "powerlaw":
+                                order = len(params[function].values())
+                                fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
+                                    for i in range(0, order, 2)])
+                                fun = ROOT.RooGenericPdf(fit_name, fit_fun,
+                                    ROOT.RooArgList(*([x] + list(param_syst[function].values()))))
 
-                        # Refit
-                        if not blind:
-                            fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                        else:
-                            fun.fitTo(data, ROOT.RooFit.Range(
-                                float(self.x_range[0]), float(self.x_range[1])),
-                                ROOT.RooFit.SumW2Error(True))
+                            # Refit
+                            if not blind:
+                                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                            else:
+                                fun.fitTo(data, ROOT.RooFit.Range(
+                                    float(self.x_range[0]), float(self.x_range[1])),
+                                    ROOT.RooFit.SumW2Error(True))
 
-                        for value in params.values():
-                            value.setConstant(True)
+                            for value in params[function].values():
+                                value.setConstant(True)
+
+                            funs.append(fun)
 
                         # save the function inside the workspace
                         w_name = "workspace_syst"
                         workspace_syst = ROOT.RooWorkspace(w_name, w_name)
-                        getattr(workspace_syst, "import")(fun)
+
+                        if method == "envelope":
+                            models = ROOT.RooArgList()
+                            for fun in funs:
+                                models.add(fun)
+                            cat_name = f"pdf_index_{self.category_name}_" + fit_params["process_name"]
+                            cat = ROOT.RooCategory(cat_name, "")
+                            datacard_env_cats.append(cat_name)
+                            multi_fun = ROOT.RooMultiPdf("model_" + fit_params["process_name"], "",
+                                cat, models)
+                            getattr(workspace_syst, "import")(cat)
+                            getattr(workspace_syst, "import")(multi_fun)
+                        else:
+                            getattr(workspace_syst, "import")(fun)
+
                         getattr(workspace_syst, "import")(data)
                         tf.cd()
                         workspace_syst.Write("workspace_" + fit_params["process_name"])
@@ -814,7 +775,7 @@ class CreateDatacards(CombineBase):
                 norm_systematics_feature.update(norm_systematics)
 
                 self.write_shape_datacard(feature, norm_systematics_feature, shape_systematics,
-                    datacard_syst_params, *self.additional_lines)
+                    datacard_syst_params, datacard_env_cats, *self.additional_lines)
 
             else:  # counting experiment
                 norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
@@ -846,7 +807,8 @@ class Fit(FeaturePlot, FitBase):
 
     """
 
-    method = luigi.ChoiceParameter(choices=("voigtian", "polynomial", "exponential", "powerlaw"),
+    method = luigi.ChoiceParameter(
+        choices=("voigtian", "polynomial", "exponential", "powerlaw", "envelope"),
         default="voigtian", description="fitting method to consider, default: voigtian")
     process_name = luigi.Parameter(default="signal", description="process name to consider, "
         "default: signal")
@@ -857,6 +819,8 @@ class Fit(FeaturePlot, FitBase):
     fit_parameters = luigi.DictParameter(default={}, description="Initial values for the parameters "
         "involved in the fit, defaults depend on the method. Should be included as "
         "--fit-parameters '{\"mean\": \"(20, -100, 100)\"}'")
+    functions = law.CSVParameter(default={}, description="functions to be considered inside "
+        "the envelope, default: None")
 
     normalize_signals = False
 
@@ -939,19 +903,28 @@ class Fit(FeaturePlot, FitBase):
                     if histo.GetBinContent(i) > 0:
                         n_non_zero_bins += 1
 
+                funs = []
                 # get function to fit and its parameters
-                fun, params = self.get_fit(self.method, self.fit_parameters, x,
-                    fit_name="model_" + self.process_name)
+                if self.method != "envelope":
+                    fun, params = self.get_fit(self.method, self.fit_parameters, x,
+                        fit_name="model_" + self.process_name)
+                    funs.append(fun)
+                else:
+                    params = {}
+                    for function in self.functions:
+                        aux_fun, aux_params = self.get_fit(function.strip(), self.fit_parameters, x,
+                            fit_name=f"model_{function.strip()}_{self.process_name}")
+                        funs.append(aux_fun)
+                        params.update(aux_params)
 
                 # fitting
-                if not blind:
-                    fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                else:
-                    fun.fitTo(data, ROOT.RooFit.Range(
-                        float(self.x_range[0]), float(self.x_range[1])),
-                        ROOT.RooFit.SumW2Error(True))
-
-                npar = fun.getParameters(data).selectByAttrib("Constant", False).getSize()
+                for fun in funs:
+                    if not blind:
+                        fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                    else:
+                        fun.fitTo(data, ROOT.RooFit.Range(
+                            float(self.x_range[0]), float(self.x_range[1])),
+                            ROOT.RooFit.SumW2Error(True))
 
                 # filling output dict with fitting results
                 d[key] = {}
@@ -959,12 +932,25 @@ class Fit(FeaturePlot, FitBase):
                     d[key][param] = value.getVal()
                     # setting the parameter as constant before saving it in the workspace
                     value.setConstant(True)  # needs further studying
+
                 if self.method == "voigtian":
                     gamma_value = params["gamma"].getVal()
                     sigma_value = params["sigma"].getVal()
                     G = 2 * sigma_value * np.sqrt(2 * np.log(2))
                     L = 2 * gamma_value
                     d[key]["HWHM"] = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
+
+                if self.method != "envelope":
+                    npar = fun.getParameters(data).selectByAttrib("Constant", False).getSize()
+                    d[key]["npar"] = npar
+                    d[key]["chi2/ndf"] = frame.chiSquare(npar)
+                    d[key]["ndf"] = n_non_zero_bins - npar
+                else:
+                    models = ROOT.RooArgList()
+                    for fun in funs:
+                        models.add(fun)
+                    cat = ROOT.RooCategory(f"pdf_index_{self.category_name}_{self.process_name}", "")
+                    multi_fun = ROOT.RooMultiPdf("model_" + self.process_name, "", cat, models)
 
                 histo_new = data.createHistogram("histo_new", x)
                 error = c_double(0.)
@@ -979,11 +965,8 @@ class Fit(FeaturePlot, FitBase):
                 # Additional results to include in the output dict
                 fun.plotOn(frame)
                 d[key]["chi2"] = frame.chiSquare()
-                d[key]["npar"] = npar
-                d[key]["chi2/ndf"] = frame.chiSquare(npar)
                 d[key]["Number of non-zero bins"] = n_non_zero_bins
                 d[key]["Full chi2"] = frame.chiSquare() * n_non_zero_bins
-                d[key]["ndf"] = n_non_zero_bins - npar
                 d[key]["integral"] = data.sumEntries()
                 d[key]["fit_range"] = self.x_range
                 d[key]["blind_range"] = "None" if not blind else self.blind_range
@@ -994,7 +977,11 @@ class Fit(FeaturePlot, FitBase):
 
                 w_name = "workspace_" + self.process_name + key
                 workspace = ROOT.RooWorkspace(w_name, w_name)
-                getattr(workspace, "import")(fun)
+                if self.method != "envelope":
+                    getattr(workspace, "import")(fun)
+                else:
+                    getattr(workspace, "import")(multi_fun)
+                    getattr(workspace, "import")(cat)
                 getattr(workspace, "import")(data)
                 workspace.Print()
                 f = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
@@ -1035,6 +1022,18 @@ class InspectFitSyst(Fit):
         }
 
     def run(self):
+        def get_params(method):
+            if method == "voigtian":
+                return ["mean", "sigma", "gamma"]
+            elif method == "exponential":
+                return ["c"]
+            elif method == "polynomial":
+                order = int(self.fit_parameters.get("polynomial_order", 1))
+                return [f'p{i}' for i in range(order)]
+            elif method == "powerlaw":
+                order = int(self.fit_parameters.get("powerlaw_order", 1))
+                return [f'a{i}' for i in range(order)] + [f'b{i}' for i in range(order)]
+
         inputs = self.input()
         isMC = self.config.processes.get(self.process_name).isMC
         for ifeat, feature in enumerate(self.features):
@@ -1042,16 +1041,11 @@ class InspectFitSyst(Fit):
                 + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC))
 
             params = ["integral"]
-            if self.method == "voigtian":
-                params += ["mean", "sigma", "gamma"]
-            elif self.method == "exponential":
-                params += ["c"]
+            if self.method != "envelope":
+                params.extend(get_params(self.method))
             else:
-                order = int(self.fit_parameters.get("order", 1))
-                if self.method == "polynomial":
-                    params += [f'p{i}' for i in range(order)]
-                elif self.method == "powerlaw":
-                    params += [f'a{i}' for i in range(order)] + [f'b{i}' for i in range(order)]
+                for method in self.functions:
+                    params.extend(get_params(method.strip()))
 
             with open(inputs[feature.name]["json"].path) as f:
                 d = json.load(f)
@@ -1082,7 +1076,7 @@ class InspectFitSyst(Fit):
                 json.dump(out, f, indent=4)
 
 
-class CombineDatacards(CombineCategoriesTask):
+class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
     """
     Task that combines datacards coming from :class:`.CreateDatacards`.
 
@@ -1132,7 +1126,7 @@ class CombineDatacards(CombineCategoriesTask):
             os.system(cmd)
 
 
-class CreateWorkspace(CreateDatacards, CombineCategoriesTask,
+class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
         law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
     """
     Task that creates the Combine workspace from the datacards obtained from
@@ -1444,7 +1438,7 @@ class PullsAndImpacts(RunCombine):
                 json.dump(results, f)
 
 
-class MergePullsAndImpacts(CombineCategoriesTask):
+class MergePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
     """
     Task that merges the pulls and impacts for each systematic obtained by :class:`.PullsAndImpacts`.
 
