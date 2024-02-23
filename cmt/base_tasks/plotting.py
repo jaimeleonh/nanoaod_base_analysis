@@ -28,7 +28,7 @@ from analysis_tools.utils import (
 from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import ( 
     DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow,
-    ConfigTaskWithCategory, RDFModuleTask, InputData, FitBase, QCDABCDTask
+    ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask
 )
 
 from cmt.base_tasks.preprocessing import (
@@ -49,7 +49,7 @@ directions = ["up", "down"]
 
 ROOT = import_root()
 
-class BasePlotTask(ConfigTaskWithCategory):
+class BasePlotTask(ConfigTaskWithRegion):
     """
     Task that wraps parameters used in all plotting tasks. Can't be run.
 
@@ -516,7 +516,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         out.Close()
 
 
-class FeaturePlot(BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
+class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
     """
     Performs the actual histogram plotting: loads the histograms obtained in the PrePlot tasks,
     rescales them if needed and plots and saves them.
