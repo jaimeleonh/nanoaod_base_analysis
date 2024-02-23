@@ -660,40 +660,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         super(FeaturePlot, self).__init__(*args, **kwargs)
         # select processes and datasets
         assert not (self.do_qcd and self.do_sideband)
-<<<<<<< HEAD
-=======
-        self.processes_datasets = {}
-        self.datasets_to_run = []
-
-        def get_processes(dataset=None, process=None):
-            processes = ObjectCollection()
-            if dataset and not process:
-                process = self.config.processes.get(dataset.process.name)
-            processes.append(process)
-            if process.parent_process:
-                processes += get_processes(process=self.config.processes.get(
-                    process.parent_process))
-            return processes
-
-        for dataset in self.datasets:
-            processes = get_processes(dataset=dataset)
-            filtered_processes = ObjectCollection()
-            for process in processes:
-                if process.name in self.config.process_group_names[self.process_group_name]:
-                    filtered_processes.append(process)
-            if len(filtered_processes) > 1:
-                raise Exception("%s process group name includes not orthogonal processes %s"
-                    % (self.process_group_name, ", ".join(filtered_processes.names())))
-            elif len(filtered_processes) == 1:
-                process = filtered_processes[0]
-                if process not in self.processes_datasets:
-                    self.processes_datasets[process] = []
-                self.processes_datasets[process].append(dataset)
-                self.datasets_to_run.append(dataset)
-        if len(self.datasets_to_run) == 0:
-            raise ValueError("No datasets were selected. Are you sure you want to use"
-                " %s as process_group_name?" % self.process_group_name)
->>>>>>> 72af547cf4fbd2968f955ee2be2878cc3231c4ea
 
         # get QCD regions when requested
         self.qcd_regions = None
