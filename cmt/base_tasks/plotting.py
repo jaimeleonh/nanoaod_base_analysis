@@ -280,11 +280,23 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         :return: number of files after merging (usually 1) unless skip_processing == True
         :rtype: int
         """
-        if self.skip_processing or self.skip_merging:
-            return len(self.dataset.get_files(
+        # number of files of InputData. In a lambda to not compute i unless needed
+        input_data_count = lambda : len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
                 check_empty=True))
-        return self.n_files_after_merging
+        if self.skip_processing:
+            return input_data_count()
+        elif self.skip_merging:
+            categorization_max_events = self.dataset.get_aux("categorization_max_events", None)
+            if categorization_max_events is None:
+                return input_data_count()
+            else:
+                # in case we have used the Categorization splitting output
+                with open(create_file_dir(os.path.expandvars(
+                        "$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                        self.config_name, categorization_max_events, self.dataset.name)))) as f:
+                    return len(json.load(f))
+        return self.n_files_after_merging # in case we use MergeCategorization
 
     def workflow_requires(self):
         """
@@ -381,7 +393,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                 df = dfs[key]
 
                 # apply selection if needed
-                if feature.selection:
+                if feature.selection and nentries[key] > 0:
                     feat_df = df.Define("feat_selection", self.config.get_object_expression(
                         feature.selection, isMC, syst_name, direction)).Filter("feat_selection")
                 else:
@@ -434,6 +446,7 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
         nentries = {}
         for elem in ["central"] + [f"{syst}_{d}"
                 for (syst, d) in itertools.product(self.syst_list, directions)]:
+
             if self.skip_processing:
                 inp_to_consider = self.get_path(inp[elem])[0]
                 if not self.dataset.friend_datasets:
@@ -579,6 +592,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
     :param log_y: whether to set y axis to log scale
     :type log_y: bool
 
+    :param log_x: whether to set y axis to log scale
+    :type log_x: bool
+    
     :param include_fit: YAML file inside config folder (w/o extension) including input parameters
         for the fit
     :type include_fit: str
@@ -590,7 +606,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
         "them with dataset and category weights, and normalize afterwards, default: False")
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
-    normalize_signals = luigi.BoolParameter(default=True, description="whether to normalize "
+    normalize_signals = luigi.BoolParameter(default=False, description="whether to normalize "
         "signals to the total bkg yield, default: True")
     avoid_normalization = luigi.BoolParameter(default=False, description="whether to avoid "
         "normalizing by cross section and initial number of events, default: False")
@@ -611,6 +627,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
     fixed_colors = luigi.BoolParameter(default=False, description="whether to use fixed colors "
         "for plotting, default: False")
     log_y = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
+        "default: False")
+    log_x = luigi.BoolParameter(default=False, description="set logarithmic scale for X axis, "
         "default: False")
     include_fit = luigi.Parameter(default="", description="fit to be included in the plots, "
         "default: None")
@@ -642,6 +660,40 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         super(FeaturePlot, self).__init__(*args, **kwargs)
         # select processes and datasets
         assert not (self.do_qcd and self.do_sideband)
+<<<<<<< HEAD
+=======
+        self.processes_datasets = {}
+        self.datasets_to_run = []
+
+        def get_processes(dataset=None, process=None):
+            processes = ObjectCollection()
+            if dataset and not process:
+                process = self.config.processes.get(dataset.process.name)
+            processes.append(process)
+            if process.parent_process:
+                processes += get_processes(process=self.config.processes.get(
+                    process.parent_process))
+            return processes
+
+        for dataset in self.datasets:
+            processes = get_processes(dataset=dataset)
+            filtered_processes = ObjectCollection()
+            for process in processes:
+                if process.name in self.config.process_group_names[self.process_group_name]:
+                    filtered_processes.append(process)
+            if len(filtered_processes) > 1:
+                raise Exception("%s process group name includes not orthogonal processes %s"
+                    % (self.process_group_name, ", ".join(filtered_processes.names())))
+            elif len(filtered_processes) == 1:
+                process = filtered_processes[0]
+                if process not in self.processes_datasets:
+                    self.processes_datasets[process] = []
+                self.processes_datasets[process].append(dataset)
+                self.datasets_to_run.append(dataset)
+        if len(self.datasets_to_run) == 0:
+            raise ValueError("No datasets were selected. Are you sure you want to use"
+                " %s as process_group_name?" % self.process_group_name)
+>>>>>>> 72af547cf4fbd2968f955ee2be2878cc3231c4ea
 
         # get QCD regions when requested
         self.qcd_regions = None
@@ -791,7 +843,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         if self.include_fit:
             postfix += "__withfit"
         if self.log_y and key not in ("root", "yields"):
-            postfix += "__log"
+            postfix += "__logY"
+        if self.log_x and key not in ("root", "yields"):
+            postfix += "__logX"
+        if self.normalize_signals and key not in ("root", "yields"):
+            postfix += "__norm_sig"
         return postfix
 
     def output(self):
@@ -1206,6 +1262,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             c = Canvas()
             if self.log_y:
                 c.SetLogy()
+            if self.log_x:
+                c.SetLogx()
             label_scaling = 1
         else:
             do_ratio = True
@@ -1215,6 +1273,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             c.get_pad(1).cd()
             if self.log_y:
                 c.get_pad(1).SetLogy()
+            if self.log_x:
+                c.get_pad(1).SetLogx()
             label_scaling = 5./4.
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
@@ -1590,7 +1650,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                                 rootfile = ROOT.TFile.Open(elem.path)
                                 histo = copy(rootfile.Get(feature_name))
                                 rootfile.Close()
-                                dataset_histo.Add(histo)
+                                if histo.GetEntries() != 0:
+                                    dataset_histo.Add(histo)
                             if not process.isData and not self.avoid_normalization:
                                 elem = ("central" if syst == "central" or syst not in self.norm_syst_list
                                     else f"{syst}_{d}")
@@ -1807,6 +1868,8 @@ class FeaturePlotSyst(FeaturePlot):
                 c.get_pad(1).cd()
                 if self.log_y:
                     c.get_pad(1).SetLogy()
+                if self.log_x:
+                    c.get_pad(1).SetLogx()
                 label_scaling = 5./4.
 
                 r.setup_hist(dummy_hist)

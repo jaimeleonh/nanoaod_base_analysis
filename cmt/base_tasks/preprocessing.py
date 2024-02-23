@@ -373,11 +373,16 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     :param keep_and_drop_file: filename inside ``cmt/config/`` or "../config/" (w/o extension)
         with the RDF columns to save in the output file
     :type keep_and_drop_file: str
+
+    :param compute_filter_efficiency: compute efficiency of each filter applied
+    :type compute_filter_efficiency: bool
     """
 
     modules_file = luigi.Parameter(description="filename with RDF modules", default=law.NO_STR)
     keep_and_drop_file = luigi.Parameter(description="filename with branches to save, empty: all",
         default="")
+    compute_filter_efficiency = luigi.BoolParameter(description="compute efficiency of each filter applied, default: False",
+        default=False)
     weights_file = None
 
     default_store = "$CMT_STORE_EOS_PREPROCESSING"
@@ -395,7 +400,11 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         :return: One file per input file with the tree + additional branches
         :rtype: `.root`
         """
-        return self.local_target(f"data_{self.addendum}{self.branch}.root")
+        out = {"root" : self.local_target(f"data_{self.addendum}{self.branch}.root")}
+        if self.compute_filter_efficiency:
+            out["cut_flow"] = self.local_target(f"cutflow_{self.addendum}{self.branch}.json")
+        out = law.SiblingFileCollection(out)
+        return out
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -406,6 +415,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         """
         from shutil import copy
         ROOT = import_root()
+        verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # create RDataFrame
@@ -424,9 +434,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             tchain.AddFriend(friend_tchain, "friend")
             df = ROOT.RDataFrame(tchain)
 
-        print(self.get_path(inp))
-
-        outp = self.output()
+        outp = self.output()['root']
         # print(outp.path)
 
         selection = self.category.selection
@@ -435,7 +443,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             # selection = jrs(dataset_selection, selection, op="and")
 
         if selection != "":
-            filtered_df = df.Define("selection", selection).Filter("selection")
+            filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
         else:
             filtered_df = df
 
@@ -454,7 +462,14 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         branch_list = ROOT.vector('string')()
         for branch_name in branches:
             branch_list.push_back(branch_name)
+        if self.compute_filter_efficiency == True:
+            report = filtered_df.Report()
         filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
+        if self.compute_filter_efficiency == True:
+            json_res = {cutReport.GetName() : {"pass": cutReport.GetPass(), "all": cutReport.GetAll()} for cutReport in report.GetValue()}
+            with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                json.dump(json_res, f, indent=4)
+
 
 
 class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
@@ -698,6 +713,8 @@ class Categorization(PreprocessRDF):
 
     :param skip_preprocess: whether to skip the PreprocessRDF task
     :type skip_preprocess: bool
+
+    You can add categorization_max_events as dataset parameter, this will split the dataset output from PreprocessRDF further into different files having at most the given number of events (the last one will have less)
     """
 
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
@@ -715,6 +732,75 @@ class Categorization(PreprocessRDF):
 
     def __init__(self, *args, **kwargs):
         super(Categorization, self).__init__(*args, **kwargs)
+        self.max_events = self.dataset.get_aux("categorization_max_events", None)
+        if sum((x is not None for x in [self.dataset.get_aux("categorization_max_events"), self.dataset.get_aux("preprocess_merging_factor"), self.dataset.get_aux("event_threshold")])) > 1:
+            raise RuntimeError(f"Dataset {self.dataset.name} error : you can only specify one of categorization_max_events, preprocess_merging_factor, event_threshold a the same time")
+        if self.dataset.get_aux("categorization_max_events") is not None and self.request_cpus > 1:
+            raise RuntimeError(f"Dataset.categorization_max_events is not compatible with request_cpus > 1 (in dataset {self.dataset.name}), due to RDataFrame limitation") # RDataFrame.Range is not compatible with multithreading
+        if self.max_events is not None:
+            if not hasattr(self, "splitted_branches") and self.is_workflow():
+                self.splitted_branches = self.build_splitted_branches()
+            elif not hasattr(self, "splitted_branches"):
+                self.splitted_branches = self.get_splitted_branches # not exactly sure what this is supposed to do, copied over from Preprocess
+    
+    def get_n_events(self, fil):
+        ROOT = import_root()
+        for trial in range(10): 
+            try:
+                f = ROOT.TFile.Open(fil)
+                tree = f.Get(self.tree_name)
+                nevents = tree.GetEntries()
+                return nevents
+            except:
+                print("Failed opening %s, %s/10 trials" % (fil, trial + 1))
+            finally:
+                if 'f' in locals():
+                    f.Close()
+        raise RuntimeError("Failed opening %s" % fil)
+    
+    def build_splitted_branches(self):
+        if not os.path.exists(
+                os.path.expandvars("$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                    self.config_name, self.max_events, self.dataset.name))):
+            ROOT = import_root()
+            files = [target["root"].path for target in self.get_input()["data"]["collection"].targets.values()]
+            branches = []
+            for ifil, fil in enumerate(files):
+                nevents = -1
+                print("Analyzing file %s" % fil)
+                nevents = self.get_n_events(fil)
+                initial_event = 0
+                isplit = 0
+                while initial_event < nevents:
+                    max_events = min(initial_event + self.max_events, int(nevents))
+                    branches.append({
+                        "filenumber": ifil,
+                        "split": isplit,
+                        "initial_event": initial_event,
+                        "max_events": max_events,
+                    })
+                    initial_event += self.max_events
+                    isplit += 1
+            with open(create_file_dir(os.path.expandvars(
+                    "$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                    self.config_name, self.max_events, self.dataset.name))), "w+") as f:
+                json.dump(branches, f, indent=4)
+        else:
+             with open(create_file_dir(os.path.expandvars(
+                    "$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                    self.config_name, self.max_events, self.dataset.name)))) as f:
+                branches = json.load(f)
+        return branches
+
+    @law.workflow_property
+    def get_splitted_branches(self):
+        return self.splitted_branches
+    
+    def create_branch_map(self):
+        if self.max_events is not None:
+            return len(self.splitted_branches)
+        else:
+            return super().create_branch_map()
 
     def workflow_requires(self):
         if not self.skip_preprocess:
@@ -723,11 +809,15 @@ class Categorization(PreprocessRDF):
             return {"data": InputData.req(self)}
 
     def requires(self):
+        if self.max_events is not None:
+            preprocess_branch = self.splitted_branches[self.branch]["filenumber"]
+        else:
+            preprocess_branch = self.branch
         if not self.skip_preprocess:
             return PreprocessRDF.vreq(self, category_name=self.base_category_name,
-                branch=self.branch)
+                branch=preprocess_branch)
         else:
-            return InputData.req(self, file_index=self.branch)
+            return InputData.req(self, file_index=preprocess_branch)
 
     def output(self):
         return self.local_target(f"data_{self.addendum}{self.branch}.root")
@@ -742,7 +832,11 @@ class Categorization(PreprocessRDF):
         """
         from shutil import copy
         ROOT = import_root()
-        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+        verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
+        if self.request_cpus > 1:
+            ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+        else:
+            ROOT.ROOT.DisableImplicitMT() # probably not needed
 
         # prepare inputs and outputs
         # inp = self.input()["data"].path
@@ -767,7 +861,12 @@ class Categorization(PreprocessRDF):
                     tchain.AddFriend(friend_tchain, "friend")
                     df = ROOT.RDataFrame(tchain)
             else:
-                df = ROOT.RDataFrame(self.tree_name, self.input().path)
+                df = ROOT.RDataFrame(self.tree_name, self.input()["root"].path)
+            
+            # restricting number of events
+            if self.max_events is not None:
+                df = df.Range(self.splitted_branches[self.branch]["initial_event"],
+                    self.splitted_branches[self.branch]["max_events"])
 
             selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
                 self.systematic, self.systematic_direction)
@@ -792,19 +891,19 @@ class Categorization(PreprocessRDF):
             branch_list = ROOT.vector('string')()
             for branch_name in branches:
                 branch_list.push_back(branch_name)
-            filtered_df = df.Define("selection", selection).Filter("selection")
+            filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
             filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
 
         except ReferenceError:  # empty ntuple
-            inp = self.input().path
+            inp = self.input()["root"].path
             copy(inp, outp.path)
         except AttributeError:  # empty input file
-            inp = self.input().path
+            inp = self.input()["root"].path
             copy(inp, outp.path)
         #copy(self.input()["stats"].path, outp["stats"].path)
 
         # except KeyboardInterrupt:
-        #     print("### DEBUG Error")    
+        #     print("### DEBUG Error")
 
 
 class CategorizationWrapper(DatasetCategorySystWrapperTask):
@@ -947,6 +1046,70 @@ class MergeCategorizationWrapper(DatasetCategorySystWrapperTask):
             category_name=category.name, systematic=systematic,
             systematic_direction=direction)
 
+class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
+    """
+    Merges the output from the PreProcessRDF task if the option
+    compute-filter-efficiency is used.
+    """ 
+
+    # regions not supported
+    region_name = None
+
+    merge_factor = -1
+
+    def merge_workflow_requires(self):
+        return PreprocessRDF.vreq(self, compute_filter_efficiency=True, 
+                _prefer_cli=["workflow"])
+
+    def merge_requires(self, start_leaf, end_leaf):
+        return PreprocessRDF.vreq(self, compute_filter_efficiency=True, 
+                workflow="local", branches=((start_leaf, end_leaf),), _exclude={"branch"})
+
+    def trace_merge_inputs(self, inputs):
+        return [inp for inp in inputs["collection"].targets.values()]
+
+    def merge_output(self):
+        return self.local_target(f"cut_flow.json")
+
+    def merge(self, inputs, output):
+        # output content
+        stats = defaultdict(lambda: {"pass": 0, "all": 0})
+
+        # merge
+        for inp in inputs:
+            try:
+                if "json" in inp["cut_flow"].path:
+                    _stats = inp["cut_flow"].load(formatter="json")
+                else:
+                    continue
+            except:
+                print("error leading input target {}".format(inp["cut_flow"]))
+                raise
+
+            # add pass and all
+            if "json" in inp["cut_flow"].path:
+                for cutName, cutEffs in _stats.items():
+                    for keyPassAll, val in cutEffs.items():
+                        stats[cutName][keyPassAll] += val
+            else:
+                continue
+
+        output.parent.touch()
+        output.dump(stats, indent=4, formatter="json")
+
+class MergeCutFlowWrapper(DatasetCategorySystWrapperTask):
+    """
+    Wrapper task to run the MergeCutFlow task over several datasets in parallel.
+
+    Example command:
+
+    ``law run MergeCutFlowWrapper --version test --category-names etau \
+--config-name base_config --dataset-names tt_dl,tt_sl --workers 10``
+    """
+
+    def atomic_requires(self, dataset, category, systematic, direction):
+        return MergeCutFlow.vreq(self, dataset_name=dataset.name,
+            category_name=category.name)
 
 class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
     """
@@ -986,7 +1149,6 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
             _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
-        # return [inp["data"] for inp in inputs["collection"].targets.values()]
         return [inp for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
