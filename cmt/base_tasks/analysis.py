@@ -48,6 +48,9 @@ class CombineBase(BasePlotTask, FitBase):
 
     :param fit_models: filename with fit models to use in the fit
     :type fit_models: str
+
+    :param unblind: Whether to run combine unblinded.
+    :type method: bool
     """
 
     pois = law.CSVParameter(default=("r",), description="parameters of interest to be considered, "
@@ -56,11 +59,14 @@ class CombineBase(BasePlotTask, FitBase):
         "combine, default: 125")
     fit_models = luigi.Parameter(default="", description="filename with fit models to use "
         "in the fit, default: none (binned fit)")
+    unblind = luigi.BoolParameter(default=False, description="whether to run combine unblinded, "
+        "default: False")
 
     def get_output_postfix(self, **kwargs):
-        self.process_group_name = kwargs.pop("process_group_name", self.process_group_name)
-        process_group_name = "" if self.process_group_name == "default" else "_{}".format(
-            self.process_group_name)
+        default_pgn = getattr(self, "process_group_name", "default")
+        process_group_name = kwargs.get("process_group_name", default_pgn)
+        process_group_name = "" if process_group_name == "default" else "_{}".format(
+            process_group_name)
         region_name = "" if not self.region else "_{}".format(self.region.name)
         return process_group_name + region_name
 
@@ -84,14 +90,9 @@ class CombineCategoriesTask(CombineBase):
     def get_output_postfix(self, **kwargs):
         postfix = super(CombineCategoriesTask, self).get_output_postfix(**kwargs)
         if not self.combine_categories:
-            postfix += "_" + list(self.category_names)[self.branch]
+            category_names = kwargs.get("category_names", self.category_names)
+            postfix += "_" + list(category_names)[self.branch]
         return postfix
-
-    def store_parts(self):
-        parts = super(CombineCategoriesTask, self).store_parts()
-        # parts["category_name"] = "cat_combined"
-        del parts["category_name"]
-        return parts
 
 
 class CreateDatacards(CombineBase, FeaturePlot):
@@ -229,6 +230,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
     def get_shape_systematics_from_inspect(self, feature_name):
         def round_unc(num):
+            if num == 0:
+                return num
             exp = 0
             while True:
                 if num * 10 ** exp > 1:
@@ -653,8 +656,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         model_tf.Close()
                         # if it's an envelope function, we also need to
                         # store the category in the datacard
-                        datacard_env_cats.append(
-                            f"pdf_index_{self.category_name}_" + fit_params["process_name"])
+                        if fit_params.get("method") == "envelope":
+                            datacard_env_cats.append(
+                                f"pdf_index_{self.category_name}_" + fit_params["process_name"])
                     else:
                         # create a new workspace with the dedicated systematics
                         x_range = fit_params.get("x_range", Fit.x_range._default)
@@ -1082,7 +1086,6 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
 
     """
 
-    category_name = "base"
     combine_categories = True
 
     def requires(self):
@@ -1133,8 +1136,6 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
     :class:`.CreateDatacards` or :class:`.CombineDatacards`.
 
     """
-
-    category_name = "base"
 
     def create_branch_map(self):
         """
@@ -1197,6 +1198,50 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
             os.system(cmd)
 
 
+class ValidateDatacards(CreateWorkspace):
+    """
+    Task that runs the ValidateDatacards.py script from the CombineHarvester package
+    Uses the datacards coming from :class:`.CreateDatacards` or :class:`.CombineDatacards`.
+
+    NOTE: Needs the full CombineHarvester package, so at the moment it only works in CMSSW_11_3_4.
+
+    """
+
+    def output(self):
+        """
+        Outputs one root file with the workspace if categories are combined or one per category.
+        """
+        assert not self.combine_categories or (
+            self.combine_categories and len(self.category_names) > 1)
+        return {
+            feature.name: {
+                key: self.local_target("results_{}{}.{}".format(
+                    feature.name, self.get_output_postfix(), key))
+                for key in ["json", "log"]
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        """
+        Obtains the workspace for each provided datacard.
+        """
+        inputs = self.input()
+        for feature in self.features:
+            if not self.combine_categories:
+                inp = inputs[list(self.category_names)[self.branch]][feature.name]['txt'].path
+            else:
+                inp = inputs[feature.name].path
+            filename = randomize("datacard")
+            os.system(f"cp {inp} {filename}.txt")
+            cmd = "ValidateDatacards.py {}.txt --jsonFile {} > {}".format(
+                filename,
+                create_file_dir(self.output()[feature.name]["json"].path),
+                create_file_dir(self.output()[feature.name]["log"].path)
+            )
+            os.system(cmd)
+
+
 class RunCombine(CreateWorkspace):
     """
     Task that runs the combine tool over the workspace created by
@@ -1206,15 +1251,10 @@ class RunCombine(CreateWorkspace):
         now.
     :type method: str
 
-    :param unblind: Whether to run combine unblinded.
-    :type method: bool
-
     """
 
     method = luigi.ChoiceParameter(choices=("limits",), default="limits",
         description="combine method to be considered, default: False")
-    unblind = luigi.BoolParameter(default=False, description="whether to run combine unblinded, "
-        "default: False")
 
     def workflow_requires(self):
         """
@@ -1268,7 +1308,19 @@ class RunCombine(CreateWorkspace):
                 self.output()[feature.name]["root"].path)
 
 
-class PullsAndImpacts(RunCombine):
+class BasePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
+
+    robust = luigi.BoolParameter(default=False, description="whether to run pulls and impacts with robust fit, "
+        "default: False")
+
+    def get_output_postfix(self, **kwargs):
+        postfix = super(CombineCategoriesTask, self).get_output_postfix(**kwargs)
+        if self.robust:
+            postfix += "__robustfit"
+        return postfix
+
+
+class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
     """
     Task that obtains the pulls and impacts over the workspace created by :class:`.CreateWorkspace`.
     Based on https://gitlab.cern.ch/hh/tools/inference/-/blob/master/dhi/tasks/pulls_impacts.py
@@ -1397,17 +1449,19 @@ class PullsAndImpacts(RunCombine):
         Runs the combine commands needed for pulls and impacts computations.
         """
         inp = self.input()["collection"].targets[0]
+        robust_fit = "--robustFit 1 " if self.robust else ""
         for feature in self.features:
             w_path = inp[feature.name].path
 
             if self.branch == 0:
                 cmd = ("combine -M MultiDimFit -n _initialFit --algo singles "
-                    "--redefineSignalPOIs {poi} {toys} -m {mass} -d {workspace} > {log_file}")
+                    "--redefineSignalPOIs {poi} {toys} -m {mass} -d {workspace} {robust_fit}>"
+                    " {log_file}")
                 out_file = "higgsCombine_initialFit.MultiDimFit.mH{mass}.root"
             else:
                 cmd = ("combine -M MultiDimFit -n _paramFit_Test_{param} --algo impact "
                     "--redefineSignalPOIs {poi} -P {param} --floatOtherPOIs 1 --saveInactivePOI 1 "
-                    "{toys} -m {mass} -d {workspace} > {log_file}")
+                    "{toys} -m {mass} -d {workspace} {robust_fit}> {log_file}")
                 out_file = "higgsCombine_paramFit_Test_{param}.MultiDimFit.mH{mass}.root"
 
             toys = "--toys -1"
@@ -1416,7 +1470,7 @@ class PullsAndImpacts(RunCombine):
             log_file = randomize("log")
 
             cmd = cmd.format(poi=self.pois[0], toys=toys, mass=self.higgs_mass,
-                workspace=w_path, param=self.branch_data, log_file=log_file)
+                workspace=w_path, param=self.branch_data, robust_fit=robust_fit, log_file=log_file)
             print("Running " + cmd)
             os.system(cmd)
 
@@ -1438,13 +1492,11 @@ class PullsAndImpacts(RunCombine):
                 json.dump(results, f)
 
 
-class MergePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
+class MergePullsAndImpacts(BasePullsAndImpacts):
     """
     Task that merges the pulls and impacts for each systematic obtained by :class:`.PullsAndImpacts`.
 
     """
-
-    category_name = "base"
 
     def requires(self):
         """
@@ -1535,4 +1587,4 @@ class PlotPullsAndImpacts(MergePullsAndImpacts):
                 inp[feature.name].path,
                 out
             ))
-            move(out + ".pdf", self.output()[feature.name].path)
+            move(out + ".pdf", create_file_dir(self.output()[feature.name].path))

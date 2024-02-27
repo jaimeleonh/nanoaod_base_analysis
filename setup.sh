@@ -116,6 +116,14 @@ action() {
        fi
        mkdir -p "$TMPDIR"
     fi
+    if [ -n "$CMT_LLR_USER" ]; then
+       if [ -n "$CMT_REMOTE_JOB" ]; then
+         export TMPDIR=$CMT_TMP_DIR
+       else
+         export TMPDIR="/scratch/$CMT_LLR_USER/tmp"
+       fi
+       mkdir -p "$TMPDIR"
+    fi 
 
     # specific eos dirs
     [ -z "$CMT_STORE_EOS_PREPROCESSING" ] && export CMT_STORE_EOS_PREPROCESSING="$CMT_STORE_EOS"

@@ -154,8 +154,6 @@ class ConfigTaskWithCategory(ConfigTask):
 
     category_name = luigi.Parameter(default="baseline_even", description="the name of a category "
         "whose selection rules are applied, default: baseline_even")
-    region_name = luigi.Parameter(default=law.NO_STR, description="an optional name of a region "
-        "to apply live, default: empty")
     # use_base_category = luigi.BoolParameter(default=False, description="use the base category of "
     #     "the requested category for requirements, apply the selection on-the-fly, default: False")
     use_base_category = False  # currently disabled
@@ -170,10 +168,6 @@ class ConfigTaskWithCategory(ConfigTask):
         if self.category.subcategories and not self.allow_composite_category:
             raise Exception("category '{}' is composite, prohibited by task {}".format(
                 self.category.name, self))
-
-        self.region = None
-        if self.region_name and self.region_name != law.NO_STR:
-            self.region = self.config.regions.get(self.region_name)
 
     def store_parts(self):
         parts = super(ConfigTaskWithCategory, self).store_parts()
@@ -195,6 +189,19 @@ class ConfigTaskWithCategory(ConfigTask):
         # else:
             # return category
         return category
+
+
+class ConfigTaskWithRegion(ConfigTask):
+
+    region_name = luigi.Parameter(default=law.NO_STR, description="an optional name of a region "
+        "to apply live, default: empty")
+
+    def __init__(self, *args, **kwargs):
+        super(ConfigTaskWithRegion, self).__init__(*args, **kwargs)
+
+        self.region = None
+        if self.region_name and self.region_name != law.NO_STR:
+            self.region = self.config.regions.get(self.region_name)
 
 
 class DatasetTask(ConfigTask):
@@ -224,7 +231,7 @@ class DatasetTask(ConfigTask):
         return parts
 
 
-class DatasetTaskWithCategory(ConfigTaskWithCategory, DatasetTask):
+class DatasetTaskWithCategory(ConfigTaskWithCategory, ConfigTaskWithRegion, DatasetTask):
 
     def __init__(self, *args, **kwargs):
         super(DatasetTaskWithCategory, self).__init__(*args, **kwargs)
