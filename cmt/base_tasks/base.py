@@ -6,7 +6,7 @@ Base tasks.
 
 __all__ = [
     "Task", "ConfigTask", "ConfigTaskWithCategory", "DatasetTask", "DatasetTaskWithCategory",
-    "DatasetWrapperTask", "HTCondorWorkflow", "SGEWorkflow", "InputData",
+    "DatasetWrapperTask", "HTCondorWorkflow", "SGEWorkflow", "SlurmWorkflow" "InputData",
 ]
 
 

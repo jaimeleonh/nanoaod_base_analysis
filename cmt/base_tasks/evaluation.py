@@ -13,7 +13,7 @@ from collections import OrderedDict
 import law
 import luigi
 
-from cmt.base_tasks.base import ConfigTaskWithCategory, DatasetTaskWithCategory, HTCondorWorkflow
+from cmt.base_tasks.base import ConfigTaskWithCategory, DatasetTaskWithCategory, HTCondorWorkflow, SlurmWorkflow
 from cmt.base_tasks.preprocessing import MergeCategorization
 from cmt.base_tasks.shards import MergeShards
 from cmt.base_tasks.training import MultiSeedTrainingTask, Training
@@ -80,7 +80,7 @@ class EvaluateTraining(ConfigTaskWithCategory, MultiSeedTrainingTask):
 
 
 class EvaluateData(DatasetTaskWithCategory, MultiSeedTrainingTask, law.LocalWorkflow,
-        HTCondorWorkflow):
+        HTCondorWorkflow, SlurmWorkflow):
 
     tree_name = "HTauTauTree"
 
@@ -188,7 +188,7 @@ class EvaluateData(DatasetTaskWithCategory, MultiSeedTrainingTask, law.LocalWork
 
 
 class FeatureRanking(ConfigTaskWithCategory, MultiSeedTrainingTask, law.LocalWorkflow,
-        HTCondorWorkflow):
+        HTCondorWorkflow, SlurmWorkflow):
 
     feature_names = law.CSVParameter(default=(), description="features to test using the shuffling "
         "method, use all features from tag when empty, default: empty")

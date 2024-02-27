@@ -13,7 +13,7 @@ import six
 import law
 import luigi
 
-from cmt.base_tasks.base import Task, ConfigTask, HTCondorWorkflow, SGEWorkflow
+from cmt.base_tasks.base import Task, ConfigTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow
 from cmt.base_tasks.shards import MergeShards
 from cmt.util import parse_workflow_file
 
@@ -560,7 +560,8 @@ class Training(MultiConfigTrainingTask):
         return False
 
 
-class TrainingWorkflowBase(Task, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
+class TrainingWorkflowBase(Task, law.LocalWorkflow, HTCondorWorkflow,
+    SGEWorkflow, SlurmWorkflow):
 
     training_workflow_file = TrainingTask.training_workflow_file
 
