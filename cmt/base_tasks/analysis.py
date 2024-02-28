@@ -460,26 +460,31 @@ class CreateDatacards(CombineBase, FeaturePlot):
             rate = d[""]["integral"]
             weight = (0 if d[""]["integral_error"] == 0
                 else rate / (d[""]["integral_error"] * d[""]["integral_error"]))
+            num_ev = round(rate * weight)
             if self.additional_scaling.get(p_name, False):
                 rate *= float(self.additional_scaling.get(p_name))
                 weight /= float(self.additional_scaling.get(p_name))
+            # round rate and modify the weight accordingly
+            weight = (num_ev / rate if rate != 0. else 0.)
             return rate, weight
 
     def get_stat_unc_lines(self, feature, rates, process_names=None):
-        def round_unc(num):
+        def round_unc(num, ev, val):
             exp = 0
             while True:
-                if num * 10 ** exp > 1:
-                    return round(num, exp + 1)
+                # print("%s * %s = %s, %s" % (round(num, exp), ev, round(num, exp) * ev, round(val, 3)))
                 exp += 1
+                if abs(round(num, exp) * ev - round(val, 3)) < 0.001:
+                    return round(num, exp)
 
         if not process_names:
             process_names = self.non_data_names
         table = []
         for p_name in process_names:
             # line = [f"{p_name}_norm", "gmN {:.2f}".format(rates[p_name][0] * rates[p_name][1])]
-            line = [f"{p_name}_{self.category_name}_norm",
-                "gmN {}".format(int(round(rates[p_name][0] * rates[p_name][1])))]
+            evs = int(round(rates[p_name][0] * rates[p_name][1]))
+            # evs = rates[p_name][0] * rates[p_name][1]
+            line = [f"{p_name}_{self.category_name}_norm", "gmN {}".format(evs)]
             append_line = False
             for name in self.non_data_names:
                 if name == p_name or \
@@ -487,7 +492,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     if rates[p_name][1] > 0.001:
                         append_line = True
                         # line.append("{:.4f}".format(1. / rates[p_name][1]))
-                        line.append(round_unc(1. / rates[p_name][1]))
+                        line.append(round_unc(1. / rates[p_name][1], evs, rates[p_name][0]))
                 else:
                     line.append("-")
             if append_line:
@@ -1142,7 +1147,7 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
         Returns one branch if categories are combined or one branch per category
         """
         if self.combine_categories:
-            return 1
+            return [None]
         return len(self.category_names)
 
     def requires(self):
