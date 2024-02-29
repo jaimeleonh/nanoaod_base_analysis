@@ -645,7 +645,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             elif not self.counting:  # unbinned fits
                 shape_systematics_feature = self.get_shape_systematics_from_inspect(feature.name)
                 # shape_systematics_feature = {}
-                datacard_syst_params = []  # list of systematics to be included later in the datacard
+                datacard_syst_params = {}  # list of systematics to be included later in the datacard
                 datacard_env_cats = []  # list of categories for envelope fits to be included later in the datacard
 
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
@@ -701,11 +701,14 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                     syst_values = []
                                     for syst, syst_value in \
                                             shape_systematics_feature[fit_params["process_name"]][param].items():
-                                        systs[function][param].append(ROOT.RooRealVar(f"d{param}_{syst}",
-                                            f"d{param}_{syst}", 0, -5, 5))
-                                        systs[function][param][-1].setConstant(True)
+
+                                        if syst not in datacard_syst_params:
+                                            datacard_syst_params[syst] = ROOT.RooRealVar(syst,
+                                                syst, 0, -5, 5)
+                                            datacard_syst_params[syst].setConstant(True)
+                                        systs[function][param].append(datacard_syst_params[syst])
                                         syst_values.append(syst_value)
-                                        datacard_syst_params.append(f"d{param}_{syst}")
+
                                     param_syst[function][param] = ROOT.RooFormulaVar(
                                         f"{param}_syst", f"{param}_syst",
                                         "@0*" + "*".join([f"(1+{syst_values[i]}*@{i+1})"
@@ -784,7 +787,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                 norm_systematics_feature.update(norm_systematics)
 
                 self.write_shape_datacard(feature, norm_systematics_feature, shape_systematics,
-                    datacard_syst_params, datacard_env_cats, *self.additional_lines)
+                    datacard_syst_params.keys(), datacard_env_cats, *self.additional_lines)
 
             else:  # counting experiment
                 norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
