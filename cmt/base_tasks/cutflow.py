@@ -23,7 +23,7 @@ from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import ConfigTaskWithCategory, DatasetTaskWithCategory, DatasetWrapperTask
-from cmt.base_tasks.preprocessing import DatasetCategoryWrapperTask
+from cmt.base_tasks.preprocessing import DatasetCategoryWrapperTask, PreprocessRDF
 
 
 class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
@@ -92,4 +92,68 @@ class MergeCutFlowWrapper(DatasetCategoryWrapperTask, law.WrapperTask):
         return MergeCutFlow.vreq(self, dataset_name=dataset.name, category_name=category.name)
 
 
-# class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
+class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
+    """
+    Task to generate CutFlow tables for several datasets.
+
+    Example command:
+
+    ``law run CutFlowTable --version test --category-names etau \
+--config-name base_config --dataset-names tt_dl,tt_sl --workers 10``
+    """
+
+    keys = ["total", "rel", "rel_step"]
+
+    def requires(self):
+        return {
+            dataset.name: MergeCutFlow.vreq(self, dataset_name=dataset.name)
+            for dataset in self.datasets
+        }
+
+    def output(self):
+        return {
+            key: {
+                ext: self.local_target(f"table_{key}.{ext}")
+                for ext in ["txt", "tex"]
+            }
+            for key in self.keys
+        }
+
+    def run(self):
+        inputs = self.input()
+        tables = {key: [] for key in self.keys}
+        cutflows = OrderedDict()
+        for dataset in self.datasets:
+            with open(inputs[dataset.name].path) as f:
+                cutflows[dataset.name] = json.load(f, object_pairs_hook=OrderedDict)
+        filters = list(cutflows.values())[0].keys()
+
+        for elem in cutflows.values():
+            print(elem[self.category.name])
+
+        tables["total"].append(["total"] + [
+            elem[self.category.name]["all"] for elem in cutflows.values()])
+        tables["rel"].append(["total"] + [1 for elem in cutflows.values()])
+        tables["rel_step"].append(["total"] + ["-" for elem in cutflows.values()])
+
+        for filt in filters:
+            tables["total"].append([filt] + [
+                cutflows[dataset.name][filt]["pass"]
+                for idat, dataset in enumerate(self.datasets)
+            ])
+            tables["rel"].append([filt] + [
+                "{:.2f}".format(cutflows[dataset.name][filt]["pass"] / tables["total"][0][idat + 1])
+                for idat, dataset in enumerate(self.datasets)
+            ])
+            tables["rel_step"].append([filt] + [
+                "{:.2f}".format(cutflows[dataset.name][filt]["pass"] / cutflows[dataset.name][filt]["all"])
+                for idat, dataset in enumerate(self.datasets)
+            ])
+
+        headers = [d.name for d in self.datasets]
+        for key in self.keys:
+            for ext, fmt in zip(["txt", "tex"], ["", "latex"]):
+                fancy_tab = tabulate.tabulate(tables[key], headers=headers, tablefmt=fmt)
+                with open(create_file_dir(self.output()[key][ext].path), "w+") as f:
+                    f.write(fancy_tab)
+
