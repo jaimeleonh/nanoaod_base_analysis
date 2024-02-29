@@ -365,6 +365,7 @@ action() {
             cmt_pip_install sphinx_rtd_theme
             cmt_pip_install sphinx_design
             cmt_pip_install urllib3==1.26.6
+            cmt_pip_install envyaml
         fi
 
         # gfal python bindings
