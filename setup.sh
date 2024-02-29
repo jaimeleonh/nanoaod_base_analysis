@@ -11,7 +11,7 @@ action() {
     export CMT_BASE="$this_dir"
 
     # check if this setup script is sourced by a remote job
-    if [ "$CMT_ON_HTCONDOR" = "1" ]; then
+    if [ "$CMT_ON_HTCONDOR" = "1" ] || [ "$CMT_ON_SLURM" = "1" ]; then
         export CMT_REMOTE_JOB="1"
     else
         export CMT_REMOTE_JOB="0"
@@ -38,10 +38,17 @@ action() {
     else
         export CMT_ON_LLR="0"
     fi
+
+    # check if we're at psi
+    if [[ "$( hostname -f )" = *.psi.ch ]]; then
+        export CMT_ON_PSI="1"
+    else
+        export CMT_ON_PSI="0"
+    fi
     
     # default cern name
     if [ -z "$CMT_CERN_USER" ]; then
-        if [ "$CMT_ON_LXPLUS" = "1" ]; then
+        if [ "$CMT_ON_LXPLUS" = "1" ] || [ "$CMT_ON_PSI" = "1" ]; then
             export CMT_CERN_USER="$( whoami )"
         elif [ "$CMT_ON_CIEMAT" = "0" ] && [ "$CMT_ON_LLR" = "0" ] ; then
             2>&1 echo "please set CMT_CERN_USER to your CERN user name and try again"
@@ -50,11 +57,11 @@ action() {
     fi
 
     # default ciemat name
-    if [ -z "$CMT_CIEMAT_USER" ]; then
-        if [ "$CMT_ON_CIEMAT" = "1" ]; then
-            export CMT_CIEMAT_USER="$( whoami )"
+    if [ -z "$CMT_T3_USER" ]; then
+        if [ "$CMT_ON_CIEMAT" = "1" ] || [ "$CMT_ON_PSI" = "1" ]; then
+            export CMT_T3_USER="$( whoami )"
         # elif [ "$CMT_ON_LXPLUS" = "0" ]; then
-            # 2>&1 echo "please set CMT_CIEMAT_USER to your CIEMAT user name and try again"
+            # 2>&1 echo "please set CMT_T3_USER to your CIEMAT user name and try again"
             # return "1"
         fi
     fi
@@ -82,8 +89,12 @@ action() {
     # other defaults
     [ -z "$CMT_SOFTWARE" ] && export CMT_SOFTWARE="$CMT_DATA/software"
     [ -z "$CMT_STORE_LOCAL" ] && export CMT_STORE_LOCAL="$CMT_DATA/store"
-    if [ -n "$CMT_CIEMAT_USER" ]; then
-      [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/nfs/cms/$CMT_CIEMAT_USER/cmt"
+    if [ -n "$CMT_T3_USER" ]; then
+        if [ "$CMT_ON_CIEMAT" = "1" ]; then
+          [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/nfs/cms/$CMT_T3_USER/cmt"
+        elif [ "$CMT_ON_PSI" = "1" ]; then
+          [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS=$CMT_STORE_LOCAL #"/pnfs/psi.ch/cms/trivcat/store/user/$CMT_T3_USER/HHbbtautau_Run3"
+        fi
     elif [ -n "$CMT_CERN_USER" ]; then
       [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/eos/user/${CMT_CERN_USER:0:1}/$CMT_CERN_USER/cmt"
     elif [ -n "$CMT_LLR_USER" ]; then
@@ -91,16 +102,17 @@ action() {
     fi
     [ -z "$CMT_STORE" ] && export CMT_STORE="$CMT_STORE_EOS"
     [ -z "$CMT_JOB_DIR" ] && export CMT_JOB_DIR="$CMT_DATA/jobs"
+    [ -z "$CMT_JOB_META_DIR" ] && export CMT_JOB_META_DIR="$CMT_DATA/jobs_meta"
     [ -z "$CMT_TMP_DIR" ] && export CMT_TMP_DIR="$CMT_DATA/tmp"
     [ -z "$CMT_CMSSW_BASE" ] && export CMT_CMSSW_BASE="$CMT_DATA/cmssw"
-    [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10"
-    [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6"
+    [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10" #"el8_amd64_gcc12"
+    [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6" #"CMSSW_13_3_0"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
-    if [ -n "$CMT_CIEMAT_USER" ]; then
+    if [ "$CMT_ON_CIEMAT" = "1" ]; then
        if [ -n "$CMT_TMPDIR" ]; then
          export TMPDIR="$CMT_TMPDIR"
        else
-         export TMPDIR="/nfs/scratch_cms/$CMT_CIEMAT_USER/cmt/tmp"
+         export TMPDIR="/nfs/scratch_cms/$CMT_T3_USER/cmt/tmp"
        fi
        mkdir -p "$TMPDIR"
     fi
@@ -352,6 +364,15 @@ action() {
             mkdir -p "$CMT_SOFTWARE"
 
             cmt_pip_install pip
+            cmt_pip_install wheel
+            cmt_pip_install setuptools
+            cmt_pip_install libclang
+            cmt_pip_install overrides
+            cmt_pip_install build
+            cmt_pip_install installer
+            cmt_pip_install pyproject-hooks
+            cmt_pip_install Flask
+            cmt_pip_install ordereddict
             cmt_pip_install flake8
             cmt_pip_install luigi==2.8.13
             cmt_pip_install tabulate
@@ -361,10 +382,11 @@ action() {
             cmt_pip_install --no-deps git+https://github.com/riga/plotlib
             cmt_pip_install --no-deps git+https://github.com/riga/LBN
             cmt_pip_install --no-deps gast==0.2.2  # https://github.com/tensorflow/autograph/issues/1
-            cmt_pip_install sphinx
+            cmt_pip_install sphinx==5.2.2
             cmt_pip_install sphinx_rtd_theme
             cmt_pip_install sphinx_design
             cmt_pip_install urllib3==1.26.6
+            cmt_pip_install envyaml
         fi
 
         # gfal python bindings

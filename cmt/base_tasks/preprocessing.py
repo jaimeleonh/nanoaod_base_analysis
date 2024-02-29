@@ -23,7 +23,7 @@ from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow,
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask
 )
 
@@ -150,7 +150,7 @@ class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask
         )
 
 
-class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow,
+class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
         SplittedTask, RDFModuleTask):
     """
     Performs a counting of the events with and without applying the necessary weights.
@@ -487,7 +487,7 @@ class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
             systematic=systematic, systematic_direction=direction)
 
 
-class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SplittedTask):
+class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow, SplittedTask):
 
     modules = luigi.DictParameter(default=None)
     modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
