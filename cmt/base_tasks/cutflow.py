@@ -128,9 +128,6 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
                 cutflows[dataset.name] = json.load(f, object_pairs_hook=OrderedDict)
         filters = list(cutflows.values())[0].keys()
 
-        for elem in cutflows.values():
-            print(elem[self.category.name])
-
         tables["total"].append(["total"] + [
             elem[self.category.name]["all"] for elem in cutflows.values()])
         tables["rel"].append(["total"] + [1 for elem in cutflows.values()])
@@ -142,18 +139,23 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
                 for idat, dataset in enumerate(self.datasets)
             ])
             tables["rel"].append([filt] + [
-                "{:.2f}".format(cutflows[dataset.name][filt]["pass"] / tables["total"][0][idat + 1])
+                "{:.2f}".format(100. * cutflows[dataset.name][filt]["pass"] / tables["total"][0][idat + 1])
                 for idat, dataset in enumerate(self.datasets)
             ])
             tables["rel_step"].append([filt] + [
-                "{:.2f}".format(cutflows[dataset.name][filt]["pass"] / cutflows[dataset.name][filt]["all"])
+                "{:.2f}".format(100. * cutflows[dataset.name][filt]["pass"] / cutflows[dataset.name][filt]["all"])
                 for idat, dataset in enumerate(self.datasets)
             ])
 
-        headers = [d.name for d in self.datasets]
         for key in self.keys:
-            for ext, fmt in zip(["txt", "tex"], ["", "latex"]):
+            for ext, fmt in zip(["txt", "tex"], ["", "latex_raw"]):
+                if ext == "txt":
+                    headers = [d.process.name for d in self.datasets]
+                else:
+                    headers = [d.process.label.latex for d in self.datasets]
                 fancy_tab = tabulate.tabulate(tables[key], headers=headers, tablefmt=fmt)
+                if ext == "tex":
+                    fancy_tab = fancy_tab.replace("\$", "$")
                 with open(create_file_dir(self.output()[key][ext].path), "w+") as f:
                     f.write(fancy_tab)
 
