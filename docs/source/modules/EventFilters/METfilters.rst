@@ -1,7 +1,7 @@
 METfilters
 ==========
 
-.. currentmodule:: Base.Modules.METfilters
+.. currentmodule:: Event.Filters.METfilters
 
 .. contents::
 

@@ -231,6 +231,7 @@ action() {
         export BASEMODULES_PATH="Base/Modules"
         if [ ! -d "$BASEMODULES_PATH" ]; then
           git clone https://gitlab.cern.ch/cms-phys-ciemat/cmt-base-modules.git Base/Modules
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/event-filters.git Base/Modules
           compile="1"
         fi
 

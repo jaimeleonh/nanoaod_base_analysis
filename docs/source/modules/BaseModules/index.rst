@@ -15,5 +15,3 @@ RDFModules
     :maxdepth: 2
    
     baseModules
-    METfilters
-    lumiFilter

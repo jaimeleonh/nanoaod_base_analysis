@@ -7,6 +7,7 @@ Modules Reference
     :maxdepth: 2
 
     BaseModules/index
+    EventFilters/index
     BTV/index
     EGM/index
     JME/index

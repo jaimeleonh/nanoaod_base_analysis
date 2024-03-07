@@ -130,7 +130,7 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
 
         tables["total"].append(["total"] + [
             elem[self.category.name]["all"] for elem in cutflows.values()])
-        tables["rel"].append(["total"] + [1 for elem in cutflows.values()])
+        tables["rel"].append(["total"] + [100 for elem in cutflows.values()])
         tables["rel_step"].append(["total"] + ["-" for elem in cutflows.values()])
 
         for filt in filters:

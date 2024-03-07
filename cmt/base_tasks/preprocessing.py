@@ -1004,7 +1004,10 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
         with output.localize("w") as tmp_out:
             good_inputs = []
             for inp in inputs:  # merge only files with a filled tree
-                tf = ROOT.TFile.Open(inp.path)
+                try:
+                    tf = ROOT.TFile.Open(inp.path)
+                except AttributeError:  # from_preprocess = True
+                    tf = ROOT.TFile.Open(inp.targets["root"].path)
                 try:
                     tree = tf.Get(self.tree_name)
                     if tree.GetEntries() > 0:
