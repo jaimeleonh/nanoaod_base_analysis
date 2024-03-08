@@ -39,8 +39,7 @@ class Config():
         return ObjectCollection(categories)
 
     def add_processes(self):
-        processes = [
-        ]
+        processes = []
 
         process_group_names = {
             "default": [],
@@ -94,6 +93,55 @@ class Config():
     def add_default_module_files(self):
         defaults = {}
         return defaults
+
+        def add_tau_id(self, year, tauId_algo):
+        self.tauId_algo = tauId_algo
+
+        if year <= 2018 and self.tauId_algo == "idDeepTau2018v2p5":
+            raise ValueError("Wrong tau id requested. "
+                             "Only idDeepTau2017v2p1 available in Run2 MC.")
+
+        elif year <= 2018 and self.tauId_algo == "idDeepTau2017v2p1":
+            # DeepTau2017v2p1 wpbit is in power 2 in Run2 MC NanoAOD
+            self.tauId_algo_wps=DotDict(
+                vsjet=DotDict(VVVLoose = 1, VVLoose = 3, VLoose = 7, Loose = 15,
+                              Medium = 31, Tight = 63, VTight = 127, VVTight = 255),
+                vse=DotDict(VVVLoose = 1, VVLoose = 3, VLoose = 7, Loose = 15,
+                            Medium = 31, Tight = 63, VTight = 127, VVTight = 255),
+                vsmu=DotDict(VLoose = 1, Loose = 3, Medium = 7, Tight = 15) )
+
+        elif year >= 2022 and self.tauId_algo == "idDeepTau2018v2p5":
+            # DeepTau2017v2p1/DeepTau2018v2p5 wpbit os integer in latest NanoAOD
+            self.tauId_algo_wps=DotDict(
+                vsjet = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
+                                Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
+                vse   = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
+                                Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
+                vsmu  = DotDict(VLoose = 1, Loose = 2, Medium = 3, Tight = 4) )
+
+        else:
+            raise ValueError("Wrong tau id requested. "
+                             "Only idDeepTau2017v2p1 or idDeepTau2018v2p5 available at the moment.")
+
+        return self
+
+    def add_bjet_id(self, btag_algo = "DeepFlavB"):
+        self.btag_algo = btag_algo
+        
+        if self.btag_algo == "DeepFlavB":
+            # https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
+            self.btag_algo_wps = DotDict(tight = 0.7264, medium = 0.2770, loose = 0.0494)
+
+        elif self.btag_algo == "PNetB":
+            # ParticleNet WPs taken from BTV SF json
+            self.btag_algo_wps = DotDict(xxtight = 0.9610, xtight = 0.7862, tight = 0.6734,
+                                         medium = 0.2450, loose = 0.0470)
+
+        else:
+            raise ValueError("Wrong jet id requested. "
+                             "Only DeepFlavB or PNetB available at the moment.")
+
+        return self
 
     # feature methods
 
