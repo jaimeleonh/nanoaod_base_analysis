@@ -5,10 +5,11 @@ from plotting_tools import Label
 from collections import OrderedDict
 
 class Config():
-    def __init__(self, name, year, ecm, lumi_fb=None, lumi_pb=None, **kwargs):
+    def __init__(self, name, year, ecm, runPeriod="", lumi_fb=None, lumi_pb=None, **kwargs):
         self.name=name
         self.year=year
         self.ecm=ecm
+        self.runPeriod=runPeriod
         assert lumi_fb or lumi_pb
         if lumi_fb:
             self.lumi_fb = lumi_fb
