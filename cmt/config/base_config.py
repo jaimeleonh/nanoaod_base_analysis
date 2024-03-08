@@ -94,7 +94,7 @@ class Config():
         defaults = {}
         return defaults
 
-        def add_tau_id(self, year, tauId_algo):
+    def add_tau_id(self, year, tauId_algo):
         self.tauId_algo = tauId_algo
 
         if year <= 2018 and self.tauId_algo == "idDeepTau2018v2p5":
@@ -121,7 +121,9 @@ class Config():
 
         else:
             raise ValueError("Wrong tau id requested. "
-                             "Only idDeepTau2017v2p1 or idDeepTau2018v2p5 available at the moment.")
+                             "Only idDeepTau2017v2p1 (for Run2) or "
+                             "idDeepTau2017v2p1/idDeepTau2018v2p5 (for Run3) "
+                             "available at the moment.")
 
         return self
 
