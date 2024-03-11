@@ -30,6 +30,9 @@ class Config():
         self.systematics = self.add_systematics()
         self.default_module_files = self.add_default_module_files()
 
+        self.qcd_var1 = DotDict({"nominal": "os", "inverted": "ss"})
+        self.qcd_var2 = DotDict({"nominal": "iso", "inverted": "inviso"})
+
     def get_aux(self, name, default=None):
         return self.x.get(name, default)
 
@@ -267,3 +270,48 @@ class Config():
                 else:
                     break
         return processes
+
+    def get_qcd_regions(self, region, category, wp="", shape_region="os_inviso",
+            signal_region_wp="os_iso", sym=False):
+        # the region must be set and tagged os_iso
+        if not region:
+            raise Exception("region must not be empty")
+        # if not region.has_tag("qcd_os_iso"):
+        #     raise Exception("region must be tagged as 'qcd_os_iso' but isn't")
+
+        # the category must be compatible with the estimation technique
+        # if category.has_tag("qcd_incompatible"):
+        #     raise Exception("category '{}' incompatible with QCD estimation".format(category.name))
+
+        if wp != "":
+            wp = "__" + wp
+
+        # get other qcd regions
+        prefix = region.name[:-len(signal_region_wp)]
+        qcd_regions = {f"{self.qcd_var1.inverted}_{self.qcd_var2.inverted}":
+            self.regions.get(prefix + f"{self.qcd_var1.inverted}_{self.qcd_var2.inverted}" + wp)}
+        # for the inverted regions, allow different working points
+        default_config = [
+            f"{self.qcd_var1.nominal}_{self.qcd_var2.inverted}",
+            f"{self.qcd_var1.inverted}_{self.qcd_var2.nominal}"
+        ]
+        for key in default_config:
+            region_name = (prefix + key + wp
+                if key != f"{self.qcd_var1.inverted}_{self.qcd_var2.nominal}"
+                else prefix + self.qcd_var1.inverted + "_" + signal_region_wp[
+                    len(f"{self.qcd_var1.nominal}_"):])
+            qcd_regions[key] = self.regions.get(region_name)
+
+        if sym:
+            qcd_regions["shape1"] = self.regions.get(prefix + shape_region + wp)
+            qcd_regions["shape2"] = self.regions.get(
+                prefix + self.qcd_var1.inverted + "_" + signal_region_wp[
+                    len(self.qcd_var1.nominal + "_"):])
+        else:
+            if shape_region == f"{self.qcd_var1.nominal}_{self.qcd_var2.inverted}":
+                qcd_regions["shape"] = self.regions.get(prefix + shape_region + wp)
+            else:
+                qcd_regions["shape"] = self.regions.get(
+                    prefix + self.qcd_var1.inverted + "_" + signal_region_wp[
+                    len(self.qcd_var1.nominal + "_"):])
+        return DotDict(qcd_regions)
