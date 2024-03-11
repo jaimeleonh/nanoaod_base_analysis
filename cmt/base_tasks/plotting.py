@@ -78,9 +78,6 @@ class BasePlotTask(ConfigTaskWithRegion):
     :param store_systematics: whether to store systematic templates inside the output root files.
     :type store_systematics: bool
 
-    :param shape_region: shape region used for QCD computation.
-    :type shape_region: str from choice list
-
     :param remove_horns: NOT YET IMPLEMENTED. Whether to remove the eta horns present in 2017
     :type remove_horns: bool
 
@@ -104,8 +101,6 @@ class BasePlotTask(ConfigTaskWithRegion):
     systematics = law.CSVParameter(default=(), description="list of systematics, default: empty")
     store_systematics = luigi.BoolParameter(default=True, description="whether to store "
         "systematic templates inside root files, default: True")
-    shape_region = luigi.ChoiceParameter(default="os_inviso", choices=("os_inviso", "ss_iso"),
-        significant=False, description="shape region default: os_inviso")
     remove_horns = luigi.BoolParameter(default=False, description="whether to remove horns "
         "from distributions, default: False")
     tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
@@ -672,7 +667,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             # complain when no data is present
             if not any(dataset.process.isData for dataset in self.datasets):
                 raise Exception("no real dataset passed for QCD estimation")
-
         self.sideband_regions = None
         if self.do_sideband:  # Several fixes may be needed later for this
             assert self.region.name == "signal"
@@ -741,6 +735,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 for key, region in self.qcd_regions.items()
             }
             if self.qcd_category_name != "default":  # to be fixed
+                raise ValueError("qcd_category_name is not currently implemented")
                 reqs["qcd"]["ss_iso"] = FeaturePlot.vreq(self,
                     region_name=self.qcd_regions.ss_iso.name, category_name=self.qcd_category_name,
                     blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
@@ -966,7 +961,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             qcd_shape_files = {}
             for key, region in self.qcd_regions.items():
                 if self.qcd_category_name != "default":
-                    my_feature = (feature.name if "shape" in key or key == "os_inviso"
+                    my_feature = (feature.name
+                        if "shape" in key or \
+                            key == f"{self.config.qcd_var1.nominal}_{self.config.qcd_var2.inverted}"
                         else self.qcd_feature)
                 else:
                     my_feature = feature.name
@@ -989,11 +986,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 qcd_hist.Scale(0.5)
 
             n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
-                get_qcd("os_inviso", qcd_shape_files, bin_limit=-999)) # C
+                get_qcd(f"{self.config.qcd_var1.nominal}_{self.config.qcd_var2.inverted}",
+                qcd_shape_files, bin_limit=-999)) # C
             n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
-                get_qcd("ss_iso", qcd_shape_files, bin_limit=-999)) # B
+                get_qcd(f"{self.config.qcd_var1.inverted}_{self.config.qcd_var2.nominal}",
+                qcd_shape_files, bin_limit=-999)) # B
             n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
-                get_qcd("ss_inviso", qcd_shape_files, bin_limit=-999)) # D
+                get_qcd(f"{self.config.qcd_var1.inverted}_{self.config.qcd_var2.inverted}",
+                qcd_shape_files, bin_limit=-999)) # D
             # if not n_ss_iso or not n_ss_inviso:
             if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
                 print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")
@@ -1070,11 +1070,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                         qcd_hist.Scale(0.5)
 
                     n_os_inviso, n_os_inviso_error, n_os_inviso_compatible = get_integral_and_error(
-                        get_qcd("os_inviso", qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # C
+                        get_qcd(f"{self.config.qcd_var1.nominal}_{self.config.qcd_var2.inverted}",
+                        qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # C
                     n_ss_iso, n_ss_iso_error, n_ss_iso_compatible = get_integral_and_error(
-                        get_qcd("ss_iso", qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # B
+                        get_qcd(f"{self.config.qcd_var1.inverted}_{self.config.qcd_var2.nominal}",
+                        qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # B
                     n_ss_inviso, n_ss_inviso_error, n_ss_inviso_compatible = get_integral_and_error(
-                        get_qcd("ss_inviso", qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # D
+                        get_qcd(f"{self.config.qcd_var1.inverted}_{self.config.qcd_var2.inverted}",
+                        qcd_shape_files, syst=syst_dir_name, bin_limit=-999)) # D
                     # if not n_ss_iso or not n_ss_inviso:
                     if n_os_inviso_compatible or n_ss_iso_compatible or n_ss_inviso_compatible:
                         print("****WARNING: QCD normalization failed (negative yield), Removing QCD!")

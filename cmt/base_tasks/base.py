@@ -851,7 +851,7 @@ class QCDABCDTask(law.Task):
         description="working points to use for qcd computation, default: empty (vvvl - m)")
     qcd_signal_region_wp = luigi.Parameter(default="os_iso", description="signal region wp, "
         "default: os_iso")
-    shape_region = luigi.ChoiceParameter(default="os_inviso", choices=("os_inviso", "ss_iso"),
+    shape_region = luigi.Parameter(default="os_inviso",
         significant=True, description="shape region default: os_inviso")
     qcd_sym_shape = luigi.BoolParameter(default=False, description="symmetrize QCD shape, "
         "default: False")

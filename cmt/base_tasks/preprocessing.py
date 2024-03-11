@@ -1007,7 +1007,8 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                 try:
                     tf = ROOT.TFile.Open(inp.path)
                 except AttributeError:  # from_preprocess = True
-                    tf = ROOT.TFile.Open(inp.targets["root"].path)
+                    inp = inp.targets["root"]
+                    tf = ROOT.TFile.Open(inp.path)
                 try:
                     tree = tf.Get(self.tree_name)
                     if tree.GetEntries() > 0:
