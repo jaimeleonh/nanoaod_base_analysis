@@ -22,7 +22,7 @@ import luigi
 from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
 
-from cmt.base_tasks.base import ( 
+from cmt.base_tasks.base import (
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask
 )
@@ -381,8 +381,8 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     modules_file = luigi.Parameter(description="filename with RDF modules", default=law.NO_STR)
     keep_and_drop_file = luigi.Parameter(description="filename with branches to save, empty: all",
         default="")
-    compute_filter_efficiency = luigi.BoolParameter(description="compute efficiency of each filter applied, default: False",
-        default=False)
+    compute_filter_efficiency = luigi.BoolParameter(description="compute efficiency of each filter "
+        "applied, default: False", default=False)
     weights_file = None
 
     default_store = "$CMT_STORE_EOS_PREPROCESSING"
@@ -415,7 +415,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         """
         from shutil import copy
         ROOT = import_root()
-        verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
+        # verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # create RDataFrame
@@ -520,7 +520,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
 
     def get_n_events(self, fil):
         ROOT = import_root()
-        for trial in range(10): 
+        for trial in range(10):
             try:
                 f = ROOT.TFile.Open(fil)
                 tree = f.Get(self.tree_name)
@@ -628,7 +628,7 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
             mod = module_params[tag]["path"]
             mod = __import__(mod, fromlist=[name])
             nargs, kwargs = eval('_args(%s)' % parameter_str)
-            modules.append(getattr(mod, name)(**kwargs)())      
+            modules.append(getattr(mod, name)(**kwargs)())
         return modules
 
     @law.decorator.notify
@@ -742,10 +742,10 @@ class Categorization(PreprocessRDF):
                 self.splitted_branches = self.build_splitted_branches()
             elif not hasattr(self, "splitted_branches"):
                 self.splitted_branches = self.get_splitted_branches # not exactly sure what this is supposed to do, copied over from Preprocess
-    
+
     def get_n_events(self, fil):
         ROOT = import_root()
-        for trial in range(10): 
+        for trial in range(10):
             try:
                 f = ROOT.TFile.Open(fil)
                 tree = f.Get(self.tree_name)
@@ -757,7 +757,7 @@ class Categorization(PreprocessRDF):
                 if 'f' in locals():
                     f.Close()
         raise RuntimeError("Failed opening %s" % fil)
-    
+
     def build_splitted_branches(self):
         if not os.path.exists(
                 os.path.expandvars("$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
@@ -795,7 +795,7 @@ class Categorization(PreprocessRDF):
     @law.workflow_property
     def get_splitted_branches(self):
         return self.splitted_branches
-    
+
     def create_branch_map(self):
         if self.max_events is not None:
             return len(self.splitted_branches)
@@ -820,8 +820,15 @@ class Categorization(PreprocessRDF):
             return InputData.req(self, file_index=preprocess_branch)
 
     def output(self):
-        return self.local_target(f"data_{self.addendum}{self.branch}.root")
-
+        """
+        :return: One file per input file with the tree + additional branches
+        :rtype: `.root`
+        """
+        out = {"root" : self.local_target(f"data_{self.addendum}{self.branch}.root")}
+        if self.compute_filter_efficiency:
+            out["cut_flow"] = self.local_target(f"cutflow_{self.addendum}{self.branch}.json")
+        out = law.SiblingFileCollection(out)
+        return out
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -832,11 +839,8 @@ class Categorization(PreprocessRDF):
         """
         from shutil import copy
         ROOT = import_root()
-        verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
         if self.request_cpus > 1:
             ROOT.ROOT.EnableImplicitMT(self.request_cpus)
-        else:
-            ROOT.ROOT.DisableImplicitMT() # probably not needed
 
         # prepare inputs and outputs
         # inp = self.input()["data"].path
@@ -862,7 +866,7 @@ class Categorization(PreprocessRDF):
                     df = ROOT.RDataFrame(tchain)
             else:
                 df = ROOT.RDataFrame(self.tree_name, self.input()["root"].path)
-            
+
             # restricting number of events
             if self.max_events is not None:
                 df = df.Range(self.splitted_branches[self.branch]["initial_event"],
@@ -892,14 +896,29 @@ class Categorization(PreprocessRDF):
             for branch_name in branches:
                 branch_list.push_back(branch_name)
             filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
-            filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
+            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branch_list)
+
+            if self.compute_filter_efficiency:
+                report = filtered_df.Report()
+                json_res = {cutReport.GetName():
+                    {"pass": cutReport.GetPass(), "all": cutReport.GetAll()}
+                    for cutReport in report.GetValue()}
+                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                    json.dump(json_res, f, indent=4)
 
         except ReferenceError:  # empty ntuple
             inp = self.input()["root"].path
-            copy(inp, outp.path)
+            copy(inp, outp["root"].path)
+            if self.compute_filter_efficiency:
+                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                    json.dump({}, f, indent=4)
         except AttributeError:  # empty input file
             inp = self.input()["root"].path
-            copy(inp, outp.path)
+            copy(inp, outp["root"].path)
+            if self.compute_filter_efficiency:
+                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                    json.dump({}, f, indent=4)
+
         #copy(self.input()["stats"].path, outp["stats"].path)
 
         # except KeyboardInterrupt:
@@ -1004,9 +1023,10 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
         with output.localize("w") as tmp_out:
             good_inputs = []
             for inp in inputs:  # merge only files with a filled tree
+                # inp = inp.targets["root"]
                 try:
                     tf = ROOT.TFile.Open(inp.path)
-                except AttributeError:  # from_preprocess = True
+                except:
                     inp = inp.targets["root"]
                     tf = ROOT.TFile.Open(inp.path)
                 try:
@@ -1054,7 +1074,7 @@ class MergeCategorizationWrapper(DatasetCategorySystWrapperTask):
 
 class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
     """
-    Merges the output from the PreCounter task in order to reduce the 
+    Merges the output from the PreCounter task in order to reduce the
     parallelization entering the plotting tasks.
 
     :param systematic: systematic to use for categorization.
