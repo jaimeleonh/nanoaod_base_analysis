@@ -456,9 +456,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                         friend_tchain.Add("{}/{}".format(f, self.tree_name))
                     tchain.AddFriend(friend_tchain, "friend")
                     dfs[elem] = ROOT.RDataFrame(tchain)
-
             elif self.skip_merging:
-                inp_to_consider = inp[elem].path
+                inp_to_consider = inp[elem]["root"].path
                 dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
             else:
                 inp_to_consider = inp[elem].targets[self.branch].path
