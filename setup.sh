@@ -231,7 +231,7 @@ action() {
         export BASEMODULES_PATH="Base/Modules"
         if [ ! -d "$BASEMODULES_PATH" ]; then
           git clone https://gitlab.cern.ch/cms-phys-ciemat/cmt-base-modules.git Base/Modules
-          git clone https://gitlab.cern.ch/cms-phys-ciemat/event-filters.git Event/Filters
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/event-filters.git Base/Filters
           compile="1"
         fi
 
@@ -275,8 +275,8 @@ action() {
         export HHBTAG_PATH="HHTools"
         if [ ! -d "$HHBTAG_PATH" ]; then
           git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
+          git clone https://gitlab.cern.ch/cclubbtautau/AnalysisCore.git Tools/Tools
           git clone https://gitlab.cern.ch/hh/bbtautau/MulticlassInference
-          git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
           git clone https://github.com/GilesStrong/cms_hh_proc_interface.git
           cd cms_hh_proc_interface
           git checkout tags/V4.0
@@ -295,7 +295,7 @@ action() {
         export CORRECTIONS_PATH="Corrections"
         cmt_add_root_inc $(correction config --incdir)
         if [ ! -d "$CORRECTIONS_PATH" ]; then
-          git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
+          # git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
           git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/TAU
 
           git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
