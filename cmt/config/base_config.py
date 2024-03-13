@@ -110,8 +110,8 @@ class Config():
                             Medium = 31, Tight = 63, VTight = 127, VVTight = 255),
                 vsmu=DotDict(VLoose = 1, Loose = 3, Medium = 7, Tight = 15) )
 
-        elif year >= 2022 and self.tauId_algo == "idDeepTau2018v2p5":
-            # DeepTau2017v2p1/DeepTau2018v2p5 wpbit os integer in latest NanoAOD
+        elif year >= 2022 and (self.tauId_algo == "idDeepTau2018v2p5" or self.tauId_algo == "idDeepTau2017v2p1"):
+            # DeepTau2017v2p1/DeepTau2018v2p5 wpbit is integer in latest NanoAOD
             self.tauId_algo_wps=DotDict(
                 vsjet = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
                                 Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
