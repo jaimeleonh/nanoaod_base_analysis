@@ -23,7 +23,7 @@ from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import ConfigTaskWithCategory, DatasetTaskWithCategory, DatasetWrapperTask
-from cmt.base_tasks.preprocessing import DatasetCategoryWrapperTask, PreprocessRDF
+from cmt.base_tasks.preprocessing import DatasetCategoryWrapperTask, PreprocessRDF, Categorization
 
 
 class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
@@ -32,18 +32,27 @@ class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
     compute-filter-efficiency is used.
     """ 
 
+    from_categorization = luigi.BoolParameter(description="whether to get cutflow from"
+        "Categorization, default: False", default=False)
+    base_category_name = luigi.Parameter(description="base category to use in PreprocessRDF"
+        "default: None", default="")
+
     # regions not supported
     region_name = None
 
     merge_factor = -1
 
     def merge_workflow_requires(self):
-        return PreprocessRDF.vreq(self, compute_filter_efficiency=True, 
-                _prefer_cli=["workflow"])
+       if not self.from_categorization:
+           return PreprocessRDF.vreq(self, compute_filter_efficiency=True, _prefer_cli=["workflow"])
+       return Categorization.vreq(self, compute_filter_efficiency=True, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return PreprocessRDF.vreq(self, compute_filter_efficiency=True, 
+        if not self.from_categorization:
+            return PreprocessRDF.vreq(self, compute_filter_efficiency=True,
                 workflow="local", branches=((start_leaf, end_leaf),), _exclude={"branch"})
+        return Categorization.vreq(self, compute_filter_efficiency=True,
+            workflow="local", branches=((start_leaf, end_leaf),), _exclude={"branch"})
 
     def trace_merge_inputs(self, inputs):
         return [inp for inp in inputs["collection"].targets.values()]
@@ -102,13 +111,26 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
 --config-name base_config --dataset-names tt_dl,tt_sl --workers 10``
     """
 
+    add_categorization = luigi.Parameter(default="", description="Category name to run on the "
+        "Categorization task to add on top of the standard Cutflow, default: None")
+
     keys = ["total", "rel", "rel_step"]
 
     def requires(self):
-        return {
-            dataset.name: MergeCutFlow.vreq(self, dataset_name=dataset.name)
-            for dataset in self.datasets
+        d = {
+            "preprocess": {
+                dataset.name: MergeCutFlow.vreq(self, dataset_name=dataset.name)
+                for dataset in self.datasets
+                }
         }
+        if self.add_categorization:
+            d["cat"] = {
+                dataset.name: MergeCutFlow.vreq(self, dataset_name=dataset.name,
+                    from_categorization=True, category_name=self.add_categorization,
+                    base_category_name=self.category_name)
+                for dataset in self.datasets
+            }
+        return d
 
     def output(self):
         return {
@@ -124,8 +146,13 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
         tables = {key: [] for key in self.keys}
         cutflows = OrderedDict()
         for dataset in self.datasets:
-            with open(inputs[dataset.name].path) as f:
+            with open(inputs["preprocess"][dataset.name].path) as f:
                 cutflows[dataset.name] = json.load(f, object_pairs_hook=OrderedDict)
+        if self.add_categorization:
+            for dataset in self.datasets:
+                with open(inputs["cat"][dataset.name].path) as f:
+                    cutflows[dataset.name].update(json.load(f, object_pairs_hook=OrderedDict))
+
         filters = list(cutflows.values())[0].keys()
 
         tables["total"].append(["total"] + [
