@@ -1260,12 +1260,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             dummy_hist.SetMaximum(1.35 * maximum)
             dummy_hist.SetMinimum(0.001)
 
-        inner_text=[self.category.label + " category"]
-        if self.region:
-            if isinstance(self.region.label, list):
-                inner_text += self.region.label
-            else:
-                inner_text.append(self.region.label)
+        # get text to plot inside the figure
+        inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
 
         if self.normalize_signals and self.stack and signal_hists and bkg_histo:
             scale_text = []
@@ -1301,6 +1297,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
 
         draw_labels = get_labels(
+            upper_left=self.config.upper_left_text,
             upper_left_offset=upper_left_offset,
             upper_right=upper_right,
             scaling=label_scaling,

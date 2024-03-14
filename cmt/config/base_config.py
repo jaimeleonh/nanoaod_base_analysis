@@ -34,6 +34,8 @@ class Config():
         self.qcd_var1 = DotDict({"nominal": "os", "inverted": "ss"})
         self.qcd_var2 = DotDict({"nominal": "iso", "inverted": "inviso"})
 
+        self.upper_left_text = "Private work"
+
     def get_aux(self, name, default=None):
         return self.x.get(name, default)
 
@@ -276,9 +278,6 @@ class Config():
                     continue
         return systematics
 
-    def get_norm_systematics(self, process_datasets, region):
-        return []
-
     def get_weights_expression(self, list_of_weights, syst_name="central", systematic_direction=""):
         weights = []
         for weight in list_of_weights:
@@ -366,3 +365,17 @@ class Config():
                     prefix + self.qcd_var1.inverted + "_" + signal_region_wp[
                     len(self.qcd_var1.nominal + "_"):])
         return DotDict(qcd_regions)
+
+    # plotting functions
+
+    def get_norm_systematics(self, process_datasets, region):
+        return []
+
+    def get_inner_text_for_plotting(self, category, region):
+        inner_text=[category.label + " category"]
+        if region:
+            if isinstance(region.label, list):
+                inner_text += region.label
+            else:
+                inner_text.append(region.label)
+        return inner_text
