@@ -11,7 +11,7 @@ action() {
     export CMT_BASE="$this_dir"
 
     # check if this setup script is sourced by a remote job
-    if [ "$CMT_ON_HTCONDOR" = "1" ]; then
+    if [ "$CMT_ON_HTCONDOR" = "1" ] || [ "$CMT_ON_SLURM" = "1" ]; then
         export CMT_REMOTE_JOB="1"
     else
         export CMT_REMOTE_JOB="0"
@@ -38,10 +38,17 @@ action() {
     else
         export CMT_ON_LLR="0"
     fi
+
+    # check if we're at psi
+    if [[ "$( hostname -f )" = *.psi.ch ]]; then
+        export CMT_ON_PSI="1"
+    else
+        export CMT_ON_PSI="0"
+    fi
     
     # default cern name
     if [ -z "$CMT_CERN_USER" ]; then
-        if [ "$CMT_ON_LXPLUS" = "1" ]; then
+        if [ "$CMT_ON_LXPLUS" = "1" ] || [ "$CMT_ON_PSI" = "1" ]; then
             export CMT_CERN_USER="$( whoami )"
         elif [ "$CMT_ON_CIEMAT" = "0" ] && [ "$CMT_ON_LLR" = "0" ] ; then
             2>&1 echo "please set CMT_CERN_USER to your CERN user name and try again"
@@ -50,11 +57,11 @@ action() {
     fi
 
     # default ciemat name
-    if [ -z "$CMT_CIEMAT_USER" ]; then
-        if [ "$CMT_ON_CIEMAT" = "1" ]; then
-            export CMT_CIEMAT_USER="$( whoami )"
+    if [ -z "$CMT_T3_USER" ]; then
+        if [ "$CMT_ON_CIEMAT" = "1" ] || [ "$CMT_ON_PSI" = "1" ]; then
+            export CMT_T3_USER="$( whoami )"
         # elif [ "$CMT_ON_LXPLUS" = "0" ]; then
-            # 2>&1 echo "please set CMT_CIEMAT_USER to your CIEMAT user name and try again"
+            # 2>&1 echo "please set CMT_T3_USER to your CIEMAT user name and try again"
             # return "1"
         fi
     fi
@@ -82,8 +89,12 @@ action() {
     # other defaults
     [ -z "$CMT_SOFTWARE" ] && export CMT_SOFTWARE="$CMT_DATA/software"
     [ -z "$CMT_STORE_LOCAL" ] && export CMT_STORE_LOCAL="$CMT_DATA/store"
-    if [ -n "$CMT_CIEMAT_USER" ]; then
-      [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/nfs/cms/$CMT_CIEMAT_USER/cmt"
+    if [ -n "$CMT_T3_USER" ]; then
+        if [ "$CMT_ON_CIEMAT" = "1" ]; then
+          [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/nfs/cms/$CMT_T3_USER/cmt"
+        elif [ "$CMT_ON_PSI" = "1" ]; then
+          [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS=$CMT_STORE_LOCAL #"/pnfs/psi.ch/cms/trivcat/store/user/$CMT_T3_USER/HHbbtautau_Run3"
+        fi
     elif [ -n "$CMT_CERN_USER" ]; then
       [ -z "$CMT_STORE_EOS" ] && export CMT_STORE_EOS="/eos/user/${CMT_CERN_USER:0:1}/$CMT_CERN_USER/cmt"
     elif [ -n "$CMT_LLR_USER" ]; then
@@ -91,19 +102,28 @@ action() {
     fi
     [ -z "$CMT_STORE" ] && export CMT_STORE="$CMT_STORE_EOS"
     [ -z "$CMT_JOB_DIR" ] && export CMT_JOB_DIR="$CMT_DATA/jobs"
+    [ -z "$CMT_JOB_META_DIR" ] && export CMT_JOB_META_DIR="$CMT_DATA/jobs_meta"
     [ -z "$CMT_TMP_DIR" ] && export CMT_TMP_DIR="$CMT_DATA/tmp"
     [ -z "$CMT_CMSSW_BASE" ] && export CMT_CMSSW_BASE="$CMT_DATA/cmssw"
-    [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10"
-    [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6"
+    [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10" #"el8_amd64_gcc12"
+    [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6" #"CMSSW_13_3_0"
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
-    if [ -n "$CMT_CIEMAT_USER" ]; then
+    if [ "$CMT_ON_CIEMAT" = "1" ]; then
        if [ -n "$CMT_TMPDIR" ]; then
          export TMPDIR="$CMT_TMPDIR"
        else
-         export TMPDIR="/nfs/scratch_cms/$CMT_CIEMAT_USER/cmt/tmp"
+         export TMPDIR="/nfs/scratch_cms/$CMT_T3_USER/cmt/tmp"
        fi
        mkdir -p "$TMPDIR"
     fi
+    if [ -n "$CMT_LLR_USER" ]; then
+       if [ -n "$CMT_REMOTE_JOB" ]; then
+         export TMPDIR=$CMT_TMP_DIR
+       else
+         export TMPDIR="/scratch/$CMT_LLR_USER/tmp"
+       fi
+       mkdir -p "$TMPDIR"
+    fi 
 
     # specific eos dirs
     [ -z "$CMT_STORE_EOS_PREPROCESSING" ] && export CMT_STORE_EOS_PREPROCESSING="$CMT_STORE_EOS"
@@ -211,6 +231,7 @@ action() {
         export BASEMODULES_PATH="Base/Modules"
         if [ ! -d "$BASEMODULES_PATH" ]; then
           git clone https://gitlab.cern.ch/cms-phys-ciemat/cmt-base-modules.git Base/Modules
+          git clone https://gitlab.cern.ch/cms-phys-ciemat/event-filters.git Base/Filters
           compile="1"
         fi
 
@@ -254,8 +275,8 @@ action() {
         export HHBTAG_PATH="HHTools"
         if [ ! -d "$HHBTAG_PATH" ]; then
           git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
+          git clone https://gitlab.cern.ch/cclubbtautau/AnalysisCore.git Tools/Tools
           git clone https://gitlab.cern.ch/hh/bbtautau/MulticlassInference
-          git clone https://github.com/jaimeleonh/InferenceTools.git Tools/Tools
           git clone https://github.com/GilesStrong/cms_hh_proc_interface.git
           cd cms_hh_proc_interface
           git checkout tags/V4.0
@@ -274,7 +295,7 @@ action() {
         export CORRECTIONS_PATH="Corrections"
         cmt_add_root_inc $(correction config --incdir)
         if [ ! -d "$CORRECTIONS_PATH" ]; then
-          git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
+          # git clone https://github.com/jaimeleonh/correctionlib-wrapper --branch cmssw_version  Corrections/Wrapper
           git clone https://gitlab.cern.ch/cms-phys-ciemat/tau-corrections.git Corrections/TAU
 
           git clone https://gitlab.cern.ch/cms-phys-ciemat/jme-corrections.git Corrections/JME
@@ -289,6 +310,25 @@ action() {
           git clone https://gitlab.cern.ch/cms-phys-ciemat/muo-corrections.git Corrections/MUO
           git clone https://gitlab.cern.ch/cms-phys-ciemat/egm-corrections.git Corrections/EGM
           git clone https://gitlab.cern.ch/cms-phys-ciemat/btv-corrections.git Corrections/BTV
+          compile="1"
+        fi
+
+        export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
+        if [ ! -d "$COMBINE_PATH" ]; then
+          git clone https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git -b v9.1.0 HiggsAnalysis/CombinedLimit
+          compile="1"
+        fi
+
+        export COMBINEHARVESTER_PATH="CombineHarvester"
+        if [ ! -d "$COMBINEHARVESTER_PATH" ]; then
+          git clone https://github.com/cms-analysis/CombineHarvester -b v2.1.0
+          cd CombineHarvester
+          rm -r CombinePdfs
+          rm CombineTools/bin/*
+          rm CombineTools/src/*
+          rm CombineTools/interface/*
+          rm CombineTools/macros/*
+          cd -
           compile="1"
         fi
 
@@ -325,6 +365,15 @@ action() {
             mkdir -p "$CMT_SOFTWARE"
 
             cmt_pip_install pip
+            cmt_pip_install wheel
+            cmt_pip_install setuptools
+            cmt_pip_install libclang
+            cmt_pip_install overrides
+            cmt_pip_install build
+            cmt_pip_install installer
+            cmt_pip_install pyproject-hooks
+            cmt_pip_install Flask
+            cmt_pip_install ordereddict
             cmt_pip_install flake8
             cmt_pip_install luigi==2.8.13
             cmt_pip_install tabulate
@@ -334,10 +383,11 @@ action() {
             cmt_pip_install --no-deps git+https://github.com/riga/plotlib
             cmt_pip_install --no-deps git+https://github.com/riga/LBN
             cmt_pip_install --no-deps gast==0.2.2  # https://github.com/tensorflow/autograph/issues/1
-            cmt_pip_install sphinx
+            cmt_pip_install sphinx==5.2.2
             cmt_pip_install sphinx_rtd_theme
             cmt_pip_install sphinx_design
             cmt_pip_install urllib3==1.26.6
+            cmt_pip_install envyaml
         fi
 
         # gfal python bindings

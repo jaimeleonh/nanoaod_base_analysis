@@ -1,7 +1,7 @@
 Luminosity json filter
 ======================
 
-.. currentmodule:: Base.Modules.lumiFilter
+.. currentmodule:: Event.Filters.lumiFilter
 
 .. contents::
 

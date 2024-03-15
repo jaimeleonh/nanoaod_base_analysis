@@ -14,6 +14,7 @@ cmssw_setup:
     # access CVMFS
     - set +u && source ${CMS_PATH}/cmsset_default.sh; set -u
     - set +u && source setup.sh set -u
+    - law index --verbose
     - cd docs
     - make html
       #- cp -r build/* ../_readthedocs 

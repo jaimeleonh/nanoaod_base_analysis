@@ -5,6 +5,8 @@ Smearing
 
 .. contents::
 
+.. _JME_smearing_jetSmearerRDF:
+
 ``jetSmearerRDF``
 -----------------
 

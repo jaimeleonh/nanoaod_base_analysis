@@ -5,10 +5,11 @@ from plotting_tools import Label
 from collections import OrderedDict
 
 class Config():
-    def __init__(self, name, year, ecm, lumi_fb=None, lumi_pb=None, **kwargs):
+    def __init__(self, name, year, ecm, runPeriod="", lumi_fb=None, lumi_pb=None, **kwargs):
         self.name=name
         self.year=year
         self.ecm=ecm
+        self.runPeriod=runPeriod
         assert lumi_fb or lumi_pb
         if lumi_fb:
             self.lumi_fb = lumi_fb
@@ -30,6 +31,11 @@ class Config():
         self.systematics = self.add_systematics()
         self.default_module_files = self.add_default_module_files()
 
+        self.qcd_var1 = DotDict({"nominal": "os", "inverted": "ss"})
+        self.qcd_var2 = DotDict({"nominal": "iso", "inverted": "inviso"})
+
+        self.upper_left_text = "Private work"
+
     def get_aux(self, name, default=None):
         return self.x.get(name, default)
 
@@ -38,8 +44,7 @@ class Config():
         return ObjectCollection(categories)
 
     def add_processes(self):
-        processes = [
-        ]
+        processes = []
 
         process_group_names = {
             "default": [],
@@ -62,263 +67,15 @@ class Config():
 
 
     def add_datasets(self):
-        datasets = [
-            Dataset("ggf_sm",
-                dataset="/GluGluToHHTo2B2Tau_node_cHHH1_TuneCP5_PSWeights_13TeV-powheg-pythia8/"
-                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
-                    "NANOAODSIM",
-                process=self.processes.get("ggf_sm"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.03105),
+        datasets = []
+        # Dataset("example_ggf_sm",
+        #         dataset="/GluGlutoHHto2B2Tau_kl-1p00_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/"
+        #                 "Run3Summer22EENanoAODv12-Poisson60KeepRAW_130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM",
+        #         process=self.processes.get("example_ggf_sm"),
+        #         # prefix="xrootd-cms.infn.it//",
+        #         xs=0.03443,
+        #         tags=["NanoAODv12"])
 
-            Dataset("vbf_sm",
-                dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_1_dipoleRecoilOff"
-                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("vbf_sm"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.001726),
-
-            Dataset("vbf_0p5_1_1",
-                dataset="/VBFHHTo2B2Tau_CV_0_5_C2V_1_C3_1_dipoleRecoilOff"
-                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("vbf_0p5_1_1"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.010824),
-
-            Dataset("vbf_1p5_1_1",
-                dataset="/VBFHHTo2B2Tau_CV_1_5_C2V_1_C3_1_dipoleRecoilOff"
-                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("vbf_1p5_1_1"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.066018),
-
-            Dataset("vbf_1_0_1",
-                dataset="/VBFHHTo2B2Tau_CV_1_C2V_0_C3_1_dipoleRecoilOff"
-                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("vbf_1_0_1"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.027080),
-
-            Dataset("vbf_1_1_0",
-                dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_0_dipoleRecoilOff"
-                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("vbf_1_1_0"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.004609),
-
-            Dataset("vbf_1_1_2",
-                dataset="/VBFHHTo2B2Tau_CV_1_C2V_1_C3_2_dipoleRecoilOff"
-                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("vbf_1_1_2"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.001423),
-
-            Dataset("vbf_1_2_1",
-                dataset="/VBFHHTo2B2Tau_CV_1_C2V_2_C3_1_dipoleRecoilOff"
-                "-TuneCP5_PSweights_13TeV-madgraph-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("vbf_1_2_1"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.014218),
-
-            # Background samples
-            Dataset("dy_high",
-                dataset="/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/"
-                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("dy_high"),
-                # prefix="xrootd-cms.infn.it//",
-                # prefix="cms-xrd-global.cern.ch//",
-                xs=6077.22, 
-                merging={
-                    "tautau": 20,
-                    "etau": 20,
-                }),
-            Dataset("tt_dl",
-                dataset="/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
-                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
-                    "NANOAODSIM",
-                process=self.processes.get("tt_dl"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=88.29, 
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
-                scaling=(0.96639, 0.00863),),
-            Dataset("tt_sl",
-                dataset="/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext3-v1/"
-                "NANOAODSIM",
-                process=self.processes.get("tt_sl"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=365.34,
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },
-                scaling=(0.96639, 0.00863),),
-            Dataset("tt_fh",
-                dataset="/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/"
-                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext2-v1/"
-                    "NANOAODSIM",
-                process=self.processes.get("tt_fh"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=377.96,
-                scaling=(0.96639, 0.00863),
-            ),
-
-            # Others
-            # ttH
-            Dataset("tth_bb",
-                dataset="/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8/"
-                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_EXT_102X_upgrade2018_realistic_v21-v1/"
-                    "NANOAODSIM",
-                process=self.processes.get("tth_bb"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.2953),
-            Dataset("tth_tautau",
-                dataset="/ttHToTauTau_M125_TuneCP5_13TeV-powheg-pythia8/"
-                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
-                    "NANOAODSIM",
-                process=self.processes.get("tth_tautau"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.031805),
-            Dataset("tth_nonbb",
-                dataset="/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8/"
-                    "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/"
-                    "NANOAODSIM",
-                process=self.processes.get("tth_nonbb"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=0.17996),
-
-            # Wjets
-            Dataset("wjets",
-                dataset="/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("wjets"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=61526.7,
-                merging={
-                    "tautau": 5,
-                    "etau": 10,
-                }),
-            # tW
-            Dataset("st_tw_antitop",
-                dataset="/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext1-v1/"
-                "NANOAODSIM",
-                process=self.processes.get("tw"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=35.85),
-            Dataset("st_tw_top",
-                dataset="/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21_ext1-v1/"
-                "NANOAODSIM",
-                process=self.processes.get("tw"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=35.85),
-            # single top
-            Dataset("st_antitop",
-                dataset="/ST_t-channel_antitop_5f_TuneCP5_13TeV-powheg-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("singlet"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=80.95),
-            Dataset("st_top",
-                dataset="/ST_t-channel_top_5f_TuneCP5_13TeV-powheg-pythia8/"
-                "RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM",
-                process=self.processes.get("singlet"),
-                # prefix="xrootd-cms.infn.it//",
-                xs=136.02),
-
-            # DATA
-            # Tau 2018
-            Dataset("data_tau_a",
-                dataset="/Tau/Run2018A-02Apr2020-v1/NANOAOD",
-                process=self.processes.get("data_tau"),
-                runPeriod="A",
-                # prefix="xrootd-cms.infn.it//",
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },),
-            Dataset("data_tau_b",
-                dataset="/Tau/Run2018B-02Apr2020-v1/NANOAOD",
-                process=self.processes.get("data_tau"),
-                runPeriod="B",
-                # prefix="xrootd-cms.infn.it//",
-                # locate="se-xrd01.jinr-t1.ru:1095/",
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },),
-            Dataset("data_tau_c",
-                dataset="/Tau/Run2018C-02Apr2020-v1/NANOAOD",
-                process=self.processes.get("data_tau"),
-                runPeriod="C",
-                # prefix="xrootd-cms.infn.it//",
-                # locate="cms03.lcg.cscs.ch:1094/",
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },),
-            Dataset("data_tau_d",
-                dataset="/Tau/Run2018D-02Apr2020-v2/NANOAOD",
-                process=self.processes.get("data_tau"),
-                runPeriod="D",
-                # prefix="xrootd-cms.infn.it//",
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },),
-
-            # EGamma 2018
-            Dataset("data_etau_a",
-                dataset="/EGamma/Run2018A-02Apr2020-v1/NANOAOD",
-                process=self.processes.get("data_etau"),
-                runPeriod="A",
-                # prefix="xrootd-cms.infn.it//",
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },),
-            Dataset("data_etau_b",
-                dataset="/EGamma/Run2018B-02Apr2020-v1/NANOAOD",
-                process=self.processes.get("data_etau"),
-                runPeriod="B",
-                # prefix="xrootd-cms.infn.it//",
-                # locate="se-xrd01.jinr-t1.ru:1095/",
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },),
-            Dataset("data_etau_c",
-                dataset="/EGamma/Run2018C-02Apr2020-v1/NANOAOD",
-                process=self.processes.get("data_etau"),
-                runPeriod="C",
-                # prefix="xrootd-cms.infn.it//",
-                # locate="cms03.lcg.cscs.ch:1094/",
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },),
-            Dataset("data_etau_d",
-                dataset="/EGamma/Run2018D-02Apr2020-v1/NANOAOD",
-                process=self.processes.get("data_etau"),
-                runPeriod="D",
-                # prefix="xrootd-cms.infn.it//",
-                merging={
-                    "tautau": 20,
-                    "etau": 40,
-                },),
-
-        ]
         return ObjectCollection(datasets)
 
     def add_features(self):
@@ -341,6 +98,57 @@ class Config():
     def add_default_module_files(self):
         defaults = {}
         return defaults
+
+    def add_tau_id(self, year, tauId_algo):
+        self.tauId_algo = tauId_algo
+
+        if year <= 2018 and self.tauId_algo == "idDeepTau2018v2p5":
+            raise ValueError("Wrong tau id requested. "
+                             "Only idDeepTau2017v2p1 available in Run2 MC.")
+
+        elif year <= 2018 and self.tauId_algo == "idDeepTau2017v2p1":
+            # DeepTau2017v2p1 wpbit is in power 2 in Run2 MC NanoAOD
+            self.tauId_algo_wps=DotDict(
+                vsjet=DotDict(VVVLoose = 1, VVLoose = 3, VLoose = 7, Loose = 15,
+                              Medium = 31, Tight = 63, VTight = 127, VVTight = 255),
+                vse=DotDict(VVVLoose = 1, VVLoose = 3, VLoose = 7, Loose = 15,
+                            Medium = 31, Tight = 63, VTight = 127, VVTight = 255),
+                vsmu=DotDict(VLoose = 1, Loose = 3, Medium = 7, Tight = 15) )
+
+        elif year >= 2022 and (self.tauId_algo == "idDeepTau2018v2p5" or self.tauId_algo == "idDeepTau2017v2p1"):
+            # DeepTau2017v2p1/DeepTau2018v2p5 wpbit is integer in latest NanoAOD
+            self.tauId_algo_wps=DotDict(
+                vsjet = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
+                                Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
+                vse   = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
+                                Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
+                vsmu  = DotDict(VLoose = 1, Loose = 2, Medium = 3, Tight = 4) )
+
+        else:
+            raise ValueError("Wrong tau id requested. "
+                             "Only idDeepTau2017v2p1 (for Run2) or "
+                             "idDeepTau2017v2p1/idDeepTau2018v2p5 (for Run3) "
+                             "available at the moment.")
+
+        return self
+
+    def add_bjet_id(self, btag_algo = "DeepFlavB"):
+        self.btag_algo = btag_algo
+        
+        if self.btag_algo == "DeepFlavB":
+            # https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
+            self.btag_algo_wps = DotDict(tight = 0.7264, medium = 0.2770, loose = 0.0494)
+
+        elif self.btag_algo == "PNetB":
+            # ParticleNet WPs taken from BTV SF json
+            self.btag_algo_wps = DotDict(xxtight = 0.9610, xtight = 0.7862, tight = 0.6734,
+                                         medium = 0.2450, loose = 0.0470)
+
+        else:
+            raise ValueError("Wrong jet id requested. "
+                             "Only DeepFlavB or PNetB available at the moment.")
+
+        return self
 
     # feature methods
 
@@ -470,9 +278,6 @@ class Config():
                     continue
         return systematics
 
-    def get_norm_systematics(self, process_datasets, region):
-        return []
-
     def get_weights_expression(self, list_of_weights, syst_name="central", systematic_direction=""):
         weights = []
         for weight in list_of_weights:
@@ -499,3 +304,78 @@ class Config():
                 process = self.processes.get(process.parent_process)
             else:
                 return False
+
+    def get_children_from_process(self, original_process_name):
+        processes = []
+        for process in self.processes:
+            child = process
+            if process.name == original_process_name:
+                continue
+            while True:
+                if process.parent_process == original_process_name:
+                    processes.append(child)
+                    break
+                elif process.parent_process:
+                    process=self.processes.get(process.parent_process)
+                else:
+                    break
+        return processes
+
+    def get_qcd_regions(self, region, category, wp="", shape_region="os_inviso",
+            signal_region_wp="os_iso", sym=False):
+        # the region must be set and tagged os_iso
+        if not region:
+            raise Exception("region must not be empty")
+        # if not region.has_tag("qcd_os_iso"):
+        #     raise Exception("region must be tagged as 'qcd_os_iso' but isn't")
+
+        # the category must be compatible with the estimation technique
+        # if category.has_tag("qcd_incompatible"):
+        #     raise Exception("category '{}' incompatible with QCD estimation".format(category.name))
+
+        if wp != "":
+            wp = "__" + wp
+
+        # get other qcd regions
+        prefix = region.name[:-len(signal_region_wp)]
+        qcd_regions = {f"{self.qcd_var1.inverted}_{self.qcd_var2.inverted}":
+            self.regions.get(prefix + f"{self.qcd_var1.inverted}_{self.qcd_var2.inverted}" + wp)}
+        # for the inverted regions, allow different working points
+        default_config = [
+            f"{self.qcd_var1.nominal}_{self.qcd_var2.inverted}",
+            f"{self.qcd_var1.inverted}_{self.qcd_var2.nominal}"
+        ]
+        for key in default_config:
+            region_name = (prefix + key + wp
+                if key != f"{self.qcd_var1.inverted}_{self.qcd_var2.nominal}"
+                else prefix + self.qcd_var1.inverted + "_" + signal_region_wp[
+                    len(f"{self.qcd_var1.nominal}_"):])
+            qcd_regions[key] = self.regions.get(region_name)
+
+        if sym:
+            qcd_regions["shape1"] = self.regions.get(prefix + shape_region + wp)
+            qcd_regions["shape2"] = self.regions.get(
+                prefix + self.qcd_var1.inverted + "_" + signal_region_wp[
+                    len(self.qcd_var1.nominal + "_"):])
+        else:
+            if shape_region == f"{self.qcd_var1.nominal}_{self.qcd_var2.inverted}":
+                qcd_regions["shape"] = self.regions.get(prefix + shape_region + wp)
+            else:
+                qcd_regions["shape"] = self.regions.get(
+                    prefix + self.qcd_var1.inverted + "_" + signal_region_wp[
+                    len(self.qcd_var1.nominal + "_"):])
+        return DotDict(qcd_regions)
+
+    # plotting functions
+
+    def get_norm_systematics(self, process_datasets, region):
+        return []
+
+    def get_inner_text_for_plotting(self, category, region):
+        inner_text=[category.label + " category"]
+        if region:
+            if isinstance(region.label, list):
+                inner_text += region.label
+            else:
+                inner_text.append(region.label)
+        return inner_text

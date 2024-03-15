@@ -21,8 +21,8 @@ from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.util import iter_tree
 from cmt.base_tasks.base import ( 
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, InputData,
-    ConfigTaskWithCategory
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow,
+    SlurmWorkflow, InputData, ConfigTaskWithCategory
 )
 from cmt.base_tasks.preprocessing import PreprocessRDF, Categorization, DatasetCategoryWrapperTask
 
@@ -38,7 +38,8 @@ def nested(*contexts):
 
 
 
-class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
+class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow,
+    SGEWorkflow, SlurmWorkflow):
     base_category_name = luigi.Parameter(default="base_selection", description="the name of the "
         "base category with the initial selection, default: base")
     from_categorization = luigi.BoolParameter(default=False, description="whether to use as input "
