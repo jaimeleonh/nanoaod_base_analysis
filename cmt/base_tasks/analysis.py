@@ -912,8 +912,9 @@ class Fit(FeaturePlot, FitBase):
 
                 n_non_zero_bins = 0
                 for i in range(1, histo.GetNbinsX()):
-                    if histo.GetBinContent(i) > 0 and histo.GetBinCenter(i) >= self.x_range[0] and \
-                            histo.GetBinCenter(i) <= self.x_range[1]:
+                    if histo.GetBinContent(i) > 0 and \
+                            histo.GetBinCenter(i) >= float(self.x_range[0]) and \
+                            histo.GetBinCenter(i) <= float(self.x_range[1]):
                         n_non_zero_bins += 1
 
                 funs = []
