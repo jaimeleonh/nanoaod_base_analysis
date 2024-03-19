@@ -5,18 +5,40 @@ from plotting_tools import Label
 from collections import OrderedDict
 
 class Config():
-    def __init__(self, name, year, ecm, runPeriod="", lumi_fb=None, lumi_pb=None, **kwargs):
+    def __init__(self, name, year, ecm, runPeriod="", lumi_pb=None, **kwargs):
         self.name=name
         self.year=year
         self.ecm=ecm
         self.runPeriod=runPeriod
-        assert lumi_fb or lumi_pb
-        if lumi_fb:
-            self.lumi_fb = lumi_fb
-            self.lumi_pb = lumi_fb * 1000.
-        else:
+
+        # Example: Lumi definition as dict
+        #preEE = {
+        #    "C" : 5010,
+        #    "D" : 2970,
+        #}
+        #postEE = {
+        #    "E" : 5807,
+        #    "F" : 17782,
+        #    "G" : 3083,
+        #}
+        #lumi_pb = {
+        #    "preEE"  : preEE,
+        #    "postEE" : postEE,
+        #}
+        #####
+        if lumi_pb and not type(lumi_pb) == dict:
             self.lumi_fb = lumi_pb / 1000.
             self.lumi_pb = lumi_pb 
+
+        else:
+            lumi_fb = {}
+            for period, period_dict in lumi_pb.items():
+                period_dict_fb = {}
+                for era, lum in period_dict.items():
+                    period_dict_fb[era] = lum / 1000
+                lumi_fb[period] = period_dict_fb
+            self.lumi_fb = lumi_fb
+            self.lumi_pb = lumi_pb
 
         self.x = kwargs
 
