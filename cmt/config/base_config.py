@@ -401,3 +401,27 @@ class Config():
             else:
                 inner_text.append(region.label)
         return inner_text
+
+    # run-era - run-period functions
+    def get_run_periods(self):
+        if not isinstance(self.lumi_pb, dict):
+            return []
+        return list(self.lumi_pb.keys())
+
+    def get_run_period_from_run_era(self, era):
+        if not isinstance(self.lumi_pb, dict):
+            return None
+        for run_period in self.lumi_pb:
+            if era in self.lumi_pb[run_period].keys():
+                return run_period
+
+    def get_run_eras_from_run_period(self, run_period):
+        if not isinstance(self.lumi_pb, dict):
+            return []
+        return list(self.lumi_pb[run_period].keys())
+
+    def get_run_eras(self):
+        eras = []
+        for run_period in self.get_run_periods():
+            eras += self.get_run_eras_from_run_period(run_period)
+        return eras

@@ -270,6 +270,18 @@ class DatasetWrapperTask(ConfigTask):
     def __init__(self, *args, **kwargs):
         super(DatasetWrapperTask, self).__init__(*args, **kwargs)
 
+        if getattr(self, "run_period", False):
+            assert self.run_period in self.config.get_run_periods()
+            self.skip_dataset_tags = list(self.skip_dataset_tags) \
+                + [elem for elem in self.config.get_run_periods() if elem != self.run_period]
+
+        if getattr(self, "run_era", False):
+            assert self.config.get_run_period_from_run_era(self.run_era) != None
+            self.skip_dataset_tags = list(self.skip_dataset_tags) \
+                + [elem for elem in self.config.get_run_eras() if elem != self.run_era] \
+                + [elem for elem in self.config.get_run_periods()
+                    if elem != self.config.get_run_period_from_run_era(self.run_era)]
+
         # first get datasets to skip
         skip_datasets = self._find_datasets(self.skip_dataset_names, self.skip_dataset_tags)
 
