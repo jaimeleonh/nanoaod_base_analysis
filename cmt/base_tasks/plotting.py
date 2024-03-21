@@ -596,6 +596,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
     :param propagate_syst_qcd: whether to propagate systematics to qcd background
     :type propagate_syst_qcd: bool
 
+    :param run_period: parameter to run only over the datasets for the specified run period of a
+        given year. It also allows you to plot the run period with the proper format.
+    :type run_period: str
+
+    :param run_era: parameter to run only over the era dataset that has been specified. The lumi labels 
+        and the luminosity are also set accordingly.
+    :type run_era: str
+
     """
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
         "them with dataset and category weights, and normalize afterwards, default: False")
@@ -628,6 +636,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         "default: None")
     propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate systematics to qcd background, "
         "default: False")
+    run_period = luigi.Parameter(default="", description="plot only the specified period, "
+        "default: None")
+    run_era = luigi.Parameter(default="", description="plot only the specified era, "
+        "default: None")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
         # "optimization task to use, not used when empty, default: empty")
@@ -1243,7 +1255,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 c.get_pad(1).SetLogy()
             if self.log_x:
                 c.get_pad(1).SetLogx()
-            label_scaling = 5./4.
+            label_scaling = self.config.label_size
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
@@ -1282,11 +1294,26 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             upper_left_offset = 0.0
 
         if not (self.hide_data or not len(data_hists) > 0) or self.stack:
-            upper_right="{}, {} TeV ({:.1f} ".format(
-                self.config.year,
-                self.config.ecm,
-                self.config.lumi_fb
-            ) + "fb^{-1})"
+            if not type(self.config.lumi_fb) == dict:
+                upper_right="{}, {:.1f} ".format(
+                    self.config.year,
+                    self.config.lumi_fb,
+                ) + "fb^{-1} " + "({} TeV)".format(self.config.ecm)
+            else:
+                if self.run_era != "":
+                    era_label = self.run_era
+                    lumi_label = self.config.lumi_fb[self.config.get_run_period_from_run_era(self.run_era)][self.run_era]
+                else:
+                    era_label = self.run_period
+                    if self.run_period != "":
+                        lumi_label = sum(self.config.lumi_fb.get(self.run_period, {}).values())
+                    else:
+                        lumi_label = sum(sum(period_dict.values()) for period_dict in self.config.lumi_fb.values())
+                upper_right="{} {}, {:.1f} ".format(
+                    self.config.year,
+                    era_label,
+                    lumi_label,
+                ) + "fb^{-1} " + "({} TeV)".format(self.config.ecm)
         else:
             upper_right="{} Simulation ({} TeV)".format(
                 self.config.year,
@@ -1545,7 +1572,12 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         return nevents
 
     def get_normalization_factor(self, dataset, elem):
-        return dataset.xs * self.config.lumi_pb / self.nevents[dataset.name][elem]
+        if not type(self.config.lumi_pb) == dict:
+            return dataset.xs * self.config.lumi_pb / self.nevents[dataset.name][elem]
+        elif self.run_era != "":
+            return dataset.xs * self.config.lumi_pb[dataset.runPeriod][self.run_era] / self.nevents[dataset.name][elem]
+        else:
+            return dataset.xs * sum(self.config.lumi_pb.get(dataset.runPeriod, {}).values()) / self.nevents[dataset.name][elem]
 
     @law.decorator.notify
     @law.decorator.safe_output
@@ -1835,7 +1867,7 @@ class FeaturePlotSyst(FeaturePlot):
                     c.get_pad(1).SetLogy()
                 if self.log_x:
                     c.get_pad(1).SetLogx()
-                label_scaling = 5./4.
+                label_scaling = self.config.label_size
 
                 r.setup_hist(dummy_hist)
                 r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
@@ -2431,11 +2463,33 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
                 inner_text.append(self.region.label)
 
         if not (self.hide_data or not len(data_hists) > 0) or self.stack:
-            upper_right="{}, {} TeV ({:.1f} ".format(
-                self.config.year,
-                self.config.ecm,
-                self.config.lumi_fb
-            ) + "fb^{-1})"
+            ### Old implementation ###
+            #upper_right="{}, {} TeV ({:.1f} ".format(
+            #    self.config.year,
+            #    self.config.ecm,
+            #    self.config.lumi_fb
+            #) + "fb^{-1})"
+            ### New implementation: NOT TESTED ###  
+            if not type(self.config.lumi_fb) == dict:
+                upper_right="{} , {:.1f} ".format(
+                    self.config.year,
+                    self.config.lumi_fb,
+                ) + "fb^{-1} " + "({} TeV)".format(self.config.ecm)
+            else:
+                if self.run_era != "":
+                    era_label = self.run_era
+                    lumi_label = self.config.lumi_fb[self.config.get_run_period_from_run_era(self.run_era)][self.run_era]
+                else:
+                    era_label = self.run_period
+                    if self.run_period != "":
+                        lumi_label = sum(self.config.lumi_pb.get(self.run_period, {}).values())
+                    else:
+                        lumi_label = sum(sum(period_dict.values()) for period_dict in self.config.lumi_pb.values())
+                upper_right="{} {}, {:.1f} ".format(
+                    self.config.year,
+                    era_label,
+                    lumi_label,
+                ) + "fb^{-1} " + "({} TeV)".format(self.config.ecm)
         else:
             upper_right="{} Simulation ({} TeV)".format(
                 self.config.year,
