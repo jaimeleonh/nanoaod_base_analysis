@@ -57,6 +57,7 @@ class Config():
         self.qcd_var2 = DotDict({"nominal": "iso", "inverted": "inviso"})
 
         self.upper_left_text = "Private work"
+        self.label_size = 5./4.
 
     def get_aux(self, name, default=None):
         return self.x.get(name, default)

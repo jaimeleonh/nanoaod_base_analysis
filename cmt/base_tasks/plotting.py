@@ -597,13 +597,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
     :type propagate_syst_qcd: bool
 
     :param run_period: parameter to run only over the datasets for the specified run period of a
-        given year (NOT YET -> To be moved to a different task). It also allows you to plot the
-        run period with the proper format.
+        given year. It also allows you to plot the run period with the proper format.
     :type run_period: str
 
-    :param run_era: parameter to set correctly the lumi labels & the luminosity itself when
-        plotting just one era of a given year. NOTE: if you set the era, you must specify also
-        the run_period, unless there is only one.
+    :param run_era: parameter to run only over the era dataset that has been specified. The lumi labels 
+        and the luminosity are also set accordingly.
     :type run_era: str
 
     """
@@ -1257,8 +1255,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 c.get_pad(1).SetLogy()
             if self.log_x:
                 c.get_pad(1).SetLogx()
-            #label_scaling = 5./4.
-            label_scaling = 1
+            label_scaling = self.config.label_size
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
@@ -1305,7 +1302,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             else:
                 if self.run_era != "":
                     era_label = self.run_era
-                    lumi_label = self.config.lumi_fb[self.run_period][self.run_era]
+                    lumi_label = self.config.lumi_fb[self.config.get_run_period_from_run_era(self.run_era)][self.run_era]
                 else:
                     era_label = self.run_period
                     if self.run_period != "":
@@ -1870,7 +1867,7 @@ class FeaturePlotSyst(FeaturePlot):
                     c.get_pad(1).SetLogy()
                 if self.log_x:
                     c.get_pad(1).SetLogx()
-                label_scaling = 5./4.
+                label_scaling = self.config.label_size
 
                 r.setup_hist(dummy_hist)
                 r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
@@ -2481,7 +2478,7 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
             else:
                 if self.run_era != "":
                     era_label = self.run_era
-                    lumi_label = self.config.lumi_fb[self.run_period][self.run_era]
+                    lumi_label = self.config.lumi_fb[self.config.get_run_period_from_run_era(self.run_era)][self.run_era]
                 else:
                     era_label = self.run_period
                     if self.run_period != "":
