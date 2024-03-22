@@ -203,8 +203,8 @@ class BasePlotTask(ConfigTaskWithRegion):
         return postfix
 
 
-class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondorWorkflow,
-        SGEWorkflow, SlurmWorkflow, RDFModuleTask):
+class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow,
+        HTCondorWorkflow, SGEWorkflow, SlurmWorkflow):
     """
     Performs the filling of histograms for all features considered. If systematics are considered,
     it also produces the same histograms after applying those.
@@ -445,7 +445,8 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
             if self.skip_processing:
                 inp_to_consider = self.get_path(inp[elem])[0]
                 if not self.dataset.friend_datasets:
-                    dfs[elem] = ROOT.RDataFrame(self.tree_name, self.get_path(inp[elem]))
+                    dfs[elem] = self.RDataFrame(self.tree_name, self.get_path(inp[elem]),
+                        allow_redefinition=self.allow_redefinition)
                 # friend tree
                 else:
                     tchain = ROOT.TChain()
@@ -455,13 +456,15 @@ class PrePlot(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow, HTCondor
                     for f in self.get_path(inp[elem], 1):
                         friend_tchain.Add("{}/{}".format(f, self.tree_name))
                     tchain.AddFriend(friend_tchain, "friend")
-                    dfs[elem] = ROOT.RDataFrame(tchain)
+                    dfs[elem] = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
             elif self.skip_merging:
                 inp_to_consider = inp[elem]["root"].path
-                dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
+                dfs[elem] = self.RDataFrame(self.tree_name, inp_to_consider,
+                    allow_redefinition=self.allow_redefinition)
             else:
                 inp_to_consider = inp[elem].targets[self.branch].path
-                dfs[elem] = ROOT.RDataFrame(self.tree_name, inp_to_consider)
+                dfs[elem] = self.RDataFrame(self.tree_name, inp_to_consider,
+                    allow_redefinition=self.allow_redefinition)
 
             empty_file = False
             try:
