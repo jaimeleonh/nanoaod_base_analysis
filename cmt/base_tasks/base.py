@@ -14,6 +14,7 @@ import re
 import os
 import math
 from collections import OrderedDict
+import cppyy
 
 import luigi
 import law
@@ -30,6 +31,9 @@ from analysis_tools import ObjectCollection
 from analysis_tools.utils import import_root
 
 law.contrib.load("cms", "git", "htcondor", "slurm", "root", "tasks", "telegram", "tensorflow", "wlcg")
+
+ROOT = import_root()
+
 
 class Target():
     def __init__(self, path, *args, **kwargs):
@@ -498,7 +502,55 @@ class SplittedTask():
         return
 
 
-class RDFModuleTask():
+class RDFModuleTask(DatasetTask):
+    allow_redefinition = luigi.BoolParameter(default=False, description="whether to allow "
+        "redefinition of variables already in the RDataFrame, default: False")
+
+    class RDataFrame():
+        def __init__(self, *args, **kwargs):
+            if len(args) != 1 or isinstance(args[0], ROOT.TChain):
+                self.rdf = ROOT.RDataFrame(*args)
+            else:  # rdf coming from another df after some modification (e.g. Define)
+                self.rdf = args[0]
+            self.allow_redefinition = kwargs.pop("allow_redefinition", False)
+
+        def Define(self, *args):
+            try:
+                return type(self)(self.rdf.Define(*args),
+                    allow_redefinition=self.allow_redefinition)
+            except cppyy.gbl.std.runtime_error:
+            # except:
+                if not self.allow_redefinition:
+                    raise ValueError(f"Attempted a redefinition of variable {args[0]}. If you want "
+                        "to proceed, please rerun with allow_redefinition = True")
+                else:
+                    print(50 * "-")
+                    print(f"WARNING: Variable {args[0]} is already present in the RDataFrame and "
+                        "will be redefined as allow_redefinition = True")
+                    print(50 * "-")
+                    return type(self)(ROOT.RDataFrame(self.rdf.Redefine(*args)),
+                        allow_redefinition=self.allow_redefinition)
+
+        def Snapshot(self, *args):
+            try:
+                self.rdf.Snapshot(*args)
+            # except cppyy.gbl.std.logic_error:
+            except TypeError:
+                print("SNAPSHOT VIA REDEFINITION")
+                # A redefinition has been performed, so we need to remove duplicated branches
+                args = list(args)
+                args[2] = tuple(set(args[2]))
+                self.rdf.Snapshot(*args)
+
+        # avoid redefining the rest of RDataFrame functions
+        def __getattr__(self, name):
+            def fn(*args, **kwargs):
+                result = getattr(self.rdf, name)(*args, **kwargs)
+                if "RInterface" in str(type(result)):  # A new RDataFrame has been created
+                    return type(self)(result, allow_redefinition=self.allow_redefinition)
+                return result
+            return fn
+
     def get_feature_modules(self, filename, **kwargs):
         module_params = None
 

@@ -150,8 +150,8 @@ class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask
         )
 
 
-class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
-        SplittedTask, RDFModuleTask):
+class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+        SplittedTask):
     """
     Performs a counting of the events with and without applying the necessary weights.
     Weights are read from the config file.
@@ -297,7 +297,8 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, 
         # create RDataFrame
         inp = self.get_input()
         if not self.dataset.friend_datasets:
-            df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+            df = self.RDataFrame(self.tree_name, self.get_path(inp),
+                allow_redefinition=self.allow_redefinition)
 
         # friend tree
         else:
@@ -308,7 +309,7 @@ class PreCounter(DatasetTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, 
             for elem in self.get_path(inp, 1):
                 friend_tchain.Add("{}/{}".format(elem, self.tree_name))
             tchain.AddFriend(friend_tchain, "friend")
-            df = ROOT.RDataFrame(tchain)
+            df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
 
         weight_modules = self.get_feature_modules(self.weights_file)
         if len(weight_modules) > 0:
@@ -415,13 +416,13 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         """
         from shutil import copy
         ROOT = import_root()
-        # verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # create RDataFrame
         inp = self.get_input()
         if not self.dataset.friend_datasets:
-            df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+            df = self.RDataFrame(self.tree_name, self.get_path(inp),
+                allow_redefinition=self.allow_redefinition)
 
         # friend tree
         else:
@@ -432,7 +433,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             for elem in self.get_path(inp, 1):
                 friend_tchain.Add("{}/{}".format(elem, self.tree_name))
             tchain.AddFriend(friend_tchain, "friend")
-            df = ROOT.RDataFrame(tchain)
+            df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
 
         outp = self.output()['root']
         # print(outp.path)
@@ -442,13 +443,14 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         # if dataset_selection and dataset_selection != "1":
             # selection = jrs(dataset_selection, selection, op="and")
 
+        branches = list(df.GetColumnNames())
+
         if selection != "":
             filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
         else:
             filtered_df = df
 
         modules = self.get_feature_modules(self.modules_file)
-        branches = list(df.GetColumnNames())
         if len(modules) > 0:
             for module in modules:
                 try:
@@ -458,15 +460,14 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                     sys.exit()
                 branches += add_branches
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-
-        branch_list = ROOT.vector('string')()
-        for branch_name in branches:
-            branch_list.push_back(branch_name)
         if self.compute_filter_efficiency == True:
             report = filtered_df.Report()
-        filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
+        filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), tuple(branches))
         if self.compute_filter_efficiency == True:
-            json_res = {cutReport.GetName() : {"pass": cutReport.GetPass(), "all": cutReport.GetAll()} for cutReport in report.GetValue()}
+            json_res = {cutReport.GetName() : {
+                "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
+                for cutReport in report.GetValue()
+            }
             with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
                 json.dump(json_res, f, indent=4)
 
@@ -852,7 +853,8 @@ class Categorization(PreprocessRDF):
                 # create RDataFrame
                 inp = self.get_input()
                 if not self.dataset.friend_datasets:
-                    df = ROOT.RDataFrame(self.tree_name, self.get_path(inp))
+                    df = self.RDataFrame(self.tree_name, self.get_path(inp),
+                        allow_redefinition=self.allow_redefinition)
 
                 # friend tree
                 else:
@@ -863,9 +865,10 @@ class Categorization(PreprocessRDF):
                     for elem in self.get_path(inp, 1):
                         friend_tchain.Add("{}/{}".format(elem, self.tree_name))
                     tchain.AddFriend(friend_tchain, "friend")
-                    df = ROOT.RDataFrame(tchain)
+                    df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
             else:
-                df = ROOT.RDataFrame(self.tree_name, self.input()["root"].path)
+                df = self.RDataFrame(self.tree_name, self.input()["root"].path,
+                    allow_redefinition=self.allow_redefinition)
 
             # restricting number of events
             if self.max_events is not None:
@@ -877,7 +880,6 @@ class Categorization(PreprocessRDF):
             dataset_selection = self.dataset.get_aux("selection")
             if dataset_selection and dataset_selection != "1":
                 selection = jrs(dataset_selection, selection, op="and")
-
             try:
                 branches = list(df.GetColumnNames())
             except:
@@ -892,11 +894,8 @@ class Categorization(PreprocessRDF):
                         sys.exit()
                     branches += add_branches
             branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-            branch_list = ROOT.vector('string')()
-            for branch_name in branches:
-                branch_list.push_back(branch_name)
             filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
-            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branch_list)
+            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
 
             if self.compute_filter_efficiency:
                 report = filtered_df.Report()
