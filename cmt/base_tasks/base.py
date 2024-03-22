@@ -528,7 +528,7 @@ class RDFModuleTask(DatasetTask):
                     print(f"WARNING: Variable {args[0]} is already present in the RDataFrame and "
                         "will be redefined as allow_redefinition = True")
                     print(50 * "-")
-                    return type(self)(ROOT.RDataFrame(self.rdf.Redefine(*args)),
+                    return type(self)(self.rdf.Redefine(*args),
                         allow_redefinition=self.allow_redefinition)
 
         def Snapshot(self, *args):
