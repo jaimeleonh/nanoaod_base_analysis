@@ -792,9 +792,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             # in principle it should crash, but let's give it a chance by checking whether the
             # process_group_name it's actually a process. In that case, swap the process_name with
             # the process_group_name
-            if fit_params["process_name"] not in self.processes:
-                if self.process_group_name in self.config.processes:
+            if fit_params["process_name"] not in self.processes_datasets.keys():
+                try:
+                    process = self.config.processes.get(self.process_group_name)
                     fit_params["process_name"] = self.process_group_name
+                except ValueError:
+                    raise ValueError(f"{self.process_name} is not among the processes considered by"
+                        f"the process_group_name {self.process_group_name} and "
+                        f"{self.process_group_name} is not a process, so the fit can't be included.")
 
             from cmt.base_tasks.analysis import Fit
             params = ", ".join([f"{param}='{value}'"
