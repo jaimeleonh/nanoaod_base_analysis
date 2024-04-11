@@ -944,6 +944,7 @@ class Fit(FeaturePlot, FitBase):
                 d[key] = {}
                 for param, value in params.items():
                     d[key][param] = value.getVal()
+                    d[key][param + "_error"] = value.getError()
                     # setting the parameter as constant before saving it in the workspace
                     value.setConstant(True)  # needs further studying
 

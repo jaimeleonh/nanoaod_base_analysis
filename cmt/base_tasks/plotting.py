@@ -689,15 +689,16 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
         # obtain the list of systematics that apply to the normalization only if this is done
         self.norm_syst_list = []
-        weights = self.config.weights.total_events_weights
-        for weight in weights:
-            try:
-                feature = self.config.features.get(weight)
-                for syst in feature.systematics:
-                    if syst not in self.norm_syst_list:
-                        self.norm_syst_list.append(syst)
-            except:  # weight not defined as a feature -> no syst available
-                continue
+        if self.store_systematics:
+            weights = self.config.weights.total_events_weights
+            for weight in weights:
+                try:
+                    feature = self.config.features.get(weight)
+                    for syst in feature.systematics:
+                        if syst not in self.norm_syst_list:
+                            self.norm_syst_list.append(syst)
+                except:  # weight not defined as a feature -> no syst available
+                    continue
 
     def requires(self):
         """
@@ -798,8 +799,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     process = self.config.processes.get(self.process_group_name)
                     fit_params["process_name"] = self.process_group_name
                 except ValueError:
-                    raise ValueError(f"{self.process_name} is not among the processes considered by"
-                        f"the process_group_name {self.process_group_name} and "
+                    raise ValueError(f"{fit_params['process_name']} is not among the processes "
+                        f"considered by the process_group_name {self.process_group_name} and "
                         f"{self.process_group_name} is not a process, so the fit can't be included.")
 
             from cmt.base_tasks.analysis import Fit
