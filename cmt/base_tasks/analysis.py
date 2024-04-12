@@ -1123,9 +1123,9 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
         """
         Combines all datacards using combine's combineCards.py
         """
-        cmd = "combineCards.py "
         inputs = self.input()
         for feature in self.features:
+            cmd = "combineCards.py "
             force_shape = False
             for category_name in self.category_names:
                 cmd += f"{category_name}={inputs[category_name][feature.name]['txt'].path} "
