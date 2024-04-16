@@ -4,6 +4,20 @@ from analysis_tools.utils import join_root_selection as jrs
 from plotting_tools import Label
 from collections import OrderedDict
 
+from correctionlib import _core
+def getcorrectionlut(fname, cname):
+    # Load CorrectionSet
+    if fname.endswith(".json.gz"):
+        import gzip
+        with gzip.open(fname,'rt') as file:
+            #data = json.load(file)
+            data = file.read().strip()
+        cset = _core.CorrectionSet.from_string(data)
+    else:
+        cset = _core.CorrectionSet.from_file(fname)
+
+    return cset[cname]
+
 class Config():
     def __init__(self, name, year, ecm, runPeriod="", lumi_pb=None, **kwargs):
         self.name=name
@@ -155,17 +169,47 @@ class Config():
 
         return self
 
-    def add_bjet_id(self, btag_algo = "DeepFlavB"):
+    def add_bjet_id(self, year, runPeriod, btag_algo):
         self.btag_algo = btag_algo
+
+        # read WPs directly from json corrections
+        if year == 2022:
+            if   runPeriod == "preEE":  fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2022_Summer22/btagging.json.gz"
+            elif runPeriod == "postEE": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2022_Summer22EE/btagging.json.gz"
+            else:
+                raise ValueError("Wrong year-runPeriod pair.")
+        elif year == 2023:
+            if   runPeriod == "preBPix":  fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23/btagging.json.gz"
+            elif runPeriod == "postBPix": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23BPix/btagging.json.gz"
+            else:
+                raise ValueError("Wrong year-runPeriod pair.")
         
         if self.btag_algo == "DeepFlavB":
-            # https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
-            self.btag_algo_wps = DotDict(tight = 0.7264, medium = 0.2770, loose = 0.0494)
+            if year >= 2022:
+                # get WPs directy from BTV SF json
+                corr = getcorrectionlut(fname, "deepJet_wp_values")
+                self.btag_algo_wps = DotDict(xxtight = corr.evaluate("XXT"),
+                                             xtight  = corr.evaluate("XT"),
+                                             tight   = corr.evaluate("T"),
+                                             medium  = corr.evaluate("M"),
+                                             loose   = corr.evaluate("L"))
+            else:
+                # https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
+                self.btag_algo_wps = DotDict(tight  = 0.7264,
+                                             medium = 0.2770,
+                                             loose  = 0.0494)
 
         elif self.btag_algo == "PNetB":
-            # ParticleNet WPs taken from BTV SF json
-            self.btag_algo_wps = DotDict(xxtight = 0.9610, xtight = 0.7862, tight = 0.6734,
-                                         medium = 0.2450, loose = 0.0470)
+            if year >= 2022:
+                # get WPs directy from BTV SF json
+                corr = getcorrectionlut(fname, "particleNet_wp_values")
+                self.btag_algo_wps = DotDict(xxtight = corr.evaluate("XXT"),
+                                             xtight  = corr.evaluate("XT"),
+                                             tight   = corr.evaluate("T"),
+                                             medium  = corr.evaluate("M"),
+                                             loose   = corr.evaluate("L"))
+            else:
+                raise ValueError("No default PNet for Run2")
 
         else:
             raise ValueError("Wrong jet id requested. "
