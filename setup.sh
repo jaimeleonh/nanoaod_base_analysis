@@ -18,10 +18,15 @@ action() {
     fi
 
     # check if we're on lxplus
-    if [[ "$( hostname )" = lxplus*.cern.ch ]]; then
-        export CMT_ON_LXPLUS="1"
+    if [[ "$( hostname )" = lxplus9*.cern.ch ]]; then
+        export CMT_ON_LXPLUS9="1"
+        export CMT_ON_LXPLUS7="0"
+    elif [[ "$( hostname )" = lxplus7*.cern.ch ]]; then
+        export CMT_ON_LXPLUS9="0"
+	export CMT_ON_LXPLUS7="1"
     else
-        export CMT_ON_LXPLUS="0"
+        export CMT_ON_LXPLUS9="0"
+	export CMT_ON_LXPLUS7="0"
     fi
     
     # check if we're at ciemat
@@ -46,9 +51,16 @@ action() {
         export CMT_ON_PSI="0"
     fi
     
+    # check if we're at mib
+    if [[ "$( hostname -f )" = *mib.infn.it ]] || [[ "$( hostname -f )" = *hcms.it ]]; then
+        export CMT_ON_MIB="1"
+    else
+        export CMT_ON_MIB="0"
+    fi
+
     # default cern name
     if [ -z "$CMT_CERN_USER" ]; then
-        if [ "$CMT_ON_LXPLUS" = "1" ] || [ "$CMT_ON_PSI" = "1" ]; then
+	if [ "$CMT_ON_LXPLUS9" = "1" ] || [ "$CMT_ON_LXPLUS7" = "1" ] || [ "$CMT_ON_PSI" = "1" ] || [ "$CMT_ON_MIB" = "1" ]; then
             export CMT_CERN_USER="$( whoami )"
         elif [ "$CMT_ON_CIEMAT" = "0" ] && [ "$CMT_ON_LLR" = "0" ] ; then
             2>&1 echo "please set CMT_CERN_USER to your CERN user name and try again"
@@ -78,7 +90,7 @@ action() {
 
     # default data directory
     if [ -z "$CMT_DATA" ]; then
-        if [ "$CMT_ON_LXPLUS" = "1" ]; then
+        if [ "$CMT_ON_LXPLUS7" = "1" ] || [ "$CMT_ON_LXPLUS9" = "1" ]; then
             export CMT_DATA="$CMT_BASE/data"
         else
             # TODO: better default when not on lxplus
@@ -105,8 +117,13 @@ action() {
     [ -z "$CMT_JOB_META_DIR" ] && export CMT_JOB_META_DIR="$CMT_DATA/jobs_meta"
     [ -z "$CMT_TMP_DIR" ] && export CMT_TMP_DIR="$CMT_DATA/tmp"
     [ -z "$CMT_CMSSW_BASE" ] && export CMT_CMSSW_BASE="$CMT_DATA/cmssw"
-    [ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc10" #"el8_amd64_gcc12"
-    [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_12_3_0_pre6" #"CMSSW_13_3_0"
+    if [ "$CMT_ON_LXPLUS9" = "1" ]; then
+	[ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="el9_amd64_gcc12"
+    else
+	[ -z "$CMT_SCRAM_ARCH" ] && export CMT_SCRAM_ARCH="slc7_amd64_gcc12"
+    fi
+    [ -z "$CMT_CMSSW_VERSION" ] && export CMT_CMSSW_VERSION="CMSSW_13_3_0"
+
     [ -z "$CMT_PYTHON_VERSION" ] && export CMT_PYTHON_VERSION="3"
     if [ "$CMT_ON_CIEMAT" = "1" ]; then
        if [ -n "$CMT_TMPDIR" ]; then
@@ -274,17 +291,20 @@ action() {
 
         export HHBTAG_PATH="HHTools"
         if [ ! -d "$HHBTAG_PATH" ]; then
-          git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
+          # contains temporary rollback below + TF fix to run with CMSSW_13_X
+          git clone https://github.com/portalesHEP/HHbtag.git HHTools/HHbtag
+          #git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
+          # temporary fix: rolling back to older HHBTag commit to prevent issue with period requirement
+          # (only Run 2 available for HHBTag v2)
+          #  cd HHTools/HHbtag
+          #  git reset --hard df5220db5d4a32d05dc81d652083aece8c99ccab
+          #  cd -
+          # --
+          #fi
           git clone https://gitlab.cern.ch/cclubbtautau/AnalysisCore.git Tools/Tools
           git clone https://gitlab.cern.ch/hh/bbtautau/MulticlassInference
-          git clone https://github.com/GilesStrong/cms_hh_proc_interface.git
-          cd cms_hh_proc_interface
-          git checkout tags/V4.0
-          cd -
-          git clone https://github.com/GilesStrong/cms_hh_tf_inference.git
-          cd cms_hh_tf_inference/inference
-          echo '<use name="boost_filesystem"/>' | cat - BuildFile.xml > temp && mv temp BuildFile.xml
-          cd -
+          git clone https://github.com/portalesHEP/cms_hh_proc_interface.git
+          git clone https://github.com/portalesHEP/cms_hh_tf_inference.git
           git clone https://github.com/GilesStrong/cms_runII_dnn_models.git
           cd cms_runII_dnn_models/models/test/
           mv test.cc test.cc_x
