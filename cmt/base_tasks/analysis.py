@@ -63,6 +63,7 @@ class CombineBase(BasePlotTask, FitBase):
         "default: False")
 
     def get_output_postfix(self, **kwargs):
+        postfix = super(CombineBase, self).get_output_postfix()
         default_pgn = getattr(self, "process_group_name", "default")
         process_group_name = kwargs.get("process_group_name", default_pgn)
         process_group_name = "" if process_group_name == "default" else "_{}".format(
@@ -120,6 +121,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
         "systematics to estimated qcd background, default: False")
     counting = luigi.BoolParameter(default=False, description="whether the datacard should consider "
         "a counting experiment, default: False")
+    refit_with_syst = luigi.BoolParameter(default=True, description="whether to refit after "
+        "modifying the fit parameters with systematics, default: True")
 
     additional_scaling = luigi.DictParameter(description="dict with scalings to be "
         "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
@@ -163,9 +166,10 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                     for param, value in fit_params["fit_parameters"].items()]) + "}"
                 reqs["fits"][fit_params["process_name"]] = eval(
-                    f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+                    f"Fit.vreq(self, {params}, _exclude=['include_fit', 'save_pdf', 'save_png'])")
                 reqs["inspections"][fit_params["process_name"]] = eval(
-                    f"InspectFitSyst.vreq(self, {params}, _exclude=['include_fit'])")
+                    f"InspectFitSyst.vreq(self, {params}, "
+                        "_exclude=['include_fit', 'save_pdf', 'save_png'])")
 
             # In order to have a workspace with data_obs, we replicate the first fit
             # (just in case the x_range is defined) for the available data process
@@ -651,6 +655,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
                 for model, fit_params in self.models.items():
+                    print(inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
                     model_tf = ROOT.TFile.Open(
                         inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
                     w = model_tf.Get("workspace_" + fit_params["process_name"])
@@ -679,6 +684,10 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         x, blind = self.get_x(x_range, blind_range)
                         data = w.data("data_obs")
                         fit_parameters = fit_params.get("fit_parameters", {})
+                        if not self.refit_with_syst:
+                            with open(inputs["fits"][fit_params["process_name"]][feature.name]["json"].path) as f:
+                                d = json.load(f)
+                            fit_parameters.update(d[""])
 
                         # Loop over the different functions (1 if not an envelope)
                         params = {}  # parameters in the fit
@@ -740,12 +749,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                     ROOT.RooArgList(*([x] + list(param_syst[function].values()))))
 
                             # Refit
-                            if not blind:
-                                fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
-                            else:
-                                fun.fitTo(data, ROOT.RooFit.Range(
-                                    float(self.x_range[0]), float(self.x_range[1])),
-                                    ROOT.RooFit.SumW2Error(True))
+                            if self.refit_with_syst:
+                                if not blind:
+                                    fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                                else:
+                                    fun.fitTo(data, ROOT.RooFit.Range(
+                                        float(self.x_range[0]), float(self.x_range[1])),
+                                        ROOT.RooFit.SumW2Error(True))
 
                             for value in params[function].values():
                                 value.setConstant(True)
@@ -817,10 +827,19 @@ class Fit(FeaturePlot, FitBase):
     :param fit_parameters: Initial values for the parameters involved in the fit.
     :type fit_parameters: `str` representing a dict (e.g. '{\"mean\": \"(20, -100, 100)\"}').
 
+    :param functions: Functions to be considered inside the envelope.
+    :type functions: csv string.
+
+    :param save_pdf: whether to save plots in pdf
+    :type save_pdf: bool
+
+    :param save_png: whether to save plots in png
+    :type save_png: bool
+
     """
 
     method = luigi.ChoiceParameter(
-        choices=("voigtian", "polynomial", "exponential", "powerlaw", "envelope"),
+        choices=("voigtian", "gaussian", "polynomial", "exponential", "powerlaw", "envelope"),
         default="voigtian", description="fitting method to consider, default: voigtian")
     process_name = luigi.Parameter(default="signal", description="process name to consider, "
         "default: signal")
@@ -833,6 +852,10 @@ class Fit(FeaturePlot, FitBase):
         "--fit-parameters '{\"mean\": \"(20, -100, 100)\"}'")
     functions = law.CSVParameter(default={}, description="functions to be considered inside "
         "the envelope, default: None")
+    # save_pdf = luigi.BoolParameter(default=False, description="whether to save created histograms "
+        # "in pdf, default: False")
+    # save_png = luigi.BoolParameter(default=False, description="whether to save created histograms "
+        # "in png, default: False")
 
     normalize_signals = False
 
@@ -859,21 +882,30 @@ class Fit(FeaturePlot, FitBase):
             else "__blinded")
         region_name = "" if not self.region_name else "__{}".format(self.region_name)
 
+        keys = ["json", "root"]
+        if self.save_png:
+            keys.append("png")
+        if self.save_pdf:
+            keys.append("pdf")
+
         return {
             feature.name: {
                 key: self.local_target("{}__{}__{}__{}_{}{}.{}".format(
                     feature.name, self.process_name, self.method, x, blind, region_name, key
                 ))
-                for key in ["json", "root"]
+                for key in keys
             }
             for feature in self.features
         }
+
+    def get_input(self):
+        return self.input()
 
     def run(self):
         """
         Obtains the fits per feature and systematic.
         """
-        inputs = self.input()
+        inputs = self.get_input()
 
         assert self.process_name in self.config.process_group_names[self.process_group_name]
 
@@ -1004,6 +1036,14 @@ class Fit(FeaturePlot, FitBase):
                 f.cd()
                 workspace.Write()
                 f.Close()
+
+                if self.save_png or self.save_pdf:
+                    c = ROOT.TCanvas()
+                    frame.Draw()
+                    if self.save_pdf:
+                        c.SaveAs(create_file_dir(self.output()[feature.name]["pdf"].path))
+                    if self.save_png:
+                        c.SaveAs(create_file_dir(self.output()[feature.name]["png"].path))
 
             with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
                 json.dump(d, f, indent=4)

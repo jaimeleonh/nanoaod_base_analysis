@@ -402,6 +402,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         :rtype: `.root`
         """
         out = {"root" : self.local_target(f"data_{self.addendum}{self.branch}.root")}
+        #out = {"root" : self.dynamic_target(f"data_{self.addendum}{self.branch}.root")}
         if self.compute_filter_efficiency:
             out["cut_flow"] = self.local_target(f"cutflow_{self.addendum}{self.branch}.json")
         out = law.SiblingFileCollection(out)
@@ -417,6 +418,8 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         from shutil import copy
         ROOT = import_root()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+
+        print(self.output()["root"].path)
 
         # create RDataFrame
         inp = self.get_input()

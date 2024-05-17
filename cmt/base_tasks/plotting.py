@@ -1499,10 +1499,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         n_entries = len(entries)
         if n_entries <= 4:
             n_cols = 1
-            col_width = 0.2
+            col_width = getattr(self.config, "single_column_width", 0.2)
         elif n_entries <= 8:
             n_cols = 2
-            col_width = 0.15
+            col_width = getattr(self.config, "double_column_width", 0.15)
         else:
             n_cols = 3
             col_width = 0.1
