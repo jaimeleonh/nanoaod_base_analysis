@@ -14,7 +14,10 @@ import re
 import os
 import math
 from collections import OrderedDict
-import cppyy
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore')
+    import cppyy
 
 import luigi
 import law
