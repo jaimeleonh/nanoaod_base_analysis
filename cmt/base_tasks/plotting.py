@@ -14,6 +14,7 @@ import itertools
 import functools
 import array
 from collections import OrderedDict
+import numpy as np
 
 import law
 import luigi
@@ -2065,8 +2066,7 @@ class BasePlot2DTask(BasePlotTask):
             if isinstance(feature_elem.binning, tuple):
                 binning_args += feature_elem.binning
             else:
-                binning_args += [len(feature_elem.binning) - 1, array.array("f", feature_elem.binning)]
-
+                binning_args += [len(feature_elem.binning) - 1, np.array(feature_elem.binning)]
         return tuple(binning_args), ""
 
 
