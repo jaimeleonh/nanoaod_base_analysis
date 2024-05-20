@@ -102,22 +102,29 @@ class Task(law.Task):
         return cls(self.local_path(*args, store=kwargs.pop("store", None)), **kwargs)
 
     def wlcg_path(self, *path, **kwargs):
-        if kwargs.pop("avoid_store", False):
+        if "InputData" in str(type(self)):
             parts = list(path)[0]
+            return "/".join([parts])
         else:
             parts = tuple(self.store_parts().values()) + tuple(self.store_parts_ext().values()) + path
-        return "/".join([parts])
+            return os.path.join(*[str(p) for p in parts])
 
     def wlcg_target(self, *args, **kwargs):
         kwargs.setdefault("fs", self.default_wlcg_fs)
-        # cls = law.wlcg.WLCGDirectoryTarget if kwargs.pop("dir", False) else law.wlcg.WLCGFileTarget
-        cls = Target
+        if "InputData" in str(type(self)):
+            cls = Target
+        else:
+            cls = (law.wlcg.WLCGDirectoryTarget if kwargs.pop("dir", False)
+                else law.wlcg.WLCGFileTarget)
         path = self.wlcg_path(*args, **kwargs)
         kwargs.pop("avoid_store", False)
         return cls(path, **kwargs)
 
     def dynamic_target(self, *args, **kwargs):
-        if os.getenv("CMT_REMOTE_JOB", "0") == "1":
+        if (
+            "InputData" in str(type(self)) or
+            ("PreprocessRDF" in str(type(self)) and os.getenv("CMT_REMOTE_PREPROCESSING", "0") == "1")
+        ):
             return self.wlcg_target(*args, **kwargs)
         else:
             return self.local_target(*args, **kwargs)
@@ -539,7 +546,6 @@ class RDFModuleTask(DatasetTask):
                 self.rdf.Snapshot(*args)
             # except cppyy.gbl.std.logic_error:
             except TypeError:
-                print("SNAPSHOT VIA REDEFINITION")
                 # A redefinition has been performed, so we need to remove duplicated branches
                 args = list(args)
                 args[2] = tuple(set(args[2]))
@@ -706,7 +712,8 @@ class InputData(DatasetTask, law.ExternalTask):
         "refer to, points to the collection of all files when empty, default: empty")
 
     default_wlcg_fs = "wlcg_xrootd"
-    os.environ["CMT_REMOTE_JOB"] = "1"
+    # os.environ["CMT_REMOTE_JOB"] = "1"
+    # os.environ["CMT_INPUT_DATA"] = "1"
     version = None
 
     def complete(self):
@@ -716,7 +723,7 @@ class InputData(DatasetTask, law.ExternalTask):
         if self.file_index != law.NO_INT:
             out = [self.dynamic_target(
                 self.dataset.get_files(
-                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
                     index=self.file_index),
                 avoid_store=True, check_empty=True)]
             if self.dataset.friend_datasets:
@@ -727,7 +734,7 @@ class InputData(DatasetTask, law.ExternalTask):
                 for dataset_name in friend_dataset_names:
                     out.append(self.dynamic_target(
                         self.config.datasets.get(dataset_name).get_files(
-                            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), 
+                            os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
                             index=self.file_index, check_empty=True), avoid_store=True)
                     )
             return tuple(out)
@@ -736,7 +743,7 @@ class InputData(DatasetTask, law.ExternalTask):
             return cls([self.dynamic_target(file_path, avoid_store=True)
                 for file_path in self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False)])
-            
+
 
 class FitBase(ConfigTask):
     def convert_parameters(self, d):
@@ -802,6 +809,24 @@ class FitBase(ConfigTask):
 
             fun = ROOT.RooVoigtian(fit_name, fit_name, x,
                 params["mean"], params["gamma"], params["sigma"])
+
+        elif name == "gaussian":
+            fit_parameters["mean"] = parameters.get("mean", (0, -100, 100))
+            fit_parameters["sigma"] = parameters.get("sigma", (0.001, 0, 0.1))
+            fit_parameters = self.convert_parameters(fit_parameters)
+
+            try:
+                params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian',
+                    *fit_parameters["mean"])
+                params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian',
+                    *fit_parameters["sigma"])
+            except TypeError:
+                params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian',
+                    fit_parameters["mean"])
+                params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian',
+                    fit_parameters["sigma"])
+
+            fun = ROOT.RooGaussian(fit_name, fit_name, x, params["mean"], params["sigma"])
 
         elif name == "polynomial":
             order = int(parameters.get("polynomial_order", 1))
