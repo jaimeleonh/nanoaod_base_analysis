@@ -14,6 +14,7 @@ import itertools
 import functools
 import array
 from collections import OrderedDict
+import numpy as np
 
 import law
 import luigi
@@ -1499,10 +1500,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         n_entries = len(entries)
         if n_entries <= 4:
             n_cols = 1
-            col_width = 0.2
+            col_width = getattr(self.config, "single_column_width", 0.2)
         elif n_entries <= 8:
             n_cols = 2
-            col_width = 0.15
+            col_width = getattr(self.config, "double_column_width", 0.15)
         else:
             n_cols = 3
             col_width = 0.1
@@ -2065,8 +2066,7 @@ class BasePlot2DTask(BasePlotTask):
             if isinstance(feature_elem.binning, tuple):
                 binning_args += feature_elem.binning
             else:
-                binning_args += [len(feature_elem.binning) - 1, array.array("f", feature_elem.binning)]
-
+                binning_args += [len(feature_elem.binning) - 1, np.array(feature_elem.binning)]
         return tuple(binning_args), ""
 
 
