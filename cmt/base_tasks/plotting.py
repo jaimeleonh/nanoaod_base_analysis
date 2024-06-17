@@ -795,7 +795,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             # in principle it should crash, but let's give it a chance by checking whether the
             # process_group_name it's actually a process. In that case, swap the process_name with
             # the process_group_name
-            if fit_params["process_name"] not in self.processes_datasets.keys():
+            if fit_params["process_name"] not in [p.name for p in self.processes_datasets.keys()]:
                 try:
                     process = self.config.processes.get(self.process_group_name)
                     fit_params["process_name"] = self.process_group_name
@@ -1281,7 +1281,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         if do_ratio:
             r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         dummy_hist.GetYaxis().SetMaxDigits(4)
-        dummy_hist.GetYaxis().SetTitleOffset(1.22)
+        # dummy_hist.GetYaxis().SetTitleOffset(1.22)
         maximum = max([hist.GetMaximum() for hist in draw_hists])
         if self.log_y:
             dummy_hist.SetMaximum(100 * maximum)
@@ -1373,8 +1373,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             r.setup_y_axis(dummy_ratio_hist.GetYaxis(), pad=c.get_pad(2),
                 props={"Ndivisions": 3})
             dummy_ratio_hist.GetYaxis().SetTitle("Data / MC")
-            dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
-            dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
+            # dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
+            # dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
 
             data_graph = hist_to_graph(data_histo, remove_zeros=False, errors=True,
                 asymm=True, overflow=False, underflow=False,
