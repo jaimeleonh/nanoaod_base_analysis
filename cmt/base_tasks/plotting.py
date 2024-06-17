@@ -132,7 +132,7 @@ class BasePlotTask(ConfigTaskWithRegion):
         return features
 
     def round(self, number):
-        if number - round(number) < 0.0001:
+        if abs(number - round(number)) < 0.0001:
             return number
         if number > 10.:
             return round(number)
