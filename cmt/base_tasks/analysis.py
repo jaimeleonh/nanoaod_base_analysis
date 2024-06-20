@@ -121,8 +121,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
         "systematics to estimated qcd background, default: False")
     counting = luigi.BoolParameter(default=False, description="whether the datacard should consider "
         "a counting experiment, default: False")
-    refit_with_syst = luigi.BoolParameter(default=True, description="whether to refit after "
-        "modifying the fit parameters with systematics, default: True")
+    refit_signal_with_syst = luigi.BoolParameter(default=True, description="whether to refit the "
+        "signal histograms after modifying the fit parameters with systematics, default: True")
 
     additional_scaling = luigi.DictParameter(description="dict with scalings to be "
         "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
@@ -264,6 +264,28 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         systematics[name][param][syst_name] = max(up_value, down_value)
         return systematics
 
+    def add_processes_line(self, process_names):
+        sig_counter = 0
+        bkg_counter = 1
+        line = ["process", ""]
+        for p_name in process_names:
+            try:
+                if self.config.processes.get(p_name).isSignal:
+                    line.append(sig_counter)
+                    sig_counter -= 1
+                else:
+                    line.append(bkg_counter)
+                    bkg_counter += 1
+            except ValueError:
+                # qcd coming from do_qcd or background coming from data
+                if "qcd" in p_name or "data" in p_name:
+                    line.append(bkg_counter)
+                    bkg_counter += 1
+                else:  # signal coming from a grid
+                    line.append(sig_counter)
+                    sig_counter -= 1
+        return line
+
     def write_datacard(self, yields, feature, norm_systematics, shape_systematics, *args):
         n_dashes = 50
 
@@ -277,18 +299,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         sig_counter = 0
         bkg_counter = 1
         line = ["process", ""]
-        for p_name in self.non_data_names:
-            try:
-                if self.config.processes.get(p_name).isSignal:
-                    line.append(sig_counter)
-                    sig_counter -= 1
-                else:
-                    line.append(bkg_counter)
-                    bkg_counter += 1
-            except ValueError:  # qcd coming from do_qcd
-                line.append(bkg_counter)
-                bkg_counter += 1
-        table.append(line)
+        table.append(self.add_processes_line(self.non_data_names))
         table.append(["rate", ""] + [yields[p_name] for p_name in self.non_data_names])
 
         # normalization systematics
@@ -341,6 +352,15 @@ class CreateDatacards(CombineBase, FeaturePlot):
             for arg in args:
                 f.write(arg + "\n")
 
+    def get_rate_from_process_in_fit(self, feature, p_name):
+        filename = self.input()["fits"][p_name][feature.name]["json"].path
+        with open(filename) as f:
+            d = json.load(f)
+        rate = d[""]["integral"]
+        if self.additional_scaling.get(p_name, False):
+            rate *= float(self.additional_scaling.get(p_name))
+        return rate
+
     def write_shape_datacard(self, feature, norm_systematics, shape_systematics,
             datacard_syst_params, datacard_env_cats, *args):
         n_dashes = 50
@@ -372,22 +392,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
         table.append(["bin", ""] + [bin_name for i in range(len(process_names))])
         table.append(["process", ""] + process_names)
-
-        sig_counter = 0
-        bkg_counter = 1
-        line = ["process", ""]
-        for p_name in process_names:
-            try:
-                if self.config.processes.get(p_name).isSignal:
-                    line.append(sig_counter)
-                    sig_counter -= 1
-                else:
-                    line.append(bkg_counter)
-                    bkg_counter += 1
-            except ValueError:  # qcd coming from do_qcd or background coming from data
-                line.append(bkg_counter)
-                bkg_counter += 1
-        table.append(line)
+        table.append(self.add_processes_line(process_names))
 
         rate_line = ["rate", ""]
         for p_name in process_names:
@@ -395,13 +400,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                 # assuming it comes from data, may cause problems in certain setups
                 rate_line.append(1)
             else:
-                filename = self.input()["fits"][p_name][feature.name]["json"].path
-                with open(filename) as f:
-                    d = json.load(f)
-                rate = d[""]["integral"]
-                if self.additional_scaling.get(p_name, False):
-                    rate *= float(self.additional_scaling.get(p_name))
-                rate_line.append(rate)
+                rate_line.append(self.get_rate_from_process_in_fit(feature, p_name))
         table.append(rate_line)
 
         # normalization systematics
@@ -476,7 +475,6 @@ class CreateDatacards(CombineBase, FeaturePlot):
         def round_unc(num, ev, val):
             exp = 0
             while True:
-                # print("%s * %s = %s, %s" % (round(num, exp), ev, round(num, exp) * ev, round(val, 3)))
                 exp += 1
                 if abs(round(num, exp) * ev - round(val, 3)) < 0.001:
                     return round(num, exp)
@@ -521,18 +519,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         sig_counter = 0
         bkg_counter = 1
         line = ["process", ""]
-        for p_name in process_names:
-            try:
-                if self.config.processes.get(p_name).isSignal:
-                    line.append(sig_counter)
-                    sig_counter -= 1
-                else:
-                    line.append(bkg_counter)
-                    bkg_counter += 1
-            except ValueError:  # qcd coming from do_qcd or background coming from data
-                line.append(bkg_counter)
-                bkg_counter += 1
-        table.append(line)
+        table.append(self.add_processes_line(process_names))
 
         rate_line = ["rate", ""]
         rates = {}
@@ -593,6 +580,14 @@ class CreateDatacards(CombineBase, FeaturePlot):
             for arg in args:
                 f.write(arg + "\n")
 
+    def update_parameters_for_fitting_signal(self, feature, fit_params, fit_parameters,
+            workspace_is_available):
+        if workspace_is_available:
+            with open(self.input()["fits"][fit_params["process_name"]][feature.name]["json"].path
+                    ) as f:
+                d = json.load(f)
+            fit_parameters.update(d[""])
+        return fit_parameters
 
     def run(self):
         """
@@ -655,11 +650,27 @@ class CreateDatacards(CombineBase, FeaturePlot):
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
                 for model, fit_params in self.models.items():
-                    print(inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
-                    model_tf = ROOT.TFile.Open(
-                        inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
-                    w = model_tf.Get("workspace_" + fit_params["process_name"])
-                    if fit_params["process_name"] not in shape_systematics_feature:
+                    # Parametric models can be obtained in two ways
+                    # 1) From the Fit class, which already creates a workspace w/o systs
+                    # 2) For a grid, where a workspace is not created
+                    # In the second case, we always need to create a new workspace.
+                    # In the first one, if no systematics need to be applied, one can use the same
+                    # workspace created in the Fit class.
+                    is_signal = False
+                    try:
+                        is_signal = self.config.processes.get(fit_params["process_name"]).isSignal
+                    except ValueError:
+                        is_signal = True and "data" not in fit_params["process_name"]
+                        # the latter houldn't be needed, but just in case
+                    workspace_is_available = True
+                    try:
+                        model_tf = ROOT.TFile.Open(
+                            inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
+                        w = model_tf.Get("workspace_" + fit_params["process_name"])
+                    except:
+                        workspace_is_available = False
+                    if fit_params["process_name"] not in shape_systematics_feature and \
+                            workspace_is_available:
                         # directly extract the workspace from the inputs
                         tf.cd()
                         w.Write()
@@ -682,12 +693,10 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             functions = [e.strip() for e in fit_params.get("functions").split(",")]
 
                         x, blind = self.get_x(x_range, blind_range)
-                        data = w.data("data_obs")
                         fit_parameters = fit_params.get("fit_parameters", {})
-                        if not self.refit_with_syst:
-                            with open(inputs["fits"][fit_params["process_name"]][feature.name]["json"].path) as f:
-                                d = json.load(f)
-                            fit_parameters.update(d[""])
+                        if is_signal and not self.refit_signal_with_syst:
+                            fit_parameters = self.update_parameters_for_fitting_signal(
+                                feature, fit_params, fit_parameters, workspace_is_available)
 
                         # Loop over the different functions (1 if not an envelope)
                         params = {}  # parameters in the fit
@@ -748,8 +757,11 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                 fun = ROOT.RooGenericPdf(fit_name, fit_fun,
                                     ROOT.RooArgList(*([x] + list(param_syst[function].values()))))
 
+                            if workspace_is_available:
+                                data = w.data("data_obs")
+
                             # Refit
-                            if self.refit_with_syst:
+                            if (not is_signal or self.refit_signal_with_syst) and workspace_is_available:
                                 if not blind:
                                     fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
                                 else:
@@ -780,7 +792,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         else:
                             getattr(workspace_syst, "import")(fun)
 
-                        getattr(workspace_syst, "import")(data)
+                        if workspace_is_available:
+                            getattr(workspace_syst, "import")(data)
                         tf.cd()
                         workspace_syst.Write("workspace_" + fit_params["process_name"])
                         model_tf.Close()
@@ -907,7 +920,7 @@ class Fit(FeaturePlot, FitBase):
         """
         inputs = self.get_input()
 
-        assert self.process_name in self.config.process_group_names[self.process_group_name]
+        # assert self.process_name in self.config.process_group_names[self.process_group_name]
 
         isMC = self.config.processes.get(self.process_name).isMC
         for ifeat, feature in enumerate(self.features):
