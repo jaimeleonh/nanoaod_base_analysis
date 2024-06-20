@@ -174,12 +174,14 @@ class BasePlotTask(ConfigTaskWithRegion):
     def get_feature_systematics(self, feature):
         return feature.systematics
 
-    def get_systs(self, feature, isMC):
+    def get_systs(self, feature, isMC, category=None):
         if not isMC:
             return []
+        if category == None:
+            category = self.category
         systs = self.get_feature_systematics(feature) \
-            + self.config.get_weights_systematics(self.config.weights[self.category.name], isMC)
-        systs += self.config.get_systematics_from_expression(self.category.selection)
+            + self.config.get_weights_systematics(self.config.weights[category.name], isMC)
+        systs += self.config.get_systematics_from_expression(category.selection)
         if self.region:
             systs += self.config.get_systematics_from_expression(self.region.selection)
         return self.get_unique_systs(systs)
