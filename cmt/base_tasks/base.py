@@ -14,6 +14,7 @@ import re
 import os
 import math
 from collections import OrderedDict
+
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore')
@@ -749,10 +750,13 @@ class FitBase(ConfigTask):
     def convert_parameters(self, d):
         for param, val in d.items():
             if isinstance(val, str):
+                val = val.strip()
+                if val.startswith("("):
+                    val = val[1:-1]
                 if "," not in val:
                     d[param] = tuple([float(val)])
                 else:
-                    d[param] = tuple(map(float, val.split(', ')))
+                    d[param] = tuple(map(float, val.split(',')))
             else:
                 d[param] = val
         return d
@@ -877,10 +881,18 @@ class ProcessGroupNameTask(DatasetWrapperTask):
 
     process_group_name = luigi.Parameter(default="default", description="the name of the process "
         "grouping, only encoded into output paths when changed, default: default")
+    default_process_group_name = luigi.Parameter(default="", description="the name of the "
+        "process grouping, only encoded into output paths when changed, default: default")
 
     def __init__(self, *args, **kwargs):
         super(ProcessGroupNameTask, self).__init__(*args, **kwargs)
-        assert self.process_group_name in self.config.process_group_names
+        try:
+            processes_in_process_group_name = self.config.process_group_names[
+                self.process_group_name]
+        except KeyError:
+            processes_in_process_group_name = self.config.process_group_names[
+                self.default_process_group_name]
+
         self.processes_datasets = {}
         self.datasets_to_run = []
 
@@ -898,7 +910,7 @@ class ProcessGroupNameTask(DatasetWrapperTask):
             processes = get_processes(dataset=dataset)
             filtered_processes = ObjectCollection()
             for process in processes:
-                if process.name in self.config.process_group_names[self.process_group_name]:
+                if process.name in processes_in_process_group_name:
                     filtered_processes.append(process)
             if len(filtered_processes) > 1:
                 raise Exception("%s process group name includes not orthogonal processes %s"

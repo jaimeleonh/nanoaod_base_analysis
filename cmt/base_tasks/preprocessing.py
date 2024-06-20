@@ -419,6 +419,8 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         ROOT = import_root()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
+        print(self.output()["root"].path)
+
         # create RDataFrame
         inp = self.get_input()
         if not self.dataset.friend_datasets:
