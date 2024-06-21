@@ -104,6 +104,8 @@ class BasePlotTask(ConfigTaskWithRegion):
         "systematic templates inside root files, default: True")
     remove_horns = luigi.BoolParameter(default=False, description="whether to remove horns "
         "from distributions, default: False")
+    tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
+        "the root file, default: Events (nanoAOD)")
     optimization_method = luigi.ChoiceParameter(default="", choices=("", "bayesian_blocks"),
         significant=False, description="optimization method to be used, default: none")
 
@@ -512,6 +514,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                         selection = join_root_selection(region_selection, selection, op="and")
                     else:
                         selection = region_selection
+
                 if selection != "1":
                     dfs[elem] = dfs[elem].Define("selection", selection).Filter("selection")
 
@@ -610,6 +613,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
     """
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
         "them with dataset and category weights, and normalize afterwards, default: False")
+    show_ratio = luigi.BoolParameter(default=True, description="Allow, in the defined cases, that "
+        "data/mc plot is shown, default: True")
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
     normalize_signals = luigi.BoolParameter(default=False, description="whether to normalize "
         "signals to the total bkg yield, default: True")
@@ -1204,6 +1209,23 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 hist.Scale(scale)
                 hist.scale = scale
             draw_hists = all_hists[::-1]
+            for hist in background_hists[::-1]:
+                if not bkg_histo:
+                    bkg_histo = hist.Clone()
+                else:
+                    bkg_histo.Add(hist.Clone())
+            for hist in data_hists:
+                if not data_histo:
+                    data_histo = hist.Clone()
+                else:
+                    data_histo.Add(hist.Clone())
+            scale = 1. / (bkg_histo.Integral() or 1.)
+            bkg_histo.Scale(scale)
+            if self.plot_systematics:
+                scale = 1. / (bkg_histo_syst.Integral() or 1.)
+                bkg_histo_syst.Scale(scale)
+            scale = 1. / (data_histo.Integral() or 1.)
+            data_histo.Scale(scale)
         else:
             background_stack = ROOT.THStack(randomize("stack"), "")
             for hist in background_hists[::-1]:
@@ -1255,8 +1277,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
         dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
         # Draw
-        if self.hide_data or len(data_hists) == 0 or len(background_hists) == 0 or not self.stack:
-            do_ratio = False
+        self.show_ratio = self.show_ratio and not (self.hide_data or len(data_hists) == 0
+            or len(background_hists) == 0)
+        if not self.show_ratio:
             c = Canvas()
             if self.log_y:
                 c.SetLogy()
@@ -1264,7 +1287,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 c.SetLogx()
             label_scaling = 1
         else:
-            do_ratio = True
             c = RatioCanvas()
             dummy_hist.GetXaxis().SetLabelOffset(100)
             dummy_hist.GetXaxis().SetTitleOffset(100)
@@ -1277,7 +1299,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
         # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
-        if do_ratio:
+        if self.show_ratio:
             r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         dummy_hist.GetYaxis().SetMaxDigits(4)
         # dummy_hist.GetYaxis().SetTitleOffset(1.22)
@@ -1362,10 +1384,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         # Can be updated with the fits and the uncertainty bands
         entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
 
-        show_ratio = not (self.hide_data or len(data_hists) == 0 or len(background_hists) == 0
-            or not self.stack)
-
-        if show_ratio:
+        if self.show_ratio:
             dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
                 props={"Minimum": 0.25, "Maximum": 1.75})
@@ -1457,7 +1476,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             for line in lines:
                 line.Draw("same")
 
-        if show_ratio:
+        if self.show_ratio:
             c.get_pad(1).cd()
 
         # Draw fit if required
