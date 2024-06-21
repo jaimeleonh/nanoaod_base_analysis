@@ -190,7 +190,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         Returns, per feature, one txt storing the datacard and its corresponding root file
         storing the histograms
         """
-        keys = ["txt"]
+        keys = ["txt", "json"]
         if not self.counting:
             keys.append("root")
         return {
@@ -395,13 +395,17 @@ class CreateDatacards(CombineBase, FeaturePlot):
         table.append(self.add_processes_line(process_names))
 
         rate_line = ["rate", ""]
+        yields = {}
         for p_name in process_names:
             if p_name == "background" and self.data_names[0] in self.model_processes:
                 # assuming it comes from data, may cause problems in certain setups
                 rate_line.append(1)
             else:
-                rate_line.append(self.get_rate_from_process_in_fit(feature, p_name))
+                yields[p_name] = self.get_rate_from_process_in_fit(feature, p_name)
+                rate_line.append(yields[p_name])
         table.append(rate_line)
+        with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
+            json.dump(yields, f, indent=4)
 
         # normalization systematics
         for norm_syst in norm_systematics:
@@ -522,13 +526,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
         table.append(self.add_processes_line(process_names))
 
         rate_line = ["rate", ""]
-        rates = {}
+        yields = {}
         for p_name in process_names:
-            rates[p_name] = self.get_process_rate_for_counting(p_name, feature)
-            if not self.config.processes.get(p_name).isSignal and rates[p_name][0] < 0.001:
-                rates[p_name] = (0.001, rates[p_name][1])
-            rate_line.append(round(rates[p_name][0], 3))
+            yields[p_name] = self.get_process_rate_for_counting(p_name, feature)
+            rate_line.append(round(yields[p_name][0], 3))
         table.append(rate_line)
+        with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
+            json.dump(yields, f, indent=4)
 
         # normalization systematics
         for norm_syst in norm_systematics:
@@ -632,6 +636,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
                 self.write_datacard(yields, feature,
                     norm_systematics, shape_systematics, *self.additional_lines)
+                with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
+                    json.dump(yields, f, indent=4)
 
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
@@ -1181,6 +1187,23 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
             cmd = "combineCards.py "
             force_shape = False
             for category_name in self.category_names:
+                # First, check if this category has all signals or all backgrounds with 0 expectation
+                null_signal = True
+                null_bkg = True
+                with open(inputs[category_name][feature.name]['json'].path) as f:
+                    yields = json.load(f)
+                for process_name, value in yields.items():
+                    if value != 0:
+                        try:
+                            if self.config.processes.get(process_name).isSignal:
+                                null_signal = False
+                            elif not self.config.processes.get(process_name).isData:
+                                null_bkg = False
+                        except:  # signal not included as a process
+                            null_signal = False
+                if null_signal or null_bkg:
+                    continue
+
                 cmd += f"{category_name}={inputs[category_name][feature.name]['txt'].path} "
                 with open(inputs[category_name][feature.name]['txt'].path) as f:
                     text = f.read()
