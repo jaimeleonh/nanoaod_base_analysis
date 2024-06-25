@@ -27,7 +27,7 @@ from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
 from plotting_tools.root import get_labels, Canvas, RatioCanvas
-from cmt.base_tasks.base import ( 
+from cmt.base_tasks.base import (
     DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask
 )
@@ -315,7 +315,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                         systematic=syst, systematic_direction=d)
         if self.optimization_method == "bayesian_blocks":
             from cmt.base_tasks.optimization import BayesianBlocksOptimization
-            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False, 
+            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False,
                 _exclude=["branch", "branches", "custom_output_tag", "plot_systematics", "workflow"])
         return reqs
 
@@ -553,7 +553,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         total background yield (True) or not (False)
     :type normalize_signals: bool
 
-    :param avoid_normalization: whether to avoid normalizing by cross section and initial 
+    :param avoid_normalization: whether to avoid normalizing by cross section and initial
         number of events
     :type avoid_normalization: bool
 
@@ -594,7 +594,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
     :param log_x: whether to set y axis to log scale
     :type log_x: bool
-    
+
     :param include_fit: YAML file inside config folder (w/o extension) including input parameters
         for the fit
     :type include_fit: str
@@ -606,7 +606,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         given year. It also allows you to plot the run period with the proper format.
     :type run_period: str
 
-    :param run_era: parameter to run only over the era dataset that has been specified. The lumi labels 
+    :param run_era: parameter to run only over the era dataset that has been specified. The lumi labels
         and the luminosity are also set accordingly.
     :type run_era: str
 
@@ -773,7 +773,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     category_name=self.qcd_category_name,
                     blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
                     save_pdf=True, save_yields=False, feature_names=(self.qcd_feature,),
-                    bin_opt_version=law.NO_STR, remove_horns=self.remove_horns, _exclude=["feature_tags", 
+                    bin_opt_version=law.NO_STR, remove_horns=self.remove_horns, _exclude=["feature_tags",
                         "shape_region", "qcd_category_name", "qcd_sym_shape", "bin_opt_version",
                         "qcd_signal_region_wp"])
 
@@ -1219,13 +1219,15 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     data_histo = hist.Clone()
                 else:
                     data_histo.Add(hist.Clone())
-            scale = 1. / (bkg_histo.Integral() or 1.)
-            bkg_histo.Scale(scale)
-            if self.plot_systematics:
-                scale = 1. / (bkg_histo_syst.Integral() or 1.)
-                bkg_histo_syst.Scale(scale)
-            scale = 1. / (data_histo.Integral() or 1.)
-            data_histo.Scale(scale)
+            if bkg_histo:
+                scale = 1. / (bkg_histo.Integral() or 1.)
+                bkg_histo.Scale(scale)
+                if self.plot_systematics:
+                    scale = 1. / (bkg_histo_syst.Integral() or 1.)
+                    bkg_histo_syst.Scale(scale)
+            if data_histo:
+                scale = 1. / (data_histo.Integral() or 1.)
+                data_histo.Scale(scale)
         else:
             background_stack = ROOT.THStack(randomize("stack"), "")
             for hist in background_hists[::-1]:
@@ -1765,8 +1767,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
 class FeaturePlotSyst(FeaturePlot):
     """
-    Performs the histogram plotting with up and down variations due to systematics: 
-    loads the histograms obtained in the FeaturePlot task, rescales them if needed 
+    Performs the histogram plotting with up and down variations due to systematics:
+    loads the histograms obtained in the FeaturePlot task, rescales them if needed
     and plots and saves them.
 
     Example command:
@@ -1784,7 +1786,7 @@ class FeaturePlotSyst(FeaturePlot):
         Needs as input the root file provided by the FeaturePlot task
         """
         return FeaturePlot.vreq(self, save_root=True, stack=True)
-    
+
     def output(self):
         """
         Output files to be filled: pdf or png
@@ -1796,17 +1798,17 @@ class FeaturePlotSyst(FeaturePlot):
         if self.save_png:
             output_data.append(("png", "", "png"))
 
-        process_names = [process.name for process in self.processes_datasets.keys() 
+        process_names = [process.name for process in self.processes_datasets.keys()
                         if not process.isData]
-        if self.do_qcd: 
+        if self.do_qcd:
             process_names.append("qcd")
 
         out = {
             key: law.SiblingFileCollection(OrderedDict(
-                ("%s_%s_%s" %(process_name, feature.name, syst), 
+                ("%s_%s_%s" %(process_name, feature.name, syst),
                     self.local_target("{}{}_{}_{}{}.{}".format(
                     prefix, process_name, feature.name, syst, self.get_output_postfix(key), ext)))
-                for feature in self.features 
+                for feature in self.features
                 for syst in self.get_unique_systs(self.get_systs(feature, True) \
                 + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
                 for process_name in process_names
@@ -1856,12 +1858,12 @@ class FeaturePlotSyst(FeaturePlot):
                 self.setup_syst_hist(histo_syst_down, "down")
 
                 draw_hists = [histo_syst_central, histo_syst_up, histo_syst_down]
-                
+
                 shape_syst_label = self.get_syst_label(shape_syst)
                 entries = [ (histo_syst_central, "Nominal", histo_syst_central.legend_style),
                             (histo_syst_up, shape_syst_label + " Up", histo_syst_up.legend_style),
                             (histo_syst_down, shape_syst_label + " Down", histo_syst_down.legend_style)]
-                
+
                 n_entries = len(entries)
                 if n_entries <= 4:
                     n_cols = 1
@@ -1870,7 +1872,7 @@ class FeaturePlotSyst(FeaturePlot):
                 else:
                     n_cols = 3
                 if len(shape_syst_label) < 5:
-                    col_width = 0.20 
+                    col_width = 0.20
                 elif len(shape_syst_label) < 12:
                     col_width = 0.30
                 else:
@@ -1881,7 +1883,7 @@ class FeaturePlotSyst(FeaturePlot):
                 legend_x1 = legend_x2 - n_cols * col_width
                 legend_y2 = 0.88
                 legend_y1 = legend_y2 - n_rows * row_width
-                
+
                 legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
                 legend.SetBorderSize(0)
                 legend.SetNColumns(1)
@@ -1985,7 +1987,7 @@ class FeaturePlotSyst(FeaturePlot):
                         ratio_hist_down.SetBinContent(i, histo_syst_down.GetBinContent(i)/histo_syst_central.GetBinContent(i))
                         mc_unc_graph.SetPoint(i, x, 1.)
                         mc_unc_graph.SetPointError(i, sigma_x, sigma_y/y)
-                    else: 
+                    else:
                         ratio_hist_up.SetBinContent(i, EMPTY)
                         ratio_hist_down.SetBinContent(i, EMPTY)
                         mc_unc_graph.SetPoint(i, x, EMPTY)
@@ -2018,7 +2020,7 @@ class FeaturePlotSyst(FeaturePlot):
 
     def run(self):
         """
-        Splits the processes into data and non-data. Per feature, loads the input histograms, 
+        Splits the processes into data and non-data. Per feature, loads the input histograms,
         creates the output plots with up and down variations.
         """
 
@@ -2029,7 +2031,7 @@ class FeaturePlotSyst(FeaturePlot):
         self.process_names = [process.name for process in self.processes_datasets.keys() if not process.isData]
         self.process_labels = [process.label for process in self.processes_datasets.keys() if not process.isData]
 
-        if self.do_qcd: 
+        if self.do_qcd:
             self.process_names.append("qcd")
             self.process_labels.append("QCD")
 
@@ -2049,7 +2051,7 @@ class FeaturePlotSyst(FeaturePlot):
                     self.histos[process]["%s_down" %shape_syst] = copy(tf.Get("histograms/%s_%s_down" % (process, shape_syst)))
 
             tf.Close()
-        
+
         self.plot(feature)
 
 #################################################################################################################################
@@ -2189,8 +2191,8 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
 --workers 20 --PrePlot2D-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
 --dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
 --MergeCategorizationStats-version test_old``
-    
-    :param log_z: whether to set y axis to log scale 
+
+    :param log_z: whether to set y axis to log scale
     :type log_z: bool
     """
 
@@ -2264,7 +2266,7 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
                     category_name=self.qcd_category_name,
                     blinded=False, hide_data=False, do_qcd=False, stack=True, save_root=True,
                     save_pdf=True, save_yields=False, feature_names=(self.qcd_feature,),
-                    bin_opt_version=law.NO_STR, remove_horns=self.remove_horns, _exclude=["feature_tags", 
+                    bin_opt_version=law.NO_STR, remove_horns=self.remove_horns, _exclude=["feature_tags",
                         "shape_region", "qcd_category_name", "qcd_sym_shape", "bin_opt_version",
                         "qcd_signal_region_wp"])
 
@@ -2505,7 +2507,7 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
             #    self.config.ecm,
             #    self.config.lumi_fb
             #) + "fb^{-1})"
-            ### New implementation: NOT TESTED ###  
+            ### New implementation: NOT TESTED ###
             if not type(self.config.lumi_fb) == dict:
                 upper_right="{} , {:.1f} ".format(
                     self.config.year,
