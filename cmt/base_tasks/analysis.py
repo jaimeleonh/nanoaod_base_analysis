@@ -531,8 +531,10 @@ class CreateDatacards(CombineBase, FeaturePlot):
             yields[p_name] = self.get_process_rate_for_counting(p_name, feature)
             rate_line.append(round(yields[p_name][0], 3))
         table.append(rate_line)
+
+        yields_to_save = {p_name: val[0] for p_name, val in yields.items()}
         with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
-            json.dump(yields, f, indent=4)
+            json.dump(yields_to_save, f, indent=4)
 
         # normalization systematics
         for norm_syst in norm_systematics:
@@ -545,7 +547,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             table.append(line)
 
         # statistical uncertainty
-        stat_unc_lines = self.get_stat_unc_lines(feature, rates)
+        stat_unc_lines = self.get_stat_unc_lines(feature, yields)
         table += stat_unc_lines
 
         # # # shape systematics
@@ -1262,8 +1264,8 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
         """
         Outputs one root file with the workspace if categories are combined or one per category.
         """
-        assert not self.combine_categories or (
-            self.combine_categories and len(self.category_names) > 1)
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: self.local_target("workspace_{}{}.root".format(
                 feature.name, self.get_output_postfix() ))
@@ -1298,8 +1300,8 @@ class ValidateDatacards(CreateWorkspace):
         """
         Outputs one root file with the workspace if categories are combined or one per category.
         """
-        assert not self.combine_categories or (
-            self.combine_categories and len(self.category_names) > 1)
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
                 key: self.local_target("results_{}{}.{}".format(
@@ -1360,8 +1362,8 @@ class RunCombine(CreateWorkspace):
         Outputs one txt file and one root file in total or one of each per category with the results
         of running combine
         """
-        assert not self.combine_categories or (
-            self.combine_categories and len(self.category_names) > 1)
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
                 key: self.local_target("results_{}{}.{}".format(
