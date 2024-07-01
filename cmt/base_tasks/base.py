@@ -332,13 +332,24 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
        # description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
     custom_output_tag = luigi.Parameter(default="",
        description="Custom output tag for submission and status files")
+    request_memory = luigi.IntParameter(
+        default=-1,
+        description="required amount of memory in MiB that this job needs, default: -1"
+    )
+    logs_to_eos = luigi.BoolParameter(
+        default=False,
+        description="Save job logs to same location as outputs, default: False"
+    )
 
     exclude_params_branch = {"max_runtime", "htcondor_central_scheduler", "custom_condor_tag"}
 
     def htcondor_output_directory(self):
         # the directory where submission meta data should be stored
         # at the CERN HTCondor system, this cannot be eos so force using the local store
-        return law.LocalDirectoryTarget(self.local_path(store="$CMT_STORE_LOCAL"))
+        if self.logs_to_eos:
+            return law.LocalDirectoryTarget(self.local_path(store=self.default_store))
+        else:
+            return law.LocalDirectoryTarget(self.local_path(store="$CMT_STORE_LOCAL"))
 
     def htcondor_bootstrap_file(self):
         # each job can define a bootstrap file that is executed prior to the actual job
@@ -359,6 +370,8 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         config.custom_content.append(("log", "/dev/null"))
         config.custom_content.append(("+MaxRuntime", int(math.floor(self.max_runtime * 3600)) - 1))
         config.custom_content.append(("RequestCpus", self.request_cpus))
+        if self.request_memory > 0:
+            config.custom_content.append(("request_memory", self.request_memory))
         if self.custom_condor_tag:
             for elem in self.custom_condor_tag:
                 config.custom_content.append((elem, None))
@@ -389,20 +402,31 @@ class SlurmWorkflow(law.slurm.SlurmWorkflow):
     """
 
     slurm_partition = luigi.Parameter(
-        default="standard",
+        default="long",
         significant=False,
-        description="target queue partition; default: standard",
+        description="target queue partition; default: long",
     )
     max_runtime = law.DurationParameter(
-        default=1.0,
+        default=72.0,
         unit="h",
         significant=False,
-        description="the maximum job runtime; default unit is hours; default: 1h",
+        description="the maximum job runtime; default unit is hours; default: 72h",
+    )
+    request_memory = luigi.IntParameter(
+        default=-1,
+        description="required amount of memory in MiB that this job needs, default: -1"
+    )
+    logs_to_eos = luigi.BoolParameter(
+        default=False,
+        description="Save job logs to same location as outputs, default: False"
     )
 
     def slurm_output_directory(self):
         # the directory where submission meta data should be stored
-        return law.LocalDirectoryTarget(self.local_path(store="$CMT_JOB_META_DIR"))
+        if self.logs_to_eos:
+            return law.LocalDirectoryTarget(self.local_path(store=self.default_store))
+        else:
+            return law.LocalDirectoryTarget(self.local_path(store="$CMT_JOB_META_DIR"))
 
     def slurm_bootstrap_file(self):
         # each job can define a bootstrap file that is executed prior to the actual job
@@ -422,6 +446,10 @@ class SlurmWorkflow(law.slurm.SlurmWorkflow):
         )
         config.custom_content.append(("time", job_time))
         config.custom_content.append(("nodes", 1))
+        if self.request_memory > 0:
+            config.custom_content.append(f"#SBATCH --mem{self.request_memory}M")
+        else:
+            config.custom_content.append(f"#SBATCH --mem=3000M")
 
         # replace default slurm-SLURM_JOB_ID.out and slurm-SLURM_JOB_ID.err;
         # %x is a job-name (or script name when there is no job-name)
