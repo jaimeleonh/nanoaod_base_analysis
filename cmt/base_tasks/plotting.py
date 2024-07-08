@@ -869,6 +869,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         """
         Method to apply signal format to an histogram
         """
+        ROOT = import_root()
         hist.hist_type = "signal"
         hist.legend_style = "l"
         hist.SetLineColor(color)
@@ -878,6 +879,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         """
         Method to apply background format to an histogram
         """
+        ROOT = import_root()
         hist.hist_type = "background"
         if self.stack:
             hist.SetLineColor(ROOT.kBlack)
@@ -893,6 +895,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         """
         Method to apply data format to an histogram
         """
+        ROOT = import_root()
         hist.legend_style = "lp"
         hist.hist_type = "data"
         hist.SetMarkerStyle(20)
@@ -907,6 +910,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         """
         Performs the actual plotting.
         """
+        ROOT = import_root()
         import plotlib.root as r
         from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
@@ -1812,6 +1816,7 @@ class FeaturePlotSyst(FeaturePlot):
         return out
 
     def setup_syst_hist(self, hist, dir):
+        ROOT = import_root()
         if dir == "central":
             hist.SetFillStyle(0)
             hist.SetLineColor(1)
@@ -1837,6 +1842,7 @@ class FeaturePlotSyst(FeaturePlot):
             return shape_syst
 
     def plot(self, feature):
+        ROOT = import_root()
         import plotlib.root as r
         from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
@@ -2107,6 +2113,7 @@ class PrePlot2D(PrePlot, BasePlot2DTask):
         return syst_list
 
     def define_histograms(self, dfs, nentries):
+        ROOT = import_root()
         histos = []
         isMC = self.dataset.process.isMC
 
@@ -2314,6 +2321,7 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
         """
         Performs the actual plotting.
         """
+        ROOT = import_root()
         import plotlib.root as r
         from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
