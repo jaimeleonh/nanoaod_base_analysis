@@ -36,8 +36,6 @@ from analysis_tools.utils import import_root
 
 law.contrib.load("cms", "git", "htcondor", "slurm", "root", "tasks", "telegram", "tensorflow", "wlcg")
 
-ROOT = import_root()
-
 
 class Target():
     def __init__(self, path, *args, **kwargs):
@@ -547,6 +545,7 @@ class RDFModuleTask(DatasetTask):
 
     class RDataFrame():
         def __init__(self, *args, **kwargs):
+            ROOT = import_root()
             if len(args) != 1 or isinstance(args[0], ROOT.TChain):
                 self.rdf = ROOT.RDataFrame(*args)
             else:  # rdf coming from another df after some modification (e.g. Define)

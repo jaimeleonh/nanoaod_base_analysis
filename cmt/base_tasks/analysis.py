@@ -31,8 +31,6 @@ from cmt.base_tasks.base import (
 )
 from cmt.base_tasks.plotting import BasePlotTask, FeaturePlot
 
-ROOT = import_root()
-
 directions = ["up", "down"]
 
 
@@ -600,6 +598,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         Splits the processes into data and non-data. Per feature, loads the input histograms, 
         creates the output histograms and the datacard inside the txt file.
         """
+        ROOT = import_root()
         inputs = self.input()
 
         norm_systematics = self.get_norm_systematics()
@@ -926,6 +925,7 @@ class Fit(FeaturePlot, FitBase):
         """
         Obtains the fits per feature and systematic.
         """
+        ROOT = import_root()
         inputs = self.get_input()
 
         # assert self.process_name in self.config.process_group_names[self.process_group_name]
