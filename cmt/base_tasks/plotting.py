@@ -18,7 +18,6 @@ import numpy as np
 
 import law
 import luigi
-import plotlib.root as r
 from cmt.util import hist_to_array, hist_to_graph, get_graph_maximum, update_graph_values
 
 from ctypes import c_double
@@ -26,7 +25,6 @@ from ctypes import c_double
 from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
-from plotting_tools.root import get_labels, Canvas, RatioCanvas
 from cmt.base_tasks.base import (
     DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask
@@ -36,19 +34,9 @@ from cmt.base_tasks.preprocessing import (
     Categorization, MergeCategorization, MergeCategorizationStats, EventCounterDAS
 )
 
-cmt_style = r.styles.copy("default", "cmt_style")
-cmt_style.style.ErrorX = 0
-cmt_style.x_axis.TitleOffset = 1.22
-cmt_style.y_axis.TitleOffset = 1.48
-cmt_style.legend.TextSize = 20
-cmt_style.style.legend_dy = 0.035
-cmt_style.style.legend_y2 = 0.93
-
 EMPTY = -1.e5
 
 directions = ["up", "down"]
-
-ROOT = import_root()
 
 class BasePlotTask(ConfigTaskWithRegion):
     """
@@ -367,6 +355,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         return self.config.weights.default
 
     def define_histograms(self, dfs, nentries):
+        ROOT = import_root()
         histos = []
         isMC = self.dataset.process.isMC
         for ifeat, feature in enumerate(self.features):
@@ -429,6 +418,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         and produces a set of plots per each feature, one for the nominal value
         and others (if available) for all systematics.
         """
+        ROOT = import_root()
 
         # prepare inputs and outputs
         if self.skip_processing:
@@ -917,6 +907,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         """
         Performs the actual plotting.
         """
+        import plotlib.root as r
+        from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
         # helper to extract the qcd shape in a region
         def get_qcd(region, files, syst='', bin_limit=0.):
@@ -1626,6 +1618,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         loading them from the input files. Scales the histograms and applies the correct format
         to them.
         """
+        ROOT = import_root()
         ROOT.gStyle.SetOptStat(0)
 
         # create root tchains for inputs
@@ -1844,6 +1837,8 @@ class FeaturePlotSyst(FeaturePlot):
             return shape_syst
 
     def plot(self, feature):
+        import plotlib.root as r
+        from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
         for process, p_label in zip(self.process_names, self.process_labels):
             # central histogram for each process
@@ -2024,6 +2019,7 @@ class FeaturePlotSyst(FeaturePlot):
         creates the output plots with up and down variations.
         """
 
+        ROOT = import_root()
         ROOT.gStyle.SetOptStat(0)
 
         inputs = self.input()
@@ -2318,6 +2314,9 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
         """
         Performs the actual plotting.
         """
+        import plotlib.root as r
+        from plotting_tools.root import get_labels, Canvas, RatioCanvas
+
         # helper to extract the qcd shape in a region
         def get_qcd(region, files, bin_limit=0.):
             d_hist = files[region].Get("histograms/" + self.data_names[0])
@@ -2612,6 +2611,8 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
         loading them from the input files. Scales the histograms and applies the correct format
         to them.
         """
+
+        ROOT = import_root()
         ROOT.gStyle.SetOptStat(0)
 
         # create root tchains for inputs

@@ -4,9 +4,9 @@ from analysis_tools.utils import join_root_selection as jrs
 from plotting_tools import Label
 from collections import OrderedDict
 
-from correctionlib import _core
 def getcorrectionlut(fname, cname):
     # Load CorrectionSet
+    from correctionlib import _core
     if fname.endswith(".json.gz"):
         import gzip
         with gzip.open(fname,'rt') as file:
