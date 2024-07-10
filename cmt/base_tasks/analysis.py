@@ -595,7 +595,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
     def run(self):
         """
-        Splits the processes into data and non-data. Per feature, loads the input histograms, 
+        Splits the processes into data and non-data. Per feature, loads the input histograms,
         creates the output histograms and the datacard inside the txt file.
         """
         ROOT = import_root()
@@ -608,7 +608,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             shape_syst_list = self.get_systs(feature, True)
             systs_directions += list(itertools.product(shape_syst_list, directions))
 
-            # Convert the shape systematics list to a dict with the systs as keys and a list of 
+            # Convert the shape systematics list to a dict with the systs as keys and a list of
             # the processes affected by them (all non-data processes except the qcd if computed
             # in the code)
             shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
@@ -1409,7 +1409,7 @@ class BasePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
         return postfix
 
 
-class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, 
+class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow,
                     SGEWorkflow, SlurmWorkflow):
     """
     Task that obtains the pulls and impacts over the workspace created by :class:`.CreateWorkspace`.
@@ -1421,6 +1421,7 @@ class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow,
         return nuisances
 
     def extract_nuisance_names(self, path):
+        ROOT = import_root()
         def prepare_prefit_var(var, pdf, epsilon=0.001):
             """
             Prepares a RooRealVar *var* for the extraction of its prefit values using the corresponding
@@ -1524,7 +1525,7 @@ class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow,
         """
         Outputs one log, root file, and json per nuisance paramter.
         """
-        assert(self.combine_categories or self.category_names == 1)
+        assert(self.combine_categories or len(self.category_names) == 1)
         return {
             feature.name: {
                 key: self.local_target("results_{}{}__{}.{}".format(
@@ -1599,7 +1600,7 @@ class MergePullsAndImpacts(BasePullsAndImpacts):
         Outputs one json file (in CombineHarvester format) with the results for all
         nuisance parameters.
         """
-        assert(self.combine_categories or self.category_names == 1)
+        assert(self.combine_categories or len(self.category_names) == 1)
         return {
             feature.name: self.local_target("results_{}{}.json".format(
                 feature.name, self.get_output_postfix()))
@@ -1659,7 +1660,8 @@ class PlotPullsAndImpacts(MergePullsAndImpacts):
         """
         Outputs one pdf with the pulls and impacts obtained by CombineHarvester.
         """
-        assert(self.combine_categories or self.category_names == 1)
+
+        assert(self.combine_categories or len(self.category_names) == 1)
         return {
             feature.name: self.local_target("impacts_{}{}.pdf".format(
                 feature.name, self.get_output_postfix()))
