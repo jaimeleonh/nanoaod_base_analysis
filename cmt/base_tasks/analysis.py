@@ -383,7 +383,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             "workspace_data_obs:data_obs"])
 
         table = []
-        process_names = self.non_data_names
+        process_names = copy(self.non_data_names)
         for name in self.data_names:
             if name in self.model_processes:
                 process_names.append("background")
@@ -396,7 +396,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
         yields = {}
         for p_name in process_names:
             if p_name == "background" and self.data_names[0] in self.model_processes:
-                # assuming it comes from data, may cause problems in certain setups
+                # assuming background is estimated from data, may cause problems in certain setups
+                yields[p_name] = self.get_rate_from_process_in_fit(feature, "data")
                 rate_line.append(1)
             else:
                 yields[p_name] = self.get_rate_from_process_in_fit(feature, p_name)
@@ -408,7 +409,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         # normalization systematics
         for norm_syst in norm_systematics:
             line = [norm_syst, "lnN"]
-            for p_name in self.non_data_names:
+            for p_name in process_names:
                 if p_name in norm_systematics[norm_syst]:
                     line.append(norm_systematics[norm_syst][p_name])
                 else:
@@ -678,7 +679,26 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         workspace_is_available = False
                     if fit_params["process_name"] not in shape_systematics_feature and \
                             workspace_is_available:
+
                         # directly extract the workspace from the inputs
+                        # if needed, include norm term for bkg fits extracted from data
+                        if "data" in fit_params["process_name"]:
+                            data_obs_path = inputs["fits"]["data_obs"][feature.name]["root"].path
+                            if data_obs_path == inputs["fits"][fit_params["process_name"]][feature.name]["root"].path:
+                                data_obs = w.data("data_obs")
+                                norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
+                                    "Background yield", data_obs.numEntries(), 0, 3*data_obs.numEntries())
+                            else:
+                                data_obs_model_tf = ROOT.TFile.Open(
+                                    inputs["fits"]["data_obs"][feature.name]["root"].path)
+                                data_obs_model_tf.cd()
+                                data_obs_w = data_obs_model_tf.Get("workspace_data")
+                                data_obs = data_obs_w.data("data_obs")
+                                norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
+                                    "Background yield", data_obs.numEntries(), 0, 3*data_obs.numEntries())
+                                data_obs_model_tf.Close()
+                            getattr(w, "import")(norm)
+
                         tf.cd()
                         w.Write()
                         model_tf.Close()
@@ -961,7 +981,23 @@ class Fit(FeaturePlot, FitBase):
                     data_blind = ROOT.RooDataHist("data_obs_blind", "data_obs_blind", l_blind, histo)
 
                 frame = x.frame()
-                data.plotOn(frame)
+                if not blind:
+                    data.plotOn(frame)
+                else:
+                    nlowerbins = 0
+                    nupperbins = 0
+
+                    for ib in range(histo.GetNbinsX()):
+                        if histo.GetBinCenter(ib) >= float(self.x_range[0]) and \
+                                histo.GetBinCenter(ib) < float(self.blind_range[0]):
+                            nlowerbins += 1
+                        elif histo.GetBinCenter(ib) <= float(self.x_range[1]) and \
+                                histo.GetBinCenter(ib) > float(self.blind_range[1]):
+                            nupperbins += 1
+                    x.setBins(nlowerbins, "loSB")
+                    x.setBins(nupperbins, "hiSB")
+                    data.plotOn(frame, Name="data_lower_sideband", Binning="loSB")
+                    data.plotOn(frame, Name="data_higer_sideband", Binning="hiSB")
 
                 n_non_zero_bins = 0
                 for i in range(1, histo.GetNbinsX()):
@@ -987,11 +1023,13 @@ class Fit(FeaturePlot, FitBase):
                 # fitting
                 for fun in funs:
                     if not blind:
-                        fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
+                        fun.fitTo(data, ROOT.RooFit.SumW2Error(True), ROOT.RooFit.PrintLevel(-1))
                     else:
-                        fun.fitTo(data, ROOT.RooFit.Range(
-                            float(self.x_range[0]), float(self.x_range[1])),
-                            ROOT.RooFit.SumW2Error(True))
+                        # fun.fitTo(data, ROOT.RooFit.Range(
+                            # float(self.x_range[0]), float(self.x_range[1])),
+                            # ROOT.RooFit.SumW2Error(True))
+                        fun.fitTo(data, ROOT.RooFit.CutRange("loSB,hiSB"),
+                            ROOT.RooFit.SumW2Error(True), ROOT.RooFit.PrintLevel(-1))
 
                 # filling output dict with fitting results
                 d[key] = {}
@@ -1199,11 +1237,16 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
                         try:
                             if self.config.processes.get(process_name).isSignal:
                                 null_signal = False
-                            elif not self.config.processes.get(process_name).isData:
+                            # data appearing here means background estimated from data, no need
+                            # to remove it
+                            # elif not self.config.processes.get(process_name).isData:
+                            else:
                                 null_bkg = False
                         except:  # signal not included as a process
                             null_signal = False
-                if null_signal or null_bkg:
+                # print(inputs[category_name][feature.name]['json'].path, null_signal, null_bkg)
+                # if null_signal or null_bkg:
+                if null_signal:
                     continue
 
                 cmd += f"{category_name}={inputs[category_name][feature.name]['txt'].path} "
@@ -1680,3 +1723,4 @@ class PlotPullsAndImpacts(MergePullsAndImpacts):
                 out
             ))
             move(out + ".pdf", create_file_dir(self.output()[feature.name].path))
+
