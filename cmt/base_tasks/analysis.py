@@ -981,9 +981,19 @@ class Fit(FeaturePlot, FitBase):
                 if blind:
                     data_blind = ROOT.RooDataHist("data_obs_blind", "data_obs_blind", l_blind, histo)
 
-                frame = x.frame()
+                if self.method == "envelope":
+                    frame_list = []
+                    for i in self.functions:
+                        frame_list.append(x.frame())   
+                else:
+                    frame = x.frame()
+
                 if not blind:
-                    data.plotOn(frame)
+                    if self.method == "envelope":
+                        for frame in frame_list:
+                            data.plotOn(frame)
+                    else:
+                        data.plotOn(frame)
                 else:
                     nlowerbins = 0
                     nupperbins = 0
@@ -997,8 +1007,13 @@ class Fit(FeaturePlot, FitBase):
                             nupperbins += 1
                     x.setBins(nlowerbins, "loSB")
                     x.setBins(nupperbins, "hiSB")
-                    data.plotOn(frame, Name="data_lower_sideband", Binning="loSB")
-                    data.plotOn(frame, Name="data_higer_sideband", Binning="hiSB")
+                    if self.method == "envelope":
+                        for frame in frame_list:
+                            data.plotOn(frame, Name="data_lower_sideband", Binning="loSB")
+                            data.plotOn(frame, Name="data_higer_sideband", Binning="hiSB")
+                    else:
+                        data.plotOn(frame, Name="data_lower_sideband", Binning="loSB")
+                        data.plotOn(frame, Name="data_higer_sideband", Binning="hiSB")
 
                 n_non_zero_bins = 0
                 for i in range(1, histo.GetNbinsX()):
@@ -1046,13 +1061,8 @@ class Fit(FeaturePlot, FitBase):
                     G = 2 * sigma_value * np.sqrt(2 * np.log(2))
                     L = 2 * gamma_value
                     d[key]["HWHM"] = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
-
-                if self.method != "envelope":
-                    npar = fun.getParameters(data).selectByAttrib("Constant", False).getSize()
-                    d[key]["npar"] = npar
-                    d[key]["chi2/ndf"] = frame.chiSquare(npar)
-                    d[key]["ndf"] = n_non_zero_bins - npar
-                else:
+                    
+                if self.method == "envelope":
                     models = ROOT.RooArgList()
                     for fun in funs:
                         models.add(fun)
@@ -1070,10 +1080,31 @@ class Fit(FeaturePlot, FitBase):
                         0, histo_blind.GetNbinsX() + 1, error_blind)
 
                 # Additional results to include in the output dict
-                fun.plotOn(frame)
-                d[key]["chi2"] = frame.chiSquare()
-                d[key]["Number of non-zero bins"] = n_non_zero_bins
-                d[key]["Full chi2"] = frame.chiSquare() * n_non_zero_bins
+
+                if self.method == "envelope":
+                    d[key]["Number of non-zero bins"] = n_non_zero_bins
+                    for i in range(len(self.functions)):
+                        fun = funs[i]
+                        frame = frame_list[i]
+                        fun.plotOn(frame)
+                        npar = fun.getParameters(data).getSize()
+                        d[key][f"npar_{i}"] = npar
+                        d[key][f"chi2/ndf_{i}"] = frame.chiSquare(npar)
+                        d[key][f"ndf_{i}"] = n_non_zero_bins - npar
+                        d[key][f"chi2_{i}"] = frame.chiSquare()
+                        d[key][f"Full_chi2_{i}"] = frame.chiSquare() * n_non_zero_bins
+
+                else:
+                    fun.plotOn(frame)
+                    npar = fun.getParameters(data).getSize()
+                    d[key]["npar"] = npar
+                    d[key]["chi2/ndf"] = frame.chiSquare(npar)
+                    d[key]["ndf"] = n_non_zero_bins - npar
+                    d[key]["chi2"] = frame.chiSquare()
+                    d[key]["Number of non-zero bins"] = n_non_zero_bins
+                    d[key]["Full chi2"] = frame.chiSquare() * n_non_zero_bins
+
+
                 d[key]["integral"] = data.sumEntries()
                 d[key]["fit_range"] = self.x_range
                 d[key]["blind_range"] = "None" if not blind else self.blind_range
@@ -1081,7 +1112,6 @@ class Fit(FeaturePlot, FitBase):
                     0 if not blind else data_blind.sumEntries())
                 d[key]["integral"] = integral - (0 if not blind else integral_blind)
                 d[key]["integral_error"] = error.value - (0 if not blind else error_blind.value)
-
                 w_name = "workspace_" + self.process_name + key
                 workspace = ROOT.RooWorkspace(w_name, w_name)
                 if self.method != "envelope":
