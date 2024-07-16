@@ -397,7 +397,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         for p_name in process_names:
             if p_name == "background" and self.data_names[0] in self.model_processes:
                 # assuming background is estimated from data, may cause problems in certain setups
-                yields[p_name] = self.get_rate_from_process_in_fit(feature, "data")
+                yields[self.data_names[0]] = self.get_rate_from_process_in_fit(feature, "data")
                 rate_line.append(1)
             else:
                 yields[p_name] = self.get_rate_from_process_in_fit(feature, p_name)
@@ -594,6 +594,12 @@ class CreateDatacards(CombineBase, FeaturePlot):
             fit_parameters.update(d[""])
         return fit_parameters
 
+    def get_fit_path(self, fit_params, feature):
+        return self.input()["fits"][fit_params["process_name"]][feature.name]["root"].path
+
+    def model_uses_envelope(self, fit_params, feature):
+        return fit_params.get("method") == "envelope"
+
     def run(self):
         """
         Splits the processes into data and non-data. Per feature, loads the input histograms,
@@ -672,8 +678,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         # the latter houldn't be needed, but just in case
                     workspace_is_available = True
                     try:
-                        model_tf = ROOT.TFile.Open(
-                            inputs["fits"][fit_params["process_name"]][feature.name]["root"].path)
+                        model_tf = ROOT.TFile.Open(self.get_fit_path(fit_params, feature))
                         w = model_tf.Get("workspace_" + fit_params["process_name"])
                     except:
                         workspace_is_available = False
@@ -704,7 +709,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         model_tf.Close()
                         # if it's an envelope function, we also need to
                         # store the category in the datacard
-                        if fit_params.get("method") == "envelope":
+                        if self.model_uses_envelope(fit_params, feature):
                             datacard_env_cats.append(
                                 f"pdf_index_{self.category_name}_" + fit_params["process_name"])
                     else:
@@ -984,7 +989,7 @@ class Fit(FeaturePlot, FitBase):
                 if self.method == "envelope":
                     frame_list = []
                     for i in self.functions:
-                        frame_list.append(x.frame())   
+                        frame_list.append(x.frame())
                 else:
                     frame = x.frame()
 
@@ -1061,7 +1066,7 @@ class Fit(FeaturePlot, FitBase):
                     G = 2 * sigma_value * np.sqrt(2 * np.log(2))
                     L = 2 * gamma_value
                     d[key]["HWHM"] = (0.5346 * L + np.sqrt(0.2166 * L ** 2 + G ** 2)) / 2
-                    
+
                 if self.method == "envelope":
                     models = ROOT.RooArgList()
                     for fun in funs:
@@ -1080,9 +1085,7 @@ class Fit(FeaturePlot, FitBase):
                         0, histo_blind.GetNbinsX() + 1, error_blind)
 
                 # Additional results to include in the output dict
-
                 if self.method == "envelope":
-                    d[key]["Number of non-zero bins"] = n_non_zero_bins
                     for i in range(len(self.functions)):
                         fun = funs[i]
                         frame = frame_list[i]
@@ -1093,7 +1096,6 @@ class Fit(FeaturePlot, FitBase):
                         d[key][f"ndf_{i}"] = n_non_zero_bins - npar
                         d[key][f"chi2_{i}"] = frame.chiSquare()
                         d[key][f"Full_chi2_{i}"] = frame.chiSquare() * n_non_zero_bins
-
                 else:
                     fun.plotOn(frame)
                     npar = fun.getParameters(data).getSize()
@@ -1101,10 +1103,9 @@ class Fit(FeaturePlot, FitBase):
                     d[key]["chi2/ndf"] = frame.chiSquare(npar)
                     d[key]["ndf"] = n_non_zero_bins - npar
                     d[key]["chi2"] = frame.chiSquare()
-                    d[key]["Number of non-zero bins"] = n_non_zero_bins
                     d[key]["Full chi2"] = frame.chiSquare() * n_non_zero_bins
 
-
+                d[key]["Number of non-zero bins"] = n_non_zero_bins
                 d[key]["integral"] = data.sumEntries()
                 d[key]["fit_range"] = self.x_range
                 d[key]["blind_range"] = "None" if not blind else self.blind_range
@@ -1112,6 +1113,9 @@ class Fit(FeaturePlot, FitBase):
                     0 if not blind else data_blind.sumEntries())
                 d[key]["integral"] = integral - (0 if not blind else integral_blind)
                 d[key]["integral_error"] = error.value - (0 if not blind else error_blind.value)
+                # d[key]["functions"] = [self.method] if self.method != "envelope" else self.functions
+
+                # create and save workspace
                 w_name = "workspace_" + self.process_name + key
                 workspace = ROOT.RooWorkspace(w_name, w_name)
                 if self.method != "envelope":
@@ -1127,6 +1131,7 @@ class Fit(FeaturePlot, FitBase):
                 workspace.Write()
                 f.Close()
 
+                # plot data and pdf in an unformatted canvas
                 if self.save_png or self.save_pdf:
                     c = ROOT.TCanvas()
                     frame.Draw()
@@ -1263,6 +1268,7 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
                 null_bkg = True
                 with open(inputs[category_name][feature.name]['json'].path) as f:
                     yields = json.load(f)
+                is_background_from_data = any(["data" in key for key in yields.keys()])
                 for process_name, value in yields.items():
                     if value != 0:
                         try:
@@ -1277,7 +1283,7 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
                             null_signal = False
                 # print(inputs[category_name][feature.name]['json'].path, null_signal, null_bkg)
                 # if null_signal or null_bkg:
-                if null_signal:
+                if null_signal or (null_bkg and not is_background_from_data):
                     continue
 
                 cmd += f"{category_name}={inputs[category_name][feature.name]['txt'].path} "
