@@ -801,7 +801,7 @@ class FitBase(ConfigTask):
             return x, False
         if blind_range[0] != blind_range[1]:
             blind = True
-            blind_range = (float(self.blind_range[0]), float(self.blind_range[1]))
+            blind_range = (float(blind_range[0]), float(blind_range[1]))
             assert(blind_range[0] >= x_range[0] and blind_range[0] < blind_range[1] and
                 blind_range[1] <= x_range[1])
             x.setRange("loSB", x_range[0], blind_range[0])
@@ -870,6 +870,9 @@ class FitBase(ConfigTask):
                 except TypeError:
                     params[f"p{i}"] = ROOT.RooRealVar(f'p{i}', f'p{i}', fit_parameters[f"p{i}"])
             fun = ROOT.RooPolynomial(fit_name, fit_name, x, ROOT.RooArgList(*list(params.values())))
+
+        elif name == "constant":
+            fun = ROOT.RooUniform(fit_name, fit_name, x)
 
         elif name == "exponential":
             # https://root.cern.ch/doc/master/classRooExponential.html

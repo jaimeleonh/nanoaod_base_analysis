@@ -879,7 +879,8 @@ class Fit(FeaturePlot, FitBase):
     """
 
     method = luigi.ChoiceParameter(
-        choices=("voigtian", "gaussian", "polynomial", "exponential", "powerlaw", "envelope"),
+        choices=("voigtian", "gaussian", "polynomial", "constant",
+            "exponential", "powerlaw", "envelope"),
         default="voigtian", description="fitting method to consider, default: voigtian")
     process_name = luigi.Parameter(default="signal", description="process name to consider, "
         "default: signal")
