@@ -115,6 +115,12 @@ class BasePlotTask(ConfigTaskWithRegion):
             if self.skip_feature_tags and feature.has_tag(self.skip_feature_tags):
                 continue
             features.append(feature)
+
+        # add extra features created on the fly
+        for feature_name in self.feature_names:
+            if "(" in feature_name:
+                features.append(eval(feature_name))
+
         if len(features) == 0:
             raise ValueError("No features were included. Did you spell them correctly?")
         return features
@@ -1196,6 +1202,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
         if not self.hide_data:
             all_hists += data_hists
+
+        assert len(all_hists) > 0, "No histograms were included. If you aim to plot just data, "\
+            "remember to use --hide-data False"
 
         bkg_histo = None
         data_histo = None
