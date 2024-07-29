@@ -121,6 +121,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
         "a counting experiment, default: False")
     refit_signal_with_syst = luigi.BoolParameter(default=True, description="whether to refit the "
         "signal histograms after modifying the fit parameters with systematics, default: True")
+    norm_bkg_to_data = luigi.BoolParameter(default=False, description="whether to keep bkg"
+        "normalization floating to the data, default: False")
 
     additional_scaling = luigi.DictParameter(description="dict with scalings to be "
         "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
@@ -359,6 +361,14 @@ class CreateDatacards(CombineBase, FeaturePlot):
             rate *= float(self.additional_scaling.get(p_name))
         return rate
 
+    def get_shape_line(self, process_in_datacard, bin_name, process_name, feature):
+        if process_in_datacard == "data_obs":
+            model = "workspace_{0}:data_obs".format(process_name)
+        else:
+            model = "workspace_{0}:model_{0}".format(process_name)
+        return ["shapes", process_in_datacard, bin_name, self.output()[feature.name]["root"].path,
+            model]
+
     def write_shape_datacard(self, feature, norm_systematics, shape_systematics,
             datacard_syst_params, datacard_env_cats, *args):
         n_dashes = 50
@@ -368,19 +378,17 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
         shapes_table = []
         for name in self.non_data_names:
-            shapes_table.append(["shapes", name, bin_name, self.output()[feature.name]["root"].path,
-                "workspace_{0}:model_{0}".format(name)])
+            shapes_table.append(self.get_shape_line(name, bin_name, name, feature))
+
         for name in self.data_names:
             if name in self.model_processes:
                 # We are extracting the background from the data, so let's label it as background
                 # but let's be sure background is not in the process_group_name
                 assert not "background" in self.processes_datasets.keys()
-                shapes_table.append(["shapes", "background", bin_name, self.output()[feature.name]["root"].path,
-                    "workspace_{0}:model_{0}".format(name)])
+                shapes_table.append(self.get_shape_line("background", bin_name, name, feature))
 
         # Include shape for the data
-        shapes_table.append(["shapes", "data_obs", bin_name, self.output()[feature.name]["root"].path,
-            "workspace_data_obs:data_obs"])
+        shapes_table.append(self.get_shape_line("data_obs", bin_name, "data_obs", feature))
 
         table = []
         process_names = copy(self.non_data_names)
@@ -397,10 +405,17 @@ class CreateDatacards(CombineBase, FeaturePlot):
         for p_name in process_names:
             if p_name == "background" and self.data_names[0] in self.model_processes:
                 # assuming background is estimated from data, may cause problems in certain setups
-                yields[self.data_names[0]] = self.get_rate_from_process_in_fit(feature, "data")
-                rate_line.append(1)
+                if self.norm_bkg_to_data:
+                    yields[self.data_names[0]] = 1.
+                else:
+                    yields[self.data_names[0]] = self.get_rate_from_process_in_fit(feature, "data")
+                rate_line.append(yields[self.data_names[0]])
             else:
-                yields[p_name] = self.get_rate_from_process_in_fit(feature, p_name)
+                isSignal = self.config.processes.get(p_name).isSignal
+                if not isSignal and self.norm_bkg_to_data:
+                    yields[p_name] = 1
+                else:
+                    yields[p_name] = self.get_rate_from_process_in_fit(feature, p_name)
                 rate_line.append(yields[p_name])
         table.append(rate_line)
         with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
@@ -595,10 +610,21 @@ class CreateDatacards(CombineBase, FeaturePlot):
         return fit_parameters
 
     def get_fit_path(self, fit_params, feature):
-        return self.input()["fits"][fit_params["process_name"]][feature.name]["root"].path
+        # fit_params can be
+        # 1) a dict with the parameters of the fit -> input file considers the process_name stored
+        # inside
+        # 2) a str that stores the process to consider
+        if isinstance(fit_params, str):
+            return self.input()["fits"][fit_params][feature.name]["root"].path
+        return self.get_fit_path(fit_params["process_name"], feature)
 
     def model_uses_envelope(self, fit_params, feature):
         return fit_params.get("method") == "envelope"
+
+    def get_data_obs_workspace(self, feature):
+        ROOT = import_root()
+        model_tf = ROOT.TFile.Open(self.get_fit_path("data_obs", feature))
+        return model_tf.Get("workspace_" + self.data_names[0])
 
     def run(self):
         """
@@ -680,14 +706,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     try:
                         model_tf = ROOT.TFile.Open(self.get_fit_path(fit_params, feature))
                         w = model_tf.Get("workspace_" + fit_params["process_name"])
-                    except:
-                        workspace_is_available = False
-                    if fit_params["process_name"] not in shape_systematics_feature and \
-                            workspace_is_available:
 
-                        # directly extract the workspace from the inputs
                         # if needed, include norm term for bkg fits extracted from data
-                        if "data" in fit_params["process_name"]:
+                        if self.norm_bkg_to_data and not self.config.processes.get(fit_params["process_name"]).isSignal:
                             data_obs_path = inputs["fits"]["data_obs"][feature.name]["root"].path
                             if data_obs_path == inputs["fits"][fit_params["process_name"]][feature.name]["root"].path:
                                 data_obs = w.data("data_obs")
@@ -702,9 +723,15 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                 norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
                                     "Background yield", data_obs.numEntries(), 0, 3*data_obs.numEntries())
                                 data_obs_model_tf.Close()
-                            getattr(w, "import")(norm)
+                    except:
+                        workspace_is_available = False
+                    if fit_params["process_name"] not in shape_systematics_feature and \
+                            workspace_is_available:
 
+                        # directly save in the outputs the workspace from the inputs
                         tf.cd()
+                        if self.norm_bkg_to_data:
+                            getattr(w, "import")(norm)
                         w.Write()
                         model_tf.Close()
                         # if it's an envelope function, we also need to
@@ -826,13 +853,14 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
                         if workspace_is_available:
                             getattr(workspace_syst, "import")(data)
+
+                            if self.norm_bkg_to_data:
+                                getattr(workspace_syst, "import")(norm)
                         tf.cd()
                         workspace_syst.Write("workspace_" + fit_params["process_name"])
-                        model_tf.Close()
 
                 # data_obs
-                model_tf = ROOT.TFile.Open(inputs["fits"]["data_obs"][feature.name]["root"].path)
-                w = model_tf.Get("workspace_" + self.data_names[0])
+                w = self.get_data_obs_workspace(feature)
                 tf.cd()
                 w.Write("workspace_data_obs")
                 model_tf.Close()
@@ -912,8 +940,8 @@ class Fit(FeaturePlot, FitBase):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False,
-            normalize_signals=False, save_yields=True)
+        return {"histo": FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False,
+            normalize_signals=False, save_yields=True)}
 
     def output(self):
         """
@@ -945,7 +973,7 @@ class Fit(FeaturePlot, FitBase):
         }
 
     def get_input(self):
-        return self.input()
+        return self.input()["histo"]
 
     def run(self):
         """
@@ -979,6 +1007,9 @@ class Fit(FeaturePlot, FitBase):
                 tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
                 try:
                     histo = copy(tf.Get("histograms/" + self.process_name + key))
+                    if self.process_name in self.additional_scaling:
+                        histo.Scale(self.additional_scaling[self.process_name])
+
                 except:
                     raise ValueError(f"The histogram has not been created for {self.process_name}")
 
