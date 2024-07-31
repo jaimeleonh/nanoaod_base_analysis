@@ -123,6 +123,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
         "signal histograms after modifying the fit parameters with systematics, default: True")
     norm_bkg_to_data = luigi.BoolParameter(default=False, description="whether to keep bkg"
         "normalization floating to the data, default: False")
+    save_proper_norm = luigi.BoolParameter(default=False, description="whether to save event counts "
+        "properly regardless of bkg left floating, default: False")
 
     additional_scaling = luigi.DictParameter(description="dict with scalings to be "
         "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
@@ -405,18 +407,20 @@ class CreateDatacards(CombineBase, FeaturePlot):
         for p_name in process_names:
             if p_name == "background" and self.data_names[0] in self.model_processes:
                 # assuming background is estimated from data, may cause problems in certain setups
-                if self.norm_bkg_to_data:
-                    yields[self.data_names[0]] = 1.
-                else:
-                    yields[self.data_names[0]] = self.get_rate_from_process_in_fit(feature, "data")
-                rate_line.append(yields[self.data_names[0]])
+                event_yield = self.get_rate_from_process_in_fit(feature, "data")
+                rate_line.append(1 if self.norm_bkg_to_data else event_yield)
+                yields[self.data_names[0]] = (
+                    1 if self.norm_bkg_to_data and not self.save_proper_norm
+                    else event_yield
+                )
             else:
                 isSignal = self.config.processes.get(p_name).isSignal
-                if not isSignal and self.norm_bkg_to_data:
-                    yields[p_name] = 1
-                else:
-                    yields[p_name] = self.get_rate_from_process_in_fit(feature, p_name)
-                rate_line.append(yields[p_name])
+                event_yield = self.get_rate_from_process_in_fit(feature, p_name)
+                rate_line.append(1 if self.norm_bkg_to_data and not isSignal else event_yield)
+                yields[p_name] = (
+                    1 if self.norm_bkg_to_data and not self.save_proper_norm and not isSignal
+                    else event_yield
+                )
         table.append(rate_line)
         with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
             json.dump(yields, f, indent=4)
