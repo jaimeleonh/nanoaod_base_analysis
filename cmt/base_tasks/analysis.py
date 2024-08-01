@@ -713,17 +713,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
                         # if needed, include norm term for bkg fits extracted from data
                         if self.norm_bkg_to_data and not self.config.processes.get(fit_params["process_name"]).isSignal:
-                            data_obs_path = self.get_fit_path("data_obs", feature)
-                            if data_obs_path == inputs["fits"][fit_params["process_name"]][feature.name]["root"].path:
-                                data_obs = w.data("data_obs")
-                                norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
-                                    "Background yield", data_obs.numEntries(), 0, 3*data_obs.numEntries())
-                            else:
-                                data_obs_w = self.get_data_obs_workspace("data_obs", feature)
-                                data_obs = data_obs_w.data("data_obs")
-                                norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
-                                    "Background yield", data_obs.numEntries(), 0, 3*data_obs.numEntries())
-                                data_obs_model_tf.Close()
+                            data_obs_path = self.get_fit_path("data_obs", feature).replace(
+                                ".root", ".json")
+                            with open(data_obs_path) as f:
+                                res = json.load(f)
+                            norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
+                                "Background yield", res[""]["integral"], 0, 3 * res[""]["integral"])
+
                     except:
                         workspace_is_available = False
                     if fit_params["process_name"] not in shape_systematics_feature and \
