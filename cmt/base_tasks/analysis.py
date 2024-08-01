@@ -713,16 +713,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
                         # if needed, include norm term for bkg fits extracted from data
                         if self.norm_bkg_to_data and not self.config.processes.get(fit_params["process_name"]).isSignal:
-                            data_obs_path = inputs["fits"]["data_obs"][feature.name]["root"].path
+                            data_obs_path = self.get_fit_path("data_obs", feature)
                             if data_obs_path == inputs["fits"][fit_params["process_name"]][feature.name]["root"].path:
                                 data_obs = w.data("data_obs")
                                 norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
                                     "Background yield", data_obs.numEntries(), 0, 3*data_obs.numEntries())
                             else:
-                                data_obs_model_tf = ROOT.TFile.Open(
-                                    inputs["fits"]["data_obs"][feature.name]["root"].path)
-                                data_obs_model_tf.cd()
-                                data_obs_w = data_obs_model_tf.Get("workspace_data")
+                                data_obs_w = self.get_data_obs_workspace("data_obs", feature)
                                 data_obs = data_obs_w.data("data_obs")
                                 norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
                                     "Background yield", data_obs.numEntries(), 0, 3*data_obs.numEntries())
@@ -1382,8 +1379,12 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
         # assert not self.combine_categories or (
             # self.combine_categories and len(self.category_names) > 1)
         return {
-            feature.name: self.local_target("workspace_{}{}.root".format(
-                feature.name, self.get_output_postfix() ))
+            feature.name: {
+                "root": self.local_target("workspace_{}{}.root".format(
+                    feature.name, self.get_output_postfix())),
+                "log": self.local_target("log_{}{}.txt".format(
+                    feature.name, self.get_output_postfix())),
+            }
             for feature in self.features
         }
 
@@ -1398,8 +1399,13 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
             else:
                 inp = inputs[feature.name].path
             cmd = "text2workspace.py {} -m {} -o {}".format(
-                inp, self.higgs_mass, create_file_dir(self.output()[feature.name].path))
-            os.system(cmd)
+                inp, self.higgs_mass, create_file_dir(self.output()[feature.name]["root"].path))
+            error_code = os.system(cmd)
+            with open(create_file_dir(self.output()[feature.name]["log"].path), "w+") as f:
+                if error_code == 0:
+                    f.write("Success")
+                else:
+                    f.write("Error")
 
 
 class ValidateDatacards(CreateWorkspace):
@@ -1505,7 +1511,7 @@ class RunCombine(CreateWorkspace):
             if not self.unblind:  # not sure if this is only for AsymptoticLimits
                 cmd += "--run blind "
             cmd += f"-m {self.higgs_mass} "
-            cmd += inputs[feature.name].path
+            cmd += inputs[feature.name]["root"].path
             cmd += f" > {create_file_dir(self.output()[feature.name]['txt'].path)}"
             os.system(cmd)
             move(out_file.format(test_name, self.higgs_mass),
@@ -1657,7 +1663,7 @@ class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow,
         inp = self.input()["collection"].targets[0]
         robust_fit = "--robustFit 1 " if self.robust else ""
         for feature in self.features:
-            w_path = inp[feature.name].path
+            w_path = inp[feature.name]["root"].path
 
             if self.branch == 0:
                 cmd = ("combine -M MultiDimFit -n _initialFit --algo singles "
