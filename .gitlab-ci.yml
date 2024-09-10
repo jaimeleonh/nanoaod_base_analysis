@@ -11,6 +11,7 @@ cmssw_setup:
     # Otherwise cmsrel and cmsenv won't work
     - shopt -s expand_aliases
     - yum install -y python3
+    - yum install -y wget
     # access CVMFS
     - set +u && source ${CMS_PATH}/cmsset_default.sh; set -u
     - set +u && source setup.sh set -u
