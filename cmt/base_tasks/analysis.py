@@ -150,6 +150,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
             with open(self.retrieve_file("config/{}.yaml".format(self.fit_models))) as f:
                 self.models = ordered_load(f, yaml.SafeLoader)
 
+        if self.counting:
+            self.norm_bkg_to_data = False
+
     def requires(self):
         """
         Needs as input the root file provided by the FeaturePlot task
@@ -477,21 +480,24 @@ class CreateDatacards(CombineBase, FeaturePlot):
     def get_process_rate_for_counting(self, p_name, feature):
         if p_name == "background" and self.data_names[0] in self.model_processes:
             # assuming it comes from data, may cause problems in certain setups
-            return 1
+            # return [1]
+            process_to_look = "data"
         else:
-            filename = self.input()["fits"][p_name][feature.name]["json"].path
-            with open(filename) as f:
-                d = json.load(f)
-            rate = d[""]["integral"]
-            weight = (0 if d[""]["integral_error"] == 0
-                else rate / (d[""]["integral_error"] * d[""]["integral_error"]))
-            num_ev = round(rate * weight)
-            if self.additional_scaling.get(p_name, False):
-                rate *= float(self.additional_scaling.get(p_name))
-                weight /= float(self.additional_scaling.get(p_name))
-            # round rate and modify the weight accordingly
-            weight = (num_ev / rate if rate != 0. else 0.)
-            return rate, weight
+            process_to_look = p_name
+        # else:
+        filename = self.input()["fits"][process_to_look][feature.name]["json"].path
+        with open(filename) as f:
+            d = json.load(f)
+        rate = d[""]["integral"]
+        weight = (0 if d[""]["integral_error"] == 0
+            else rate / (d[""]["integral_error"] * d[""]["integral_error"]))
+        num_ev = round(rate * weight)
+        if self.additional_scaling.get(p_name, False):
+            rate *= float(self.additional_scaling.get(p_name))
+            weight /= float(self.additional_scaling.get(p_name))
+        # round rate and modify the weight accordingly
+        weight = (num_ev / rate if rate != 0. else 0.)
+        return rate, weight
 
     def get_stat_unc_lines(self, feature, rates, process_names=None):
         def round_unc(num, ev, val):
@@ -505,6 +511,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
             process_names = self.non_data_names
         table = []
         for p_name in process_names:
+            if p_name == "background":
+                if "data" in self.model_processes:
+                    continue
             # line = [f"{p_name}_norm", "gmN {:.2f}".format(rates[p_name][0] * rates[p_name][1])]
             evs = int(round(rates[p_name][0] * rates[p_name][1]))
             # evs = rates[p_name][0] * rates[p_name][1]
@@ -1259,6 +1268,10 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
     Task that combines datacards coming from :class:`.CreateDatacards`.
 
     """
+    avoid_empty_processes = luigi.BoolParameter(default=True, description="whether to use not "
+        "consider empty processes in the combination, default: True")
+    force_shape = luigi.BoolParameter(default=False, description="whether to fake a shape datacard "
+        "from a counting experiment, default: False")
 
     combine_categories = True
 
@@ -1286,33 +1299,35 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
         """
         Combines all datacards using combine's combineCards.py
         """
+
         inputs = self.input()
         for feature in self.features:
             cmd = "combineCards.py "
-            force_shape = False
+            force_shape = self.force_shape
             for category_name in self.category_names:
                 # First, check if this category has all signals or all backgrounds with 0 expectation
-                null_signal = True
-                null_bkg = True
-                with open(inputs[category_name][feature.name]['json'].path) as f:
-                    yields = json.load(f)
-                is_background_from_data = any(["data" in key for key in yields.keys()])
-                for process_name, value in yields.items():
-                    if value != 0:
-                        try:
-                            if self.config.processes.get(process_name).isSignal:
+                if self.avoid_empty_processes:
+                    null_signal = True
+                    null_bkg = True
+                    with open(inputs[category_name][feature.name]['json'].path) as f:
+                        yields = json.load(f)
+                    is_background_from_data = any(["data" in key for key in yields.keys()])
+                    for process_name, value in yields.items():
+                        if value != 0:
+                            try:
+                                if self.config.processes.get(process_name).isSignal:
+                                    null_signal = False
+                                # data appearing here means background estimated from data, no need
+                                # to remove it
+                                # elif not self.config.processes.get(process_name).isData:
+                                else:
+                                    null_bkg = False
+                            except:  # signal not included as a process
                                 null_signal = False
-                            # data appearing here means background estimated from data, no need
-                            # to remove it
-                            # elif not self.config.processes.get(process_name).isData:
-                            else:
-                                null_bkg = False
-                        except:  # signal not included as a process
-                            null_signal = False
-                # print(inputs[category_name][feature.name]['json'].path, null_signal, null_bkg)
-                # if null_signal or null_bkg:
-                if null_signal or (null_bkg and not is_background_from_data):
-                    continue
+                    # print(inputs[category_name][feature.name]['json'].path, null_signal, null_bkg)
+                    # if null_signal or null_bkg:
+                    if null_signal or (null_bkg and not is_background_from_data):
+                        continue
 
                 cmd += f"{category_name}={inputs[category_name][feature.name]['txt'].path} "
                 with open(inputs[category_name][feature.name]['txt'].path) as f:
@@ -1388,6 +1403,7 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
         """
         Obtains the workspace for each provided datacard.
         """
+
         inputs = self.input()
         for feature in self.features:
             if not self.combine_categories:
@@ -1797,4 +1813,3 @@ class PlotPullsAndImpacts(MergePullsAndImpacts):
                 out
             ))
             move(out + ".pdf", create_file_dir(self.output()[feature.name].path))
-
