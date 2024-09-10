@@ -1,5 +1,5 @@
 cmssw_setup:
-  image: gitlab-registry.cern.ch/ci-tools/ci-worker:cc7
+  image: gitlab-registry.cern.ch/cms-phys-ciemat/test-corrections/custom-alma9:v0
   tags:
     - cvmfs
   variables:
