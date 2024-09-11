@@ -195,7 +195,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         Returns, per feature, one txt storing the datacard and its corresponding root file
         storing the histograms
         """
-        keys = ["txt", "json"]
+        keys = ["txt", "json", "log"]
         if not self.counting:
             keys.append("root")
         return {
@@ -650,6 +650,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
         norm_systematics = self.get_norm_systematics()
 
         for feature in self.features:
+            self.log = open(create_file_dir(self.output()[feature.name]["log"].path), "w+")
+            self.log.write(f"Feature: {feature.name}\n")
+            
             systs_directions = [("central", "")]
             shape_syst_list = self.get_systs(feature, True)
             systs_directions += list(itertools.product(shape_syst_list, directions))
@@ -661,6 +664,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                 for shape_syst in shape_syst_list}
 
             if not self.fit_models and not self.counting:  # binned fits
+                self.log.write("Generating a binned-fit datacard...\n")
                 histos = {}
                 tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
                 for name in self.data_names:
@@ -695,6 +699,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                 tf.Close()
 
             elif not self.counting:  # unbinned fits
+                self.log.write("Generating a parametric model datacard...\n")
                 shape_systematics_feature = self.get_shape_systematics_from_inspect(feature.name)
                 # shape_systematics_feature = {}
                 datacard_syst_params = {}  # list of systematics to be included later in the datacard
@@ -715,6 +720,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     except ValueError:
                         is_signal = True and "data" not in fit_params["process_name"]
                         # the latter houldn't be needed, but just in case
+                    self.log.write("Looking at process %s...\n" % 
+                        fit_params["process_name"])
                     workspace_is_available = True
                     try:
                         model_tf = ROOT.TFile.Open(self.get_fit_path(fit_params, feature))
@@ -730,10 +737,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                 "Background yield", res[""]["integral"], 0, 3 * res[""]["integral"])
 
                     except:
+                        self.log.write("Workspace for this process is not available\n")
                         workspace_is_available = False
+
                     if fit_params["process_name"] not in shape_systematics_feature and \
                             workspace_is_available:
-
+                        self.log.write(f"Process {fit_params['process_name']} is not affected "
+                            "by systematics, input workspace is directly saved in the output\n")
                         # directly save in the outputs the workspace from the inputs
                         tf.cd()
                         if self.norm_bkg_to_data:
@@ -760,6 +770,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         x, blind = self.get_x(x_range, blind_range)
                         fit_parameters = fit_params.get("fit_parameters", {})
                         if is_signal and not self.refit_signal_with_syst:
+                            self.log.write(f"Signal process {fit_params['process_name']} fit "
+                                "parameters are extracted from the output from Fit task and not "
+                                "reevaluated after applying systematics\n")
                             fit_parameters = self.update_parameters_for_fitting_signal(
                                 feature, fit_params, fit_parameters, workspace_is_available)
 
@@ -769,6 +782,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         systs = {}  # RooRealVar with the systematics
                         funs = []  # functions used for fitting (size 1 if not an envelope)
                         for function in functions:
+                            self.log.write(f"Adding systematics to function {function} for "
+                                f"process {fit_params['process_name']}\n")
                             _, params[function] = self.get_fit(function, fit_parameters, x)
                             # for param in params[function]:
                                 # param.setConstant(True)
@@ -776,6 +791,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             systs[function] = OrderedDict()
 
                             for param, value in params[function].items():
+                                self.log.write("Studying systematic effects on parameter "
+                                    f"{param} for process {fit_params['process_name']}\n")
                                 if param not in shape_systematics_feature[fit_params["process_name"]]:
                                     # no systematics to add, only need to consider the actual parameter
                                     param_syst[function][param] = value
@@ -789,6 +806,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                             datacard_syst_params[syst] = ROOT.RooRealVar(syst,
                                                 syst, 0, -5, 5)
                                             datacard_syst_params[syst].setConstant(True)
+                                        self.log.write(f"Syst {syst} with value {syst_value} "
+                                            f"added to param {param} for process "
+                                            f"{fit_params['process_name']}\n")    
                                         systs[function][param].append(datacard_syst_params[syst])
                                         syst_values.append(syst_value)
 
@@ -827,6 +847,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
                             # Refit
                             if (not is_signal or self.refit_signal_with_syst) and workspace_is_available:
+                                self.log.write(f"Signal process {fit_params['process_name']} "
+                                    "fit is reevaluated after applying systematics\n")
                                 if not blind:
                                     fun.fitTo(data, ROOT.RooFit.SumW2Error(True))
                                 else:
@@ -879,12 +901,15 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     datacard_syst_params.keys(), datacard_env_cats, *self.additional_lines)
 
             else:  # counting experiment
+                self.log.write("Generating a counting experiment datacard...\n")
                 norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
                 norm_systematics_feature.update(norm_systematics)
 
                 self.write_counting_datacard(feature, norm_systematics_feature, shape_systematics,
                     *self.additional_lines)
 
+            self.log.write(f"Finished with feature: {feature.name}\n\n")
+        self.log.close()
 
 class Fit(FeaturePlot, FitBase):
     """
