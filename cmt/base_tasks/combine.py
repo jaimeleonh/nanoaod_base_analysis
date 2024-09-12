@@ -296,3 +296,96 @@ class PlotSimplifiedLikelihood(SimplifiedLikelihood):
             plt.ylabel("$-2\Delta \ln L$")
 
             plt.savefig(create_file_dir(self.output()[feature.name].path))
+
+
+class GOFProduction(RunCombine):
+    ntoys = luigi.IntParameter(default=200, description="Number of toys to consider in the "
+        "covariance, default: 200")
+    seed = luigi.IntParameter(default=123456, description="Random seed to be considered, "
+        "default: 123456")
+    algo = luigi.ChoiceParameter(default="saturated", choices=("saturated", "KS", "AD"),
+        significant=False, description="algorithm to be used in the GOF computation, "
+        "default: saturated")
+
+    def output(self):
+        """
+        Outputs one root file for the data results and another with the MC toy results
+        """
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
+        return {
+            feature.name: {
+                key: self.local_target("results_{}{}_{}.root".format(
+                    feature.name, self.get_output_postfix(), key))
+                for key in ["data", "mc"]
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        """
+        Runs combine over the provided workspaces.
+        """
+
+        inputs = self.input()
+        for feature in self.features:
+            test_name = randomize("Test")
+            cmd = (f"combine -M GoodnessOfFit {inputs[feature.name]['root'].path} --algo={self.algo}"
+                f" -n {test_name} -m {self.higgs_mass}")
+            os.system(cmd)
+            move(f"higgsCombine{test_name}.GoodnessOfFit.mH{self.higgs_mass}.root",
+                create_file_dir(self.output()[feature.name]["data"].path))
+            cmd = (f"combine -M GoodnessOfFit {inputs[feature.name]['root'].path} --algo={self.algo}"
+                f" -n {test_name} -m {self.higgs_mass} -t {self.ntoys} -s {self.seed}")
+            os.system(cmd)
+            move(f"higgsCombine{test_name}.GoodnessOfFit.mH{self.higgs_mass}.{self.seed}.root",
+                create_file_dir(self.output()[feature.name]["mc"].path))
+
+
+class GOFPlot(GOFProduction):
+    def workflow_requires(self):
+        """
+        Requires the root files produced by GOFProduction.
+        """
+        return {"data": GOFProduction.vreq(self)}
+
+    def requires(self):
+        """
+        Requires the root files produced by GOFProduction.
+        """
+        return GOFProduction.vreq(self)
+
+    def output(self):
+        """
+        Outputs json, pdf and png files with the GOF distributions
+        """
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
+        return {
+            feature.name: {
+                key: self.local_target("results_{}{}.{}".format(
+                    feature.name, self.get_output_postfix(), key))
+                for key in ["json", "pdf", "png"]
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        """
+        Runs combineTool.py and plotGof.py to create the GOF distribution plots
+        """
+
+        for feature in self.features:
+            inp = self.input()[feature.name]
+            out = self.output()[feature.name]
+
+            cmd = (f"combineTool.py -M CollectGoodnessOfFit --input {inp['data'].path} "
+                f"{inp['mc'].path} -m {self.higgs_mass} -o {create_file_dir(out['json'].path)}")
+            os.system(cmd)
+
+            test_name = randomize("Test")
+            cmd = (f"plotGof.py {out['json'].path} --statistic {self.algo} "
+                f"--mass {float(self.higgs_mass)} -o {test_name}")
+            os.system(cmd)
+            move(f"{test_name}.pdf", create_file_dir(out["pdf"].path))
+            move(f"{test_name}.png", create_file_dir(out["png"].path))
