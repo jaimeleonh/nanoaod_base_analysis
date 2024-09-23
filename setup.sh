@@ -360,7 +360,8 @@ action() {
         cmt_add_py "$CMT_SOFTWARE/lib/python$pyv/site-packages:$CMT_SOFTWARE/lib64/python$pyv/site-packages"
 
         # setup custom software
-        if [ ! -d "$CMT_SOFTWARE" ]; then
+        #if [ ! -d "$CMT_SOFTWARE" ]; then
+        if false; then
             echo "installing software stack at $CMT_SOFTWARE"
             mkdir -p "$CMT_SOFTWARE"
 
