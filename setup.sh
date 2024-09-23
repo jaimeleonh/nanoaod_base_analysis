@@ -334,7 +334,7 @@ action() {
 
         if [ "$compile" == "1" ]
         then
-            scram b
+            scram b -j 8
         fi
              
         #export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
