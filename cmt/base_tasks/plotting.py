@@ -1638,7 +1638,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         inputs = self.input()
 
         self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
-        self.signal_names = [p.name for p in self.processes_datasets.keys() if p.isSignal]
         self.background_names = [p.name for p in self.processes_datasets.keys()
             if not p.isData and not p.isSignal]
 
@@ -2069,7 +2068,8 @@ class FeaturePlotSyst(FeaturePlot):
 #################################################################################################################################
 #################################################################################################################################
 
-class BasePlot2DTask(BasePlotTask):
+class BasePlotMultiDTask(BasePlotTask):
+    n_features = -1
     def get_features(self):
         features = []
         for feature_pair_name in self.feature_names:
@@ -2084,7 +2084,12 @@ class BasePlot2DTask(BasePlotTask):
                     if feature.name == feature_name:
                         feature_pair.append(feature)
                         break
-            if len(feature_pair) == 2:
+            if self.n_features > 1:
+                if len(feature_pair) == self.n_features:
+                    features.append(tuple(feature_pair))
+                else:
+                    raise ValueError(f"Task {type(self)} only allows {self.n_features} per group.")
+            else:
                 features.append(tuple(feature_pair))
 
         if len(features) == 0:
@@ -2101,7 +2106,8 @@ class BasePlot2DTask(BasePlotTask):
         return tuple(binning_args), ""
 
 
-class PrePlot2D(PrePlot, BasePlot2DTask):
+class PrePlot2D(PrePlot, BasePlotMultiDTask):
+    n_features = 2
     def get_syst_list(self):
         if self.skip_processing:
             return []
@@ -2190,7 +2196,7 @@ class PrePlot2D(PrePlot, BasePlot2DTask):
         return histos
 
 
-class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
+class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
 
     """
     Performs the actual histogram plotting: loads the histograms obtained in the PrePlot2D tasks,
@@ -2210,6 +2216,8 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
 
     log_z = luigi.BoolParameter(default=False, description="set logarithmic scale for Z axis, "
         "default: False")
+
+    n_features = 2
 
     def requires(self):
         """
@@ -2636,7 +2644,6 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
         inputs = self.input()
 
         self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
-        self.signal_names = [p.name for p in self.processes_datasets.keys() if p.isSignal]
         self.background_names = [p.name for p in self.processes_datasets.keys()
             if not p.isData and not p.isSignal]
 
@@ -2760,3 +2767,108 @@ class FeaturePlot2D(FeaturePlot, BasePlot2DTask):
                         self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
 
             self.plot(feature_pair)
+
+
+class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
+
+    """
+    Plots histograms from different features.
+
+    Example command:
+
+    ``law run ComparisonPlot --version test --category-name etau --config-name ul_2018 \
+--process-group-name etau --feature-names lep1_pt:lep1_pt_sel,lep1_eta:lep1_eta_sel1:lep1_eta_sel2 \
+--workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
+--dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
+--MergeCategorizationStats-version test_old``
+
+    """
+
+    n_features = -1
+    show_ratio = False
+    plot_systematics = False
+    store_systematics = False
+
+    def __init__(self, *args, **kwargs):
+        super(ComparisonPlot, self).__init__(*args, **kwargs)
+        self.feature_list = set([f for fs in self.features for f in fs])
+        self.do_qcd_bis = self.do_qcd
+        self.do_qcd = False
+
+    def requires(self):
+        """
+        Root files storing the histograms coming from FeaturePlot
+        """
+        return FeaturePlot.vreq(self, feature_names=[f.name for f in self.feature_list],
+            save_root=True)
+
+    def output(self):
+        """
+        Output files to be filled: pdf, png, root or json
+        """
+        def get_feature_name(feature_set):
+            return "_".join([feature.name for feature in feature_set])
+
+        # output definitions, i.e. key, file prefix, extension
+        output_data = []
+        if self.save_pdf:
+            output_data.append(("pdf", "", "pdf"))
+        if self.save_png:
+            output_data.append(("png", "", "png"))
+        if self.save_root:
+            output_data.append(("root", "root/", "root"))
+        if self.save_yields:
+            output_data.append(("yields", "yields/", "json"))
+        return {
+            key: law.SiblingFileCollection(OrderedDict(
+                (get_feature_name(feature), self.local_target("{}{}{}.{}".format(
+                    prefix, get_feature_name(feature), self.get_output_postfix(key), ext)))
+                for feature in self.features
+            ))
+            for key, prefix, ext in output_data
+        }
+
+    def get_binning(self, feature, ifeat=0):
+        return FeaturePlot.get_binning(self, feature, ifeat)
+
+    @law.decorator.notify
+    @law.decorator.safe_output
+    def run(self):
+        """
+        Splits processes into data, signal and background. Creates histograms from each process
+        loading them from the input files. Scales the histograms and applies the correct format
+        to them.
+        """
+
+        ROOT = import_root()
+        ROOT.gStyle.SetOptStat(0)
+
+        # create root tchains for inputs
+        inputs = self.input()
+        processes = list(self.processes_datasets.keys())
+        if self.do_qcd_bis:
+            processes.append(self.config.get(self.qcd_process_name))
+        nprocesses = len(processes)
+
+        for feature_set in self.features:
+            self.histos = {"background": [], "signal": [], "data": [], "all": []}
+            colors = list(range(2, 2 + len(feature_set) * nprocesses))
+            ihisto = -1
+
+            for process in processes:
+                for feature in feature_set:
+                    tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                    ihisto += 1
+                    process_histo = copy(tf.Get("histograms/" + process.name))
+                    process_histo.cmt_process_name = process.name
+                    process_histo.process_label = str(process.name)
+                    if feature.get_aux("selection_name"):
+                        process_histo.process_label += f", {feature.get_aux('selection_name')}"
+
+                    self.setup_signal_hist(process_histo, colors[ihisto])
+                    self.histos["signal"].append(process_histo)
+                    self.histos["all"].append(process_histo)
+
+            feature_to_save = copy(feature_set[0])
+            feature_to_save.name = "_".join([f.name for f in feature_set])
+            self.plot(feature_to_save)

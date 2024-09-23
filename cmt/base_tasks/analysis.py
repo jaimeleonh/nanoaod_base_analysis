@@ -652,7 +652,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         for feature in self.features:
             self.log = open(create_file_dir(self.output()[feature.name]["log"].path), "w+")
             self.log.write(f"Feature: {feature.name}\n")
-            
+
             systs_directions = [("central", "")]
             shape_syst_list = self.get_systs(feature, True)
             systs_directions += list(itertools.product(shape_syst_list, directions))
@@ -720,7 +720,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     except ValueError:
                         is_signal = True and "data" not in fit_params["process_name"]
                         # the latter houldn't be needed, but just in case
-                    self.log.write("Looking at process %s...\n" % 
+                    self.log.write("Looking at process %s...\n" %
                         fit_params["process_name"])
                     workspace_is_available = True
                     try:
@@ -808,7 +808,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                             datacard_syst_params[syst].setConstant(True)
                                         self.log.write(f"Syst {syst} with value {syst_value} "
                                             f"added to param {param} for process "
-                                            f"{fit_params['process_name']}\n")    
+                                            f"{fit_params['process_name']}\n")
                                         systs[function][param].append(datacard_syst_params[syst])
                                         syst_values.append(syst_value)
 
