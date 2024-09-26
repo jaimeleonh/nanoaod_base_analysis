@@ -433,6 +433,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             inp = self.input()
         outp = self.output().path
 
+        ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # create one RDF for the central value and each needed systematic

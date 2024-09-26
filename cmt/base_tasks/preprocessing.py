@@ -292,6 +292,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
 
         from shutil import copy
         ROOT = import_root()
+        ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # create RDataFrame
@@ -417,6 +418,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         """
         from shutil import copy
         ROOT = import_root()
+        ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         print(self.output()["root"].path)
@@ -844,6 +846,7 @@ class Categorization(PreprocessRDF):
         from shutil import copy
         ROOT = import_root()
         if self.request_cpus > 1:
+            ROOT.ROOT.EnableThreadSafety()
             ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs

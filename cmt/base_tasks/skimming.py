@@ -145,6 +145,7 @@ class SkimmingTaskRDF(DatasetTaskWithCategory,law.LocalWorkflow, HTCondorWorkflo
         """
         from shutil import copy
         ROOT = import_root()
+        ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs
