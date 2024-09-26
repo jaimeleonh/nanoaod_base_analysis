@@ -845,9 +845,8 @@ class Categorization(PreprocessRDF):
         """
         from shutil import copy
         ROOT = import_root()
-        if self.request_cpus > 1:
-            ROOT.ROOT.EnableThreadSafety()
-            ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+        ROOT.ROOT.EnableThreadSafety()
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare inputs and outputs
         # inp = self.input()["data"].path
