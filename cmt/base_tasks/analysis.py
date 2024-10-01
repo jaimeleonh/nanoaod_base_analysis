@@ -357,6 +357,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
             for arg in args:
                 f.write(arg + "\n")
 
+    def process_is_signal(self, p_name):
+        return self.config.processes.get(p_name).isSignal
+
     def get_rate_from_process_in_fit(self, feature, p_name):
         filename = self.input()["fits"][p_name][feature.name]["json"].path
         with open(filename) as f:
@@ -407,6 +410,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
         rate_line = ["rate", ""]
         yields = {}
+
         for p_name in process_names:
             if p_name == "background" and self.data_names[0] in self.model_processes:
                 # assuming background is estimated from data, may cause problems in certain setups
@@ -417,7 +421,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     else event_yield
                 )
             else:
-                isSignal = self.config.processes.get(p_name).isSignal
+                isSignal = self.process_is_signal(p_name)
                 event_yield = self.get_rate_from_process_in_fit(feature, p_name)
                 rate_line.append(1 if self.norm_bkg_to_data and not isSignal else event_yield)
                 yields[p_name] = (
