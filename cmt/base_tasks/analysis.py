@@ -373,7 +373,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         if process_in_datacard == "data_obs":
             model = "workspace_{0}:data_obs".format(process_name)
         else:
-            model = "workspace_{0}:model_{0}".format(process_name)
+            model = "workspace_{0}:model_{0}_{1}_{2}".format(process_name, self.category_name, self.region.name)
         return ["shapes", process_in_datacard, bin_name, self.output()[feature.name]["root"].path,
             model]
 
@@ -737,7 +737,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                 ".root", ".json")
                             with open(data_obs_path) as f:
                                 res = json.load(f)
-                            norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_norm",
+                            norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_{self.category_name}_{self.region.name}_norm",
                                 "Background yield", res[""]["integral"], 0, 3 * res[""]["integral"])
 
                     except:
@@ -758,7 +758,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         # store the category in the datacard
                         if self.model_uses_envelope(fit_params, feature):
                             datacard_env_cats.append(
-                                f"pdf_index_{self.category_name}_" + fit_params["process_name"])
+                                f"pdf_index_{self.category_name}_{fit_params['process_name']}_{self.category_name}_{self.region.name}")
                     else:
                         # create a new workspace with the dedicated systematics
                         x_range = fit_params.get("x_range", Fit.x_range._default)
@@ -788,11 +788,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         for function in functions:
                             self.log.write(f"Adding systematics to function {function} for "
                                 f"process {fit_params['process_name']}\n")
-                            _, params[function] = self.get_fit(function, fit_parameters, x)
+                            _, params[function] = self.get_fit(function, fit_parameters, x,
+                                postfix=f"_{fit_params['process_name']}_{self.category_name}_{self.region_name}")
                             # for param in params[function]:
                                 # param.setConstant(True)
                             param_syst[function] = OrderedDict()
                             systs[function] = OrderedDict()
+                            postfix = f"_{function}_{fit_params['process_name']}_{self.category_name}_{self.region_name}"
 
                             for param, value in params[function].items():
                                 self.log.write("Studying systematic effects on parameter "
@@ -807,8 +809,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                             shape_systematics_feature[fit_params["process_name"]][param].items():
 
                                         if syst not in datacard_syst_params:
-                                            datacard_syst_params[syst] = ROOT.RooRealVar(syst,
-                                                syst, 0, -5, 5)
+                                            datacard_syst_params[syst] = ROOT.RooRealVar(syst + param,
+                                                syst + param, 0, -5, 5)
                                             datacard_syst_params[syst].setConstant(True)
                                         self.log.write(f"Syst {syst} with value {syst_value} "
                                             f"added to param {param} for process "
@@ -817,16 +819,16 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                         syst_values.append(syst_value)
 
                                     param_syst[function][param] = ROOT.RooFormulaVar(
-                                        f"{param}_syst", f"{param}_syst",
+                                        f"{param}_syst" + postfix, f"{param}_syst" + postfix,
                                         "@0*" + "*".join([f"(1+{syst_values[i]}*@{i+1})"
                                             for i in range(len(syst_values))]),
                                         ROOT.RooArgList(value, *systs[function][param]))
 
                             # Create the new fitting function
                             if method != "envelope":
-                                fit_name = "model_" + fit_params["process_name"]
+                                fit_name = f"model_{fit_params['process_name']}_{self.category_name}_{self.region.name}"
                             else:
-                                fit_name = f"model_{function.strip()}" + fit_params["process_name"]
+                                fit_name = f"model_{function.strip()}_{fit_params['process_name']}_{self.category_name}_{self.region.name}"
 
                             if function == "voigtian":
                                 fun = ROOT.RooVoigtian(fit_name, fit_name, x,
@@ -873,11 +875,12 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             models = ROOT.RooArgList()
                             for fun in funs:
                                 models.add(fun)
-                            cat_name = f"pdf_index_{self.category_name}_" + fit_params["process_name"]
+                            cat_name = f"pdf_index_{self.category_name}_{fit_params['process_name']}_{self.category_name}_{self.region.name}"
                             cat = ROOT.RooCategory(cat_name, "")
                             datacard_env_cats.append(cat_name)
-                            multi_fun = ROOT.RooMultiPdf("model_" + fit_params["process_name"], "",
-                                cat, models)
+                            multi_fun = ROOT.RooMultiPdf(
+                                f"model__{fit_params['process_name']}_{self.category_name}_{self.region.name}",
+                                "", cat, models)
                             getattr(workspace_syst, "import")(cat)
                             getattr(workspace_syst, "import")(multi_fun)
                         else:
@@ -900,6 +903,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
                 norm_systematics_feature = self.get_norm_systematics_from_inspect(feature.name)
                 norm_systematics_feature.update(norm_systematics)
+                # norm_systematics_feature = {}
 
                 self.write_shape_datacard(feature, norm_systematics_feature, shape_systematics,
                     datacard_syst_params.keys(), datacard_env_cats, *self.additional_lines)
@@ -914,6 +918,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
             self.log.write(f"Finished with feature: {feature.name}\n\n")
         self.log.close()
+
 
 class Fit(FeaturePlot, FitBase):
     """
@@ -1097,13 +1102,15 @@ class Fit(FeaturePlot, FitBase):
                 # get function to fit and its parameters
                 if self.method != "envelope":
                     fun, params = self.get_fit(self.method, self.fit_parameters, x,
-                        fit_name="model_" + self.process_name)
+                        fit_name=f"model_{self.process_name}_{self.category_name}_{self.region.name}",
+                        postfix=f"_{self.process_name}_{self.category_name}_{self.region.name}")
                     funs.append(fun)
                 else:
                     params = {}
                     for function in self.functions:
                         aux_fun, aux_params = self.get_fit(function.strip(), self.fit_parameters, x,
-                            fit_name=f"model_{function.strip()}_{self.process_name}")
+                            fit_name=f"model_{function.strip()}_{self.process_name}_{self.category_name}_{self.region.name}",
+                            postfix=f"_{self.process_name}_{self.category_name}_{self.region.name}")
                         funs.append(aux_fun)
                         params.update(aux_params)
 
@@ -1115,7 +1122,7 @@ class Fit(FeaturePlot, FitBase):
                         # fun.fitTo(data, ROOT.RooFit.Range(
                             # float(self.x_range[0]), float(self.x_range[1])),
                             # ROOT.RooFit.SumW2Error(True))
-                        fun.fitTo(data, ROOT.RooFit.CutRange("loSB,hiSB"),
+                        fun.fitTo(data, ROOT.RooFit.Range("loSB,hiSB"),
                             ROOT.RooFit.SumW2Error(True), ROOT.RooFit.PrintLevel(-1))
 
                 # filling output dict with fitting results
@@ -1138,7 +1145,7 @@ class Fit(FeaturePlot, FitBase):
                     for fun in funs:
                         models.add(fun)
                     cat = ROOT.RooCategory(f"pdf_index_{self.category_name}_{self.process_name}", "")
-                    multi_fun = ROOT.RooMultiPdf("model_" + self.process_name, "", cat, models)
+                    multi_fun = ROOT.RooMultiPdf(f"model_{self.process_name}_{self.category_name}_{self.region_name}", "", cat, models)
 
                 histo_new = data.createHistogram("histo_new", x)
                 error = c_double(0.)
@@ -1198,7 +1205,7 @@ class Fit(FeaturePlot, FitBase):
                 f.Close()
 
                 # plot data and pdf in an unformatted canvas
-                if self.save_png or self.save_pdf:
+                if self.save_png or self.save_pdf and key == "":
                     c = ROOT.TCanvas()
                     frame.Draw()
                     if self.save_pdf:

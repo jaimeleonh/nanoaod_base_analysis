@@ -816,6 +816,7 @@ class FitBase(ConfigTask):
         fit_parameters = {}
         params = OrderedDict()
         fit_name = kwargs.pop("fit_name", "model")
+        postfix = kwargs.pop("postfix", "")
 
         if name == "voigtian":
             fit_parameters["mean"] = parameters.get("mean", (0, -100, 100))
@@ -824,18 +825,18 @@ class FitBase(ConfigTask):
             fit_parameters = self.convert_parameters(fit_parameters)
 
             try:
-                params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian',
+                params["mean"] = ROOT.RooRealVar('mean' + postfix, 'Mean of Voigtian',
                     *fit_parameters["mean"])
-                params["gamma"] = ROOT.RooRealVar('gamma', 'Gamma of Voigtian',
+                params["gamma"] = ROOT.RooRealVar('gamma' + postfix, 'Gamma of Voigtian',
                     *fit_parameters["gamma"])
-                params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian',
+                params["sigma"] = ROOT.RooRealVar('sigma' + postfix, 'Sigma of Voigtian',
                     *fit_parameters["sigma"])
             except TypeError:
-                params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian',
+                params["mean"] = ROOT.RooRealVar('mean' + postfix, 'Mean of Voigtian',
                     fit_parameters["mean"])
-                params["gamma"] = ROOT.RooRealVar('gamma', 'Gamma of Voigtian',
+                params["gamma"] = ROOT.RooRealVar('gamma' + postfix, 'Gamma of Voigtian',
                     fit_parameters["gamma"])
-                params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian',
+                params["sigma"] = ROOT.RooRealVar('sigma' + postfix, 'Sigma of Voigtian',
                     fit_parameters["sigma"])
 
             fun = ROOT.RooVoigtian(fit_name, fit_name, x,
@@ -847,14 +848,14 @@ class FitBase(ConfigTask):
             fit_parameters = self.convert_parameters(fit_parameters)
 
             try:
-                params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian',
+                params["mean"] = ROOT.RooRealVar('mean' + postfix, 'Mean of Voigtian',
                     *fit_parameters["mean"])
-                params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian',
+                params["sigma"] = ROOT.RooRealVar('sigma' + postfix, 'Sigma of Voigtian',
                     *fit_parameters["sigma"])
             except TypeError:
-                params["mean"] = ROOT.RooRealVar('mean', 'Mean of Voigtian',
+                params["mean"] = ROOT.RooRealVar('mean' + postfix, 'Mean of Voigtian',
                     fit_parameters["mean"])
-                params["sigma"] = ROOT.RooRealVar('sigma', 'Sigma of Voigtian',
+                params["sigma"] = ROOT.RooRealVar('sigma' + postfix, 'Sigma of Voigtian',
                     fit_parameters["sigma"])
 
             fun = ROOT.RooGaussian(fit_name, fit_name, x, params["mean"], params["sigma"])
@@ -866,9 +867,9 @@ class FitBase(ConfigTask):
             fit_parameters = self.convert_parameters(fit_parameters)
             for i in range(order):
                 try:
-                    params[f"p{i}"] = ROOT.RooRealVar(f'p{i}', f'p{i}', *fit_parameters[f"p{i}"])
+                    params[f"p{i}"] = ROOT.RooRealVar(f'p{i}' + postfix, f'p{i}', *fit_parameters[f"p{i}"])
                 except TypeError:
-                    params[f"p{i}"] = ROOT.RooRealVar(f'p{i}', f'p{i}', fit_parameters[f"p{i}"])
+                    params[f"p{i}"] = ROOT.RooRealVar(f'p{i}' + postfix, f'p{i}', fit_parameters[f"p{i}"])
             fun = ROOT.RooPolynomial(fit_name, fit_name, x, ROOT.RooArgList(*list(params.values())))
 
         elif name == "constant":
@@ -879,9 +880,9 @@ class FitBase(ConfigTask):
             fit_parameters["c"] = parameters.get("c", (0, -2, 2))
             fit_parameters = self.convert_parameters(fit_parameters)
             try:
-                params["c"] = ROOT.RooRealVar('c', 'c', *fit_parameters["c"])
+                params["c"] = ROOT.RooRealVar('c' + postfix, 'c', *fit_parameters["c"])
             except TypeError:
-                params["c"] = ROOT.RooRealVar('c', 'c', fit_parameters["c"])
+                params["c"] = ROOT.RooRealVar('c' + postfix, 'c', fit_parameters["c"])
             fun = ROOT.RooExponential(fit_name, fit_name, x, params["c"])
 
         elif name == "powerlaw":
@@ -893,11 +894,11 @@ class FitBase(ConfigTask):
 
             for i in range(order):
                 try:
-                    params[f'a{i}'] = ROOT.RooRealVar(f'a{i}', f'a{i}', *fit_parameters[f"a{i}"])
-                    params[f'b{i}'] = ROOT.RooRealVar(f'b{i}', f'b{i}', *fit_parameters[f"b{i}"])
+                    params[f'a{i}'] = ROOT.RooRealVar(f'a{i}' + postfix, f'a{i}', *fit_parameters[f"a{i}"])
+                    params[f'b{i}'] = ROOT.RooRealVar(f'b{i}' + postfix, f'b{i}', *fit_parameters[f"b{i}"])
                 except TypeError:
-                    params[f'a{i}'] = ROOT.RooRealVar(f'a{i}', f'a{i}', fit_parameters[f"a{i}"])
-                    params[f'b{i}'] = ROOT.RooRealVar(f'b{i}', f'b{i}', fit_parameters[f"b{i}"])
+                    params[f'a{i}'] = ROOT.RooRealVar(f'a{i}' + postfix, f'a{i}', fit_parameters[f"a{i}"])
+                    params[f'b{i}'] = ROOT.RooRealVar(f'b{i}' + postfix, f'b{i}', fit_parameters[f"b{i}"])
 
             fit_fun = " + ".join([f"@{i + 1} * TMath::Power(@0, @{i + 2})"
                 for i in range(0, order, 2)])
