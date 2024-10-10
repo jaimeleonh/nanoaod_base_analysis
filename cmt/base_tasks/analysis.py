@@ -88,7 +88,7 @@ class CombineCategoriesTask(CombineBase):
 
     def get_output_postfix(self, **kwargs):
         postfix = super(CombineCategoriesTask, self).get_output_postfix(**kwargs)
-        if not self.combine_categories:
+        if not self.combine_categories or kwargs.pop("category_names", False):
             category_names = kwargs.get("category_names", self.category_names)
             postfix += "_" + list(category_names)[self.branch]
         return postfix
@@ -758,7 +758,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         # store the category in the datacard
                         if self.model_uses_envelope(fit_params, feature):
                             datacard_env_cats.append(
-                                f"pdf_index_{self.category_name}_{fit_params['process_name']}_{self.category_name}_{self.region.name}")
+                                f"pdf_index_{fit_params['process_name']}_{self.category_name}_{self.region.name}")
                     else:
                         # create a new workspace with the dedicated systematics
                         x_range = fit_params.get("x_range", Fit.x_range._default)
@@ -1144,7 +1144,7 @@ class Fit(FeaturePlot, FitBase):
                     models = ROOT.RooArgList()
                     for fun in funs:
                         models.add(fun)
-                    cat = ROOT.RooCategory(f"pdf_index_{self.category_name}_{self.process_name}", "")
+                    cat = ROOT.RooCategory(f"pdf_index_{self.process_name}_{self.category_name}_{self.region_name}", "")
                     multi_fun = ROOT.RooMultiPdf(f"model_{self.process_name}_{self.category_name}_{self.region_name}", "", cat, models)
 
                 histo_new = data.createHistogram("histo_new", x)

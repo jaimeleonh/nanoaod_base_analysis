@@ -202,7 +202,7 @@ class ConvertSLInputs(SimplifiedLikelihood):
         # assert not self.combine_categories or (
             # self.combine_categories and len(self.category_names) > 1)
         return {
-            feature.name: 
+            feature.name:
                 self.local_target("model_{}{}.py".format(feature.name, self.get_output_postfix()))
             for feature in self.features
         }
@@ -258,7 +258,7 @@ class PlotSimplifiedLikelihood(SimplifiedLikelihood):
         # assert not self.combine_categories or (
             # self.combine_categories and len(self.category_names) > 1)
         return {
-            feature.name: 
+            feature.name:
                 self.local_target("plot_{}{}.pdf".format(feature.name, self.get_output_postfix()))
             for feature in self.features
         }
@@ -270,7 +270,7 @@ class PlotSimplifiedLikelihood(SimplifiedLikelihood):
             exec(open(self.input()["model"][feature.name].path).read(), globals())
             slp1 = sl.SLParams(background, covariance, obs=data, sig=signal)
 
-            import ROOT 
+            import ROOT
             fi = ROOT.TFile.Open(self.input()["full_like"][feature.name]["full_like"].path)
             tr = fi.Get("limit")
 
@@ -389,3 +389,170 @@ class GOFPlot(GOFProduction):
             os.system(cmd)
             move(f"{test_name}.pdf", create_file_dir(out["pdf"].path))
             move(f"{test_name}.png", create_file_dir(out["png"].path))
+
+
+class PrePostFitProduction(RunCombine):
+
+    def output(self):
+        """
+        Outputs one root file with the results from FitDiagnostics
+        """
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
+        return {
+            feature.name: {
+                "fit_diagnostics": self.local_target("results_{}{}__fit_diagnostics.root".format(
+                    feature.name, self.get_output_postfix())),
+                "combine_output": self.local_target("results_{}{}__combine_output.root".format(
+                    feature.name, self.get_output_postfix())),
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        """
+        Runs combine over the provided workspaces.
+        """
+
+        inputs = self.input()
+        for feature in self.features:
+            test_name = randomize("Test")
+            cmd = (f"combine -M FitDiagnostics {inputs[feature.name]['root'].path} "
+                f"-m {self.higgs_mass} --saveShapes --saveWithUncertainties -n {test_name}")
+            os.system(cmd)
+            move(f"higgsCombine{test_name}.FitDiagnostics.mH{self.higgs_mass}.root",
+                create_file_dir(self.output()[feature.name]["combine_output"].path))
+            move(f"fitDiagnostics{test_name}.root",
+                create_file_dir(self.output()[feature.name]["fit_diagnostics"].path))
+
+
+class PrePostFitPlotting(RunCombine):
+    stages = ["prefit", "postfit"]
+
+    def create_branch_map(self):
+        """
+        Returns one branch per category
+        """
+        return len(self.category_names)
+
+    def workflow_requires(self):
+        """
+        Requires the root files produced by PrePosFitProduction.
+        """
+        if self.combine_categories:
+            return {"data": PrePostFitProduction.vreq(self, branch=0)}
+        else:
+            return {"data": PrePostFitProduction.vreq(self)}
+
+    def requires(self):
+        """
+        Requires the root files produced by PrePosFitProduction.
+        """
+        if self.combine_categories:
+            return PrePostFitProduction.vreq(self, branch=0)
+        else:
+            return PrePostFitProduction.vreq(self)
+
+    def output(self):
+        """
+        Outputs pdf and png files with the PreFit and PostFit distributions
+        """
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
+        return {
+            feature.name: {
+                stage: {
+                    key: self.local_target("{}_distribution_{}{}.{}".format(
+                        stage, feature.name, self.get_output_postfix(
+                            category_names=self.category_names), key))
+                    for key in ["pdf", "png"]
+                } for stage in self.stages
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        """
+        Plots prefit and postfit distribution plots
+        """
+
+        from plotting_tools.root import get_labels, Canvas
+        ROOT = import_root()
+        ROOT.gStyle.SetOptStat(0)
+
+        self.category = self.config.categories.get(self.category_names[self.branch])
+
+        for feature in self.features:
+            inp = self.input()[feature.name]
+            out = self.output()[feature.name]
+            d_name = (f"{feature.name}_{self.region_name}"
+                if not self.combine_categories else self.category_names[self.branch])
+
+            for stage, name in zip(self.stages, ["shapes_prefit", "shapes_fit_s"]):
+                c = Canvas()
+                tf = ROOT.TFile.Open(inp["fit_diagnostics"].path)
+                h_bkg = tf.Get(f"{name}/{d_name}/total_background")
+                h_sig = tf.Get(f"{name}/{d_name}/total")
+                h_dat = tf.Get(f"{name}/{d_name}/data")
+
+                try:
+                    h_bkg.SetFillColor(ROOT.TColor.GetColor(100, 192, 232))
+                except AttributeError:
+                    print(f"Category {self.category.name} does not exist in the root file, "
+                        "probably it was not considered in the combination of cards. "
+                        "Dummy files are created as output.")
+                    os.system(f"touch {create_file_dir(out[stage]['pdf'].path)}")
+                    os.system(f"touch {create_file_dir(out[stage]['png'].path)}")
+                    continue
+
+                h_dat.Scale(1./1500.)
+                h_bkg.Scale(1./1500.)
+                h_sig.Scale(1./1500.)
+
+                m_sig = h_sig.GetMaximum()
+                m_dat = max([h_dat.GetPointY(i) + h_dat.GetErrorYhigh(i)
+                    for i in range(1, h_dat.GetN())])
+
+                h_bkg.SetTitle("")
+                h_bkg.GetYaxis().SetRangeUser(0, 1.1 * max(m_sig, m_dat))
+                h_sig.SetTitle("")
+                h_sig.GetYaxis().SetRangeUser(0, 1.1 * max(m_sig, m_dat))
+
+                h_bkg.Draw("HIST")
+
+                h_err = h_bkg.Clone()
+                h_err.SetFillColorAlpha(12, 0.3)  # Set grey colour (12) and alpha (0.3)
+                h_err.SetMarkerSize(0)
+                h_err.Draw("E2SAME")
+
+                h_sig.SetLineColor(ROOT.kRed)
+                h_sig.Draw("HISTSAME")
+
+                h_dat.Draw("PSAME")
+
+                h_bkg.SetMaximum(h_bkg.GetMaximum() * 1.4)
+
+                legend = ROOT.TLegend(0.60, 0.70, 0.88, 0.88)
+                legend.SetBorderSize(0)
+                legend.AddEntry(h_bkg, "Background", "F")
+                legend.AddEntry(h_sig, "Signal + Background", "L")
+                legend.AddEntry(h_err, "Background uncertainty", "F")
+                legend.Draw()
+
+                upper_right="{}, {:.1f} ".format(
+                    self.config.year,
+                    self.config.lumi_fb,
+                ) + "fb^{-1} " + "({} TeV)".format(self.config.ecm)  # Fix for eras
+
+                inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
+
+                draw_labels = get_labels(
+                    upper_left=self.config.upper_left_text,
+                    upper_right=upper_right,
+                    inner_text=inner_text
+                )
+                for label in draw_labels:
+                    label.Draw("same")
+
+                c.SaveAs(create_file_dir(out[stage]["pdf"].path))
+                c.SaveAs(create_file_dir(out[stage]["png"].path))
