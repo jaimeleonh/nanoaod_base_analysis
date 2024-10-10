@@ -235,63 +235,6 @@ action() {
           compile="1"
         fi
 
-        export HHKINFIT_PATH="HHKinFit2"
-        if [ ! -d "$HHKINFIT_PATH" ]; then
-          git clone https://github.com/bvormwald/HHKinFit2.git -b CMSSWversion
-          rm -r HHKinFit2/HHKinFit2CMSSWPlugins/plugins/
-          compile="1"
-        fi
-
-        export SVFIT_PATH="TauAnalysis"
-        if [ ! -d "$SVFIT_PATH" ]; then
-          git clone https://github.com/LLRCMS/ClassicSVfit.git TauAnalysis/ClassicSVfit -b bbtautau_LegacyRun2
-          git clone https://github.com/svfit/SVfitTF TauAnalysis/SVfitTF
-          compile="1"
-        fi
-
-        export GEM_PATH="GEM-modules"
-        if [ ! -d "$SVFIT_PATH" ]; then
-            git clone https://gitlab.cern.ch/diegof/gem-modules.git GEM/Modules
-            compile="1"
-        fi
-
-        export HTT_PATH="HTT-utilities"
-        if [ ! -d "$HTT_PATH" ]; then
-          git clone https://github.com/CMS-HTT/LeptonEff-interface.git HTT-utilities
-          cd HTT-utilities/LepEffInterface/
-          rm -rf data
-          git clone https://github.com/CMS-HTT/LeptonEfficiencies.git data
-          cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-          mkdir TauAnalysisTools
-          git clone -b run2_SFs https://github.com/cms-tau-pog/TauTriggerSFs TauAnalysisTools/TauTriggerSFs
-          rm TauAnalysisTools/TauTriggerSFs/python/*.py
-          cd TauAnalysisTools/TauTriggerSFs/data
-          wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2017_VBFHTauTauTrigger_JetLegs.root
-          wget https://github.com/camendola/VBFTriggerSFs/raw/master/data/2018_VBFHTauTauTrigger_JetLegs.root
-          cd "$CMT_CMSSW_BASE/$CMT_CMSSW_VERSION/src"
-          compile="1"
-        fi
-
-        export HHBTAG_PATH="HHTools"
-        if [ ! -d "$HHBTAG_PATH" ]; then
-          git clone https://github.com/hh-italian-group/HHbtag.git HHTools/HHbtag
-          git clone https://gitlab.cern.ch/cclubbtautau/AnalysisCore.git Tools/Tools
-          git clone https://gitlab.cern.ch/hh/bbtautau/MulticlassInference
-          git clone https://github.com/GilesStrong/cms_hh_proc_interface.git
-          cd cms_hh_proc_interface
-          git checkout tags/V4.0
-          cd -
-          git clone https://github.com/GilesStrong/cms_hh_tf_inference.git
-          cd cms_hh_tf_inference/inference
-          echo '<use name="boost_filesystem"/>' | cat - BuildFile.xml > temp && mv temp BuildFile.xml
-          cd -
-          git clone https://github.com/GilesStrong/cms_runII_dnn_models.git
-          cd cms_runII_dnn_models/models/test/
-          mv test.cc test.cc_x
-          cd -
-          compile="1"
-        fi
-
         export CORRECTIONS_PATH="Corrections"
         cmt_add_root_inc $(correction config --incdir)
         if [ ! -d "$CORRECTIONS_PATH" ]; then
@@ -336,15 +279,7 @@ action() {
         then
             scram b
         fi
-             
-        #export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
-        #if [ ! -d "$COMBINE_PATH" ]; then
-        #    git clone https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git $COMBINE_PATH
-        #    cd $COMBINE_PATH
-        #    git checkout v8.0.1
-        #    cd -
-        #    scram b -j5
-        #fi
+
         eval `scramv1 runtime -sh`
         cd "$origin"
 
