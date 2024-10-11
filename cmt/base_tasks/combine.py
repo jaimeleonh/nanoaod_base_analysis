@@ -556,3 +556,170 @@ class PrePostFitPlotting(RunCombine):
 
                 c.SaveAs(create_file_dir(out[stage]["pdf"].path))
                 c.SaveAs(create_file_dir(out[stage]["png"].path))
+
+
+class BiasTestProduction(RunCombine):
+    ntoys = luigi.IntParameter(default=1000, description="Number of toys to consider in the "
+        "covariance, default: 1000")
+    seed = luigi.IntParameter(default=123456, description="Random seed to be considered, "
+        "default: 123456")
+    expected_signal = luigi.FloatParameter(default=1., description="Expected signal contribution, "
+        "default: 1.")
+    algo = luigi.ChoiceParameter(default="singles", choices=("singles",),
+        significant=False, description="algorithm to be used in MultiDimFit, "
+        "default: singles")
+
+    def output(self):
+        """
+        Outputs one root file for the data results and another with the MC toy results
+        """
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
+        return {
+            feature.name: {
+                "toys": self.local_target("toys_{}{}.root".format(
+                    feature.name, self.get_output_postfix())),
+                "results": self.local_target("results_{}{}.root".format(
+                    feature.name, self.get_output_postfix())),
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        """
+        Runs combine over the provided workspaces.
+        """
+
+        inputs = self.input()
+        for feature in self.features:
+            test_name = randomize("Test")
+            cmd = (f"combine -M GenerateOnly {inputs[feature.name]['root'].path} "
+                f"-m {self.higgs_mass} -t {self.ntoys} --expectSignal {self.expected_signal} "
+                f"-n {test_name} --saveToys -s {self.seed}")
+            os.system(cmd)
+            move(f"higgsCombine{test_name}.GenerateOnly.mH{self.higgs_mass}.{self.seed}.root",
+                create_file_dir(self.output()[feature.name]["toys"].path))
+
+            cmd = (f"combine -M MultiDimFit {inputs[feature.name]['root'].path} "
+                f"-m {self.higgs_mass} -t {self.ntoys} --expectSignal {self.expected_signal} "
+                f"-n {test_name} --algo {self.algo} "
+                f"--toysFile {self.output()[feature.name]['toys'].path}")
+            os.system(cmd)
+            move(f"higgsCombine{test_name}.MultiDimFit.mH{self.higgs_mass}.{self.seed}.root",
+                create_file_dir(self.output()[feature.name]["results"].path))
+
+
+class BiasTestPlotting(BiasTestProduction):
+    def workflow_requires(self):
+        """
+        Requires the root files produced by GOFProduction.
+        """
+        return {"data": BiasTestProduction.vreq(self)}
+
+    def requires(self):
+        """
+        Requires the root files produced by GOFProduction.
+        """
+        return BiasTestProduction.vreq(self)
+
+    def output(self):
+        """
+        Outputs json, pdf and png files with the GOF distributions
+        """
+        # assert not self.combine_categories or (
+            # self.combine_categories and len(self.category_names) > 1)
+        return {
+            feature.name: {
+                key: self.local_target("results_{}{}.{}".format(
+                    feature.name, self.get_output_postfix(), key))
+                for key in ["pdf", "png"]
+            }
+            for feature in self.features
+        }
+
+    def run(self):
+        """
+        Plots the pull distributions
+        """
+        from plotting_tools.root import get_labels, Canvas
+        ROOT = import_root()
+
+        if not self.combine_categories:
+            self.category = self.config.categories.get(self.category_names[self.branch])
+
+        for feature in self.features:
+            inp = self.input()[feature.name]
+            out = self.output()[feature.name]
+
+            # Open file with fits
+            f = ROOT.TFile.Open(inp["results"].path)
+            t = f.Get("limit")
+
+            histo_name = randomize("pull")
+            hist_pull = ROOT.TH1F(histo_name, "", 80, -4, 4)
+            hist_pull.GetXaxis().SetTitle("Pull = (r_{truth}-r_{fit})/#sigma_{fit}")
+            hist_pull.GetYaxis().SetTitle("Entries")
+
+            sigma_values = np.array([])
+
+            for i_toy in range(self.ntoys):
+                # Best-fit value
+                t.GetEntry(i_toy * 3)
+                r_fit = getattr(t, "r")
+
+                # -1 sigma value
+                t.GetEntry(i_toy * 3 + 1)
+                r_lo = getattr(t, "r")
+
+                # +1 sigma value
+                t.GetEntry(i_toy * 3 + 2)
+                r_hi = getattr(t, "r")
+
+                # print(r_lo, r_fit, r_lo)
+
+                diff = self.expected_signal - r_fit
+                # Use uncertainty depending on where mu_truth is relative to mu_fit
+                sigma = abs(r_hi - r_fit) if diff > 0 else abs(r_lo - r_fit)
+
+                if sigma != 0:
+                    sigma_values = np.append(sigma_values, sigma)
+                else:
+                    sigma = sigma_values.mean()
+
+                if sigma != 0:
+                    hist_pull.Fill(diff / sigma)
+
+            ROOT.gStyle.SetOptFit(111)
+            ROOT.gStyle.SetStatX(0.89)
+            ROOT.gStyle.SetStatY(0.89)
+            ROOT.gStyle.SetStatW(0.1)
+            ROOT.gStyle.SetStatH(0.15)
+            ROOT.gStyle.SetOptStat(0)
+            
+            c = Canvas()
+            hist_pull.Draw()
+            # Fit Gaussian to pull distribution
+            hist_pull.Fit("gaus")
+
+            upper_right="{}, {:.1f} ".format(
+                self.config.year,
+                self.config.lumi_fb,
+            ) + "fb^{-1} " + "({} TeV)".format(self.config.ecm)  # Fix for eras
+
+            if not self.combine_categories:
+                inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
+            else:
+                inner_text = self.config.get_inner_text_for_plotting(region=self.region)
+
+            draw_labels = get_labels(
+                upper_left=self.config.upper_left_text,
+                upper_right=upper_right,
+                inner_text=inner_text
+            )
+            for label in draw_labels:
+                label.Draw("same")
+
+            c.SaveAs(create_file_dir(out["pdf"].path))
+            c.SaveAs(create_file_dir(out["png"].path))
+
+

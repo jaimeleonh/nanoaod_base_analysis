@@ -438,8 +438,10 @@ class Config():
     def get_norm_systematics(self, process_datasets, region):
         return []
 
-    def get_inner_text_for_plotting(self, category, region):
-        inner_text=[category.label + " category"]
+    def get_inner_text_for_plotting(self, category=None, region=None):
+        inner_text = []
+        if category:
+            inner_text.append(category.label + " category")
         if region:
             if isinstance(region.label, list):
                 inner_text += region.label

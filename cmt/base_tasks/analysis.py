@@ -227,6 +227,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     continue
                 if abs(up_value) > self.norm_syst_threshold or \
                         abs(down_value) > self.norm_syst_threshold:
+                    syst_alias = self.config.systematics.get(syst_name).get_aux("alias", None)
+                    syst_name = syst_name if not syst_alias else syst_alias
                     if syst_name not in systematics:
                         systematics[syst_name] = {}
                     # symmetric?
@@ -266,7 +268,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             systematics[name] = {}
                         if param not in systematics[name]:
                             systematics[name][param] = {}
-                        systematics[name][param][syst_name] = max(up_value, down_value)
+                        syst_alias = self.config.systematics.get(syst_name).get_aux("alias", None)
+                        syst = syst if not syst_alias else syst_alias
+                        systematics[name][param][syst] = max(up_value, down_value)
         return systematics
 
     def add_processes_line(self, process_names):
@@ -681,7 +685,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         elif self.do_qcd and name == "qcd":
                             continue
                         else:
-                            name_to_save = "%s_%s%s" % (name, syst, d.capitalize())
+                            syst_alias = self.config.systematics.get(syst_name).get_aux("alias", None)
+                            syst_name = syst if not syst_alias else syst
+                            name_to_save = "%s_%s%s" % (name, syst_name, d.capitalize())
                             name_from_featureplot = "%s_%s_%s" % (name, syst, d)
                         histos[name_to_save] = copy(tf.Get("histograms/" + name_from_featureplot))
                 tf.Close()

@@ -733,8 +733,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     syst = ""
                     d = ""
                     if "_" in elem:
-                        syst = elem.split("_")[0]
-                        d = elem.split("_")[1]
+                        syst = "_".join(elem.split("_")[0:-1])
+                        d = elem.split("_")[-1]
                     if dataset.get_aux("secondary_dataset", None):
                         reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
                             dataset_name=dataset.get_aux("secondary_dataset"),
