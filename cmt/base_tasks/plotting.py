@@ -2103,7 +2103,7 @@ class BasePlotMultiDTask(BasePlotTask):
             if isinstance(feature_elem.binning, tuple):
                 binning_args += feature_elem.binning
             else:
-                binning_args += [len(feature_elem.binning) - 1, np.array(feature_elem.binning)]
+                binning_args += [len(feature_elem.binning) - 1, np.array(feature_elem.binning, dtype=np.float64)]
         return tuple(binning_args), ""
 
 
