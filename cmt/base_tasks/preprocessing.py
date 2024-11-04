@@ -319,7 +319,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
                     df, _ = module.run(df)
                 except Exception as e:
                     print("Exception: %s. Exiting" % e)
-                    sys.exit()
+                    sys.exit(1)
 
         weight = self.get_weight(
             self.config.weights.total_events_weights, self.systematic, self.systematic_direction)
@@ -462,7 +462,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                     filtered_df, add_branches = module.run(filtered_df)
                 except Exception as e:
                     print("Exception: %s. Exiting" % e)
-                    sys.exit()
+                    sys.exit(1)
                 branches += add_branches
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
         if self.compute_filter_efficiency == True:
@@ -896,7 +896,7 @@ class Categorization(PreprocessRDF):
                         df, add_branches = module.run(df)
                     except Exception as e:
                         print("Exception: %s. Exiting" % e)
-                        sys.exit()
+                        sys.exit(1)
                     branches += add_branches
             branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
             filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
