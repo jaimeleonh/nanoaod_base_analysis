@@ -2669,7 +2669,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
         self.background_names = [p.name for p in self.processes_datasets.keys()
             if not p.isData and not p.isSignal]
 
-        self.nevents, _, _ = self.get_nevents(inputs)
+        self.nevents, self.nweightedevents, self.nunweightedevents = self.get_nevents(inputs)
 
         for feature_pair in self.features:
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
