@@ -831,10 +831,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
                                         ROOT.RooArgList(value, *systs[function][param]))
 
                             # Create the new fitting function
+                            postfix = f"{fit_params['process_name']}_{self.category_name}"
+                            if self.region:
+                                postfix += f"_{self.region.name}"
                             if method != "envelope":
-                                fit_name = f"model_{fit_params['process_name']}_{self.category_name}_{self.region.name}"
+                                fit_name = f"model_" + postfix
                             else:
-                                fit_name = f"model_{function.strip()}_{fit_params['process_name']}_{self.category_name}_{self.region.name}"
+                                fit_name = f"model_{function.strip()}_" + postfix
 
                             if function == "voigtian":
                                 fun = ROOT.RooVoigtian(fit_name, fit_name, x,
@@ -1062,6 +1065,7 @@ class Fit(FeaturePlot, FitBase):
                 data = ROOT.RooDataHist("data_obs", "data_obs", l, histo)
                 if blind:
                     data_blind = ROOT.RooDataHist("data_obs_blind", "data_obs_blind", l_blind, histo)
+                    data = data.reduce(CutRange="loSB,hiSB")
 
                 if self.method == "envelope":
                     frame_list = []
@@ -1091,11 +1095,9 @@ class Fit(FeaturePlot, FitBase):
                     x.setBins(nupperbins, "hiSB")
                     if self.method == "envelope":
                         for frame in frame_list:
-                            data.plotOn(frame, Name="data_lower_sideband", Binning="loSB")
-                            data.plotOn(frame, Name="data_higer_sideband", Binning="hiSB")
+                            data.plotOn(frame, Range="loSB,hiSB")
                     else:
-                        data.plotOn(frame, Name="data_lower_sideband", Binning="loSB")
-                        data.plotOn(frame, Name="data_higer_sideband", Binning="hiSB")
+                        data.plotOn(frame, Range="loSB,hiSB")
 
                 n_non_zero_bins = 0
                 for i in range(1, histo.GetNbinsX()):
@@ -1106,17 +1108,20 @@ class Fit(FeaturePlot, FitBase):
 
                 funs = []
                 # get function to fit and its parameters
+                postfix = f"{self.process_name}_{self.category_name}"
+                if self.region:
+                    postfix += f"_{self.region.name}"
                 if self.method != "envelope":
                     fun, params = self.get_fit(self.method, self.fit_parameters, x,
-                        fit_name=f"model_{self.process_name}_{self.category_name}_{self.region.name}",
-                        postfix=f"_{self.process_name}_{self.category_name}_{self.region.name}")
+                        fit_name=f"model_" + postfix,
+                        postfix="_" + postfix)
                     funs.append(fun)
                 else:
                     params = {}
                     for function in self.functions:
                         aux_fun, aux_params = self.get_fit(function.strip(), self.fit_parameters, x,
-                            fit_name=f"model_{function.strip()}_{self.process_name}_{self.category_name}_{self.region.name}",
-                            postfix=f"_{self.process_name}_{self.category_name}_{self.region.name}")
+                            fit_name=f"model_{function.strip()}_" + postfix,
+                            postfix="_" + postfix)
                         funs.append(aux_fun)
                         params.update(aux_params)
 
@@ -1128,8 +1133,7 @@ class Fit(FeaturePlot, FitBase):
                         # fun.fitTo(data, ROOT.RooFit.Range(
                             # float(self.x_range[0]), float(self.x_range[1])),
                             # ROOT.RooFit.SumW2Error(True))
-                        fun.fitTo(data, ROOT.RooFit.Range("loSB,hiSB"),
-                            ROOT.RooFit.SumW2Error(True), ROOT.RooFit.PrintLevel(-1))
+                        fun.fitTo(data, ROOT.RooFit.SumW2Error(True), ROOT.RooFit.PrintLevel(-1), Range="loSB,hiSB")
 
                 # filling output dict with fitting results
                 d[key] = {}
@@ -1168,7 +1172,10 @@ class Fit(FeaturePlot, FitBase):
                     for i in range(len(self.functions)):
                         fun = funs[i]
                         frame = frame_list[i]
-                        fun.plotOn(frame)
+                        if not blind:
+                            fun.plotOn(frame)
+                        else:
+                            fun.plotOn(frame, NormRange="loSB,hiSB")
                         npar = fun.getParameters(data).getSize()
                         d[key][f"npar_{i}"] = npar
                         d[key][f"chi2/ndf_{i}"] = frame.chiSquare(npar)
@@ -1176,7 +1183,10 @@ class Fit(FeaturePlot, FitBase):
                         d[key][f"chi2_{i}"] = frame.chiSquare()
                         d[key][f"Full_chi2_{i}"] = frame.chiSquare() * n_non_zero_bins
                 else:
-                    fun.plotOn(frame)
+                    if not blind:
+                        fun.plotOn(frame)
+                    else:
+                        fun.plotOn(frame, NormRange="loSB,hiSB")
                     npar = fun.getParameters(data).getSize()
                     d[key]["npar"] = npar
                     d[key]["chi2/ndf"] = frame.chiSquare(npar)
