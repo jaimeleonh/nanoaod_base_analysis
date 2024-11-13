@@ -807,7 +807,6 @@ class FitBase(ConfigTask):
             x.setRange("loSB", x_range[0], blind_range[0])
             x.setRange("hiSB", blind_range[1], x_range[1])
             x.setRange("full", x_range[0], x_range[1])
-            fit_range = "loSB,hiSB"
         return x, blind
 
     def get_fit(self, name, parameters, x, **kwargs):
