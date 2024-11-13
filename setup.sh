@@ -326,31 +326,31 @@ action() {
         fi
 
         # gfal python bindings
-        cmt_add_bin "$CMT_GFAL_DIR/bin"
-        cmt_add_py "$CMT_GFAL_DIR/lib/python3/site-packages"
-        cmt_add_lib "$CMT_GFAL_DIR/lib"
+        #cmt_add_bin "$CMT_GFAL_DIR/bin"
+        #cmt_add_py "$CMT_GFAL_DIR/lib/python3/site-packages"
+        #cmt_add_lib "$CMT_GFAL_DIR/lib"
 
-        if [ ! -d "$CMT_GFAL_DIR" ]; then
-            local lcg_base="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr"
-            if [ ! -d "$lcg_base" ]; then
-                2>&1 echo "LCG software directory $lcg_base not existing"
-                return "1"
-            fi
+        #if [ ! -d "$CMT_GFAL_DIR" ]; then
+        #    local lcg_base="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr"
+        #    if [ ! -d "$lcg_base" ]; then
+        #        2>&1 echo "LCG software directory $lcg_base not existing"
+        #        return "1"
+        #    fi
 
-            mkdir -p "$CMT_GFAL_DIR"
-            (
-                cd "$CMT_GFAL_DIR"
-                mkdir -p include bin lib/gfal2-plugins lib/python3/site-packages
-                ln -s "$lcg_base"/include/gfal2* include
-                ln -s "$lcg_base"/bin/gfal-* bin
-                ln -s "$lcg_base"/lib64/libgfal* lib
-                ln -s "$lcg_base"/lib64/gfal2-plugins/libgfal* lib/gfal2-plugins
-                ln -s "$lcg_base"/lib64/python3/site-packages/gfal* lib/python3/site-packages
-                cd lib/gfal2-plugins
-                rm libgfal_plugin_http.so libgfal_plugin_xrootd.so
-                curl https://cernbox.cern.ch/index.php/s/qgrogVY4bwcuCXt/download > libgfal_plugin_xrootd.so
-            )
-        fi
+        #    mkdir -p "$CMT_GFAL_DIR"
+        #    (
+        #        cd "$CMT_GFAL_DIR"
+        #        mkdir -p include bin lib/gfal2-plugins lib/python3/site-packages
+        #        ln -s "$lcg_base"/include/gfal2* include
+        #        ln -s "$lcg_base"/bin/gfal-* bin
+        #        ln -s "$lcg_base"/lib64/libgfal* lib
+        #        ln -s "$lcg_base"/lib64/gfal2-plugins/libgfal* lib/gfal2-plugins
+        #        ln -s "$lcg_base"/lib64/python3/site-packages/gfal* lib/python3/site-packages
+        #        cd lib/gfal2-plugins
+        #        rm libgfal_plugin_http.so libgfal_plugin_xrootd.so
+        #        curl https://cernbox.cern.ch/index.php/s/qgrogVY4bwcuCXt/download > libgfal_plugin_xrootd.so
+        #    )
+        #fi
     }
     export -f cmt_setup_software
 

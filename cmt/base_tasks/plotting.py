@@ -1599,30 +1599,51 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             with open(create_file_dir(self.output()["yields"].targets[feature.name].path), "w") as f:
                 json.dump(yields, f, indent=4)
 
-    def get_nevents(self):
-        nevents = {}
+    def get_nevents(self, inputs=None):
+        """ Open MergeCategorizationStats outputs and load json files with nevents and nweightedevents (for normalization)
+        Arguments : inputs : results of self.input(), facultative, for caching
+        Returns tuple :
+         - nevents (event count or weights depending on self.apply_weights)
+         - nweightedevents : sum of weights
+         - nunweightedevents : event count
+        """
+        nevents, nweightedevents, nunweightedevents = {}, {}, {}
+        if inputs is None:
+            inputs = self.input() # this is quite slow so bring it outside the loop (maybe we could enable cache_requirements ?)
         for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
             if not process.isData and not self.avoid_normalization:
                 for dataset in datasets:
                     nevents[dataset.name] = {}
+                    nweightedevents[dataset.name] = {}
+                    nunweightedevents[dataset.name] = {}
                     for elem in ["central"] + [f"{syst}_{d}"
                             for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
-                        inp = self.input()["stats"][dataset.name][elem]
+                        inp = inputs["stats"][dataset.name][elem]
                         with open(inp.path) as f:
                             stats = json.load(f)
+                            nweightedevents[dataset.name][elem] = stats["nweightedevents"]
+                            nunweightedevents[dataset.name][elem] = stats["nevents"]
                             if self.apply_weights:
                                 nevents[dataset.name][elem] = stats["nweightedevents"]
                             else:
                                 nevents[dataset.name][elem] = stats["nevents"]
-        return nevents
+
+        return nevents, nweightedevents, nunweightedevents
 
     def get_normalization_factor(self, dataset, elem):
         if not type(self.config.lumi_pb) == dict:
-            return dataset.xs * self.config.lumi_pb / self.nevents[dataset.name][elem]
+            lumi = self.config.lumi_pb
         elif self.run_era != "":
-            return dataset.xs * self.config.lumi_pb[dataset.runPeriod][self.run_era] / self.nevents[dataset.name][elem]
+            lumi = self.config.lumi_pb[dataset.runPeriod][self.run_era]
         else:
-            return dataset.xs * sum(self.config.lumi_pb.get(dataset.runPeriod, {}).values()) / self.nevents[dataset.name][elem]
+            lumi = sum(self.config.lumi_pb.get(dataset.runPeriod, {}).values())
+
+        if dataset.get_aux("stitchingNormalization", False) and self.apply_weights:
+            # Normalization for stitched datasets, where generator weights are scaled to their average
+            # needs to be combined with appropriate stitching weights
+            return dataset.xs * lumi / (self.nweightedevents[dataset.name][elem] / self.nunweightedevents[dataset.name][elem])
+        else:
+            return dataset.xs * lumi / self.nevents[dataset.name][elem]
 
     @law.decorator.notify
     @law.decorator.safe_output
@@ -1648,7 +1669,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         if self.fixed_colors:
             colors = list(range(2, 2 + len(self.processes_datasets.keys())))
 
-        self.nevents = self.get_nevents()
+        self.nevents, self.nweightedevents, self.nunweightedevents = self.get_nevents(inputs)
 
         for ifeat, feature in enumerate(self.features):
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
@@ -2103,7 +2124,7 @@ class BasePlotMultiDTask(BasePlotTask):
             if isinstance(feature_elem.binning, tuple):
                 binning_args += feature_elem.binning
             else:
-                binning_args += [len(feature_elem.binning) - 1, np.array(feature_elem.binning)]
+                binning_args += [len(feature_elem.binning) - 1, np.array(feature_elem.binning, dtype=np.float64)]
         return tuple(binning_args), ""
 
 
@@ -2648,7 +2669,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
         self.background_names = [p.name for p in self.processes_datasets.keys()
             if not p.isData and not p.isSignal]
 
-        self.nevents = self.get_nevents()
+        self.nevents, self.nweightedevents, self.nunweightedevents = self.get_nevents(inputs)
 
         for feature_pair in self.features:
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
