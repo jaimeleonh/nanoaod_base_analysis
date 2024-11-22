@@ -1159,13 +1159,7 @@ class Fit(FeaturePlot, FitBase):
 
                 histo_new = data.createHistogram("histo_new", x)
                 error = c_double(0.)
-                integral = histo_new.IntegralAndError(
-                    0, histo_new.GetNbinsX() + 1, error)
-                if blind:
-                    histo_blind = data_blind.createHistogram("histo_blind", x_blind)
-                    error_blind = c_double(0.)
-                    integral_blind = histo_blind.IntegralAndError(
-                        0, histo_blind.GetNbinsX() + 1, error_blind)
+                integral = histo_new.IntegralAndError(0, histo_new.GetNbinsX() + 1, error)
 
                 # Additional results to include in the output dict
                 if self.method == "envelope":
@@ -1198,10 +1192,9 @@ class Fit(FeaturePlot, FitBase):
                 d[key]["integral"] = data.sumEntries()
                 d[key]["fit_range"] = self.x_range
                 d[key]["blind_range"] = "None" if not blind else self.blind_range
-                d[key]["sum_entries"] = data.sumEntries() - (
-                    0 if not blind else data_blind.sumEntries())
-                d[key]["integral"] = integral - (0 if not blind else integral_blind)
-                d[key]["integral_error"] = error.value - (0 if not blind else error_blind.value)
+                d[key]["sum_entries"] = data.sumEntries()
+                d[key]["integral"] = integral
+                d[key]["integral_error"] = error.value
                 # d[key]["functions"] = [self.method] if self.method != "envelope" else self.functions
 
                 # create and save workspace
