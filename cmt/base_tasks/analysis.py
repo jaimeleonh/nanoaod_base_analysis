@@ -685,7 +685,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         elif self.do_qcd and name == "qcd":
                             continue
                         else:
-                            syst_alias = self.config.systematics.get(syst_name).get_aux("alias", None)
+                            syst_alias = self.config.systematics.get(syst).get_aux("alias", None)
                             syst_name = syst if not syst_alias else syst
                             name_to_save = "%s_%s%s" % (name, syst_name, d.capitalize())
                             name_from_featureplot = "%s_%s_%s" % (name, syst, d)
