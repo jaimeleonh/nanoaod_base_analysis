@@ -861,6 +861,7 @@ class Categorization(PreprocessRDF):
                     # checking for broken files
                     # they should raise an OSError when opening
                     f = ROOT.TFile.Open(self.get_path(inp)[0])
+                    f.Close()
                     df = self.RDataFrame(self.tree_name, self.get_path(inp),
                         allow_redefinition=self.allow_redefinition)
 
@@ -871,6 +872,7 @@ class Categorization(PreprocessRDF):
                         # checking for broken files
                         # they should raise an OSError when opening
                         f = ROOT.TFile.Open(elem)
+                        f.Close()
                         tchain.Add("{}/{}".format(elem, self.tree_name))
                     friend_tchain = ROOT.TChain()
                     for elem in self.get_path(inp, 1):
@@ -881,6 +883,7 @@ class Categorization(PreprocessRDF):
                 # checking for broken files
                 # they should raise an OSError when opening
                 f = ROOT.TFile.Open(self.input()["root"].path)
+                f.Close()
                 df = self.RDataFrame(self.tree_name, self.input()["root"].path,
                     allow_redefinition=self.allow_redefinition)
 
