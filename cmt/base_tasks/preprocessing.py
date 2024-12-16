@@ -858,6 +858,9 @@ class Categorization(PreprocessRDF):
                 # create RDataFrame
                 inp = self.get_input()
                 if not self.dataset.friend_datasets:
+                    # checking for broken files
+                    # they should raise an OSError when opening
+                    f = ROOT.TFile.Open(self.get_path(inp)[0])
                     df = self.RDataFrame(self.tree_name, self.get_path(inp),
                         allow_redefinition=self.allow_redefinition)
 
@@ -865,6 +868,9 @@ class Categorization(PreprocessRDF):
                 else:
                     tchain = ROOT.TChain()
                     for elem in self.get_path(inp):
+                        # checking for broken files
+                        # they should raise an OSError when opening
+                        f = ROOT.TFile.Open(elem)
                         tchain.Add("{}/{}".format(elem, self.tree_name))
                     friend_tchain = ROOT.TChain()
                     for elem in self.get_path(inp, 1):
@@ -872,6 +878,9 @@ class Categorization(PreprocessRDF):
                     tchain.AddFriend(friend_tchain, "friend")
                     df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
             else:
+                # checking for broken files
+                # they should raise an OSError when opening
+                f = ROOT.TFile.Open(self.input()["root"].path)
                 df = self.RDataFrame(self.tree_name, self.input()["root"].path,
                     allow_redefinition=self.allow_redefinition)
 
@@ -910,6 +919,9 @@ class Categorization(PreprocessRDF):
                 with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
                     json.dump(json_res, f, indent=4)
 
+        except OSError:  # broken input file
+            raise OSError(f"Input file for branch {self.branch} is broken. If it was produced "
+                "by PreprocessRDF, try removing the file and running the task again.")
         except ReferenceError:  # empty ntuple
             inp = self.input()["root"].path
             copy(inp, outp["root"].path)
