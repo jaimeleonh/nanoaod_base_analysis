@@ -56,15 +56,20 @@ class Config():
 
         self.x = kwargs
 
+        # for tau_id and bjet_id here use only a temporary default to initialise the base config
+        # in the analysis config these must be called a second time with the corrcet parameters
+        self = self.add_tau_id(2022, "idDeepTau2018v2p5")
+        self = self.add_bjet_id(2022, "preEE", "PNetB")
+
         self.categories = self.add_categories()
         self.processes, self.process_group_names, self.process_training_names = self.add_processes()
         self.datasets = self.add_datasets()
         if 'xrd_redir' in kwargs:
             self.prefix_datasets(self.datasets, kwargs['xrd_redir'])
+        self.systematics = self.add_systematics()
         self.features = self.add_features()
         self.versions = self.add_versions()
         self.weights = self.add_weights()
-        self.systematics = self.add_systematics()
         self.default_module_files = self.add_default_module_files()
 
         self.qcd_var1 = DotDict({"nominal": "os", "inverted": "ss"})
