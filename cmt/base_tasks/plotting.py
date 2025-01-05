@@ -1413,10 +1413,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
             setattr(mc_unc_graph, "title", "MC stat.")
             r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
-            r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
-                "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
-            entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
             if self.plot_systematics:
+                r.setup_graph(mc_unc_graph, props={"FillStyle": 3017, "LineColor": 0,
+                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
+                entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
                 syst_graph = hist_to_graph(bkg_histo_syst, remove_zeros=False, errors=True,
                     asymm=True, overflow=False, underflow=False,
                     attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
@@ -1426,10 +1426,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
                 # entries.append((syst_unc_graph, syst_unc_graph.title, "f"))
                 all_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                setattr(all_unc_graph, "title", "Norm. syst. + MC Stat.")
+                setattr(all_unc_graph, "title", "MC Stat. + Norm. Syst.")
                 entries.append((all_unc_graph, all_unc_graph.title, "f"))
-                r.setup_graph(all_unc_graph, props={"FillStyle": 3007, "LineColor": 0,
-                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
+                r.setup_graph(all_unc_graph, props={"FillStyle": 3001, "LineColor": 0,
+                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+            else:
+                r.setup_graph(mc_unc_graph, props={"FillStyle": 3001, "LineColor": 0,
+                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+                entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
 
             for i in range(binning_args[0]):
                 x, d, b = c_double(0.), c_double(0.), c_double(0.)
@@ -1465,12 +1469,12 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
             c.get_pad(2).cd()
             dummy_ratio_hist.Draw()
-            mc_unc_graph.Draw("2,SAME")
             if not self.hide_data:
                 ratio_graph.Draw("PEZ,SAME")
             if self.plot_systematics:
                 # syst_unc_graph.Draw("2,SAME")
                 all_unc_graph.Draw("2,SAME")
+            mc_unc_graph.Draw("2,SAME")
 
             lines = []
             for y in [0.5, 1.0, 1.5]:
@@ -2005,7 +2009,7 @@ class FeaturePlotSyst(FeaturePlot):
                 ratio_hist_down.SetLineStyle(0)
 
                 mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                r.setup_graph(mc_unc_graph, props={"FillStyle": 3004, "LineColor": 0,
+                r.setup_graph(mc_unc_graph, props={"FillStyle": 3001, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
 
                 for i in range(binning_args[0]+1):
