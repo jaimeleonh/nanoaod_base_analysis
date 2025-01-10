@@ -10,7 +10,7 @@ cmssw_setup:
     # IMPORTANT: Expand aliases in noninteractive bash mode
     # Otherwise cmsrel and cmsenv won't work
     - shopt -s expand_aliases
-    - yum install -y python3
+    - yum install -y python3 openssl-devel
     - yum install -y wget
     - yum install -y which
     # access CVMFS
