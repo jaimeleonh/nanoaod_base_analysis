@@ -425,6 +425,10 @@ class SlurmWorkflow(law.slurm.SlurmWorkflow):
         default=False,
         description="Save job logs to same location as outputs, default: False"
     )
+    shared_preprocessed = luigi.BoolParameter(
+        default=False,
+        description="Use shared preprocessed pNTuples stored in /eos/cms/store/group/phys_higgs/HHbbtautau/PreprocessRDF, default: False"
+    )
 
     def slurm_output_directory(self):
         # the directory where submission meta data should be stored
@@ -436,7 +440,10 @@ class SlurmWorkflow(law.slurm.SlurmWorkflow):
     def slurm_bootstrap_file(self):
         # each job can define a bootstrap file that is executed prior to the actual job
         # configure it to be shared across jobs and rendered as part of the job itself
-        bootstrap_file = os.path.expandvars("$CMT_BASE/cmt/slurm_tools/bootstrap.sh")
+        if self.shared_preprocessed:
+            bootstrap_file = os.path.expandvars("$CMT_BASE/cmt/slurm_tools/bootstrap_Pshared.sh")
+        else:
+            bootstrap_file = os.path.expandvars("$CMT_BASE/cmt/slurm_tools/bootstrap.sh")
         return law.JobInputFile(bootstrap_file, share=True, render_job=True)
 
     def slurm_job_config(self, config, job_num, branches):
