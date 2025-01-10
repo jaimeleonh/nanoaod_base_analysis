@@ -277,7 +277,8 @@ action() {
 
         if [ "$compile" == "1" ]
         then
-            scram b
+            export NUMPY_INCLUDE_DIR=$(python3 -c "import numpy; print(numpy.get_include())")
+            scram b USER_CXXFLAGS="-I$NUMPY_INCLUDE_DIR"
         fi
 
         eval `scramv1 runtime -sh`
