@@ -92,8 +92,6 @@ class BasePlotTask(ConfigTaskWithRegion):
         "systematic templates inside root files, default: True")
     remove_horns = luigi.BoolParameter(default=False, description="whether to remove horns "
         "from distributions, default: False")
-    tree_name = luigi.Parameter(default="Events", description="name of the tree inside "
-        "the root file, default: Events (nanoAOD)")
     optimization_method = luigi.ChoiceParameter(default="", choices=("", "bayesian_blocks"),
         significant=False, description="optimization method to be used, default: none")
 
