@@ -338,6 +338,10 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         default=False,
         description="Save job logs to same location as outputs, default: False"
     )
+    shared_preprocessed = luigi.BoolParameter(
+        default=False,
+        description="Use shared preprocessed pNTuples stored in /eos/cms/store/group/phys_higgs/HHbbtautau/PreprocessRDF, default: False"
+    )
 
     exclude_params_branch = {"max_runtime", "htcondor_central_scheduler", "custom_condor_tag"}
 
@@ -352,7 +356,10 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
     def htcondor_bootstrap_file(self):
         # each job can define a bootstrap file that is executed prior to the actual job
         # in order to setup software and environment variables
-        return os.path.expandvars("$CMT_BASE/cmt/files/cern_htcondor_bootstrap.sh")
+        if self.shared_preprocessed:
+            return os.path.expandvars("$CMT_BASE/cmt/files/cern_htcondor_bootstrap_Pshared.sh")
+        else:
+            return os.path.expandvars("$CMT_BASE/cmt/files/cern_htcondor_bootstrap.sh")
 
     def htcondor_output_postfix(self):
         return self.custom_output_tag + super(HTCondorWorkflow, self).htcondor_output_postfix()
