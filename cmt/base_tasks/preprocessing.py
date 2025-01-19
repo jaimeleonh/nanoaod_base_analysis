@@ -191,6 +191,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         self.custom_output_tag = "_%s" % self.addendum
         self.threshold = self.dataset.get_aux("event_threshold", None)
         self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        self.additional_tree = self.dataset.get_aux("additional_tree", None)
 
     def get_addendum(self):
         if self.systematic:
@@ -300,6 +301,10 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         if not self.dataset.friend_datasets:
             df = self.RDataFrame(self.tree_name, self.get_path(inp),
                 allow_redefinition=self.allow_redefinition)
+            # Additional tree RDF
+            if self.additional_tree:
+                df_additional = self.RDataFrame(self.additional_tree, self.get_path(inp),
+                    allow_redefinition=self.allow_redefinition)
 
         # friend tree
         else:
@@ -317,6 +322,8 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
             for module in weight_modules:
                 try:
                     df, _ = module.run(df)
+                    if self.additional_tree:
+                        df_additional, _ = module.run(df_additional)
                 except Exception as e:
                     print("Exception: %s. Exiting" % e)
                     sys.exit(1)
@@ -332,9 +339,21 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         else:
             histo_weight = df.Define("var", "1.").Histo1D(hmodel, "var")
 
+        nevents_additional = 0.0
+        nweightedevents_additional = 0.0
+        if self.additional_tree:
+            histo_noweight_additional = df_additional.Define("var", "1.").Histo1D(hmodel, "var")
+            if not self.dataset.process.isData:
+                histo_weight_additional = df_additional.Define("var", "1.").Define("weight", weight).Histo1D(
+                    hmodel, "var", "weight")
+            else:
+                histo_weight_additional = df_additional.Define("var", "1.").Histo1D(hmodel, "var")
+            nevents_additional = histo_noweight_additional.Integral()
+            nweightedevents_additional = histo_weight_additional.Integral()
+
         d = {
-            "nevents": histo_noweight.Integral(),
-            "nweightedevents": histo_weight.Integral(),
+            "nevents": histo_noweight.Integral() + nevents_additional,
+            "nweightedevents": histo_weight.Integral() + nweightedevents_additional,
             "filenames": [str(self.get_path(inp))]
         }
 
