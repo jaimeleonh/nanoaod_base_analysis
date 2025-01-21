@@ -191,7 +191,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         self.custom_output_tag = "_%s" % self.addendum
         self.threshold = self.dataset.get_aux("event_threshold", None)
         self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
-        self.additional_tree = self.dataset.get_aux("additional_tree", None)
+        self.additional_trees = self.dataset.get_aux("additional_trees", [])
 
     def get_addendum(self):
         if self.systematic:
@@ -302,9 +302,11 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
             df = self.RDataFrame(self.tree_name, self.get_path(inp),
                 allow_redefinition=self.allow_redefinition)
             # Additional tree RDF
-            if self.additional_tree:
-                df_additional = self.RDataFrame(self.additional_tree, self.get_path(inp),
+            additional_dfs = []
+            for additional_tree in self.additional_trees:
+                df_additional = self.RDataFrame(additional_tree, self.get_path(inp),
                     allow_redefinition=self.allow_redefinition)
+                additional_dfs.append(df_additional)
 
         # friend tree
         else:
@@ -322,8 +324,8 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
             for module in weight_modules:
                 try:
                     df, _ = module.run(df)
-                    if self.additional_tree:
-                        df_additional, _ = module.run(df_additional)
+                    for idf in range(len(additional_dfs)):
+                        additional_dfs[idf], _ = module.run(additional_dfs[idf])
                 except Exception as e:
                     print("Exception: %s. Exiting" % e)
                     sys.exit(1)
@@ -341,15 +343,15 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
 
         nevents_additional = 0.0
         nweightedevents_additional = 0.0
-        if self.additional_tree:
+        for df_additional in additional_dfs:
             histo_noweight_additional = df_additional.Define("var", "1.").Histo1D(hmodel, "var")
             if not self.dataset.process.isData:
                 histo_weight_additional = df_additional.Define("var", "1.").Define("weight", weight).Histo1D(
                     hmodel, "var", "weight")
             else:
                 histo_weight_additional = df_additional.Define("var", "1.").Histo1D(hmodel, "var")
-            nevents_additional = histo_noweight_additional.Integral()
-            nweightedevents_additional = histo_weight_additional.Integral()
+            nevents_additional += histo_noweight_additional.Integral()
+            nweightedevents_additional += histo_weight_additional.Integral()
 
         d = {
             "nevents": histo_noweight.Integral() + nevents_additional,
