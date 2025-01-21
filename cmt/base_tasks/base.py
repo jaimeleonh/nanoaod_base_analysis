@@ -7,6 +7,8 @@ Base tasks.
 __all__ = [
     "Task", "ConfigTask", "ConfigTaskWithCategory", "DatasetTask", "DatasetTaskWithCategory",
     "DatasetWrapperTask", "HTCondorWorkflow", "SGEWorkflow", "SlurmWorkflow" "InputData",
+    "fully_split_branch_map", "categorization_branch_map", "get_n_files_after_merging",
+    "get_categorization_merging_factor", "get_categorization_reduced_branch"
 ]
 
 
@@ -24,6 +26,7 @@ import luigi
 import law
 
 from law.util import merge_dicts
+from cmt.util import chunked_list
 from law.contrib.htcondor.job import HTCondorJobFileFactory
 from cmt.sge.job import SGEJobFileFactory
 from cmt.sge.workflow import SGEWorkflow as SGEWorkflowTmp
@@ -31,11 +34,112 @@ from cmt.sge.workflow import SGEWorkflow as SGEWorkflowTmp
 
 from abc import abstractmethod
 
-from analysis_tools import ObjectCollection
+from analysis_tools import ObjectCollection, Dataset, Category
 from analysis_tools.utils import import_root
 
 law.contrib.load("cms", "git", "htcondor", "slurm", "root", "tasks", "telegram", "tensorflow", "wlcg")
 
+
+#------------------------------------------------------------------------------------------------------------
+# various functions that might be used multiple times in differnt classes
+
+def fully_split_branch_map(config_name:str, dataset:Dataset):
+    """
+    :return: number of files for the selected dataset
+    :rtype: int
+    """
+    threshold = dataset.get_aux("event_threshold", None)
+    merging_factor = dataset.get_aux("preprocess_merging_factor", None)
+    if not threshold and not merging_factor:
+        return len(dataset.get_files(
+            os.path.expandvars("$CMT_TMP_DIR/%s/" % config_name), add_prefix=False,
+            check_empty=False))
+    elif threshold and not merging_factor:
+        return len(dataset.get_file_groups(
+            path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % config_name),
+            threshold=threshold))
+    elif not threshold and merging_factor:
+        nfiles = len(dataset.get_files(
+            os.path.expandvars("$CMT_TMP_DIR/%s/" % config_name), add_prefix=False,
+            check_empty=False))
+        nbranches = nfiles // dataset.get_aux("preprocess_merging_factor")
+        if nfiles % dataset.get_aux("preprocess_merging_factor"):
+            nbranches += 1
+        return nbranches
+    else:
+        raise ValueError("Both event_threshold and preprocess_merging_factor "
+            "can't be set at once")
+
+
+def categorization_branch_map(config_name, dataset, merging_factor):
+    """
+    Returns dict(branch_nb=dict(
+        reduced_branch_nb=..., # what the numeric branch number would be with only one systematic, for output file nb. in case no preprocess merging this is the parent branch, otherwise its maximum is lower
+        parent_branches=[], # list of branch numbers of parent task (ie PreProcess branch numbers)
+        part_single_file=True/False, # if True, then we use a subset of a single file using RDataframe.Range (only for len(parent_branches)==1)
+        initial_event=, # if part_single_file=True, first event to process
+        max_events=,
+        )
+    )
+    merging_factor can be None in which case no merging will be performed
+    TODO merging_factor should be called n_files_after_merging or something
+    """
+    branch_datas = []
+
+    preproc_n_files = fully_split_branch_map(config_name, dataset)
+    if merging_factor is not None and merging_factor >= 1:
+        branch_datas.extend(
+            dict(reduced_branch_nb=i, parent_branches=chunk, part_single_file=False)
+            for i, chunk in enumerate(chunked_list(range(preproc_n_files), merging_factor))
+        )
+    else:
+        branch_datas.extend(
+            dict(reduced_branch_nb=i, parent_branches=[i], part_single_file=False)
+            for i in range(preproc_n_files)
+        )
+    return {i : data for i, data in enumerate(branch_datas)}
+
+
+def get_n_files_after_merging(dataset:Dataset, category:Category, dataset_key="merging", default=1):
+    """ For a given dataset-category, get the number of files at the output of MergeCategorization (depends on Dataset.`dataset_key` setting).
+    This setting has to be a dict(category_pattern->number). If there is an exact match in category name, that value will be picked.
+    Otherwise all keys will be tried in order, picking the first one such that `key in category.name` (ie substring matching).
+    Using an empty string (ie {"":5} for example ) will match any category """
+    n_files_after_requested_merging = default
+    n_files_after_merging = 1
+    if dataset.get_aux(dataset_key, None):
+        try:
+            n_files_after_requested_merging = dataset.get_aux(dataset_key)[category.name]
+        except KeyError:
+            print(f"Merging factor for {dataset.name} - {category.name} not found. "
+                  f"Defaulting to '{dataset_key}={default}'.")
+
+    # check that the merging factor applied in MergeCategorization is smaller than any previous
+    # merging to avoid the situations of merging e.g. 3 inputs in 5 outputs
+    if dataset_key != "merging":
+        if dataset.get_aux("merging", None):
+            try:
+                n_files_after_merging = dataset.get_aux("merging")[category.name]
+            except KeyError:
+                print(f"Merging factor for {dataset.name} - {category.name} not found. "
+                        "Defaulting to n_files_after_merging=1.")
+
+        if n_files_after_requested_merging > 0 and n_files_after_requested_merging < n_files_after_merging:
+            raise ValueError(f"In {dataset.name} - {category.name}, "
+                             f"merging factor '{dataset_key}={n_files_after_requested_merging}' is smaller than 'merging={n_files_after_merging}', "
+                              "which is not suported. Please fix their values.")
+
+    return n_files_after_requested_merging
+
+
+def get_categorization_merging_factor(dataset, category):
+    return get_n_files_after_merging(dataset, category, dataset_key="categorization_merging", default=0)
+
+
+def get_categorization_reduced_branch(branch_data):
+    return f"{branch_data['reduced_branch_nb']}"
+
+#------------------------------------------------------------------------------------------------------------
 
 class Target():
     def __init__(self, path, *args, **kwargs):
@@ -250,11 +354,7 @@ class DatasetTaskWithCategory(ConfigTaskWithCategory, ConfigTaskWithRegion, Data
 
     def __init__(self, *args, **kwargs):
         super(DatasetTaskWithCategory, self).__init__(*args, **kwargs)
-
-        if self.dataset.get_aux("merging", None):
-            self.n_files_after_merging = self.dataset.get_aux("merging").get(self.category.name, 1)
-        else:
-            self.n_files_after_merging = 1
+        self.n_files_after_merging = get_n_files_after_merging(self.dataset, self.category)
 
 
 class DatasetWrapperTask(ConfigTask):
