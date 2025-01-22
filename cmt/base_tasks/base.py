@@ -41,7 +41,7 @@ law.contrib.load("cms", "git", "htcondor", "slurm", "root", "tasks", "telegram",
 
 
 #------------------------------------------------------------------------------------------------------------
-# various functions that might be used multiple times in differnt classes
+# various functions that might be used multiple times in different classes
 
 def fully_split_branch_map(config_name:str, dataset:Dataset):
     """
@@ -74,37 +74,36 @@ def fully_split_branch_map(config_name:str, dataset:Dataset):
 def categorization_branch_map(config_name, dataset, merging_factor):
     """
     Returns dict(branch_nb=dict(
-        reduced_branch_nb=..., # what the numeric branch number would be with only one systematic, for output file nb. in case no preprocess merging this is the parent branch, otherwise its maximum is lower
-        parent_branches=[], # list of branch numbers of parent task (ie PreProcess branch numbers)
-        part_single_file=True/False, # if True, then we use a subset of a single file using RDataframe.Range (only for len(parent_branches)==1)
-        initial_event=, # if part_single_file=True, first event to process
-        max_events=,
+        reduced_branch_nb=..., # output branch number that will be inherited by daughter tasks (i.e. MergeCategorization/PrePlot)
+        parent_branches=[], # list of input branch numbers that will be merged from parent task (i.e. PreprocessRDF branch numbers)
         )
     )
-    merging_factor can be None in which case no merging will be performed
-    TODO merging_factor should be called n_files_after_merging or something
+    merging_factor can be None/0 in which case no merging will be performed
     """
     branch_datas = []
 
     preproc_n_files = fully_split_branch_map(config_name, dataset)
-    if merging_factor is not None and merging_factor >= 1:
+    if merging_factor and merging_factor >= 1:
         branch_datas.extend(
-            dict(reduced_branch_nb=i, parent_branches=chunk, part_single_file=False)
+            dict(reduced_branch_nb=i, parent_branches=chunk)
             for i, chunk in enumerate(chunked_list(range(preproc_n_files), merging_factor))
         )
     else:
         branch_datas.extend(
-            dict(reduced_branch_nb=i, parent_branches=[i], part_single_file=False)
+            dict(reduced_branch_nb=i, parent_branches=[i])
             for i in range(preproc_n_files)
         )
     return {i : data for i, data in enumerate(branch_datas)}
 
 
 def get_n_files_after_merging(dataset:Dataset, category:Category, dataset_key="merging", default=1):
-    """ For a given dataset-category, get the number of files at the output of MergeCategorization (depends on Dataset.`dataset_key` setting).
-    This setting has to be a dict(category_pattern->number). If there is an exact match in category name, that value will be picked.
-    Otherwise all keys will be tried in order, picking the first one such that `key in category.name` (ie substring matching).
-    Using an empty string (ie {"":5} for example ) will match any category """
+    """
+    For a given dataset-category, get the number of files at the output of the task that could undergo merging.
+    The `dataset_key` parameter regulates wich task merging factor we are retrieving.
+    The dataset_key setting in the dataset is a dict(category: number).
+    If there is an exact match in category name, that value will be picked.
+    If the category name is not found the default "non-merging" value will be set.
+    """
     n_files_after_requested_merging = default
     n_files_after_merging = 1
     if dataset.get_aux(dataset_key, None):
