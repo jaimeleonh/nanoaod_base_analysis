@@ -923,80 +923,72 @@ class Categorization(PreprocessRDF):
                     json.dump({}, f, indent=4)
             return
 
+        if len(non_empty_input_files) == 1 and not self.dataset.friend_datasets:
+            # simple case : we don't need to amnually build a TTree/TChain
+            df = self.RDataFrame(self.tree_name, non_empty_input_files[0],
+                    allow_redefinition=self.allow_redefinition)
+
+        else:
+            tchain = ROOT.TChain(self.tree_name)
+            for in_file in non_empty_input_files:
+                sts = tchain.AddFile(in_file, 0)
+                if not sts:
+                    # this error should actually always be caught by the checks done above
+                    raise RuntimeError(f"Input file for branch '{in_file}' is corrupted or missing. If it was produced "
+                                        "by PreprocessRDF, try removing the file and running the task again.")
+
+
+            if self.dataset.friend_datasets:
+                assert (len(non_empty_input_files) == len(input_files))
+                friend_tchain = ROOT.TChain(self.tree_name)
+                for input_target in self.input():
+                    # only one friend dataset is supported
+                    assert (len(input_target) == 2)
+                    # InputData output is a tuple, assume second element is the friend
+                    sts = friend_tchain.AddFile(input_target[1].path, 0)
+                    if not sts:
+                        # this error should actually always be caught by the checks done above
+                        raise RuntimeError(f"Input file for branch '{in_file}' is corrupted or missing. If it was produced "
+                                            "by PreprocessRDF, try removing the file and running the task again.")
+
+                tchain.AddFriend(friend_tchain, "friend")
+
+            df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
+
+        # restricting number of events
+        if self.max_events:
+            df = df.Range(self.splitted_branches[self.branch]["initial_event"],
+                self.splitted_branches[self.branch]["max_events"])
+
+        selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
+            self.systematic, self.systematic_direction)
+        dataset_selection = self.dataset.get_aux("selection")
+        if dataset_selection and dataset_selection != "1":
+            selection = jrs(dataset_selection, selection, op="and")
         try:
-            if len(non_empty_input_files) == 1 and not self.dataset.friend_datasets:
-                # simple case : we don't need to amnually build a TTree/TChain
-                df = self.RDataFrame(self.tree_name, non_empty_input_files[0],
-                        allow_redefinition=self.allow_redefinition)
+            branches = list(df.GetColumnNames())
+        except:
+            raise ReferenceError
+        feature_modules = self.get_feature_modules(self.feature_modules_file)
+        if len(feature_modules) > 0:
+            for module in feature_modules:
+                try:
+                    df, add_branches = module.run(df)
+                except Exception as e:
+                    print("Exception: %s. Exiting" % e)
+                    sys.exit(1)
+                branches += add_branches
+        branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
+        filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
+        filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
 
-            else:
-                tchain = ROOT.TChain()
-                for in_file in non_empty_input_files:
-                    tchain.AddFile(f"{in_file}?#{self.tree_name}")
-
-                if self.dataset.friend_datasets:
-                    assert (len(non_empty_input_files) == len(input_files))
-                    friend_tchain = ROOT.TChain()
-                    for input_target in self.input():
-                        # only one friend dataset is supported
-                        assert (len(input_target) == 2)
-                        # InputData output is a tuple, assume second element is the friend
-                        friend_tchain.AddFile(f"{input_target[1].path}?#{self.tree_name}")
-
-                    tchain.AddFriend(friend_tchain, "friend")
-
-                df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
-
-            # restricting number of events
-            if self.max_events:
-                df = df.Range(self.splitted_branches[self.branch]["initial_event"],
-                    self.splitted_branches[self.branch]["max_events"])
-
-            selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
-                self.systematic, self.systematic_direction)
-            dataset_selection = self.dataset.get_aux("selection")
-            if dataset_selection and dataset_selection != "1":
-                selection = jrs(dataset_selection, selection, op="and")
-            try:
-                branches = list(df.GetColumnNames())
-            except:
-                raise ReferenceError
-            feature_modules = self.get_feature_modules(self.feature_modules_file)
-            if len(feature_modules) > 0:
-                for module in feature_modules:
-                    try:
-                        df, add_branches = module.run(df)
-                    except Exception as e:
-                        print("Exception: %s. Exiting" % e)
-                        sys.exit(1)
-                    branches += add_branches
-            branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-            filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
-            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
-
-            if self.compute_filter_efficiency:
-                report = filtered_df.Report()
-                json_res = {cutReport.GetName():
-                    {"pass": cutReport.GetPass(), "all": cutReport.GetAll()}
-                    for cutReport in report.GetValue()}
-                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                    json.dump(json_res, f, indent=4)
-
-        # except empty ntuple
-        except ReferenceError:
-            inp = self.input()["root"].path
-            copy(inp, outp["root"].path)
-            if self.compute_filter_efficiency:
-                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                    json.dump({}, f, indent=4)
-
-        # except empty input file
-        except AttributeError:
-            inp = self.input()["root"].path
-            copy(inp, outp["root"].path)
-            if self.compute_filter_efficiency:
-                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                    json.dump({}, f, indent=4)
+        if self.compute_filter_efficiency:
+            report = filtered_df.Report()
+            json_res = {cutReport.GetName():
+                {"pass": cutReport.GetPass(), "all": cutReport.GetAll()}
+                for cutReport in report.GetValue()}
+            with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                json.dump(json_res, f, indent=4)
 
 
 class CategorizationWrapper(DatasetCategorySystWrapperTask):
