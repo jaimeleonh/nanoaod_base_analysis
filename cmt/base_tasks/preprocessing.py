@@ -470,7 +470,15 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
         if self.compute_filter_efficiency == True:
             report = filtered_df.Report()
-        filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), tuple(branches))
+
+        if filtered_df.Count().GetValue() > 0:
+            filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), tuple(branches))
+        else:
+            output_file = ROOT.TFile(create_file_dir(outp.path), "RECREATE")
+            empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
+            empty_tree.Write()
+            output_file.Close()
+
         if self.compute_filter_efficiency == True:
             json_res = {cutReport.GetName() : {
                 "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
@@ -897,27 +905,27 @@ class Categorization(PreprocessRDF):
             try:
                 with law.contrib.root.GuardedTFile(in_file) as file:
                     if file.IsZombie():
-                        raise RuntimeError(f"Input file for branch '{in_file}' is zombie. If it was produced "
+                        raise RuntimeError(f"Categorization : Input file for branch '{in_file}' is zombie. If it was produced "
                                             "by PreprocessRDF, try removing the file and running the task again.")
 
                     evts = file.Get("Events")
                     if not evts:
-                        raise RuntimeError(f"Input file for branch '{in_file}' is empty. If it was produced "
+                        raise RuntimeError(f"Categorization : Input file for branch '{in_file}' is empty. If it was produced "
                                             "by PreprocessRDF, try removing the file and running the task again.")
 
                     if evts.GetEntries() > 0:
                         non_empty_input_files.append(in_file)
                     else:
-                        print(f"Removing healthy but empty input file {in_file}")
+                        print(f"Categorization : Removing healthy but empty input file {in_file}")
 
             except OSError:
-                raise OSError(f"Input file for branch '{in_file}' is corrupted or missing. If it was produced "
+                raise OSError(f"Categorization : Input file for branch '{in_file}' is corrupted or missing. If it was produced "
                                "by PreprocessRDF, try removing the file and running the task again.")
 
         # if files are healthy but all empty create empty output and return
         if len(non_empty_input_files) == 0:
-            print(f"All healthy but empty input files. Creating empty output.")
-            df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), [])
+            print(f"Categorization : All healthy but empty input files. Copying first empty input to output.")
+            copy(input_files[0], outp["root"].path)
             if self.compute_filter_efficiency:
                 with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
                     json.dump({}, f, indent=4)
