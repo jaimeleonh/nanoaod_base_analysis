@@ -10,6 +10,6 @@ action() {
     export CMT_ON_SLURM="1"
     export X509_USER_PROXY="{{cmt_base}}/x509up"
 
-    source "{{cmt_base}}/../setup.sh"
+    source "{{cmt_base}}/../setup.sh" -p shared
 }
 action

@@ -27,7 +27,8 @@ from analysis_tools.utils import (
 )
 from cmt.base_tasks.base import (
     DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
-    ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask
+    ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask,
+    get_categorization_merging_factor
 )
 
 from cmt.base_tasks.preprocessing import (
@@ -279,7 +280,11 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         elif self.skip_merging:
             categorization_max_events = self.dataset.get_aux("categorization_max_events", None)
             if categorization_max_events is None:
-                return input_data_count()
+                categorization_merging_factor = get_categorization_merging_factor(self.dataset, self.category)
+                if categorization_merging_factor:
+                    return categorization_merging_factor
+                else:
+                    return input_data_count()
             else:
                 # in case we have used the Categorization splitting output
                 with open(create_file_dir(os.path.expandvars(

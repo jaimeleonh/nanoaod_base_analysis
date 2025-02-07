@@ -9,6 +9,7 @@ __all__ = [
     "extract_branch_names", "check_expression", "feature_expression", "get_expression_infos",
     "iter_tree", "evaluate_model_on_tree", "poisson_asym_errors", "hist_to_array", "hist_to_graph",
     "get_graph_maximum", "update_graph_values", "optimize_binning", "parse_workflow_file",
+    "chunked_list"
 ]
 
 
@@ -698,3 +699,20 @@ def parse_workflow_file(workflow_file):
                     _data)
 
     return workflow_data, training_data
+
+
+def chunked_list(lst, n):
+    """Split a list into n chunks."""
+    if n <= 0:
+        raise ValueError("Number of chunks must be greater than 0.")
+    lst = list(lst)
+    # Calculate the size of each chunk (some chunks may be larger by 1 if the division isn't exact)
+    chunk_size = len(lst) // n
+    remainder = len(lst) % n
+
+    start = 0
+    for i in range(n):
+        # Add one extra item to the first 'remainder' chunks
+        end = start + chunk_size + (1 if i < remainder else 0)
+        yield lst[start:end]
+        start = end

@@ -24,7 +24,9 @@ from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import (
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
-    InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask
+    InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask,
+    fully_split_branch_map, get_categorization_merging_factor, categorization_branch_map,
+    get_categorization_reduced_branch
 )
 
 directions = ["up", "down"]
@@ -191,6 +193,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         self.custom_output_tag = "_%s" % self.addendum
         self.threshold = self.dataset.get_aux("event_threshold", None)
         self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
+        self.additional_trees = self.dataset.get_aux("additional_trees", [])
 
     def get_addendum(self):
         if self.systematic:
@@ -209,27 +212,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         :return: number of files for the selected dataset
         :rtype: int
         """
-        self.threshold = self.dataset.get_aux("event_threshold", None)
-        self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
-        if not self.threshold and not self.merging_factor:
-            return len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
-                check_empty=True))
-        elif self.threshold and not self.merging_factor:
-            return len(self.dataset.get_file_groups(
-                path_to_look=os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name),
-                threshold=self.threshold))
-        elif not self.threshold and self.merging_factor:
-            nfiles = len(self.dataset.get_files(
-                os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
-                check_empty=True))
-            nbranches = nfiles // self.dataset.get_aux("preprocess_merging_factor")
-            if nfiles % self.dataset.get_aux("preprocess_merging_factor"):
-                nbranches += 1
-            return nbranches
-        else:
-            raise ValueError("Both event_threshold and preprocess_merging_factor "
-                "can't be set at once")
+        return fully_split_branch_map(self.config_name, self.dataset)
 
     def workflow_requires(self):
         """
@@ -300,6 +283,12 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         if not self.dataset.friend_datasets:
             df = self.RDataFrame(self.tree_name, self.get_path(inp),
                 allow_redefinition=self.allow_redefinition)
+            # Additional tree RDF
+            additional_dfs = []
+            for additional_tree in self.additional_trees:
+                df_additional = self.RDataFrame(additional_tree, self.get_path(inp),
+                    allow_redefinition=self.allow_redefinition)
+                additional_dfs.append(df_additional)
 
         # friend tree
         else:
@@ -317,6 +306,8 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
             for module in weight_modules:
                 try:
                     df, _ = module.run(df)
+                    for idf in range(len(additional_dfs)):
+                        additional_dfs[idf], _ = module.run(additional_dfs[idf])
                 except Exception as e:
                     print("Exception: %s. Exiting" % e)
                     sys.exit(1)
@@ -332,9 +323,21 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         else:
             histo_weight = df.Define("var", "1.").Histo1D(hmodel, "var")
 
+        nevents_additional = 0.0
+        nweightedevents_additional = 0.0
+        for df_additional in additional_dfs:
+            histo_noweight_additional = df_additional.Define("var", "1.").Histo1D(hmodel, "var")
+            if not self.dataset.process.isData:
+                histo_weight_additional = df_additional.Define("var", "1.").Define("weight", weight).Histo1D(
+                    hmodel, "var", "weight")
+            else:
+                histo_weight_additional = df_additional.Define("var", "1.").Histo1D(hmodel, "var")
+            nevents_additional += histo_noweight_additional.Integral()
+            nweightedevents_additional += histo_weight_additional.Integral()
+
         d = {
-            "nevents": histo_noweight.Integral(),
-            "nweightedevents": histo_weight.Integral(),
+            "nevents": histo_noweight.Integral() + nevents_additional,
+            "nweightedevents": histo_weight.Integral() + nweightedevents_additional,
             "filenames": [str(self.get_path(inp))]
         }
 
@@ -467,7 +470,15 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
         if self.compute_filter_efficiency == True:
             report = filtered_df.Report()
-        filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), tuple(branches))
+
+        if filtered_df.Count().GetValue() > 0:
+            filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), tuple(branches))
+        else:
+            output_file = ROOT.TFile(create_file_dir(outp.path), "RECREATE")
+            empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
+            empty_tree.Write()
+            output_file.Close()
+
         if self.compute_filter_efficiency == True:
             json_res = {cutReport.GetName() : {
                 "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
@@ -739,10 +750,14 @@ class Categorization(PreprocessRDF):
     def __init__(self, *args, **kwargs):
         super(Categorization, self).__init__(*args, **kwargs)
         self.max_events = self.dataset.get_aux("categorization_max_events", None)
+        self.categorization_merging_factor = get_categorization_merging_factor(self.dataset, self.category)
+
         if sum((x is not None for x in [self.dataset.get_aux("categorization_max_events"), self.dataset.get_aux("preprocess_merging_factor"), self.dataset.get_aux("event_threshold")])) > 1:
             raise RuntimeError(f"Dataset {self.dataset.name} error : you can only specify one of categorization_max_events, preprocess_merging_factor, event_threshold a the same time")
         if self.dataset.get_aux("categorization_max_events") is not None and self.request_cpus > 1:
             raise RuntimeError(f"Dataset.categorization_max_events is not compatible with request_cpus > 1 (in dataset {self.dataset.name}), due to RDataFrame limitation") # RDataFrame.Range is not compatible with multithreading
+        if self.max_events and self.categorization_merging_factor:
+            raise RuntimeError(f"Dataset {self.dataset.name} error : you can only specify one of categorization_max_events and categorization_merging")
         if self.max_events is not None:
             if not hasattr(self, "splitted_branches") and self.is_workflow():
                 self.splitted_branches = self.build_splitted_branches()
@@ -803,36 +818,53 @@ class Categorization(PreprocessRDF):
         return self.splitted_branches
 
     def create_branch_map(self):
-        if self.max_events is not None:
+        if self.max_events:
             return len(self.splitted_branches)
         else:
-            return super().create_branch_map()
+            return categorization_branch_map(self.config_name, self.dataset, self.categorization_merging_factor)
 
     def workflow_requires(self):
-        if not self.skip_preprocess:
-            return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
-        else:
+        if self.skip_preprocess:
             return {"data": InputData.req(self)}
+        else:
+            return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
 
     def requires(self):
-        if self.max_events is not None:
+        if self.max_events:
             preprocess_branch = self.splitted_branches[self.branch]["filenumber"]
+            if self.skip_preprocess:
+                return InputData.req(self, file_index=preprocess_branch)
+            else:
+                return PreprocessRDF.vreq(self, category_name=self.base_category_name,
+                    branch=preprocess_branch)
+
         else:
-            preprocess_branch = self.branch
-        if not self.skip_preprocess:
-            return PreprocessRDF.vreq(self, category_name=self.base_category_name,
-                branch=preprocess_branch)
-        else:
-            return InputData.req(self, file_index=preprocess_branch)
+            parent_branches = self.branch_data["parent_branches"]
+            if self.skip_preprocess:
+                return [InputData.req(self, file_index=file_index) for file_index in parent_branches]
+
+            else:
+                if len(parent_branches) == 1:
+                    preprocess_kwargs = dict(branch=parent_branches[0])
+                elif len(parent_branches) > 1:
+                    preprocess_kwargs = dict(branches=parent_branches)
+
+                return PreprocessRDF.vreq(self, category_name=self.base_category_name,
+                    **preprocess_kwargs, _exclude=["branch"])
 
     def output(self):
         """
         :return: One file per input file with the tree + additional branches
         :rtype: `.root`
         """
-        out = {"root" : self.local_target(f"data_{self.addendum}{self.branch}.root")}
+        if self.max_events:
+            branch = self.branch
+        else:
+            branch = get_categorization_reduced_branch(self.branch_data)
+
+        out = {"root" : self.local_target(f"data_{self.addendum}{branch}.root")}
         if self.compute_filter_efficiency:
-            out["cut_flow"] = self.local_target(f"cutflow_{self.addendum}{self.branch}.json")
+            out["cut_flow"] = self.local_target(f"cutflow_{self.addendum}{branch}.json")
         out = law.SiblingFileCollection(out)
         return out
 
@@ -848,100 +880,123 @@ class Categorization(PreprocessRDF):
         ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
-        # prepare inputs and outputs
-        # inp = self.input()["data"].path
-        # inp = self.input().path
+        # prepare outputs and inputs
         outp = self.output()
-        # tf = ROOT.TFile.Open(inp)
-        try:
-            if self.skip_preprocess:
-                # create RDataFrame
-                inp = self.get_input()
-                if not self.dataset.friend_datasets:
-                    # checking for broken files
-                    # they should raise an OSError when opening
-                    f = ROOT.TFile.Open(self.get_path(inp)[0])
-                    f.Close()
-                    df = self.RDataFrame(self.tree_name, self.get_path(inp),
-                        allow_redefinition=self.allow_redefinition)
 
-                # friend tree
-                else:
-                    tchain = ROOT.TChain()
-                    for elem in self.get_path(inp):
-                        # checking for broken files
-                        # they should raise an OSError when opening
-                        f = ROOT.TFile.Open(elem)
-                        f.Close()
-                        tchain.Add("{}/{}".format(elem, self.tree_name))
-                    friend_tchain = ROOT.TChain()
-                    for elem in self.get_path(inp, 1):
-                        friend_tchain.Add("{}/{}".format(elem, self.tree_name))
-                    tchain.AddFriend(friend_tchain, "friend")
-                    df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
+        if self.max_events:
+            if self.skip_preprocess:
+                input_files = [self.get_path(inp)[0]]
             else:
-                # checking for broken files
-                # they should raise an OSError when opening
-                f = ROOT.TFile.Open(self.input()["root"].path)
-                f.Close()
-                df = self.RDataFrame(self.tree_name, self.input()["root"].path,
+                input_files = [self.input()["root"].path]
+        else:
+            if self.skip_preprocess:
+                input_files = [t[0].path for t in self.input()]
+            else:
+                if len(self.branch_data["parent_branches"]) == 1:
+                    input_files = [self.input()["root"].path]
+                else:
+                    try:
+                        input_files = [x["root"].path for x in self.input()["collection"].targets.values()]
+                    except Exception as e:
+                        raise Exception(f'Categorization : did not find file paths in task input collection {repr(self.input()["collection"].targets)}. branch_data={self.branch_data}') from e
+
+        non_empty_input_files = []
+        for in_file in input_files:
+            try:
+                with law.contrib.root.GuardedTFile(in_file) as file:
+                    if file.IsZombie():
+                        raise RuntimeError(f"Categorization : Input file for branch '{in_file}' is zombie. If it was produced "
+                                            "by PreprocessRDF, try removing the file and running the task again.")
+
+                    evts = file.Get("Events")
+                    if not evts:
+                        raise RuntimeError(f"Categorization : Input file for branch '{in_file}' is empty. If it was produced "
+                                            "by PreprocessRDF, try removing the file and running the task again.")
+
+                    if evts.GetEntries() > 0:
+                        non_empty_input_files.append(in_file)
+                    else:
+                        print(f"Categorization : Removing healthy but empty input file {in_file}")
+
+            except OSError:
+                raise OSError(f"Categorization : Input file for branch '{in_file}' is corrupted or missing. If it was produced "
+                               "by PreprocessRDF, try removing the file and running the task again.")
+
+        # if files are healthy but all empty create empty output and return
+        if len(non_empty_input_files) == 0:
+            print(f"Categorization : All healthy but empty input files. Copying first empty input to output.")
+            copy(input_files[0], outp["root"].path)
+            if self.compute_filter_efficiency:
+                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                    json.dump({}, f, indent=4)
+            return
+
+        if len(non_empty_input_files) == 1 and not self.dataset.friend_datasets:
+            # simple case : we don't need to amnually build a TTree/TChain
+            df = self.RDataFrame(self.tree_name, non_empty_input_files[0],
                     allow_redefinition=self.allow_redefinition)
 
-            # restricting number of events
-            if self.max_events is not None:
-                df = df.Range(self.splitted_branches[self.branch]["initial_event"],
-                    self.splitted_branches[self.branch]["max_events"])
+        else:
+            tchain = ROOT.TChain(self.tree_name)
+            for in_file in non_empty_input_files:
+                sts = tchain.AddFile(in_file, 0)
+                if not sts:
+                    # this error should actually always be caught by the checks done above
+                    raise RuntimeError(f"Input file for branch '{in_file}' is corrupted or missing. If it was produced "
+                                        "by PreprocessRDF, try removing the file and running the task again.")
 
-            selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
-                self.systematic, self.systematic_direction)
-            dataset_selection = self.dataset.get_aux("selection")
-            if dataset_selection and dataset_selection != "1":
-                selection = jrs(dataset_selection, selection, op="and")
-            try:
-                branches = list(df.GetColumnNames())
-            except:
-                raise ReferenceError
-            feature_modules = self.get_feature_modules(self.feature_modules_file)
-            if len(feature_modules) > 0:
-                for module in feature_modules:
-                    try:
-                        df, add_branches = module.run(df)
-                    except Exception as e:
-                        print("Exception: %s. Exiting" % e)
-                        sys.exit(1)
-                    branches += add_branches
-            branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-            filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
-            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
 
-            if self.compute_filter_efficiency:
-                report = filtered_df.Report()
-                json_res = {cutReport.GetName():
-                    {"pass": cutReport.GetPass(), "all": cutReport.GetAll()}
-                    for cutReport in report.GetValue()}
-                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                    json.dump(json_res, f, indent=4)
+            if self.dataset.friend_datasets:
+                assert (len(non_empty_input_files) == len(input_files))
+                friend_tchain = ROOT.TChain(self.tree_name)
+                for input_target in self.input():
+                    # only one friend dataset is supported
+                    assert (len(input_target) == 2)
+                    # InputData output is a tuple, assume second element is the friend
+                    sts = friend_tchain.AddFile(input_target[1].path, 0)
+                    if not sts:
+                        # this error should actually always be caught by the checks done above
+                        raise RuntimeError(f"Input file for branch '{in_file}' is corrupted or missing. If it was produced "
+                                            "by PreprocessRDF, try removing the file and running the task again.")
 
-        except OSError:  # broken input file
-            raise OSError(f"Input file for branch {self.branch} is broken. If it was produced "
-                "by PreprocessRDF, try removing the file and running the task again.")
-        except ReferenceError:  # empty ntuple
-            inp = self.input()["root"].path
-            copy(inp, outp["root"].path)
-            if self.compute_filter_efficiency:
-                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                    json.dump({}, f, indent=4)
-        except AttributeError:  # empty input file
-            inp = self.input()["root"].path
-            copy(inp, outp["root"].path)
-            if self.compute_filter_efficiency:
-                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                    json.dump({}, f, indent=4)
+                tchain.AddFriend(friend_tchain, "friend")
 
-        #copy(self.input()["stats"].path, outp["stats"].path)
+            df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
 
-        # except KeyboardInterrupt:
-        #     print("### DEBUG Error")
+        # restricting number of events
+        if self.max_events:
+            df = df.Range(self.splitted_branches[self.branch]["initial_event"],
+                self.splitted_branches[self.branch]["max_events"])
+
+        selection = self.config.get_object_expression(self.category, self.dataset.process.isMC,
+            self.systematic, self.systematic_direction)
+        dataset_selection = self.dataset.get_aux("selection")
+        if dataset_selection and dataset_selection != "1":
+            selection = jrs(dataset_selection, selection, op="and")
+        try:
+            branches = list(df.GetColumnNames())
+        except:
+            raise ReferenceError
+        feature_modules = self.get_feature_modules(self.feature_modules_file)
+        if len(feature_modules) > 0:
+            for module in feature_modules:
+                try:
+                    df, add_branches = module.run(df)
+                except Exception as e:
+                    print("Exception: %s. Exiting" % e)
+                    sys.exit(1)
+                branches += add_branches
+        branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
+        filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
+        filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
+
+        if self.compute_filter_efficiency:
+            report = filtered_df.Report()
+            json_res = {cutReport.GetName():
+                {"pass": cutReport.GetPass(), "all": cutReport.GetAll()}
+                for cutReport in report.GetValue()}
+            with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                json.dump(json_res, f, indent=4)
 
 
 class CategorizationWrapper(DatasetCategorySystWrapperTask):
