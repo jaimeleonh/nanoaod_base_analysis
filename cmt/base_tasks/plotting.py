@@ -584,6 +584,12 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         (True) starting from ``ROOT`` color ``2``.
     :type fixed_colors: bool
 
+    :param max_y: maximum value for the y axis. Applies only to 1D plots.
+    :type max_y: float
+
+    :param min_y: minimum value for the y axis. Applies only to 1D plots.
+    :type min_y: float
+
     :param log_y: whether to set y axis to log scale
     :type log_y: bool
 
@@ -631,6 +637,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         "default: True")
     fixed_colors = luigi.BoolParameter(default=False, description="whether to use fixed colors "
         "for plotting, default: False")
+    min_y = luigi.FloatParameter(default=law.NO_FLOAT, description="y-axis minimum value, "
+        "default: None (varies with feature). Aplies only to 1D plots.")
+    max_y = luigi.FloatParameter(default=law.NO_FLOAT, description="y-axis maximum value, "
+        "default: None (varies with feature). Aplies only to 1D plots.")
     log_y = luigi.BoolParameter(default=False, description="set logarithmic scale for Y axis, "
         "default: False")
     log_x = luigi.BoolParameter(default=False, description="set logarithmic scale for X axis, "
@@ -987,7 +997,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
         x_title = (str(feature.get_aux("x_title"))
             + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
-        y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
+        if not getattr(self, "isEfficiency", False):
+            y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
+        else:
+            y_title = "Efficiency"
         hist_title = "; %s; %s" % (x_title, y_title)
 
         # qcd shape files
@@ -1309,13 +1322,17 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         dummy_hist.GetYaxis().SetMaxDigits(4)
         # dummy_hist.GetYaxis().SetTitleOffset(1.22)
-        maximum = max([hist.GetMaximum() for hist in draw_hists])
-        if self.log_y:
-            dummy_hist.SetMaximum(100 * maximum)
-            dummy_hist.SetMinimum(0.0011)
+        if self.max_y == law.NO_FLOAT:
+            maximum = max([hist.GetMaximum() for hist in draw_hists])
+            dummy_hist.SetMaximum(100 * maximum if self.log_y else 1.35 * maximum)
         else:
-            dummy_hist.SetMaximum(1.35 * maximum)
-            dummy_hist.SetMinimum(0.001)
+            maximum = self.max_y
+            dummy_hist.SetMaximum(self.max_y)
+
+        if self.min_y == law.NO_FLOAT:
+            dummy_hist.SetMinimum(0.0011 if self.log_y else 0.001)
+        else:
+            dummy_hist.SetMaximum(self.min_y)
 
         # get text to plot inside the figure
         inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
@@ -1339,34 +1356,45 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         else:
             upper_left_offset = 0.0
 
+        def get_lumi_string(lumi_value):
+            unit = "fb^{-1}"
+            if lumi_value < 1.0:
+                lumi_value *= 1000
+                unit = "pb^{-1}"
+            return "{:.1f} ".format(lumi_value) + unit
+
         if not (self.hide_data or not len(data_hists) > 0) or self.stack:
             if not type(self.config.lumi_fb) == dict:
-                upper_right="{}, {:.1f} ".format(
+                upper_right="{}, {} ".format(
                     self.config.year,
-                    self.config.lumi_fb,
-                ) + "fb^{-1} " + "({} TeV)".format(self.config.ecm)
+                    get_lumi_string(self.config.lumi_fb),
+                ) + "({} TeV)".format(self.config.ecm)
             else:
                 if self.run_era != "":
-                    era_label = self.run_era
+                    era_label = " " + self.run_era
                     lumi_label = self.config.lumi_fb[self.config.get_run_period_from_run_era(self.run_era)][self.run_era]
                 else:
                     era_label = self.run_period
                     if self.run_period != "":
+                        era_label = " " + era_label
                         lumi_label = sum(self.config.lumi_fb.get(self.run_period, {}).values())
                     else:
                         lumi_label = sum(sum(period_dict.values()) for period_dict in self.config.lumi_fb.values())
-                upper_right="{} {}, {:.1f} ".format(
+                upper_right="{}{}, {} ".format(
                     self.config.year,
                     era_label,
-                    lumi_label,
-                ) + "fb^{-1} " + "({} TeV)".format(self.config.ecm)
+                    get_lumi_string(lumi_label),
+                ) + "({} TeV)".format(self.config.ecm)
         else:
             upper_right="{} Simulation ({} TeV)".format(
                 self.config.year,
                 self.config.ecm,
             )
 
-        m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
+        try:
+            m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
+        except AttributeError:  # TEfficiency doesn't have GetMaximum()
+            m = None
 
         draw_labels = get_labels(
             upper_left=self.config.upper_left_text,
@@ -2855,6 +2883,14 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
     def get_binning(self, feature, ifeat=0):
         return FeaturePlot.get_binning(self, feature, ifeat)
 
+    def requires(self):
+        """
+        Root files storing the histograms coming from FeaturePlot
+        """
+        return FeaturePlot.vreq(self, feature_names=[f.name for f in self.feature_list],
+            save_root=True, plot_systematics=False, store_systematics=False,
+            _exclude=["min_y", "max_y"])
+
     @law.decorator.notify
     @law.decorator.safe_output
     def run(self):
@@ -2885,7 +2921,7 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
                     ihisto += 1
                     process_histo = copy(tf.Get("histograms/" + process.name))
                     process_histo.cmt_process_name = process.name
-                    process_histo.process_label = str(process.name)
+                    process_histo.process_label = str(process.label)
                     if feature.get_aux("selection_name"):
                         process_histo.process_label += f", {feature.get_aux('selection_name')}"
 
@@ -2894,5 +2930,80 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
                     self.histos["all"].append(process_histo)
 
             feature_to_save = copy(feature_set[0])
+            feature_to_save.name = "_".join([f.name for f in feature_set])
+            self.plot(feature_to_save)
+
+
+class EfficiencyPlot(ComparisonPlot):
+
+    """
+    Plots efficiencies for the features and processes included as input.
+
+    Example command:
+
+    ``law run EfficiencyPlot --version version_name --category-name category_name 
+--config-name config_name --feature-names numerator1:denominator1,numerator2:denominator2``
+
+    """
+    
+    # law run EfficiencyPlot --version version_name --category-name category_name
+    # --config-name config_name --feature-names numerator1:denominator1,numerator2:denominator2
+
+    max_y = 1.
+    stack = True
+    isEfficiency = True  # uses Efficiency as y axis title    
+
+    def requires(self):
+        """
+        Root files storing the histograms coming from FeaturePlot
+        """
+        return FeaturePlot.vreq(self, feature_names=[f.name for f in self.feature_list],
+            save_root=True, plot_systematics=False, store_systematics=False, stack=True,
+            _exclude=["min_y", "max_y"])
+
+    @law.decorator.notify
+    @law.decorator.safe_output
+    def run(self):
+        """
+        Splits processes into data, signal and background. Creates histograms from each process
+        loading them from the input files. Scales the histograms and applies the correct format
+        to them.
+        """
+
+        ROOT = import_root()
+        ROOT.gStyle.SetOptStat(0)
+
+        # create root tchains for inputs
+        inputs = self.input()
+        processes = list(self.processes_datasets.keys())
+        if self.do_qcd_bis:
+            processes.append(self.config.get(self.qcd_process_name))
+        nprocesses = len(processes)
+
+        for feature_set in self.features:
+            self.histos = {"background": [], "signal": [], "data": [], "all": []}
+            colors = list(range(2, 2 + len(feature_set) * nprocesses))
+
+            for iprocess, process in enumerate(processes):
+                num_histo, den_histo = None, None
+                for feature in reversed(feature_set):
+                    tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+
+                    if not den_histo:
+                        den_histo = copy(tf.Get("histograms/" + process.name))
+                        den_histo.SetTitle(f"CACA; {den_histo.GetXaxis().GetTitle()}; Efficiency")
+                    else:
+                        num_histo = copy(tf.Get("histograms/" + process.name))
+                        den_histo.SetTitle(f"CACA; {den_histo.GetXaxis().GetTitle()}; Efficiency")
+
+                process_histo = ROOT.TEfficiency(num_histo, den_histo)
+                process_histo.SetTitle(f"CACA; {den_histo.GetXaxis().GetTitle()}; Efficiency")
+                process_histo.cmt_process_name = process.name
+                process_histo.process_label = str(process.label)
+                self.setup_signal_hist(process_histo, colors[iprocess])
+                self.histos["signal"].append(process_histo)
+                self.histos["all"].append(process_histo)
+
+            feature_to_save = copy(feature_set[1])
             feature_to_save.name = "_".join([f.name for f in feature_set])
             self.plot(feature_to_save)
