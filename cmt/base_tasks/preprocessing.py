@@ -1136,10 +1136,11 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                         os.environ["CMSSW_BASE"], os.environ["SCRAM_ARCH"],
                         create_file_dir(tmp_out.path), " ".join([f.path for f in good_inputs]))
                     rc = call(cmd, shell=True)
-            else:  # if all input files are empty, create an empty file as output
+            else:  # if all input files are empty, create an empty ttree as output
                 tf = ROOT.TFile.Open(create_file_dir(tmp_out.path), "RECREATE")
+                empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
+                empty_tree.Write()
                 tf.Close()
-
 
 class MergeCategorizationWrapper(DatasetCategorySystWrapperTask):
     """
