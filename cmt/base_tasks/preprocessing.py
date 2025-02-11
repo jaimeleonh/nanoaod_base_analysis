@@ -989,6 +989,7 @@ class Categorization(PreprocessRDF):
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
         filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
 
+        # If no events survive the selection -> return an empty TTree
         if filtered_df.Count().GetValue() > 0:
             filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
         else:
@@ -1100,22 +1101,25 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
     def merge(self, inputs, output):
         ROOT = import_root()
-        # with output.localize("w") as tmp_out:
         with output.localize("w") as tmp_out:
             good_inputs = []
             for inp in inputs:  # merge only files with a filled tree
-                # inp = inp.targets["root"]
                 try:
                     tf = ROOT.TFile.Open(inp.path)
                 except:
                     inp = inp.targets["root"]
                     tf = ROOT.TFile.Open(inp.path)
-                try:
-                    tree = tf.Get(self.tree_name)
-                    if tree.GetEntries() > 0:
-                        good_inputs.append(inp)
-                except:
-                    print("File %s not used" % inp.path)
+
+                tree = tf.Get(self.tree_name)
+                if not tree:
+                    raise RuntimeError(f"MergeCategorization : Input file '{inp.path}' is empty. If it was produced "
+                                        "by Categorization, try removing the file and running the task again.")
+
+                if tree.GetEntries() > 0:
+                    good_inputs.append(inp)
+                else:
+                    print("MergeCategorization : File %s healthy but empty -> not used" % inp.path)
+
             if len(good_inputs) != 0:
                 use_hadd = self.dataset.process.isMC
                 assert not(self.force_haddnano and self.force_hadd)
