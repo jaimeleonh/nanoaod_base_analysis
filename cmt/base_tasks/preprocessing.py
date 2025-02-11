@@ -988,7 +988,14 @@ class Categorization(PreprocessRDF):
                 branches += add_branches
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
         filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
-        filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
+
+        if filtered_df.Count().GetValue() > 0:
+            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
+        else:
+            output_file = ROOT.TFile(create_file_dir(outp["root"].path), "RECREATE")
+            empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
+            empty_tree.Write()
+            output_file.Close()
 
         if self.compute_filter_efficiency:
             report = filtered_df.Report()
