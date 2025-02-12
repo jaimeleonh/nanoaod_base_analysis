@@ -470,16 +470,15 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                     allow_redefinition=self.allow_redefinition)
 
             empty_file = False
-            try:
-                tf = ROOT.TFile.Open(inp_to_consider)
-                tree = tf.Get(self.tree_name)
-                nentries[elem] = tree.GetEntries()
-                if nentries[elem] == 0: # tree with 0 entries
-                    empty_file = True
-                tf.Close()
-            except:  # no tree inside the file
-                nentries[elem] = 0
+            tf = ROOT.TFile.Open(inp_to_consider)
+            tree = tf.Get(self.tree_name)
+            if not tree: # no tree inside the file
+                raise RuntimeError(f"PrePlot : Input file '{inp_to_consider}' has no TTree named '{self.tree_name}'. "
+                                    "Try removing the file and running the task again.")
+            nentries[elem] = tree.GetEntries()
+            if nentries[elem] == 0: # tree with 0 entries
                 empty_file = True
+            tf.Close()
 
             # applying modules according to the systematic considered
             syst = ""
