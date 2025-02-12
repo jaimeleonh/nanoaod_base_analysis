@@ -474,6 +474,8 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                 tf = ROOT.TFile.Open(inp_to_consider)
                 tree = tf.Get(self.tree_name)
                 nentries[elem] = tree.GetEntries()
+                if nentries[elem] == 0: # tree with 0 entries
+                    empty_file = True
                 tf.Close()
             except:  # no tree inside the file
                 nentries[elem] = 0
