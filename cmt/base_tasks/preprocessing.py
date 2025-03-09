@@ -26,7 +26,7 @@ from cmt.base_tasks.base import (
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask,
     fully_split_branch_map, get_categorization_merging_factor, categorization_branch_map,
-    get_categorization_reduced_branch
+    get_categorization_reduced_branch, make_safe_output_file
 )
 
 directions = ["up", "down"]
@@ -989,14 +989,8 @@ class Categorization(PreprocessRDF):
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
         filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
 
-        # If no events survive the selection -> return an empty TTree
-        if filtered_df.Count().GetValue() > 0:
-            filtered_df.Snapshot(self.tree_name, create_file_dir(outp["root"].path), branches)
-        else:
-            output_file = ROOT.TFile(create_file_dir(outp["root"].path), "RECREATE")
-            empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
-            empty_tree.Write()
-            output_file.Close()
+        # Safe output saving
+        make_safe_output_file(filtered_df, self.tree_name, create_file_dir(outp["root"].path), branches)
 
         if self.compute_filter_efficiency:
             report = filtered_df.Report()
