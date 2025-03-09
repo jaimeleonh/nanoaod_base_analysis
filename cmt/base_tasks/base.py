@@ -138,6 +138,25 @@ def get_categorization_merging_factor(dataset, category):
 def get_categorization_reduced_branch(branch_data):
     return f"{branch_data['reduced_branch_nb']}"
 
+def make_safe_output_file(df, tree_name, output_path, branches):
+    """
+    Run the Snapshot method making sure that in case the RDF has
+    it has zero events an empty TTree is added in the output TFile
+    """
+    # Get future counts
+    future_counts = df.Count()
+
+    # Run snapshot
+    df.Snapshot(tree_name, output_path, branches)
+
+    # If the RDF was empty, add an empty TTree in the output file
+    if future_counts.GetValue() == 0:
+        ROOT = import_root()
+        output_file = ROOT.TFile(output_path, "UPDATE")
+        empty_tree = ROOT.TTree(tree_name, tree_name)
+        empty_tree.Write()
+        output_file.Close()
+
 #------------------------------------------------------------------------------------------------------------
 
 class Target():
