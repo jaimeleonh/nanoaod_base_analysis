@@ -138,10 +138,10 @@ def get_categorization_merging_factor(dataset, category):
 def get_categorization_reduced_branch(branch_data):
     return f"{branch_data['reduced_branch_nb']}"
 
-def make_safe_output_file(df, tree_name, output_path, branches):
+def snapshot_ensuring_output_tree(df, tree_name, output_path, branches):
     """
     Run the Snapshot method making sure that in case the RDF has
-    it has zero events an empty TTree is added in the output TFile
+    zero events, an empty TTree is added in the output TFile
     """
     # Get future counts
     future_counts = df.Count()

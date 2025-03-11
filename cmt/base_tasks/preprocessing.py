@@ -26,7 +26,7 @@ from cmt.base_tasks.base import (
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask,
     fully_split_branch_map, get_categorization_merging_factor, categorization_branch_map,
-    get_categorization_reduced_branch, make_safe_output_file
+    get_categorization_reduced_branch, snapshot_ensuring_output_tree
 )
 
 directions = ["up", "down"]
@@ -471,13 +471,8 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         if self.compute_filter_efficiency == True:
             report = filtered_df.Report()
 
-        if filtered_df.Count().GetValue() > 0:
-            filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), tuple(branches))
-        else:
-            output_file = ROOT.TFile(create_file_dir(outp.path), "RECREATE")
-            empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
-            empty_tree.Write()
-            output_file.Close()
+        # Save ensuring presence of TTree in output file
+        snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), tuple(branches))
 
         if self.compute_filter_efficiency == True:
             json_res = {cutReport.GetName() : {
@@ -989,8 +984,8 @@ class Categorization(PreprocessRDF):
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
         filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
 
-        # Safe output saving
-        make_safe_output_file(filtered_df, self.tree_name, create_file_dir(outp["root"].path), branches)
+        # Save ensuring presence of TTree in output file
+        snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp["root"].path), branches)
 
         if self.compute_filter_efficiency:
             report = filtered_df.Report()
