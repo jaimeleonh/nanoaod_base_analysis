@@ -472,7 +472,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             report = filtered_df.Report()
 
         # Save ensuring presence of TTree in output file
-        snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), tuple(branches))
+        snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
 
         if self.compute_filter_efficiency == True:
             json_res = {cutReport.GetName() : {
