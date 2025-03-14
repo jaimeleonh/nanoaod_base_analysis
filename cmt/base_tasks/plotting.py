@@ -1597,12 +1597,23 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             f.cd()
             # c.Write("canvas") #FIXME
 
+            data_already_stored=False
             hist_dir = f.mkdir("histograms")
             hist_dir.cd()
             for hist in all_hists:
                 hist.Write(hist.cmt_process_name)
+
+                if not data_already_stored and "data" in hist.cmt_process_name:
+                    data_already_stored=True
+
+            # force saving of the data histograms also when not displayed in FeaturePlot
+            # this gives the possibility to blind the plots from CreateDatacards
+            if not data_already_stored:
+                for hist in data_hists:
+                    hist.Write(hist.cmt_process_name)
+
             if bkg_histo:
-               bkg_histo.Write("background")
+                bkg_histo.Write("background")
 
             if self.store_systematics:
                 for syst_dir, shape_hists in self.histos["shape"].items():
