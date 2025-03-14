@@ -116,7 +116,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
     additional_lines = law.CSVParameter(default=(), description="addtional lines to write at the "
         "end of the datacard")
     propagate_syst_qcd = luigi.BoolParameter(default=False, description="whether to propagate"
-        "systematics to estimated qcd background, default: False")
+        "shape systematics to estimated qcd background, default: False")
     counting = luigi.BoolParameter(default=False, description="whether the datacard should consider "
         "a counting experiment, default: False")
     refit_signal_with_syst = luigi.BoolParameter(default=True, description="whether to refit the "
@@ -125,7 +125,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         "normalization floating to the data, default: False")
     save_proper_norm = luigi.BoolParameter(default=False, description="whether to save event counts "
         "properly regardless of bkg left floating, default: False")
-
+    hide_data = luigi.BoolParameter(default=False, description="hide data events, default: False")
     additional_scaling = luigi.DictParameter(description="dict with scalings to be "
         "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
@@ -158,7 +158,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         Needs as input the root file provided by the FeaturePlot task
         """
         if not self.fit_models and not self.counting:
-            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False,
+            return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=self.hide_data,
                 normalize_signals=False)
         else:  # FIXME allow counting datacards starting from FeaturePlot
             reqs = {"fits": {}, "inspections": {}}
@@ -668,7 +668,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             # Convert the shape systematics list to a dict with the systs as keys and a list of
             # the processes affected by them (all non-data processes except the qcd if computed
             # in the code)
-            shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names]
+            shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names if not "qcd" in p_name or self.propagate_syst_qcd]
                 for shape_syst in shape_syst_list}
 
             if not self.fit_models and not self.counting:  # binned fits
@@ -975,6 +975,7 @@ class Fit(FeaturePlot, FitBase):
         "--fit-parameters '{\"mean\": \"(20, -100, 100)\"}'")
     functions = law.CSVParameter(default={}, description="functions to be considered inside "
         "the envelope, default: None")
+    hide_data = luigi.BoolParameter(default=False, description="hide data events, default: False")
     # save_pdf = luigi.BoolParameter(default=False, description="whether to save created histograms "
         # "in pdf, default: False")
     # save_png = luigi.BoolParameter(default=False, description="whether to save created histograms "
@@ -989,7 +990,7 @@ class Fit(FeaturePlot, FitBase):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return {"histo": FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False,
+        return {"histo": FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=self.hide_data,
             normalize_signals=False, save_yields=True)}
 
     def output(self):
