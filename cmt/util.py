@@ -705,7 +705,13 @@ def chunked_list(lst, n):
     """Split a list into n chunks."""
     if n <= 0:
         raise ValueError("Number of chunks must be greater than 0.")
+
     lst = list(lst)
+
+    # if merging factor larger then inputs, reduce to N inputs
+    if n > len(lst):
+        n = len(lst)
+
     # Calculate the size of each chunk (some chunks may be larger by 1 if the division isn't exact)
     chunk_size = len(lst) // n
     remainder = len(lst) % n

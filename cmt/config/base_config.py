@@ -54,7 +54,7 @@ class Config():
             self.lumi_fb = lumi_fb
             self.lumi_pb = lumi_pb
 
-        self.x = kwargs
+        self.cfg_kwargs = kwargs
 
         # for tau_id and bjet_id here use only a temporary default to initialise the base config
         # in the analysis config these must be called a second time with the corrcet parameters
@@ -79,7 +79,7 @@ class Config():
         self.label_size = 5./4.
 
     def get_aux(self, name, default=None):
-        return self.x.get(name, default)
+        return self.cfg_kwargs.get(name, default)
 
     def add_categories(self):
         categories = []
