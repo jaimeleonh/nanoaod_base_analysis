@@ -282,7 +282,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             if categorization_max_events is None:
                 categorization_merging_factor = get_categorization_merging_factor(self.dataset, self.category)
                 if categorization_merging_factor:
-                    return categorization_merging_factor
+                    return min(categorization_merging_factor,input_data_count())
                 else:
                     return input_data_count()
             else:
