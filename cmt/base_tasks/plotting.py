@@ -442,9 +442,12 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         # create one RDF for the central value and each needed systematic
         dfs = {}
         nentries = {}
-        for elem in ["central"] + [f"{syst}_{d}"
-                for (syst, d) in itertools.product(self.syst_list, directions)]:
+        systs_list_to_store = []
+        if self.store_systematics:
+            systs_list_to_store = [f"{syst}_{d}"
+                for (syst, d) in itertools.product(self.syst_list, directions)]
 
+        for elem in ["central"] + systs_list_to_store:
             if self.skip_processing:
                 inp_to_consider = self.get_path(inp[elem])[0]
                 if not self.dataset.friend_datasets:
