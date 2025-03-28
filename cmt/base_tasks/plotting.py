@@ -535,12 +535,6 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
 
 
 class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
-    skip_processing = luigi.BoolParameter(default=False, description="whether to skip"
-        " preprocessing and categorization steps, default: False")
-    skip_merging = luigi.BoolParameter(default=False, description="whether to skip"
-        " MergeCategorization task, default: False")
-    preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
-        default=law.NO_STR)
 
     def atomic_requires(self, dataset, category):
         return PrePlot.req(self, dataset_name=dataset.name, category_name=category.name)
