@@ -556,6 +556,17 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
     :param stack: whether to show all backgrounds stacked (True) or normalized to 1 (False)
     :type stack: bool
 
+    :param show_ratio: whether to show the data/mc ratio plot (True) or not (False)
+    :type stack: bool
+
+    :param ratio_min: minimum value for the y axis in the ratio-plot
+    :type max_y: float
+
+    :param ratio_maz: maximum value for the y axis in the ratio-plot
+    :type max_y: float
+
+    :param ratio_ndivisions: number of divisions for the y axis in the ratio-plot
+    :type max_y: int
 
     :param hide_data: whether to show (False) or hide (True) the data histograms
     :type hide_data: bool
@@ -632,6 +643,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         "them with dataset and category weights, and normalize afterwards, default: False")
     show_ratio = luigi.BoolParameter(default=True, description="Allow, in the defined cases, that "
         "data/mc plot is shown, default: True")
+    ratio_min = luigi.FloatParameter(default=0.5, description="ratio plot y-axis minimum value, default: 0.5")
+    ratio_max = luigi.FloatParameter(default=1.5, description="ratio plot y-axis maximum value, default: 1.5")
+    ratio_ndivisions = luigi.IntParameter(default=5, description="number of y-axis divisions "
+        "in the ratio-plot, default: 5")
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
     normalize_signals = luigi.BoolParameter(default=False, description="whether to normalize "
         "signals to the total bkg yield, default: True")
@@ -1437,9 +1452,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         if self.show_ratio:
             dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
-                props={"Minimum": 0.25, "Maximum": 1.75})
+                props={"Minimum": self.ratio_min, "Maximum": self.ratio_max})
             r.setup_y_axis(dummy_ratio_hist.GetYaxis(), pad=c.get_pad(2),
-                props={"Ndivisions": 3})
+                props={"Ndivisions": self.ratio_ndivisions})
             dummy_ratio_hist.GetYaxis().SetTitle("Data / MC")
             # dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
             # dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
@@ -1510,6 +1525,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                             tot_unc)
 
             c.get_pad(2).cd()
+            c.get_pad(2).SetGridy()
             dummy_ratio_hist.Draw()
             if not self.hide_data:
                 ratio_graph.Draw("PEZ,SAME")
@@ -2047,9 +2063,9 @@ class FeaturePlotSyst(FeaturePlot):
 
                 dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
                 r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
-                    props={"Minimum": 0.75, "Maximum": 1.25})
+                    props={"Minimum": self.ratio_min, "Maximum": self.ratio_max})
                 r.setup_y_axis(dummy_ratio_hist.GetYaxis(), pad=c.get_pad(2),
-                    props={"Ndivisions": 5})
+                    props={"Ndivisions": self.ratio_ndivisions})
                 dummy_ratio_hist.GetYaxis().SetTitle("Ratio")
                 dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
                 dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
@@ -2081,6 +2097,7 @@ class FeaturePlotSyst(FeaturePlot):
                         mc_unc_graph.SetPoint(i, x, EMPTY)
 
                 c.get_pad(2).cd()
+                c.get_pad(2).SetGridy()
                 dummy_ratio_hist.Draw()
                 ratio_hist_up.Draw("SAME")
                 ratio_hist_down.Draw("SAME")
