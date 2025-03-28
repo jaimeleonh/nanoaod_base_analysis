@@ -96,7 +96,7 @@ def categorization_branch_map(config_name, dataset, merging_factor):
     return {i : data for i, data in enumerate(branch_datas)}
 
 
-def get_n_files_after_merging(dataset:Dataset, category:Category, dataset_key="merging", default=1):
+def get_n_files_after_merging(dataset:Dataset, category:Category, dataset_key="merging", default=1, dataset_input_files=1E5):
     """
     For a given dataset-category, get the number of files at the output of the task that could undergo merging.
     The `dataset_key` parameter regulates wich task merging factor we are retrieving.
@@ -105,7 +105,6 @@ def get_n_files_after_merging(dataset:Dataset, category:Category, dataset_key="m
     If the category name is not found the default "non-merging" value will be set.
     """
     n_files_after_requested_merging = default
-    n_files_after_merging = 1
     if dataset.get_aux(dataset_key, None):
         try:
             n_files_after_requested_merging = dataset.get_aux(dataset_key)[category.name]
@@ -115,24 +114,28 @@ def get_n_files_after_merging(dataset:Dataset, category:Category, dataset_key="m
 
     # check that the merging factor applied in MergeCategorization is smaller than any previous
     # merging to avoid the situations of merging e.g. 3 inputs in 5 outputs
-    if dataset_key != "merging":
-        if dataset.get_aux("merging", None):
-            try:
-                n_files_after_merging = dataset.get_aux("merging")[category.name]
-            except KeyError:
-                print(f"Merging factor for {dataset.name} - {category.name} not found. "
-                        "Defaulting to n_files_after_merging=1.")
+    n_files_after_merging = 1
+    if dataset.get_aux("merging", None):
+        try:
+            n_files_after_merging = dataset.get_aux("merging")[category.name]
+        except KeyError:
+            print(f"Merging factor for {dataset.name} - {category.name} not found. "
+                    "Defaulting to n_files_after_merging=1.")
+    if n_files_after_requested_merging > 0 and n_files_after_requested_merging < n_files_after_merging:
+        raise ValueError(f"In {dataset.name} - {category.name}, "
+                         f"merging factor '{dataset_key}={n_files_after_requested_merging}' is smaller than 'merging={n_files_after_merging}', "
+                          "which is not suported. Please fix their values.")
 
-        if n_files_after_requested_merging > 0 and n_files_after_requested_merging < n_files_after_merging:
-            raise ValueError(f"In {dataset.name} - {category.name}, "
-                             f"merging factor '{dataset_key}={n_files_after_requested_merging}' is smaller than 'merging={n_files_after_merging}', "
-                              "which is not suported. Please fix their values.")
+    # check if the final merging factor is larger than the input file list
+    # to avoid the situations of merging e.g. 3 inputs in 5 outputs
+    if dataset_input_files < n_files_after_merging:
+        n_files_after_requested_merging = dataset_input_files
 
     return n_files_after_requested_merging
 
 
-def get_categorization_merging_factor(dataset, category):
-    return get_n_files_after_merging(dataset, category, dataset_key="categorization_merging", default=0)
+def get_categorization_merging_factor(dataset, category, dataset_input_files=1E5):
+    return get_n_files_after_merging(dataset, category, dataset_key="categorization_merging", default=0, dataset_input_files=dataset_input_files)
 
 
 def get_categorization_reduced_branch(branch_data):
@@ -372,7 +375,8 @@ class DatasetTaskWithCategory(ConfigTaskWithCategory, ConfigTaskWithRegion, Data
 
     def __init__(self, *args, **kwargs):
         super(DatasetTaskWithCategory, self).__init__(*args, **kwargs)
-        self.n_files_after_merging = get_n_files_after_merging(self.dataset, self.category)
+        self.n_files_after_merging = get_n_files_after_merging(self.dataset, self.category,
+                                                               dataset_input_files=fully_split_branch_map(self.config_name, self.dataset))
 
 
 class DatasetWrapperTask(ConfigTask):

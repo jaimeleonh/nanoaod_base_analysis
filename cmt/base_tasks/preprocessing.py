@@ -99,36 +99,6 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
         )
 
 
-class DatasetCategoryWrapperTask(DatasetWrapperTask):
-    category_names = law.CSVParameter(default=("baseline_even",), description="names of categories "
-        "to run, default: (baseline_even,)")
-
-    exclude_index = True
-
-    def __init__(self, *args, **kwargs):
-        super(DatasetCategoryWrapperTask, self).__init__(*args, **kwargs)
-
-        # tasks wrapped by this class do not allow composite categories, so split them here
-        self.categories = []
-        for name in self.category_names:
-            category = self.config.categories.get(name)
-            if category.subcategories:
-                self.categories.extend(category.subcategories)
-            else:
-                self.categories.append(category)
-
-    @abc.abstractmethod
-    def atomic_requires(self, dataset, category):
-        return None
-
-    def requires(self):
-        return OrderedDict(
-            ((dataset.name, category.name), self.atomic_requires(dataset, category))
-            for dataset, category in itertools.product(self.datasets, self.categories)
-            if not dataset.process.name in category.get_aux("skip_processes", [])
-        )
-
-
 class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask):
     systematic_names = law.CSVParameter(default=(), description="names of systematics "
         "to run, default: central only (empty string)")
@@ -483,7 +453,6 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                 json.dump(json_res, f, indent=4)
 
 
-
 class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
     """
     Wrapper task to run the PreprocessRDF task over several datasets in parallel.
@@ -745,7 +714,8 @@ class Categorization(PreprocessRDF):
     def __init__(self, *args, **kwargs):
         super(Categorization, self).__init__(*args, **kwargs)
         self.max_events = self.dataset.get_aux("categorization_max_events", None)
-        self.categorization_merging_factor = get_categorization_merging_factor(self.dataset, self.category)
+        self.categorization_merging_factor = get_categorization_merging_factor(self.dataset, self.category,
+                                                                               dataset_input_files=fully_split_branch_map(self.config_name, self.dataset))
 
         if sum((x is not None for x in [self.dataset.get_aux("categorization_max_events"), self.dataset.get_aux("preprocess_merging_factor"), self.dataset.get_aux("event_threshold")])) > 1:
             raise RuntimeError(f"Dataset {self.dataset.name} error : you can only specify one of categorization_max_events, preprocess_merging_factor, event_threshold a the same time")
