@@ -32,7 +32,8 @@ from cmt.base_tasks.base import (
 )
 
 from cmt.base_tasks.preprocessing import (
-    Categorization, MergeCategorization, MergeCategorizationStats, EventCounterDAS
+    Categorization, MergeCategorization, MergeCategorizationStats, EventCounterDAS,
+    DatasetCategoryWrapperTask
 )
 
 EMPTY = -1.e5
@@ -531,6 +532,18 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             out.cd()
             histo.Write()
         out.Close()
+
+
+class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
+    skip_processing = luigi.BoolParameter(default=False, description="whether to skip"
+        " preprocessing and categorization steps, default: False")
+    skip_merging = luigi.BoolParameter(default=False, description="whether to skip"
+        " MergeCategorization task, default: False")
+    preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
+        default=law.NO_STR)
+
+    def atomic_requires(self, dataset, category):
+        return PrePlot.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
 class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
