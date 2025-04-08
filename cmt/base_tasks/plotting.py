@@ -540,6 +540,385 @@ class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
         return PrePlot.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
+class FlatSignalDnnBinMerger:
+    """ Algorithm to merge DNN histogram bins whilst keeping enough brackground MC events.
+    Uses two successive methods, picking the first one that succeeds.
+    Procedure 1: flatten signal distribution, in N bins. Check that every bin has at least 10 MC events.
+                 if failed, repeat procedure with N-1 bins, N-2, etc until 3 bins.
+
+    If procedure 1 fails also for 3 bins, apply the following.
+
+    Procedure 2: find the value X such that the sum across bins higher than X has at least 10 MC events
+                 and has at least 30% of the signal. Then make a 2-bin histogram split at X.
+                 (this is mainly for extreme signal/bkg separation)
+    """
+    def __init__(self, sgn_histo=None, bkg_histo=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10):
+        if sgn_histo:
+            assert not bins_txt_path
+            self.target_bin_count = target_bin_count
+            self.min_MC_events = min_MC_events
+            self._compute_rebinning(sgn_histo, bkg_histo)
+        else:
+            assert bins_txt_path
+            self._load_bin_edges(bins_txt_path)
+
+    def _compute_rebinning(self, sgn_histo, bkg_histo):
+        integral = sgn_histo.Integral()
+
+        if sgn_histo.GetBinContent(0)!= 0 or sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1)!=0:
+            print("## WARNING overflow bins contain this fraction of the yield : "
+                 f"{ (sgn_histo.GetBinContent(0)+sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1))/sgn_histo.Integral(0, sgn_histo.GetNbinsX()+1)}")
+
+        if integral == 0:
+            edges = [0, 1.0]
+            nbins_real = 1
+
+        else:
+            success = False
+            for nbins in range(self.target_bin_count, 3, -1):
+                edges = [1.]
+                sig_yield = 0.0
+                bkg_yield = 0.0
+                bkg_error = 0.0
+                quantile = integral
+                i_bin = self.target_bin_count
+                for i in range(sgn_histo.GetNbinsX(), 1, -1):
+                    if len(edges) == nbins: break
+                    sig_yield += sgn_histo.GetBinContent(i)
+                    bkg_yield += bkg_histo.GetBinContent(i)
+                    bkg_error += bkg_histo.GetBinError(i)**2
+                    try:
+                        bkg_stats = bkg_yield**2/bkg_error
+                    except:
+                        bkg_stats = 0
+                    if len(edges) == 1 and bkg_stats < self.min_MC_events: continue
+                    if sig_yield >= quantile / i_bin:
+                        print(" ### INFO: Adding", sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        # compute the remaining yield to be subdivided
+                        quantile = quantile - sig_yield
+                        # move to the next bin to the left
+                        i_bin = i_bin - 1
+                        sig_yield = 0.0
+                        bkg_yield = 0.0
+                        bkg_error = 0.0
+                edges.append(0.0)
+                edges = edges[::-1]
+                nbins_real = len(edges)-1
+
+                # check that there are at least 10 (=min_MC_events) bkg events in all bins
+                n_bkg_stats = np.zeros(nbins_real)
+                bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", np.array(edges))
+                for ibin in range(1, nbins_real + 1):
+                    try:
+                        # number of equivalent unweighted bkg events
+                        n_bkg_stats[ibin-1] = (bkg_histo_rebin.GetBinContent(ibin) / bkg_histo_rebin.GetBinError(ibin))**2
+                    except:
+                        n_bkg_stats[ibin-1] = 0
+                n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
+
+                if not all(n_bkg_passed):
+                    print(" ### INFO: ", nbins, " not passing bkg requirement")
+                    continue
+
+                else:
+                    print("Procedure 1 success")
+                    success = True
+                    break
+
+            # if the first procedure failed
+            if not success:
+                print(" Procedure 2 :")
+                edges = [1.0]
+                sig_yield = 0.0
+                bkg_yield = 0.0
+                bkg_error = 0.0
+                for i in range(sgn_histo.GetNbinsX(), 1, -1):
+                    sig_yield += sgn_histo.GetBinContent(i)
+                    bkg_yield += bkg_histo.GetBinContent(i)
+                    bkg_error += bkg_histo.GetBinError(i)**2
+                    try:
+                        bkg_stats = bkg_yield**2/bkg_error
+                    except:
+                        bkg_stats = 0
+                    #print(bkg_stats, sig_yield/integral)
+                    if (bkg_stats > self.min_MC_events and sig_yield/integral > 0.3):
+                        edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        print(" ### INFO: Procedure 2 found border at ", sgn_histo.GetXaxis().GetBinLowEdge(i), \
+                                " with ", bkg_stats, " equivalent background events")
+                        if len(edges) > 2: break
+                        sig_yield = 0.0
+                        bkg_yield = 0.0
+                        bkg_error = 0.0
+                if len(edges) <= 1:
+                    raise RuntimeError(f"Procedure 2 failed. Final bkg statistics {bkg_stats}  - Final fraction of signal : {sig_yield/integral}")
+
+                edges.append(0.)
+                edges = edges[::-1]
+                nbins_real = len(edges)-1
+        self.edges = edges
+        self.edges_array = np.array(self.edges)
+        self.nbins_real = nbins_real
+        return edges
+
+    def _load_bin_edges(self, path):
+        self.edges_array = np.loadtxt(path)
+        self.edges = list(self.edges_array)
+        self.nbins_real = len(self.edges)-1
+
+    def rebin(self, h, inplace=False):
+        """ rebin an histogram using the previously computed edges """
+        rebin_process_histo = h.Rebin(self.nbins_real, "" if inplace else f"rebin_{h.GetTitle()}", self.edges_array)
+        attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
+                      "cmt_process_name", "cmt_yield", "cmt_yield_error",
+                      "cmt_bin_yield", "cmt_bin_yield_error"]
+        for histo_attr in attributes:
+            try:
+                setattr(rebin_process_histo, histo_attr, getattr(h, histo_attr))
+            except AttributeError: pass
+        return rebin_process_histo
+
+class FlatSignalDnnBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, BasePlotTask):
+    save_root = luigi.BoolParameter(default=False, description="whether to save created histograms "
+        "in root files, default: False")
+
+    additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
+
+    def __init__(self, *args, **kwargs):
+        super(FlatSignalDnnBinMergerTask, self).__init__(*args, **kwargs)
+
+    def requires(self):
+        """
+        All requirements needed:
+            * Histograms coming from the PrePlot task.
+            * Number of total events coming from the MergeCategorizationStats task
+              (to normalize MC histograms).
+        """
+
+        reqs = {}
+        reqs["data"] = OrderedDict(
+            ((dataset.name, category.name), PrePlot.vreq(self,
+                dataset_name=dataset.name, category_name=self.get_data_category(category).name))
+            for dataset, category in itertools.product(
+                self.datasets_to_run, self.expand_category())
+        )
+
+        reqs["stats"] = OrderedDict()
+        for dataset in self.datasets_to_run:
+            if dataset.process.isData:
+                continue
+            reqs["stats"][dataset.name] = {}
+
+            if dataset.get_aux("secondary_dataset", None):
+                reqs["stats"][dataset.name]["central"] = MergeCategorizationStats.vreq(self,
+                    dataset_name=dataset.get_aux("secondary_dataset"))
+            else:
+                reqs["stats"][dataset.name]["central"] = MergeCategorizationStats.vreq(self,
+                    dataset_name=dataset.name)
+
+        return reqs
+
+    def output(self):
+        """
+        Output files to be filled: pdf, png, root or json
+        """
+        # output definitions, i.e. key, file prefix, extension
+        output_data = []
+        output_data.append(("txt", "", "txt"))
+        if self.save_root:
+            output_data.append(("root", "", "root"))
+
+        channel = self.region.name.split("_")[0]
+
+        return {
+            key: law.SiblingFileCollection(OrderedDict(
+                (feature.name, self.local_target("{}{}_{}.{}".format(
+                    prefix, feature.name, channel, ext)))
+                for feature in self.features if "dnn" in feature.name
+            ))
+            for key, prefix, ext in output_data
+        }
+
+    def complete(self):
+        """
+        Task is completed when all output are present
+        """
+        return ConfigTaskWithCategory.complete(self)
+
+    def get_nevents(self, inputs=None):
+        """ Open MergeCategorizationStats outputs and load json files with nevents and nweightedevents (for normalization)
+        Arguments : inputs : results of self.input(), facultative, for caching
+        Returns tuple :
+         - nevents (event count or weights depending on self.apply_weights)
+         - nweightedevents : sum of weights
+         - nunweightedevents : event count
+        """
+        nevents, nweightedevents, nunweightedevents = {}, {}, {}
+        if inputs is None:
+            inputs = self.input() # this is quite slow so bring it outside the loop (maybe we could enable cache_requirements ?)
+        for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+            if not process.isData:
+                for dataset in datasets:
+                    nevents[dataset.name] = {}
+                    nweightedevents[dataset.name] = {}
+                    nunweightedevents[dataset.name] = {}
+
+                    inp = inputs["stats"][dataset.name]["central"]
+                    with open(inp.path) as f:
+                        stats = json.load(f)
+                        nweightedevents[dataset.name]["central"] = stats["nweightedevents"]
+                        nunweightedevents[dataset.name]["central"] = stats["nevents"]
+                        if self.apply_weights:
+                            nevents[dataset.name]["central"] = stats["nweightedevents"]
+                        else:
+                            nevents[dataset.name]["central"] = stats["nevents"]
+
+        return nevents, nweightedevents, nunweightedevents
+
+    def get_normalization_factor(self, dataset, elem):
+        if not type(self.config.lumi_pb) == dict:
+            lumi = self.config.lumi_pb
+        elif self.run_era != "":
+            lumi = self.config.lumi_pb[dataset.runPeriod][self.run_era]
+        else:
+            lumi = sum(self.config.lumi_pb.get(dataset.runPeriod, {}).values())
+
+        if dataset.get_aux("stitchingNormalization", False) and self.apply_weights:
+            # Normalization for stitched datasets, where generator weights are scaled to their average
+            # needs to be combined with appropriate stitching weights
+            return dataset.xs * lumi / (self.nweightedevents[dataset.name][elem] / self.nunweightedevents[dataset.name][elem])
+        else:
+            return dataset.xs * lumi / self.nevents[dataset.name][elem]
+
+    @law.decorator.notify
+    @law.decorator.safe_output
+    def run(self):
+        ROOT = import_root()
+        ROOT.gStyle.SetOptStat(0)
+
+        # create root tchains for inputs
+        inputs = self.input()
+
+        self.nevents, self.nweightedevents, self.nunweightedevents = self.get_nevents(inputs)
+
+        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
+        self.background_names = [p.name for p in self.processes_datasets.keys()
+            if not p.isData and not p.isSignal]
+
+        for ifeat, feature in enumerate(self.features):
+            # skip features that are not DNNs
+            if "dnn" not in feature.name: continue
+
+            self.histos = {"background": [], "signal": []}
+
+            binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
+            x_title = (str(feature.get_aux("x_title"))
+                + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
+            y_title = "Events" + y_axis_adendum
+            hist_title = "; %s; %s" % (x_title, y_title)
+
+            for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+                if process.isData: continue
+
+                process_histo = ROOT.TH1D(randomize(process.name), hist_title, *binning_args)
+                process_histo.process_label = str(process.label)
+                process_histo.cmt_process_name = process.name
+                process_histo.Sumw2()
+                for dataset in datasets:
+                    dataset_histo = ROOT.TH1D(randomize("tmp"), hist_title, *binning_args)
+                    dataset_histo.Sumw2()
+                    for category in self.expand_category():
+                        inp = inputs["data"][
+                            (dataset.name, category.name)].collection.targets.values()
+                        for elem in inp:
+                            rootfile = ROOT.TFile.Open(elem.path)
+                            histo = copy(rootfile.Get(feature.name))
+                            rootfile.Close()
+                            if histo.GetEntries() != 0:
+                                dataset_histo.Add(histo)
+
+                        elem = "central"
+                        if self.nevents[dataset.name][elem] != 0:
+                            dataset_histo.Scale(self.get_normalization_factor(dataset, elem))
+                            scaling = dataset.get_aux("scaling", None)
+                            if scaling:
+                                print(" ### Scaling {} histo by {} +- {}".format(
+                                    dataset.name, scaling[0], scaling[1]))
+                                old_errors = [dataset_histo.GetBinError(ibin)\
+                                    / dataset_histo.GetBinContent(ibin)
+                                    if dataset_histo.GetBinContent(ibin) != 0 else 0
+                                    for ibin in range(1, dataset_histo.GetNbinsX() + 1)]
+                                new_errors = [
+                                    math.sqrt(elem ** 2 + (scaling[1] / scaling[0]) ** 2)
+                                    for elem in old_errors]
+                                dataset_histo.Scale(scaling[0])
+                                for ibin in range(1, dataset_histo.GetNbinsX() + 1):
+                                    dataset_histo.SetBinError(
+                                        ibin, dataset_histo.GetBinContent(ibin)
+                                            * new_errors[ibin - 1])
+
+                    process_histo.Add(dataset_histo)
+
+                if process.name in self.additional_scaling:
+                    process_histo.Scale(self.additional_scaling[process.name])
+
+                yield_error = c_double(0.)
+                process_histo.cmt_yield = process_histo.IntegralAndError(0,
+                    process_histo.GetNbinsX() + 1, yield_error)
+                process_histo.cmt_yield_error = yield_error.value
+
+                process_histo.cmt_bin_yield = []
+                process_histo.cmt_bin_yield_error = []
+                for ibin in range(1, process_histo.GetNbinsX() + 1):
+                    process_histo.cmt_bin_yield.append(process_histo.GetBinContent(ibin))
+                    process_histo.cmt_bin_yield_error.append(process_histo.GetBinError(ibin))
+
+                if process.isSignal:
+                    self.histos["signal"].append(process_histo)
+                else:
+                    self.histos["background"].append(process_histo)
+
+            signal_sum = None
+            background_sum = None
+            for hist in self.histos["signal"]:
+                if not signal_sum: signal_sum = hist.Clone()
+                else:              signal_sum.Add(hist.Clone())
+            for hist in self.histos["background"]:
+                if not background_sum: background_sum = hist.Clone()
+                else:                  background_sum.Add(hist.Clone())
+
+            self.histogram_bin_merger = FlatSignalDnnBinMerger(sgn_histo=signal_sum, bkg_histo=background_sum, target_bin_count=self.category.get_aux("dnn_target_bin_count", 20))
+
+            for idx, hist in enumerate(self.histos["background"]):
+                self.histos["background"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
+            for idx, hist in enumerate(self.histos["signal"]):
+                self.histos["signal"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
+
+            # save binning
+            np.savetxt(
+                    create_file_dir(self.output()["txt"].targets[feature.name].path),
+                    self.histogram_bin_merger.edges_array
+                )
+
+            if self.save_root:
+                f = ROOT.TFile.Open(create_file_dir(
+                    self.output()["root"].targets[feature.name].path), "RECREATE")
+                f.cd()
+
+                data_already_stored=False
+                hist_dir = f.mkdir("histograms")
+                hist_dir.cd()
+
+                background_sum.Write("background")
+                for hist in self.histos["background"]:
+                    hist.Write(hist.cmt_process_name)
+
+                for hist in self.histos["signal"]:
+                    hist.Write(hist.cmt_process_name)
+
+                f.Close()
+
+
 class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
     """
     Performs the actual histogram plotting: loads the histograms obtained in the PrePlot tasks,
@@ -684,6 +1063,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         "default: None")
     run_era = luigi.Parameter(default="", description="plot only the specified era, "
         "default: None")
+    auto_flat_sgn_dnn = luigi.BoolParameter(default=False, description="automaticaly merge DNN bins to reach flat signal "
+        "default: False")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
         # "optimization task to use, not used when empty, default: empty")
@@ -710,6 +1091,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         super(FeaturePlot, self).__init__(*args, **kwargs)
         # select processes and datasets
         assert not (self.do_qcd and self.do_sideband)
+
+        if self.optimization_method and self.auto_flat_sgn_dnn:
+            raise ValueError("Can only set optimization_method or auto_flat_sgn_dnn "
+                             "not both at the same time. Please chose just one.")
 
         # get QCD regions when requested
         self.qcd_regions = None
@@ -752,9 +1137,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
             * If estimating QCD, FeaturePlot for the three additional QCD regions needed.
 
+            * If requested flat sgn DNN distribution, output from FlatSignalDnnBinMergerTask.
         """
 
         reqs = {}
+        if self.auto_flat_sgn_dnn:
+            channel_signal_region = self.region_name.split("_")[0]+"_os_iso"
+            reqs["dnn_bin_merging"] = FlatSignalDnnBinMergerTask.vreq(self, region_name=channel_signal_region, save_root=True)
+
         reqs["data"] = OrderedDict(
             ((dataset.name, category.name), PrePlot.vreq(self,
                 dataset_name=dataset.name, category_name=self.get_data_category(category).name))
@@ -851,6 +1241,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 params += ", fit_parameters={" + ", ".join([f"'{param}': '{value}'"
                 for param, value in fit_params["fit_parameters"].items()]) + "}"
             reqs["fit"] = eval(f"Fit.vreq(self, {params}, _exclude=['include_fit'])")
+
         return reqs
 
     def get_output_postfix(self, key="pdf"):
@@ -967,12 +1358,17 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
                     self.data_names[0], region, files[region]))
 
+            if self.auto_flat_sgn_dnn:
+                d_hist = self.histogram_bin_merger.rebin(d_hist, inplace=True)
+
             b_hists = []
             for b_name in self.background_names:
                 b_hist = files[region].Get("histograms/" + b_name + syst)
                 if not b_hist:
                     raise Exception("background histogram '{}' not found in region '{}'".format(
                         b_name, region))
+                if self.auto_flat_sgn_dnn:
+                    b_hist = self.histogram_bin_merger.rebin(b_hist, inplace=True)
                 b_hists.append(b_hist)
 
             qcd_hist = d_hist.Clone(randomize("qcd_" + region + syst))
@@ -1858,6 +2254,23 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                            self.histos["all"].append(process_histo)
                     else:
                         self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
+
+            if "dnn" in feature.name and self.auto_flat_sgn_dnn:
+                self.histogram_bin_merger = FlatSignalDnnBinMerger(bins_txt_path=self.input()["dnn_bin_merging"]["txt"][feature.name].path)
+
+                for idx, hist in enumerate(self.histos["signal"]):
+                    self.histos["signal"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
+                for idx, hist in enumerate(self.histos["background"]):
+                    self.histos["background"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
+                for idx, hist in enumerate(self.histos["data"]):
+                    self.histos["data"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
+                for idx, hist in enumerate(self.histos["all"]):
+                    self.histos["all"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
+                for shape in self.histos["shape"]:
+                    for idx, hist in enumerate(self.histos["shape"][shape]):
+                        self.histos["shape"][shape][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
+                if self.plot_systematics:
+                    self.histos["bkg_histo_syst"] = self.histogram_bin_merger.rebin(self.histos["bkg_histo_syst"], inplace=True)
 
             self.plot(feature)
 
