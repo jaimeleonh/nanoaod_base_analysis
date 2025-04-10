@@ -8,13 +8,14 @@ __all__ = [
     "Task", "ConfigTask", "ConfigTaskWithCategory", "DatasetTask", "DatasetTaskWithCategory",
     "DatasetWrapperTask", "HTCondorWorkflow", "SGEWorkflow", "SlurmWorkflow" "InputData",
     "fully_split_branch_map", "categorization_branch_map", "get_n_files_after_merging",
-    "get_categorization_merging_factor", "get_categorization_reduced_branch"
+    "get_categorization_merging_factor", "get_categorization_reduced_branch", "FlatSignalBinMerger"
 ]
 
 
 import re
 import os
 import math
+import numpy as np
 from collections import OrderedDict
 
 import warnings
@@ -1131,3 +1132,142 @@ class QCDABCDTask(law.Task):
         "for qcd regions ss_iso and ss_inviso, default=default (same as category)")
     do_sideband = luigi.BoolParameter(default=False, description="whether to compute the background "
         "shape from sideband region, default: False")
+
+
+class FlatSignalBinMerger:
+    """ Algorithm to merge histogram bins whilst keeping enough brackground MC events.
+    Uses two successive methods, picking the first one that succeeds.
+    Procedure 1: flatten signal distribution, in N bins. Check that every bin has at least 10 MC events.
+                 if failed, repeat procedure with N-1 bins, N-2, etc until 3 bins.
+
+    If procedure 1 fails also for 3 bins, apply the following.
+
+    Procedure 2: find the value X such that the sum across bins higher than X has at least 10 MC events
+                 and has at least 30% of the signal. Then make a 2-bin histogram split at X.
+                 (this is mainly for extreme signal/bkg separation)
+    """
+    def __init__(self, sgn_histo=None, bkg_histo=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10):
+        if sgn_histo:
+            assert not bins_txt_path
+            self.target_bin_count = target_bin_count
+            self.min_MC_events = min_MC_events
+            self._compute_rebinning(sgn_histo, bkg_histo)
+        else:
+            assert bins_txt_path
+            self._load_bin_edges(bins_txt_path)
+
+    def _compute_rebinning(self, sgn_histo, bkg_histo):
+        integral = sgn_histo.Integral()
+
+        if sgn_histo.GetBinContent(0)!= 0 or sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1)!=0:
+            print("## WARNING overflow bins contain this fraction of the yield : "
+                 f"{ (sgn_histo.GetBinContent(0)+sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1))/sgn_histo.Integral(0, sgn_histo.GetNbinsX()+1)}")
+
+        if integral == 0:
+            edges = [0, 1.0]
+            nbins_real = 1
+
+        else:
+            success = False
+            for nbins in range(self.target_bin_count, 3, -1):
+                edges = [1.]
+                sig_yield = 0.0
+                bkg_yield = 0.0
+                bkg_error = 0.0
+                quantile = integral
+                i_bin = self.target_bin_count
+                for i in range(sgn_histo.GetNbinsX(), 1, -1):
+                    if len(edges) == nbins: break
+                    sig_yield += sgn_histo.GetBinContent(i)
+                    bkg_yield += bkg_histo.GetBinContent(i)
+                    bkg_error += bkg_histo.GetBinError(i)**2
+                    try:
+                        bkg_stats = bkg_yield**2/bkg_error
+                    except:
+                        bkg_stats = 0
+                    if len(edges) == 1 and bkg_stats < self.min_MC_events: continue
+                    if sig_yield >= quantile / i_bin:
+                        print(" ### INFO: Adding", sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        # compute the remaining yield to be subdivided
+                        quantile = quantile - sig_yield
+                        # move to the next bin to the left
+                        i_bin = i_bin - 1
+                        sig_yield = 0.0
+                        bkg_yield = 0.0
+                        bkg_error = 0.0
+                edges.append(0.0)
+                edges = edges[::-1]
+                nbins_real = len(edges)-1
+
+                # check that there are at least 10 (=min_MC_events) bkg events in all bins
+                n_bkg_stats = np.zeros(nbins_real)
+                bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", np.array(edges))
+                for ibin in range(1, nbins_real + 1):
+                    try:
+                        # number of equivalent unweighted bkg events
+                        n_bkg_stats[ibin-1] = (bkg_histo_rebin.GetBinContent(ibin) / bkg_histo_rebin.GetBinError(ibin))**2
+                    except:
+                        n_bkg_stats[ibin-1] = 0
+                n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
+
+                if not all(n_bkg_passed):
+                    print(" ### INFO: ", nbins, " not passing bkg requirement")
+                    continue
+
+                else:
+                    print("Procedure 1 success")
+                    success = True
+                    break
+
+            # if the first procedure failed
+            if not success:
+                print(" Procedure 2 :")
+                edges = [1.0]
+                sig_yield = 0.0
+                bkg_yield = 0.0
+                bkg_error = 0.0
+                for i in range(sgn_histo.GetNbinsX(), 1, -1):
+                    sig_yield += sgn_histo.GetBinContent(i)
+                    bkg_yield += bkg_histo.GetBinContent(i)
+                    bkg_error += bkg_histo.GetBinError(i)**2
+                    try:
+                        bkg_stats = bkg_yield**2/bkg_error
+                    except:
+                        bkg_stats = 0
+                    #print(bkg_stats, sig_yield/integral)
+                    if (bkg_stats > self.min_MC_events and sig_yield/integral > 0.3):
+                        edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        print(" ### INFO: Procedure 2 found border at ", sgn_histo.GetXaxis().GetBinLowEdge(i), \
+                                " with ", bkg_stats, " equivalent background events")
+                        if len(edges) > 2: break
+                        sig_yield = 0.0
+                        bkg_yield = 0.0
+                        bkg_error = 0.0
+                if len(edges) <= 1:
+                    raise RuntimeError(f"Procedure 2 failed. Final bkg statistics {bkg_stats}  - Final fraction of signal : {sig_yield/integral}")
+
+                edges.append(0.)
+                edges = edges[::-1]
+                nbins_real = len(edges)-1
+        self.edges = edges
+        self.edges_array = np.array(self.edges)
+        self.nbins_real = nbins_real
+        return edges
+
+    def _load_bin_edges(self, path):
+        self.edges_array = np.loadtxt(path)
+        self.edges = list(self.edges_array)
+        self.nbins_real = len(self.edges)-1
+
+    def rebin(self, h, inplace=False):
+        """ rebin an histogram using the previously computed edges """
+        rebin_process_histo = h.Rebin(self.nbins_real, "" if inplace else f"rebin_{h.GetTitle()}", self.edges_array)
+        attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
+                      "cmt_process_name", "cmt_yield", "cmt_yield_error",
+                      "cmt_bin_yield", "cmt_bin_yield_error"]
+        for histo_attr in attributes:
+            try:
+                setattr(rebin_process_histo, histo_attr, getattr(h, histo_attr))
+            except AttributeError: pass
+        return rebin_process_histo
