@@ -395,14 +395,32 @@ class DatasetWrapperTask(ConfigTask):
 
     def _find_datasets(self, names, tags):
         datasets = []
+
+        used_names = {name: False for name in names}
         for pattern in names:
             for dataset in self.config.datasets:
                 if law.util.multi_match(dataset.name, pattern):
+                    used_names[pattern] = True
                     datasets.append(dataset)
+        if not all(used_names.values()):
+            raise ValueError(
+                f"Dataset names/patterns {[key for key, value in used_names.items() if not value]} "
+                "are not used. Check spelling or remove from the command. "
+            )
+
+        used_tags = {tag: False for tag in tags}
         for tag in tags:
             for dataset in self.config.datasets:
-                if dataset.has_tag(tag) and dataset not in datasets:
-                    datasets.append(dataset)
+                if dataset.has_tag(tag):
+                    used_tags[tag] = True
+                    if dataset not in datasets:
+                        datasets.append(dataset)
+
+        if not all(used_tags.values()):
+            raise ValueError(
+                f"Dataset tags {[key for key, value in used_tags.items() if not value]} "
+                "are not used. Check spelling or remove from the command. "
+            )
         return datasets
 
     def __init__(self, *args, **kwargs):

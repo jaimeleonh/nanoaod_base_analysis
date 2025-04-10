@@ -83,7 +83,7 @@ class BasePlotTask(ConfigTaskWithRegion):
         "selected via feature_names, default: ()")
     skip_feature_names = law.CSVParameter(default=(), description="names or name pattern of "
         "features to skip, default: ()")
-    skip_feature_tags = law.CSVParameter(default=("multiclass_dnn",), description="list of tags of "
+    skip_feature_tags = law.CSVParameter(default=(), description="list of tags of "
         "features to skip, default: (multiclass_dnn,)")
     apply_weights = luigi.BoolParameter(default=True, description="whether to apply "
         "mc weights to histograms, default: True")
@@ -102,19 +102,46 @@ class BasePlotTask(ConfigTaskWithRegion):
         # select features
         self.features = self.get_features()
 
+    def _find_features(self, names, tags):
+        features = []
+
+        used_names = {name: False for name in names}
+        for pattern in names:
+            for feature in self.config.features:
+                if law.util.multi_match(feature.name, pattern):
+                    used_names[pattern] = True
+                    features.append(feature)
+
+        if not all(used_names.values()):
+            raise ValueError(
+                f"Feature names/patterns {[key for key, value in used_names.items() if not value]} "
+                "are not used. Check spelling or remove from the command. "
+            )
+
+        used_tags = {tag: False for tag in tags}
+        for tag in tags:
+            for feature in self.config.features:
+                if feature.has_tag(tag):
+                    used_tags[tag] = True
+                    if feature not in features:
+                        features.append(feature)
+
+        if not all(used_tags.values()):
+            raise ValueError(
+                f"Feature tags {[key for key, value in used_tags.items() if not value]} "
+                "are not used. Check spelling or remove from the command. "
+            )
+
+        return features
+
     def get_features(self):
         features = []
-        for feature in self.config.features:
-            if self.feature_names and not law.util.multi_match(feature.name, self.feature_names):
-                continue
-            if self.feature_tags and not any([feature.has_tag(tag) for tag in self.feature_tags]):
-                continue
-            if self.skip_feature_names and \
-                    law.util.multi_match(feature.name, self.skip_feature_names):
-                continue
-            if self.skip_feature_tags and feature.has_tag(self.skip_feature_tags):
-                continue
-            features.append(feature)
+
+        # first get features to skip
+        skip_features = self._find_features(self.skip_feature_names, self.skip_feature_tags)
+
+        features = [feature for feature in self._find_features(self.feature_names, self.feature_tags)
+            if feature not in skip_features]
 
         # add extra features created on the fly
         for feature_name in self.feature_names:
