@@ -206,8 +206,9 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
 
         return {
             key: law.SiblingFileCollection(OrderedDict(
-                (feature.name, self.local_target("{}{}_{}.{}".format(
-                    prefix, feature.name, channel, ext)))
+                (feature.name, self.local_target("{}{}_{}_{}.{}".format(
+                    prefix, feature.name, channel,
+                    "tb"+str(feature.get_aux("target_bin_count", 20)), ext)))
                 for feature in self.features if feature.name in self.features_to_flatten
             ))
             for key, prefix, ext in output_data
@@ -361,7 +362,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                 if not background_sum: background_sum = hist.Clone()
                 else:                  background_sum.Add(hist.Clone())
 
-            self.histogram_bin_merger = FlatSignalBinMerger(sgn_histo=signal_sum, bkg_histo=background_sum, target_bin_count=self.category.get_aux("dnn_target_bin_count", 20))
+            self.histogram_bin_merger = FlatSignalBinMerger(sgn_histo=signal_sum, bkg_histo=background_sum, target_bin_count=feature.get_aux("target_bin_count", 20))
 
             for idx, hist in enumerate(self.histos["background"]):
                 self.histos["background"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
