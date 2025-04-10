@@ -76,7 +76,8 @@ class BayesianBlocksOptimization(BaseOptimizationTask):
         for iv in range(0, len(bin_list) - 1):
             bc = sum(bin_contents[bin_list[iv]: bin_list[iv + 1]])
             bin_size = bin_list[iv + 1] - bin_list[iv]
-            val += bc * (math.log(bc) - math.log(bin_size))
+            if bc > 0.:
+                val += bc * (math.log(bc) - math.log(bin_size))
         return val
 
     def run(self):
@@ -105,7 +106,7 @@ class BayesianBlocksOptimization(BaseOptimizationTask):
             if not histo:
                 histo = copy(tf.Get("histograms/" + name))
             else:
-                histo = histo.Add(tf.Get("histograms/" + name))
+                histo.Add(tf.Get("histograms/" + name))
         bin_contents = [histo.GetBinContent(i) for i in range(1, self.n_mini_bins + 1)]
         bin_edges = [0]
         merged_bin_contents = [0]
