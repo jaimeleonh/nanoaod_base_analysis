@@ -151,7 +151,7 @@ class BayesianBlocksOptimization(BaseOptimizationTask):
 
 
 class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, BasePlotTask):
-    features_to_flatten = law.CSVParameter(default=(), description="names of features to plot, uses all "
+    features_to_flatten = law.CSVParameter(default=("dnn_HHbbtt_kl_1","dnn_HHbbtt_HH"), description="names of features to plot, uses all "
         "features when empty, default: (dnn_HHbbtt_kl_1,dnn_HHbbtt_HH)")
     save_root = luigi.BoolParameter(default=False, description="whether to save created histograms "
         "in root files, default: False")

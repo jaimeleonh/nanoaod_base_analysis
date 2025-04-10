@@ -159,7 +159,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         """
         if not self.fit_models and not self.counting:
             return FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=self.hide_data,
-                normalize_signals=False, auto_flat_sgn_dnn=self.auto_flat_sgn_dnn)
+                normalize_signals=False, optimization_method=self.optimization_method)
         else:  # FIXME allow counting datacards starting from FeaturePlot
             reqs = {"fits": {}, "inspections": {}}
             self.model_processes = []
