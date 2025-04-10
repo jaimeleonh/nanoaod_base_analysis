@@ -50,8 +50,8 @@ class BaseOptimizationTask(FeaturePlot, law.LocalWorkflow, HTCondorWorkflow, SGE
             n_bins=self.n_mini_bins, plot_systematics=False, optimization_method="")}
 
     def output(self):
-        return self.local_target("binning__{}_{}_bins.json".format(
-            self.features[self.branch].name, self.n_max_bins))
+        return self.local_target("binning__{}__pgn_{}__{}_bins.json".format(
+            self.features[self.branch].name, self.process_group_name, self.n_max_bins))
 
     def run(self):
         pass
