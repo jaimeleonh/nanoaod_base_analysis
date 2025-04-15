@@ -1218,7 +1218,7 @@ class FlatSignalBinMerger:
                 edges = edges[::-1]
                 nbins_real = len(edges)-1
 
-                # check that there are at least 10 (=min_MC_events) bkg events in all bins
+                # check that there are at least 'min_MC_events' bkg events in all bins
                 n_bkg_stats = np.zeros(nbins_real)
                 bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", np.array(edges))
                 for ibin in range(1, nbins_real + 1):
