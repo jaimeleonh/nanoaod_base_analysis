@@ -468,6 +468,59 @@ class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
             systematic=systematic, systematic_direction=direction)
 
 
+class SystWorkflowBase(PreCounter):
+    systematic_names = law.CSVParameter(default=(), description="names of systematics "
+        "to run, default: central only (empty string)")
+    systematic_directions = ("up", "down")
+
+    def __init__(self, *args, **kwargs):
+        super(SystWorkflowBase, self).__init__(*args, **kwargs)
+
+        self.systematics = [("", "")]
+        if self.systematic_names:
+            self.systematics += list(itertools.product(
+                self.systematic_names, self.systematic_directions))
+
+        self.workflow_data = {
+            "require_branches": [],
+        }
+
+    def workflow_requires(self):
+        return {
+            b: self.trace_branch_requires(self.as_branch(b).requires())
+            for b in self.workflow_data["require_branches"]
+        }
+
+    def trace_branch_requires(self, branch_req):
+        return branch_req.requires()
+
+    def output(self):
+        return self.requires().output()
+
+    def matching_branch_data(self, task_cls):
+        assert(self.is_branch())
+        param_names = task_cls.get_param_names()
+        return {
+            key: value for key, value in self.branch_data.items()
+            if key in param_names
+        }
+
+
+class PreprocessRDFSyst(SystWorkflowBase):
+
+    def requires(self):
+        return {
+            (name, d): PreprocessRDF.vreq(self, systematic=name, systematic_direction=d)
+            for (name, d) in self.systematics
+        }
+
+    def output(self):
+        return {key: req.output() for key, req in self.requires().items()}
+
+    def run(self):
+        pass
+
+
 class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow, SplittedTask):
 
     modules = luigi.DictParameter(default=None)
