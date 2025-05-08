@@ -468,7 +468,7 @@ class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
             systematic=systematic, systematic_direction=direction)
 
 
-class SystWorkflowBase(PreCounter):
+class SystWorkflowBase(PreCounter, DatasetTaskWithCategory):
     systematic_names = law.CSVParameter(default=(), description="names of systematics "
         "to run, default: central only (empty string)")
     systematic_directions = ("up", "down")
@@ -506,7 +506,7 @@ class SystWorkflowBase(PreCounter):
         }
 
 
-class PreprocessRDFSyst(SystWorkflowBase, DatasetTaskWithCategory):
+class PreprocessRDFSyst(SystWorkflowBase):
 
     def requires(self):
         return {
