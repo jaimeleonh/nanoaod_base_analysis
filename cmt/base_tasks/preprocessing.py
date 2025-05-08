@@ -506,7 +506,7 @@ class SystWorkflowBase(PreCounter):
         }
 
 
-class PreprocessRDFSyst(SystWorkflowBase):
+class PreprocessRDFSyst(SystWorkflowBase, DatasetTaskWithCategory):
 
     def requires(self):
         return {
@@ -519,6 +519,11 @@ class PreprocessRDFSyst(SystWorkflowBase):
 
     def run(self):
         pass
+
+
+class PreprocessRDFSystWrapper(DatasetCategoryWrapperTask):
+    def atomic_requires(self, dataset, category):
+        return PreprocessRDFSyst.vreq(self, dataset_name=dataset.name, category_name=category.name)
 
 
 class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow, SplittedTask):
