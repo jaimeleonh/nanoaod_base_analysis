@@ -105,7 +105,7 @@ class BasePlotTask(ConfigTaskWithRegion):
     def _find_features(self, names, tags):
         features = []
 
-        used_names = {name: False for name in names}
+        used_names = {name: False for name in names if "(" not in name}
         for pattern in names:
             for feature in self.config.features:
                 if law.util.multi_match(feature.name, pattern):
