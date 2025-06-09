@@ -762,7 +762,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             with open(data_obs_path) as f:
                                 res = json.load(f)
                             norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_{self.category_name}_{self.region.name}_norm",
-                                "Background yield", res[""]["integral"], 0, 3 * res[""]["integral"])
+                                "Background yield", res[""]["integral"], 0, max(10, 3 * res[""]["integral"]))
 
                     except:
                         self.log.write("Workspace for this process is not available\n")
@@ -1626,9 +1626,6 @@ class RunCombine(CreateWorkspace):
                 cmd += inputs[feature.name]["root"].path
                 cmd += f" > {create_file_dir(self.output()[feature.name]['txt'].path)}"
                 os.system(cmd)
-                #print(cmd)
-                #import sys
-                #sys.exit()
                 move(out_file.format(test_name, self.higgs_mass),
                     self.output()[feature.name]["root"].path)
             else:
@@ -1641,9 +1638,6 @@ class RunCombine(CreateWorkspace):
                     cmd_to_run += inputs[feature.name]["root"].path
                     quantile_str = f'{str(quantile).replace(".", "p")}'
                     cmd_to_run += f" > {create_file_dir(self.output()[feature.name][quantile_str]['txt'].path)}"
-                    print(cmd_to_run)
-                    import sys
-                    sys.exit()
                     os.system(cmd_to_run)
                     move(out_file_quantiles[quantile_str].format(test_name, self.higgs_mass),
                         self.output()[feature.name][quantile_str]["root"].path)
