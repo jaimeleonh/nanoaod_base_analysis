@@ -1587,7 +1587,7 @@ class RunCombine(CreateWorkspace):
         }
 
     def get_additional_parameters(self, **kwargs):
-        return f"self.additional_parameters "
+        return f"{self.additional_parameters} "
 
     def get_inputs(self):
         return self.input()
