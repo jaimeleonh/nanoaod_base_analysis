@@ -96,6 +96,8 @@ class BasePlotTask(ConfigTaskWithRegion):
         "from distributions, default: False")
     optimization_method = luigi.ChoiceParameter(default="", choices=("", "flat_sgn", "bayesian_blocks"),
         significant=False, description="optimization method to be used, default: none")
+    preplot_foldered_by_feature=luigi.BoolParameter(default=False, description="whether to store"
+        " PrePlot histograms organised in folders in the ROOT file, default: False")
 
     def __init__(self, *args, **kwargs):
         super(BasePlotTask, self).__init__(*args, **kwargs)
@@ -553,11 +555,32 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         histos = self.define_histograms(dfs, nentries)
 
         out = ROOT.TFile.Open(create_file_dir(outp), "RECREATE")
-        for histo in histos:
-            histo = histo.Clone()
-            histo.Sumw2()
-            out.cd()
-            histo.Write()
+
+        if self.preplot_foldered_by_feature:
+            out.mkdir("histograms")
+            out.cd("histograms")
+            for feature in self.features:
+                feature_name = feature.name
+                out.mkdir(f"histograms/{feature_name}_dir")
+                out.cd(f"histograms/{feature_name}_dir")
+
+                for histo in histos:
+                    if not feature_name in histo.GetName(): continue
+
+                    histo = histo.Clone()
+                    histo.Sumw2()
+                    histo.Write()
+
+                out.cd()
+
+        else:
+            for histo in histos:
+                histo = histo.Clone()
+                histo.Sumw2()
+                out.cd()
+                histo.Write()
+
+
         out.Close()
 
 
@@ -1828,7 +1851,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                                 (dataset.name, category.name)].collection.targets.values()
                             for elem in inp:
                                 rootfile = ROOT.TFile.Open(elem.path)
-                                histo = copy(rootfile.Get(feature_name))
+                                if self.preplot_foldered_by_feature:
+                                    histo = copy(rootfile.Get(f"histograms/{feature.name}_dir/{feature_name}"))
+                                else:
+                                    histo = copy(rootfile.Get(feature_name))
                                 rootfile.Close()
                                 if histo.GetEntries() != 0:
                                     dataset_histo.Add(histo)
@@ -2854,7 +2880,10 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
                                 (dataset.name, category.name)].collection.targets.values()
                             for elem in inp:
                                 rootfile = ROOT.TFile.Open(elem.path)
-                                histo = copy(rootfile.Get(feature_name))
+                                if self.preplot_foldered_by_feature:
+                                    histo = copy(rootfile.Get(f"histograms/{feature.name}_dir/{feature_name}"))
+                                else:
+                                    histo = copy(rootfile.Get(feature_name))
                                 rootfile.Close()
                                 dataset_histo.Add(histo)
                             if not process.isData and not self.avoid_normalization:
