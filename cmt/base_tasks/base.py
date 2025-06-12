@@ -1282,10 +1282,15 @@ class FlatSignalBinMerger:
         """ rebin an histogram using the previously computed edges """
         rebin_process_histo = h.Rebin(self.nbins_real, "" if inplace else f"rebin_{h.GetTitle()}", self.edges_array)
         attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
-                      "cmt_process_name", "cmt_yield", "cmt_yield_error",
-                      "cmt_bin_yield", "cmt_bin_yield_error"]
+                      "cmt_process_name", "cmt_yield", "cmt_yield_error"]
         for histo_attr in attributes:
             try:
                 setattr(rebin_process_histo, histo_attr, getattr(h, histo_attr))
             except AttributeError: pass
+        # Set also bin-related attributes
+        rebin_process_histo.cmt_bin_yield = []
+        rebin_process_histo.cmt_bin_yield_error = []
+        for ibin in range(1, rebin_process_histo.GetNbinsX() + 1):
+            rebin_process_histo.cmt_bin_yield.append(rebin_process_histo.GetBinContent(ibin))
+            rebin_process_histo.cmt_bin_yield_error.append(rebin_process_histo.GetBinError(ibin))
         return rebin_process_histo
