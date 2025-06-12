@@ -1940,9 +1940,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     self.histos["data"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
                 for idx, hist in enumerate(self.histos["all"]):
                     self.histos["all"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
-                for shape in self.histos["shape"]:
-                    for idx, hist in enumerate(self.histos["shape"][shape]):
-                        self.histos["shape"][shape][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
+                if self.store_systematics:
+                    for shape in self.histos["shape"]:
+                        for idx, hist in enumerate(self.histos["shape"][shape]):
+                            self.histos["shape"][shape][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
                 if self.plot_systematics:
                     self.histos["bkg_histo_syst"] = self.histogram_bin_merger.rebin(self.histos["bkg_histo_syst"], inplace=True)
 
