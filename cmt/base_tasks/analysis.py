@@ -147,6 +147,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
     additional_scaling = luigi.DictParameter(description="dict with scalings to be "
         "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
+    clip_negative_integrals = luigi.BoolParameter(default=False, description="whether to keep scale"
+        "to zero the variations that have overall negative integral, default: False")
 
     norm_syst_threshold = 0.01
     norm_syst_threshold_sym = 0.01
@@ -686,8 +688,11 @@ class CreateDatacards(CombineBase, FeaturePlot):
             # Convert the shape systematics list to a dict with the systs as keys and a list of
             # the processes affected by them (all non-data processes except the qcd if computed
             # in the code)
-            shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names if not "qcd" in p_name or self.propagate_syst_qcd]
-                for shape_syst in shape_syst_list}
+            shape_systematics = {}
+            for shape_syst in shape_syst_list:
+                syst_fromConfig = self.config.systematics.get(shape_syst)
+                syst_label = syst_fromConfig.get_aux("alias", shape_syst)
+                shape_systematics[syst_label] = [p_name for p_name in self.non_data_names if not "qcd" in p_name or self.propagate_syst_qcd]
 
             if not self.fit_models and not self.counting:  # binned fits
                 self.log.write("Generating a binned-fit datacard...\n")
@@ -707,7 +712,11 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             syst_name = syst if not syst_alias else syst
                             name_to_save = "%s_%s%s" % (name, syst_name, d.capitalize())
                             name_from_featureplot = "%s_%s_%s" % (name, syst, d)
-                        histos[name_to_save] = copy(tf.Get("histograms/" + name_from_featureplot))
+                        histo = copy(tf.Get("histograms/" + name_from_featureplot))
+                        if self.clip_negative_integrals and histo.Integral() < 10:
+                            print(f"** WARNING: histo {histo.GetName()} has integral {histo.Integral()}. Clipping it to 0.0 to avoid Combine issues!",)
+                            histo.Scale(0.0)
+                        histos[name_to_save] = histo
                 tf.Close()
 
                 yields = {name_central: histos[name_central].Integral()
