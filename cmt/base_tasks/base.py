@@ -1278,8 +1278,11 @@ class FlatSignalBinMerger:
         self.edges = list(self.edges_array)
         self.nbins_real = len(self.edges)-1
 
-    def rebin(self, h, inplace=False):
+    def rebin(self, h, inplace=False, equal_bin_width=False):
         """ rebin an histogram using the previously computed edges """
+        if equal_bin_width:
+            self.edges_array = np.arange(0,self.edges_array.shape[0],1.)
+            self.edges = list(self.edges_array)
         rebin_process_histo = h.Rebin(self.nbins_real, "" if inplace else f"rebin_{h.GetTitle()}", self.edges_array)
         attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
                       "cmt_process_name", "cmt_yield", "cmt_yield_error"]

@@ -590,6 +590,54 @@ class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
         return PrePlot.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
+class EqualBinWidthTransformer:
+    """
+    Helper tool that, given a model histogram, will change
+    the x axis values to make the bins have equal width
+    """
+    def __init__(self, h_model):
+        self.n_bins = h_model.GetNbinsX()
+        self.h_model = h_model
+
+    def convert(self, old_h):
+        """ convert the histogram to fixed-width plotting binning """
+        ROOT = import_root()
+        assert old_h.GetNbinsX() == self.n_bins
+        new_h = ROOT.TH1D(randomize(old_h.GetName()), old_h.GetTitle(), self.n_bins, 0, self.n_bins)
+        new_h.Set(old_h.GetNbinsX()+2, old_h.GetArray())
+        new_h.GetSumw2().__assign__(old_h.GetSumw2())
+
+        attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
+                      "cmt_process_name", "cmt_yield", "cmt_yield_error",
+                      "cmt_bin_yield", "cmt_bin_yield_error"]
+        for histo_attr in attributes:
+            try:
+                setattr(new_h, histo_attr, getattr(old_h, histo_attr))
+            except AttributeError: pass
+
+        return new_h
+
+    def convert_labels(self, dummy_hist):
+        """ Set the histogram labels on the given dummy_hist """
+        edges = self.h_model.GetXaxis().GetXbins()
+        dummy_hist.GetXaxis().SetNdivisions(self.n_bins, 0, 0, False)
+        # try to get enough decimals so that consecutive bin labels are different
+        if len(edges) <= 2:
+            precision = 1
+        else:
+            min_diff = min(edges[i+1] - edges[i] for i in range(0, self.n_bins-1) if edges[i+1] - edges[i] > 0)
+            precision = max(0, int(math.ceil(-math.log10(min_diff))))
+        for label_i in range(2, self.n_bins+2): # labels start at 1. Label=1 is 0 which is already correct
+            dummy_hist.GetXaxis().ChangeLabel(label_i, -1,-1,-1,-1,-1, f"{self.h_model.GetXaxis().GetBinLowEdge(label_i):.{precision}g}")
+
+    def convert_labels_ratio(self, dummy_ratio_hist):
+        """ not sure why this is different than above function. Probably the 2 could be the same """
+        return self.convert_labels(dummy_ratio_hist)
+        dummy_ratio_hist.GetXaxis().SetNdivisions(self.n_bins, 0, 0, False)
+        for label_i in range(2, self.n_bins+2): # labels start at 1. Label=1 is 0 which is already correct
+            dummy_ratio_hist.GetXaxis().ChangeLabel(label_i, -1,-1,-1,-1,-1, f"{self.h_model.GetXaxis().GetBinLowEdge(label_i):.2g}")
+
+
 class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
     """
     Performs the actual histogram plotting: loads the histograms obtained in the PrePlot tasks,
@@ -688,6 +736,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         and the luminosity are also set accordingly.
     :type run_era: str
 
+    :param equal_bin_width: make all bins have equal plot width
+    :type equal_bin_width: bool
+
     """
     stack = luigi.BoolParameter(default=False, description="when set, stack backgrounds, weight "
         "them with dataset and category weights, and normalize afterwards, default: False")
@@ -734,6 +785,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         "default: None")
     run_era = luigi.Parameter(default="", description="plot only the specified era, "
         "default: None")
+    equal_bin_width = luigi.BoolParameter(default=False, description="make all bins have equal plot width. "
+        "default: False")
     # # optimization parameters
     # bin_opt_version = luigi.Parameter(default=law.NO_STR, description="version of the binning "
         # "optimization task to use, not used when empty, default: empty")
@@ -941,6 +994,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             postfix += "__logX"
         if self.normalize_signals and key not in ("root", "yields"):
             postfix += "__norm_sig"
+        if self.equal_bin_width:
+            postfix += "__equalBinWidth"
         return postfix
 
     def output(self):
@@ -1030,7 +1085,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     self.data_names[0], region, files[region]))
 
             if self.optimization_method == "flat_sgn":
-                d_hist = self.histogram_bin_merger.rebin(d_hist, inplace=True)
+                d_hist = self.histogram_bin_merger.rebin(d_hist, inplace=True, equal_bin_width=self.equal_bin_width)
 
             b_hists = []
             for b_name in self.background_names:
@@ -1039,7 +1094,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     raise Exception("background histogram '{}' not found in region '{}'".format(
                         b_name, region))
                 if self.optimization_method == "flat_sgn":
-                    b_hist = self.histogram_bin_merger.rebin(b_hist, inplace=True)
+                    b_hist = self.histogram_bin_merger.rebin(b_hist, inplace=True, equal_bin_width=self.equal_bin_width)
                 b_hists.append(b_hist)
 
             qcd_hist = d_hist.Clone(randomize("qcd_" + region + syst))
@@ -1310,6 +1365,37 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             background_hists = [bkg_hist]
             all_hists.append(bkg_hist)
 
+        # Change bins to have equal width
+        if self.equal_bin_width:
+
+            # Define transformer
+            equal_bin_width_transformer = EqualBinWidthTransformer(self.histos["all"][0])
+
+            # Apply equal bin transformation before plotting
+            for idx, hist in enumerate(signal_hists):
+                color = hist.GetLineColor()
+                sig_hist = equal_bin_width_transformer.convert(hist)
+                self.setup_signal_hist(sig_hist, color)
+                signal_hists[idx] = sig_hist
+            for idx, hist in enumerate(background_hists):
+                color = hist.GetFillColor()
+                bkg_hist = equal_bin_width_transformer.convert(hist)
+                self.setup_background_hist(bkg_hist, color)
+                background_hists[idx] = bkg_hist
+            for idx, hist in enumerate(data_hists):
+                color = hist.GetLineColor()
+                dat_hist = equal_bin_width_transformer.convert(hist)
+                self.setup_data_hist(dat_hist, color)
+                data_hists[idx] = dat_hist
+            for idx, hist in enumerate(all_hists):
+                all_hists[idx] = equal_bin_width_transformer.convert(hist)
+            if self.store_systematics:
+                for shape in self.histos["shape"]:
+                    for idx, hist in enumerate(self.histos["shape"][shape]):
+                        self.histos["shape"][shape][idx] = equal_bin_width_transformer.convert(hist)
+            if self.plot_systematics:
+                self.histos["bkg_histo_syst"] = equal_bin_width_transformer.convert(self.histos["bkg_histo_syst"])
+
         if not self.hide_data:
             all_hists += data_hists
 
@@ -1392,7 +1478,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     else:
                         data_histo.Add(hist.Clone())
 
-        dummy_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
+        # Create a dummy histogram for plotting axes and stuff (cloned from the template)
+        dummy_hist = all_hists[0].Clone(randomize("dummy"))
+        dummy_hist.SetTitle(hist_title)
+
         # Draw
         self.show_ratio = self.show_ratio and not (self.hide_data or len(data_hists) == 0
             or len(background_hists) == 0)
@@ -1414,12 +1503,18 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 c.get_pad(1).SetLogx()
             label_scaling = self.config.label_size
 
-        # r.setup_hist(dummy_hist, pad=c.get_pad(1))
         r.setup_hist(dummy_hist)
+
+        # In case there is a ratio plot, labels are changed on ratio plot later.
+        # In case no ratio plot labels are updated here on the dummy hist.
         if self.show_ratio:
             r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
+        else:
+            if self.equal_bin_width:
+                equal_bin_width_transformer.convert_labels(dummy_hist)
+
         dummy_hist.GetYaxis().SetMaxDigits(4)
-        # dummy_hist.GetYaxis().SetTitleOffset(1.22)
+
         if self.max_y == law.NO_FLOAT:
             maximum = max([hist.GetMaximum() for hist in draw_hists])
             dummy_hist.SetMaximum(100 * maximum if self.log_y else 1.35 * maximum)
@@ -1593,6 +1688,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
             c.get_pad(2).cd()
             c.get_pad(2).SetGridy()
+            if self.equal_bin_width:
+                equal_bin_width_transformer.convert_labels_ratio(dummy_ratio_hist)
             dummy_ratio_hist.Draw()
             if not self.hide_data:
                 ratio_graph.Draw("PEZ,SAME")
