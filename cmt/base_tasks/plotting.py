@@ -621,12 +621,7 @@ class EqualBinWidthTransformer:
         """ Set the histogram labels on the given dummy_hist """
         edges = self.h_model.GetXaxis().GetXbins()
         dummy_hist.GetXaxis().SetNdivisions(self.n_bins, 0, 0, False)
-        # try to get enough decimals so that consecutive bin labels are different
-        if len(edges) <= 2:
-            precision = 1
-        else:
-            min_diff = min(edges[i+1] - edges[i] for i in range(0, self.n_bins-1) if edges[i+1] - edges[i] > 0)
-            precision = max(0, int(math.ceil(-math.log10(min_diff))))
+        precision = 3 # Use precision fixed to max 3 decimals
         for label_i in range(2, self.n_bins+2): # labels start at 1. Label=1 is 0 which is already correct
             dummy_hist.GetXaxis().ChangeLabel(label_i, -1,-1,-1,-1,-1, f"{self.h_model.GetXaxis().GetBinLowEdge(label_i):.{precision}g}")
 
@@ -1740,7 +1735,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     color = colors[im]
                     fits[-1].plotOn(xframe, ROOT.RooFit.LineColor(color), ROOT.RooFit.Name(name))
                     entries.append((name, name, "l"))
-            xframe.Draw("same");
+            xframe.Draw("same")
 
         n_entries = len(entries)
         if n_entries <= 4:
