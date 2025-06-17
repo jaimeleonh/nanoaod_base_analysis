@@ -1147,15 +1147,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         if self.plot_systematics:
             bkg_histo_syst = self.histos["bkg_histo_syst"]
 
-        binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
-        x_title = (str(feature.get_aux("x_title"))
-            + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
-        if not getattr(self, "isEfficiency", False):
-            y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
-        else:
-            y_title = "Efficiency"
-        hist_title = "; %s; %s" % (x_title, y_title)
-
         # qcd shape files
         qcd_shape_files = None
         if self.do_qcd:
@@ -1480,6 +1471,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
         # Create a dummy histogram for plotting axes and stuff (cloned from the template)
         dummy_hist = all_hists[0].Clone(randomize("dummy"))
+        binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
+        x_title = (str(feature.get_aux("x_title"))
+            + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
+        if not getattr(self, "isEfficiency", False):
+            y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
+        else:
+            y_title = "Efficiency"
+        hist_title = "; %s; %s" % (x_title, y_title)
         dummy_hist.SetTitle(hist_title)
 
         # Draw
@@ -1612,14 +1611,12 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
 
         if self.show_ratio:
-            dummy_ratio_hist = ROOT.TH1F(randomize("dummy"), hist_title, *binning_args)
+            dummy_ratio_hist = dummy_hist.Clone(randomize("dummy"))
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
                 props={"Minimum": self.ratio_min, "Maximum": self.ratio_max})
             r.setup_y_axis(dummy_ratio_hist.GetYaxis(), pad=c.get_pad(2),
                 props={"Ndivisions": self.ratio_ndivisions})
             dummy_ratio_hist.GetYaxis().SetTitle("Data / MC")
-            # dummy_ratio_hist.GetXaxis().SetTitleOffset(3)
-            # dummy_ratio_hist.GetYaxis().SetTitleOffset(1.22)
 
             data_graph = hist_to_graph(data_histo, remove_zeros=False, errors=True,
                 asymm=True, overflow=False, underflow=False,
@@ -1643,7 +1640,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 setattr(syst_unc_graph, "title", "Norm. syst.")
                 r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
-                # entries.append((syst_unc_graph, syst_unc_graph.title, "f"))
                 all_unc_graph = ROOT.TGraphErrors(binning_args[0])
                 setattr(all_unc_graph, "title", "MC Stat. + Norm. Syst.")
                 entries.append((all_unc_graph, all_unc_graph.title, "f"))
@@ -1694,7 +1690,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             if not self.hide_data:
                 ratio_graph.Draw("PEZ,SAME")
             if self.plot_systematics:
-                # syst_unc_graph.Draw("2,SAME")
                 all_unc_graph.Draw("2,SAME")
             mc_unc_graph.Draw("2,SAME")
 
