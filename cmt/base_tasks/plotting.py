@@ -630,14 +630,6 @@ class EqualBinWidthTransformer:
         for label_i in range(2, self.n_bins+2): # labels start at 1. Label=1 is 0 which is already correct
             dummy_hist.GetXaxis().ChangeLabel(label_i, -1,-1,-1,-1,-1, f"{self.h_model.GetXaxis().GetBinLowEdge(label_i):.{precision}g}")
 
-    def convert_labels_ratio(self, dummy_ratio_hist):
-        """ not sure why this is different than above function. Probably the 2 could be the same """
-        return self.convert_labels(dummy_ratio_hist)
-        dummy_ratio_hist.GetXaxis().SetNdivisions(self.n_bins, 0, 0, False)
-        for label_i in range(2, self.n_bins+2): # labels start at 1. Label=1 is 0 which is already correct
-            dummy_ratio_hist.GetXaxis().ChangeLabel(label_i, -1,-1,-1,-1,-1, f"{self.h_model.GetXaxis().GetBinLowEdge(label_i):.2g}")
-
-
 class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
     """
     Performs the actual histogram plotting: loads the histograms obtained in the PrePlot tasks,
@@ -1379,7 +1371,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 self.setup_data_hist(dat_hist, color)
                 data_hists[idx] = dat_hist
             for idx, hist in enumerate(all_hists):
-                all_hists[idx] = equal_bin_width_transformer.convert(hist)
+                if hist.hist_type == 'background':
+                    color = hist.GetFillColor()
+                    all_hist = equal_bin_width_transformer.convert(hist)
+                    self.setup_background_hist(all_hist, color)
+                    all_hists[idx] = all_hist
+                else:
+                    all_hists[idx] = equal_bin_width_transformer.convert(hist)
             if self.store_systematics:
                 for shape in self.histos["shape"]:
                     for idx, hist in enumerate(self.histos["shape"][shape]):
@@ -1504,8 +1502,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
         r.setup_hist(dummy_hist)
 
-        # In case there is a ratio plot, labels are changed on ratio plot later.
-        # In case no ratio plot labels are updated here on the dummy hist.
+        # In case there is a ratio plot: labels are changed on ratio plot later.
+        # In case no ratio plot: labels are updated here on the dummy hist.
         if self.show_ratio:
             r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         else:
@@ -1685,7 +1683,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             c.get_pad(2).cd()
             c.get_pad(2).SetGridy()
             if self.equal_bin_width:
-                equal_bin_width_transformer.convert_labels_ratio(dummy_ratio_hist)
+                equal_bin_width_transformer.convert_labels(dummy_ratio_hist)
             dummy_ratio_hist.Draw()
             if not self.hide_data:
                 ratio_graph.Draw("PEZ,SAME")
