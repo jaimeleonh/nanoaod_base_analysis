@@ -619,7 +619,6 @@ class EqualBinWidthTransformer:
 
     def convert_labels(self, dummy_hist):
         """ Set the histogram labels on the given dummy_hist """
-        edges = self.h_model.GetXaxis().GetXbins()
         dummy_hist.GetXaxis().SetNdivisions(self.n_bins, 0, 0, False)
         precision = 3 # Use precision fixed to max 3 decimals
         for label_i in range(2, self.n_bins+2): # labels start at 1. Label=1 is 0 which is already correct
@@ -1486,8 +1485,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             label_scaling = 1
         else:
             c = RatioCanvas()
-            dummy_hist.GetXaxis().SetLabelOffset(100)
-            dummy_hist.GetXaxis().SetTitleOffset(100)
             c.get_pad(1).cd()
             if self.log_y:
                 c.get_pad(1).SetLogy()
@@ -1760,6 +1757,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         for entry in entries:
             legend.AddEntry(*entry)
         legend.Draw("same")
+
+        # Make sure tick mark are not hidden behind
+        # the other objects plotted with "SAME"
+        ROOT.gPad.RedrawAxis()
 
         outputs = []
         if self.save_png:
