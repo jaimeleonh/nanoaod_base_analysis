@@ -617,12 +617,21 @@ class EqualBinWidthTransformer:
 
         return new_h
 
-    def convert_labels(self, dummy_hist):
+    def convert_labels(self, dummy_hist, show_ratio):
         """ Set the histogram labels on the given dummy_hist """
         dummy_hist.GetXaxis().SetNdivisions(self.n_bins, 0, 0, False)
-        precision = 3 # Use precision fixed to max 3 decimals
-        for label_i in range(2, self.n_bins+2): # labels start at 1. Label=1 is 0 which is already correct
-            dummy_hist.GetXaxis().ChangeLabel(label_i, -1,-1,-1,-1,-1, f"{self.h_model.GetXaxis().GetBinLowEdge(label_i):.{precision}g}")
+        precision = 3 # Use precision fixed to 3 decimals
+        for label_i in range(1, self.n_bins+2): # Labels start at 1
+            # Label options here below
+            # 90 -> angle of the text
+            # 22 -> to center label on the axis tick (see TAttTex alignment)
+            dummy_hist.GetXaxis().ChangeLabel(label_i, 90, -1, 22, -1, -1, f"{self.h_model.GetXaxis().GetBinLowEdge(label_i):.{precision}f}")
+            if show_ratio:
+                dummy_hist.GetXaxis().SetLabelOffset(0.08)
+                dummy_hist.GetXaxis().SetTitleOffset(1.9)
+            else:
+                dummy_hist.GetXaxis().SetLabelOffset(0.02)
+                dummy_hist.GetXaxis().SetTitleOffset(1.9)
 
 class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
     """
@@ -1500,7 +1509,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             r.setup_y_axis(dummy_hist.GetYaxis(), pad=c.get_pad(1))
         else:
             if self.equal_bin_width:
-                equal_bin_width_transformer.convert_labels(dummy_hist)
+                equal_bin_width_transformer.convert_labels(dummy_hist, show_ratio=self.show_ratio)
+                ROOT.gPad.SetBottomMargin(0.13)
 
         dummy_hist.GetYaxis().SetMaxDigits(4)
 
@@ -1675,7 +1685,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             c.get_pad(2).cd()
             c.get_pad(2).SetGridy()
             if self.equal_bin_width:
-                equal_bin_width_transformer.convert_labels(dummy_ratio_hist)
+                equal_bin_width_transformer.convert_labels(dummy_ratio_hist, show_ratio=self.show_ratio)
+                c.get_pad(2).SetBottomMargin(0.45)
             dummy_ratio_hist.Draw()
             if not self.hide_data:
                 ratio_graph.Draw("PEZ,SAME")
