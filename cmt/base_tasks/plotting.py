@@ -1524,7 +1524,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         if self.min_y == law.NO_FLOAT:
             dummy_hist.SetMinimum(0.0011 if self.log_y else 0.001)
         else:
-            dummy_hist.SetMaximum(self.min_y)
+            dummy_hist.SetMinimum(self.min_y)
 
         # get text to plot inside the figure
         inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
