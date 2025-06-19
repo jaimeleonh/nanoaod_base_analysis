@@ -931,7 +931,7 @@ class Categorization(PreprocessRDF):
                         raise RuntimeError(f"Categorization : Input file for branch '{in_file}' is zombie. If it was produced "
                                             "by PreprocessRDF, try removing the file and running the task again.")
 
-                    evts = file.Get("Events")
+                    evts = file.Get(self.tree_name)
                     if not evts:
                         raise RuntimeError(f"Categorization : Input file for branch '{in_file}' is empty. If it was produced "
                                             "by PreprocessRDF, try removing the file and running the task again.")
