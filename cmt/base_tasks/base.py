@@ -108,14 +108,22 @@ def get_n_files_after_merging(dataset:Dataset, category:Category, dataset_key="m
     n_files_after_requested_merging = default
     after_merging_d = dataset.get_aux(dataset_key, None)
     if after_merging_d:
-        n_files_after_requested_merging = after_merging_d.get(category.name, default)
+        if category.name not in after_merging_d:
+            print(f"INFO: Merging factor for {dataset.name} - {category.name} not specified. "
+                  f"Defaulting to '{dataset_key}={default}'.")
+        else:
+            n_files_after_requested_merging = after_merging_d.get(category.name)
 
     # check that the merging factor applied in MergeCategorization is smaller than any previous
     # merging to avoid the situations of merging e.g. 3 inputs in 5 outputs
     n_files_after_merging = 1
     merging_d = dataset.get_aux("merging", None)
     if merging_d:
-        n_files_after_merging = merging_d.get(category.name, 1)
+        if category.name not in merging_d:
+            print(f"INFO: Merging factor for {dataset.name} - {category.name} not specified. "
+                    "Defaulting to n_files_after_merging=1.")
+        else:
+            n_files_after_merging = merging_d.get(category.name)
 
     if n_files_after_requested_merging > 0 and n_files_after_requested_merging < n_files_after_merging:
         raise ValueError(f"In {dataset.name} - {category.name}, "
