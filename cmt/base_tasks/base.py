@@ -106,22 +106,17 @@ def get_n_files_after_merging(dataset:Dataset, category:Category, dataset_key="m
     If the category name is not found the default "non-merging" value will be set.
     """
     n_files_after_requested_merging = default
-    if dataset.get_aux(dataset_key, None):
-        try:
-            n_files_after_requested_merging = dataset.get_aux(dataset_key)[category.name]
-        except KeyError:
-            print(f"Merging factor for {dataset.name} - {category.name} not found. "
-                  f"Defaulting to '{dataset_key}={default}'.")
+    after_merging_d = dataset.get_aux(dataset_key, None)
+    if after_merging_d:
+        n_files_after_requested_merging = after_merging_d.get(category.name, default)
 
     # check that the merging factor applied in MergeCategorization is smaller than any previous
     # merging to avoid the situations of merging e.g. 3 inputs in 5 outputs
     n_files_after_merging = 1
-    if dataset.get_aux("merging", None):
-        try:
-            n_files_after_merging = dataset.get_aux("merging")[category.name]
-        except KeyError:
-            print(f"Merging factor for {dataset.name} - {category.name} not found. "
-                    "Defaulting to n_files_after_merging=1.")
+    merging_d = dataset.get_aux("merging", None)
+    if merging_d:
+        n_files_after_merging = merging_d.get(category.name, 1)
+
     if n_files_after_requested_merging > 0 and n_files_after_requested_merging < n_files_after_merging:
         raise ValueError(f"In {dataset.name} - {category.name}, "
                          f"merging factor '{dataset_key}={n_files_after_requested_merging}' is smaller than 'merging={n_files_after_merging}', "
