@@ -363,7 +363,12 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                 if not background_sum: background_sum = hist.Clone()
                 else:                  background_sum.Add(hist.Clone())
 
-            self.histogram_bin_merger = FlatSignalBinMerger(sgn_histo=signal_sum, bkg_histo=background_sum, target_bin_count=feature.get_aux("target_bin_count", 20))
+            self.histogram_bin_merger = FlatSignalBinMerger(
+                sgn_histo=signal_sum,
+                bkg_histo=background_sum,
+                target_bin_count=feature.get_aux("target_bin_count", 20),
+                min_MC_events=feature.get_aux("min_MC_events", 10)
+            )
 
             for idx, hist in enumerate(self.histos["background"]):
                 self.histos["background"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)

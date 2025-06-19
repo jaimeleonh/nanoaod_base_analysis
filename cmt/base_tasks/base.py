@@ -1221,7 +1221,7 @@ class FlatSignalBinMerger:
                 edges = edges[::-1]
                 nbins_real = len(edges)-1
 
-                # check that there are at least 10 (=min_MC_events) bkg events in all bins
+                # check that there are at least 'min_MC_events' bkg events in all bins
                 n_bkg_stats = np.zeros(nbins_real)
                 bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", np.array(edges))
                 for ibin in range(1, nbins_real + 1):
@@ -1281,14 +1281,22 @@ class FlatSignalBinMerger:
         self.edges = list(self.edges_array)
         self.nbins_real = len(self.edges)-1
 
-    def rebin(self, h, inplace=False):
+    def rebin(self, h, inplace=False, equal_bin_width=False):
         """ rebin an histogram using the previously computed edges """
+        if equal_bin_width:
+            self.edges_array = np.arange(0,self.edges_array.shape[0],1.)
+            self.edges = list(self.edges_array)
         rebin_process_histo = h.Rebin(self.nbins_real, "" if inplace else f"rebin_{h.GetTitle()}", self.edges_array)
         attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
-                      "cmt_process_name", "cmt_yield", "cmt_yield_error",
-                      "cmt_bin_yield", "cmt_bin_yield_error"]
+                      "cmt_process_name", "cmt_yield", "cmt_yield_error"]
         for histo_attr in attributes:
             try:
                 setattr(rebin_process_histo, histo_attr, getattr(h, histo_attr))
             except AttributeError: pass
+        # Set also bin-related attributes
+        rebin_process_histo.cmt_bin_yield = []
+        rebin_process_histo.cmt_bin_yield_error = []
+        for ibin in range(1, rebin_process_histo.GetNbinsX() + 1):
+            rebin_process_histo.cmt_bin_yield.append(rebin_process_histo.GetBinContent(ibin))
+            rebin_process_histo.cmt_bin_yield_error.append(rebin_process_histo.GetBinError(ibin))
         return rebin_process_histo

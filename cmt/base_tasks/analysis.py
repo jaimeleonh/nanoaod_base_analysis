@@ -69,6 +69,24 @@ class CombineBase(BasePlotTask, FitBase):
         region_name = "" if not self.region else "_{}".format(self.region.name)
         return process_group_name + region_name
 
+    def combine_parser(self, filename):
+        '''
+        Parses the output of combine -M AsymptoticLimits
+        '''
+        import os
+        res = {}
+        with open(os.path.expandvars(filename), "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith("Observed"):
+                    res["observed"] = float(line.split(" ")[-1][0:-1])
+                elif line.startswith("Expected"):
+                    index = line.find("%")
+                    res[float(line[index - 4: index])] = float(line.split(" ")[-1][0:-1])
+        if len(res) <= 1:
+            res = {}
+        return res
+
 
 class CombineCategoriesTask(CombineBase):
     """
@@ -129,6 +147,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
     additional_scaling = luigi.DictParameter(description="dict with scalings to be "
         "applied to processes in the datacard, ONLY IMPLEMENTED FOR PARAMETRIC FITS, default: None")
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
+    clip_negative_integrals = luigi.BoolParameter(default=False, description="whether to keep scale"
+        "to zero the variations that have overall negative integral, default: False")
 
     norm_syst_threshold = 0.01
     norm_syst_threshold_sym = 0.01
@@ -668,8 +688,11 @@ class CreateDatacards(CombineBase, FeaturePlot):
             # Convert the shape systematics list to a dict with the systs as keys and a list of
             # the processes affected by them (all non-data processes except the qcd if computed
             # in the code)
-            shape_systematics = {shape_syst: [p_name for p_name in self.non_data_names if not "qcd" in p_name or self.propagate_syst_qcd]
-                for shape_syst in shape_syst_list}
+            shape_systematics = {}
+            for shape_syst in shape_syst_list:
+                syst_fromConfig = self.config.systematics.get(shape_syst)
+                syst_label = syst_fromConfig.get_aux("alias", shape_syst)
+                shape_systematics[syst_label] = [p_name for p_name in self.non_data_names if not "qcd" in p_name or self.propagate_syst_qcd]
 
             if not self.fit_models and not self.counting:  # binned fits
                 self.log.write("Generating a binned-fit datacard...\n")
@@ -689,7 +712,11 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             syst_name = syst if not syst_alias else syst
                             name_to_save = "%s_%s%s" % (name, syst_name, d.capitalize())
                             name_from_featureplot = "%s_%s_%s" % (name, syst, d)
-                        histos[name_to_save] = copy(tf.Get("histograms/" + name_from_featureplot))
+                        histo = copy(tf.Get("histograms/" + name_from_featureplot))
+                        if self.clip_negative_integrals and histo.Integral() < 0.0:
+                            print(f"** WARNING: histo {histo.GetName()} has integral {histo.Integral()}. Clipping it to 0.0 to avoid Combine issues!",)
+                            histo.Scale(0.0)
+                        histos[name_to_save] = histo
                 tf.Close()
 
                 yields = {name_central: histos[name_central].Integral()
@@ -744,7 +771,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             with open(data_obs_path) as f:
                                 res = json.load(f)
                             norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_{self.category_name}_{self.region.name}_norm",
-                                "Background yield", res[""]["integral"], 0, 3 * res[""]["integral"])
+                                "Background yield", res[""]["integral"], 0, max(10, 3 * res[""]["integral"]))
 
                     except:
                         self.log.write("Workspace for this process is not available\n")
@@ -1521,8 +1548,10 @@ class RunCombine(CreateWorkspace):
 
     """
 
-    method = luigi.ChoiceParameter(choices=("limits",), default="limits",
+    method = luigi.ChoiceParameter(choices=("limits", "limits_toys"), default="limits",
         description="combine method to be considered, default: False")
+    additional_parameters = luigi.Parameter(default="", description="additional parameters to "
+        " be used in combine, default: none")
 
     def workflow_requires(self):
         """
@@ -1543,6 +1572,20 @@ class RunCombine(CreateWorkspace):
         """
         # assert not self.combine_categories or (
             # self.combine_categories and len(self.category_names) > 1)
+        if self.method == "limits_toys":
+            keys = ["0p025", "0p16", "0p5", "0p84", "0p975"]
+            if self.unblind:
+                keys.append("obs")
+            return {
+                feature.name: {
+                    q: {
+                        key: self.local_target("results_{}{}_{}.{}".format(
+                            feature.name, self.get_output_postfix(), q, key))
+                        for key in ["txt", "root"]
+                    } for q in keys
+                }
+                for feature in self.features
+            }
         return {
             feature.name: {
                 key: self.local_target("results_{}{}.{}".format(
@@ -1552,28 +1595,61 @@ class RunCombine(CreateWorkspace):
             for feature in self.features
         }
 
+    def get_additional_parameters(self, **kwargs):
+        return f"{self.additional_parameters} "
+
+    def get_inputs(self):
+        return self.input()
+
     def run(self):
         """
         Runs combine over the provided workspaces.
         """
         if self.method == "limits":
             out_file = "higgsCombine{}.AsymptoticLimits.mH{}.root"
+        elif self.method == "limits_toys":
+            out_file_quantiles = {
+                "obs": "higgsCombine{}.HybridNew.mH{}.root",
+                "0p5": "higgsCombine{}.HybridNew.mH{}.quant0.500.root",
+                "0p84": "higgsCombine{}.HybridNew.mH{}.quant0.840.root",
+                "0p16": "higgsCombine{}.HybridNew.mH{}.quant0.160.root",
+                "0p975": "higgsCombine{}.HybridNew.mH{}.quant0.975.root",
+                "0p025": "higgsCombine{}.HybridNew.mH{}.quant0.025.root"
+            }
 
-        inputs = self.input()
+        inputs = self.get_inputs()
         for feature in self.features:
             test_name = randomize("Test")
             cmd = "combine -M "
             if self.method == "limits":
                 cmd += "AsymptoticLimits "
+            elif self.method == "limits_toys":
+                 cmd += "HybridNew --LHCmode LHC-limits --saveHybridResult "
             cmd += f"--name {test_name} "
             if not self.unblind:  # not sure if this is only for AsymptoticLimits
                 cmd += "--run blind "
             cmd += f"-m {self.higgs_mass} "
-            cmd += inputs[feature.name]["root"].path
-            cmd += f" > {create_file_dir(self.output()[feature.name]['txt'].path)}"
-            os.system(cmd)
-            move(out_file.format(test_name, self.higgs_mass),
-                self.output()[feature.name]["root"].path)
+
+            if self.method != "limits_toys":
+                cmd += self.get_additional_parameters(feature_name=feature.name)
+                cmd += inputs[feature.name]["root"].path
+                cmd += f" > {create_file_dir(self.output()[feature.name]['txt'].path)}"
+                os.system(cmd)
+                move(out_file.format(test_name, self.higgs_mass),
+                    self.output()[feature.name]["root"].path)
+            else:
+                keys = [0.025, 0.16, 0.5, 0.84, 0.975]
+                if self.unblind:
+                    keys.append("obs")
+                for quantile in keys:
+                    cmd_to_run = cmd + (f"--expectedFromGrid={quantile} " if quantile != "obs" else "")
+                    cmd_to_run += self.get_additional_parameters(feature_name=feature.name, quantile=quantile)
+                    cmd_to_run += inputs[feature.name]["root"].path
+                    quantile_str = f'{str(quantile).replace(".", "p")}'
+                    cmd_to_run += f" > {create_file_dir(self.output()[feature.name][quantile_str]['txt'].path)}"
+                    os.system(cmd_to_run)
+                    move(out_file_quantiles[quantile_str].format(test_name, self.higgs_mass),
+                        self.output()[feature.name][quantile_str]["root"].path)
 
 
 class BasePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
