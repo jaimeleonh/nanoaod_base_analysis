@@ -1689,7 +1689,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 c.get_pad(2).SetBottomMargin(0.45)
             dummy_ratio_hist.Draw()
             if not self.hide_data:
-                ratio_graph.Draw("PEZ,SAME")
+                # Draw options (from TGraphPainter)
+                # P -> plot marker
+                # 0 -> draw error bars even when point is outside range
+                # Z -> do not draw small horizontal and vertical lines the end of the error bars
+                ratio_graph.Draw("P0Z,SAME")
             if self.plot_systematics:
                 all_unc_graph.Draw("2,SAME")
             mc_unc_graph.Draw("2,SAME")
