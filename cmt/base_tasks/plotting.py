@@ -1600,7 +1600,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         dummy_hist.Draw()
 
         for ih, hist in enumerate(draw_hists):
-            option = "HIST,SAME" if hist.hist_type != "data" else "PEZ,SAME"
+            option = "HIST,SAME" if hist.hist_type != "data" else "PE0Z,SAME"
             hist.Draw(option)
 
         for label in draw_labels:
