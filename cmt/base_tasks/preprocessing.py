@@ -148,7 +148,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         default=law.NO_STR)
     systematic = luigi.Parameter(default="", description="systematic to use for categorization, "
         "default: None")
-    systematic_direction = luigi.ChoiceParameter(default="", choices=("", "up", "down"), 
+    systematic_direction = luigi.ChoiceParameter(default="", choices=("", "up", "down"),
         description="systematic direction to use for categorization, default: None")
 
     # regions not supported
@@ -772,20 +772,40 @@ class Categorization(PreprocessRDF):
     def __init__(self, *args, **kwargs):
         super(Categorization, self).__init__(*args, **kwargs)
         self.max_events = self.dataset.get_aux("categorization_max_events", None)
-        self.categorization_merging_factor = get_categorization_merging_factor(self.dataset, self.category,
-                                                                               dataset_input_files=fully_split_branch_map(self.config_name, self.dataset))
+        if not hasattr(self, "categorization_merging_factor") and self.is_workflow():
+            self.categorization_merging_factor = get_categorization_merging_factor(self.dataset, self.category,
+                dataset_input_files=fully_split_branch_map(self.config_name, self.dataset))
+        elif not hasattr(self, "categorization_merging_factor"):
+            self.categorization_merging_factor = self.get_categorization_merging_factor
 
-        if sum((x is not None for x in [self.dataset.get_aux("categorization_max_events"), self.dataset.get_aux("preprocess_merging_factor"), self.dataset.get_aux("event_threshold")])) > 1:
-            raise RuntimeError(f"Dataset {self.dataset.name} error : you can only specify one of categorization_max_events, preprocess_merging_factor, event_threshold a the same time")
+        if sum((x is not None
+                for x in [
+                    self.dataset.get_aux("categorization_max_events"),
+                    self.dataset.get_aux("preprocess_merging_factor"),
+                    self.dataset.get_aux("event_threshold")
+                ])) > 1:
+            raise RuntimeError(f"Dataset {self.dataset.name} error : "
+                "you can only specify one of categorization_max_events, "
+                "preprocess_merging_factor, event_threshold at the same time")
+
         if self.dataset.get_aux("categorization_max_events") is not None and self.request_cpus > 1:
-            raise RuntimeError(f"Dataset.categorization_max_events is not compatible with request_cpus > 1 (in dataset {self.dataset.name}), due to RDataFrame limitation") # RDataFrame.Range is not compatible with multithreading
+            # RDataFrame.Range is not compatible with multithreading
+            raise RuntimeError(f"Dataset.categorization_max_events is not compatible with request_cpus > 1"
+                f"(in dataset {self.dataset.name}), due to RDataFrame limitation")
+
         if self.max_events and self.categorization_merging_factor:
-            raise RuntimeError(f"Dataset {self.dataset.name} error : you can only specify one of categorization_max_events and categorization_merging")
+            raise RuntimeError(f"Dataset {self.dataset.name} error : "
+                "you can only specify one of categorization_max_events and categorization_merging")
+
         if self.max_events is not None:
             if not hasattr(self, "splitted_branches") and self.is_workflow():
                 self.splitted_branches = self.build_splitted_branches()
             elif not hasattr(self, "splitted_branches"):
-                self.splitted_branches = self.get_splitted_branches # not exactly sure what this is supposed to do, copied over from Preprocess
+                self.splitted_branches = self.get_splitted_branches
+
+    @law.workflow_property
+    def get_categorization_merging_factor(self):
+        return self.categorization_merging_factor
 
     def get_n_events(self, fil):
         ROOT = import_root()

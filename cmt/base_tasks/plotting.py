@@ -2577,6 +2577,12 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
 
         return reqs
 
+    def get_output_postfix(self, key="pdf"):
+        postfix = super(FeaturePlot2D, self).get_output_postfix(key)
+        if self.log_z:
+            postfix += "__logZ"
+        return postfix
+
     def output(self):
         """
         Output files to be filled: pdf, png, root or json

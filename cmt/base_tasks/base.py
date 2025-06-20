@@ -379,9 +379,15 @@ class DatasetTaskWithCategory(ConfigTaskWithCategory, ConfigTaskWithRegion, Data
 
     def __init__(self, *args, **kwargs):
         super(DatasetTaskWithCategory, self).__init__(*args, **kwargs)
-        self.n_files_after_merging = get_n_files_after_merging(self.dataset, self.category,
-                                                               dataset_input_files=fully_split_branch_map(self.config_name, self.dataset))
+        if not hasattr(self, "n_files_after_merging") and self.is_workflow():
+            self.n_files_after_merging = get_n_files_after_merging(self.dataset, self.category,
+                dataset_input_files=fully_split_branch_map(self.config_name, self.dataset))
+        elif not hasattr(self, "n_files_after_merging"):
+            self.n_files_after_merging = self.get_n_files_after_merging
 
+    @law.workflow_property
+    def get_n_files_after_merging(self):
+        return self.n_files_after_merging
 
 class DatasetWrapperTask(ConfigTask):
 
