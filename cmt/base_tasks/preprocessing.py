@@ -1148,13 +1148,23 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                     tf = ROOT.TFile.Open(inp.path)
 
                 tree = tf.Get(self.tree_name)
-                if not tree:
+                # If the tree is not stored in the file (e.g. because of some issue in the production),
+                # the variable 'tree' will store a TObject instead of a TTree. 
+                # So if the opened TTree is not an actual TTree (i.e. its type doesn't include TTree),
+                # we can consider something went wrong and raise a RuntimeError.
+                if not "TTree" in str(type(tree)):
                     raise RuntimeError(f"MergeCategorization : Input file '{inp.path}' is empty. If it was produced "
                                         "by Categorization, try removing the file and running the task again.")
 
-                if tree.GetEntries() > 0:
-                    good_inputs.append(inp)
-                else:
+                # In some cases (from what I was able to identify, empty trees stored inside directories),
+                # TTree.GetEntries() doesn't work, and raises a TypeError. If we get a TypeError,
+                # we can assume the tree inside was empty.
+                try:
+                    if tree.GetEntries() > 0:
+                        good_inputs.append(inp)
+                    else:
+                        print("MergeCategorization : File %s healthy but empty -> not used" % inp.path)
+                except TypeError:
                     print("MergeCategorization : File %s healthy but empty -> not used" % inp.path)
 
             if len(good_inputs) != 0:
