@@ -714,8 +714,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             name_from_featureplot = "%s_%s_%s" % (name, syst, d)
                         histo = copy(tf.Get("histograms/" + name_from_featureplot))
                         if self.clip_negative_integrals and histo.Integral() < 0.0:
-                            print(f"** WARNING: histo {histo.GetName()} has integral {histo.Integral()}. Clipping it to 0.0 to avoid Combine issues!",)
-                            histo.Scale(0.0)
+                            print(f"** WARNING: histo {histo.GetName()} ({syst} - {d}) has integral {histo.Integral()}. Clipping it to 0.01 to avoid Combine issues!")
+                            histo.Scale(0.01/histo.Integral())
                         histos[name_to_save] = histo
                 tf.Close()
 
