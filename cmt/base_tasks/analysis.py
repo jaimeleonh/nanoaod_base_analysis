@@ -709,7 +709,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             continue
                         else:
                             syst_alias = self.config.systematics.get(syst).get_aux("alias", None)
-                            syst_name = syst if not syst_alias else syst
+                            syst_name = syst if not syst_alias else syst_alias
                             name_to_save = "%s_%s%s" % (name, syst_name, d.capitalize())
                             name_from_featureplot = "%s_%s_%s" % (name, syst, d)
                         histo = copy(tf.Get("histograms/" + name_from_featureplot))
