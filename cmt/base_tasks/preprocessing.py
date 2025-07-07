@@ -1242,14 +1242,11 @@ class MergePreCounter(DatasetTask, law.tasks.ForestMerge):
         default_store = "$CMT_STORE_EOS_PRECOUNTER"
 
     def __init__(self, *args, **kwargs):
-        print(os.path.join(os.path.expandvars(self.default_store), "MergeCategorizationStats"))
         if os.path.exists(
                 os.path.join(os.path.expandvars(self.default_store), "MergeCategorizationStats")):
             raise Exception("MergeCategorizationStats is no longer used. "
                 f"Please rename {os.path.expandvars(self.default_store)}/MergeCategorizationStats folder  "
                 f"to {os.path.expandvars(self.default_store)}/MergePreCounter")
-        import sys
-        sys.exit()
         super(MergePreCounter, self).__init__(*args, **kwargs)
 
     def merge_workflow_requires(self):
