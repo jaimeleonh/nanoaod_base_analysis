@@ -1261,6 +1261,9 @@ class MergePreCounter(DatasetTask, law.tasks.ForestMerge):
 
     def merge_output(self):
         addendum = PreCounter.get_addendum(self)
+        # Adjust addendum name for systematic variations
+        if addendum != "":
+            addendum = "_"+addendum[:-1]
         return self.local_target(f"stats{addendum}.json")
 
     def merge(self, inputs, output):
