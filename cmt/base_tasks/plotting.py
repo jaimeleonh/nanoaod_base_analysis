@@ -863,7 +863,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             channel_signal_region = self.region_name.split("_")[0]+"_os_iso"
             reqs["bin_opt"] = FlatSignalBinMergerTask.vreq(self, region_name=channel_signal_region, save_root=False)
             self.features_to_flatten = reqs["bin_opt"].features_to_flatten
-
+            self.use_cumulative = reqs["bin_opt"].use_cumulative
+            
         reqs["data"] = OrderedDict(
             ((dataset.name, category.name), PrePlot.vreq(self,
                 dataset_name=dataset.name, category_name=self.get_data_category(category).name))
@@ -1959,6 +1960,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                                 else:
                                     histo = copy(rootfile.Get(feature_name))
                                 rootfile.Close()
+                                if not histo:
+                                    print(f"****WARNING: Histogram not found: {feature_name}   in file: {elem.path}")
+                                if not isinstance(histo, ROOT.TH1):
+                                    print(f"****WARNING: Object {feature_name} is not a TH1 histogram in file: {elem.path}")
                                 if histo.GetEntries() != 0:
                                     dataset_histo.Add(histo)
                             if not process.isData and not self.avoid_normalization:

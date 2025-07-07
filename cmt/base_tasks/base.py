@@ -8,7 +8,7 @@ __all__ = [
     "Task", "ConfigTask", "ConfigTaskWithCategory", "DatasetTask", "DatasetTaskWithCategory",
     "DatasetWrapperTask", "HTCondorWorkflow", "SGEWorkflow", "SlurmWorkflow" "InputData",
     "fully_split_branch_map", "categorization_branch_map", "get_n_files_after_merging",
-    "get_categorization_merging_factor", "get_categorization_reduced_branch", "FlatSignalBinMerger"
+    "get_categorization_merging_factor", "get_categorization_reduced_branch", "FlatSignalBinMerger", "FlatSigCumulativeRebinner"
 ]
 
 
@@ -1305,4 +1305,147 @@ class FlatSignalBinMerger:
         for ibin in range(1, rebin_process_histo.GetNbinsX() + 1):
             rebin_process_histo.cmt_bin_yield.append(rebin_process_histo.GetBinContent(ibin))
             rebin_process_histo.cmt_bin_yield_error.append(rebin_process_histo.GetBinError(ibin))
+        return rebin_process_histo
+
+
+
+
+
+
+class FlatSigCumulativeRebinner:
+    """Adaptive rebinning algorithm that flattens the signal histogram using its cumulative distribution targeting a given number of bins that starts from target_bin_count. 
+    Each bin is required to contain at least min_MC background MC events. If this is not met, the bin count is reduced iteratively by 1, down to 3.
+    In the 3 bin configuration, if the requirement is still not met, the algorithm further adjusts the bin positions to find a configuration that satisfies the background event threshold.
+    """
+    def __init__(self, sgn_histo=None, bkg_histo=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10):
+        if sgn_histo:
+            assert not bins_txt_path
+            self.target_bin_count = target_bin_count
+            self.min_MC_events = min_MC_events
+            self._compute_rebinning(sgn_histo, bkg_histo)
+        else:
+            assert bins_txt_path
+            self._load_bin_edges(bins_txt_path)
+
+            
+    def _compute_rebinning(self, sgn_histo, bkg_histo):
+        ROOT = import_root()
+        # defining original edges for consistency
+        original_bin_edges = [sgn_histo.GetBinLowEdge(i+1) for i in range(sgn_histo.GetNbinsX())]
+        # including last upper edge
+        original_bin_edges.append(sgn_histo.GetBinLowEdge(sgn_histo.GetNbinsX()) + sgn_histo.GetBinWidth(sgn_histo.GetNbinsX()))
+
+        # create a normalized cumulative of the signal distribution (and its inverse)
+        cumul_s = sgn_histo.GetCumulative()
+        cumul_s.Scale(1/sgn_histo.Integral())
+        inv_cumul_s = ROOT.TGraph()
+        for ibin in range(cumul_s.GetNbinsX()):
+            inv_cumul_s.SetPoint(inv_cumul_s.GetN(), cumul_s.GetBinContent(ibin), cumul_s.GetBinCenter(ibin))
+
+        # starting from target_bin_count, divide the inverse cumulative in target_bin_count bins
+        for n_try in range(self.target_bin_count, 2, -1):
+            frac = round(1/n_try, 5)
+            perc = [round(i * frac, 5) for i in range(1, n_try)]
+
+            try:
+                # including 0 as first edge
+                edges = [original_bin_edges[0]]
+                # for each evaluated fraction, find the closest edge (consistency)
+                for p in perc:
+                    target = inv_cumul_s.Eval(p)
+                    closest_edge = min(original_bin_edges, key=lambda x: abs(x - target))
+                    edges.append(closest_edge)
+                # including 1 as last edge
+                edges.append(original_bin_edges[-1])
+            except Exception as e:
+                print(f"not possible to evaluate   {e}")
+                continue
+            nbins_real = len(edges)-1
+            n_bkg_stats = np.zeros(nbins_real)
+            bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", np.array(edges))
+
+            for ibin in range(1, nbins_real + 1):
+                try:
+                    cont = bkg_histo_rebin.GetBinContent(ibin)
+                    err = bkg_histo_rebin.GetBinError(ibin)
+                    if err > 0:
+                        n_bkg_stats[ibin-1] = (cont/err)**2
+                    else:
+                        n_bkg_stats[ibin-1] = 0
+                except:
+                    n_bkg_stats[ibin-1] = 0
+                    
+            n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
+
+            if all(n_bkg_passed):
+                print(f"Success with {n_try} bins")
+                self.edges = edges
+                self.edges_array = np.array(self.edges)
+                self.nbins_real = nbins_real
+                return edges
+            else:
+                print(f"Not enough MC events for {n_try} bins -- {n_bkg_stats}")
+
+        print("Falling back to 3 bins")
+        frac = round(1 / 3, 5)
+        perc = [round(i * frac, 5) for i in range(1, 3)]
+        not_passed = True
+
+        while not_passed:
+            try:
+                # 0 as first edge
+                edges = [original_bin_edges[0]]
+                # find the closest edge to the evaluated point
+                for p in perc:
+                    target = inv_cumul_s.Eval(p)
+                    closest_edge = min(original_bin_edges, key=lambda x: abs(x - target))
+                    edges.append(closest_edge)
+                edges.append(original_bin_edges[-1])
+            except Exception as e:
+                raise RuntimeError(f"Final fallback evaluation failed: {e}. There are not at least {self.min_MC_events*3} events")
+
+            nbins_real = len(edges) - 1
+            n_bkg_stats = np.zeros(nbins_real)
+            bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", np.array(edges))
+
+            for ibin in range(1, nbins_real + 1):
+                try:
+                    cont = bkg_histo_rebin.GetBinContent(ibin)
+                    err = bkg_histo_rebin.GetBinError(ibin)
+                    n_bkg_stats[ibin - 1] = (cont / err) ** 2 if err > 0 else 0
+                except:
+                    n_bkg_stats[ibin - 1] = 0
+
+            n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
+
+            if all(n_bkg_passed):
+                not_passed = False
+            else:
+                for i in range(len(perc)):
+                    idx = i + 1
+                    if idx < len(n_bkg_passed) and not n_bkg_passed[idx]:
+                        perc[i] = max(0.0, perc[i] - 0.01)
+        self.edges = edges
+        self.edges_array = np.array(edges)
+        self.nbins_real = nbins_real
+        return edges
+
+    def _load_bin_edges(self, path):
+        self.edges_array = np.loadtxt(path)
+        self.edges = list(self.edges_array)
+        self.nbins_real = len(self.edges)-1
+
+    def rebin(self, h, inplace=False, equal_bin_width=False):
+        """ rebin an histogram using the previously computed edges """
+        if equal_bin_width:
+            self.edges_array = np.arange(0,self.edges_array.shape[0],1.)
+            self.edges = list(self.edges_array)
+        rebin_process_histo = h.Rebin(self.nbins_real, "" if inplace else f"rebin_{h.GetTitle()}", self.edges_array)
+        attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
+                      "cmt_process_name", "cmt_yield", "cmt_yield_error",
+                      "cmt_bin_yield", "cmt_bin_yield_error"]
+        for histo_attr in attributes:
+            try:
+                setattr(rebin_process_histo, histo_attr, getattr(h, histo_attr))
+            except AttributeError: pass
         return rebin_process_histo

@@ -20,7 +20,7 @@ from cmt.base_tasks.plotting import BasePlotTask, PrePlot, FeaturePlot
 from cmt.base_tasks.preprocessing import MergePreCounter
 from cmt.base_tasks.base import (
     HTCondorWorkflow, SGEWorkflow, ProcessGroupNameTask, ConfigTaskWithCategory,
-    FlatSignalBinMerger
+    FlatSignalBinMerger,FlatSigCumulativeRebinner
 )
 
 
@@ -156,7 +156,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
         "features when empty, default: (dnn_HHbbtt_kl_1,dnn_HHbbtt_HH)")
     save_root = luigi.BoolParameter(default=False, description="whether to save created histograms "
         "in root files, default: False")
-
+    use_cumulative = luigi.BoolParameter(default=False, description="whether to optimize binning using the FlagSigCumulativeRebinner" "default: False") 
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
 
     def __init__(self, *args, **kwargs):
@@ -362,14 +362,20 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
             for hist in self.histos["background"]:
                 if not background_sum: background_sum = hist.Clone()
                 else:                  background_sum.Add(hist.Clone())
-
-            self.histogram_bin_merger = FlatSignalBinMerger(
-                sgn_histo=signal_sum,
-                bkg_histo=background_sum,
-                target_bin_count=feature.get_aux("target_bin_count", 20),
-                min_MC_events=feature.get_aux("min_MC_events", 10)
-            )
-
+            if self.use_cumulative:
+                self.histogram_bin_merger = FlatSigCumulativeRebinner(
+                    sgn_histo=signal_sum,
+                    bkg_histo=background_sum,
+                    target_bin_count=feature.get_aux("target_bin_count", 20),
+                    min_MC_events=feature.get_aux("min_MC_events", 10)
+                )
+            else:
+                self.histogram_bin_merger = FlatSignalBinMerger(
+                    sgn_histo=signal_sum,
+                    bkg_histo=background_sum,
+                    target_bin_count=feature.get_aux("target_bin_count", 20),
+                    min_MC_events=feature.get_aux("min_MC_events", 10)
+                )
             for idx, hist in enumerate(self.histos["background"]):
                 self.histos["background"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
             for idx, hist in enumerate(self.histos["signal"]):
