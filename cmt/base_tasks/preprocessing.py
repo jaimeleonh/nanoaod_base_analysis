@@ -1246,7 +1246,7 @@ class MergePreCounter(DatasetTask, law.tasks.ForestMerge):
                 os.path.join(os.path.expandvars(self.default_store), "MergeCategorizationStats")):
             raise Exception("MergeCategorizationStats is no longer used. "
                 f"Please rename {os.path.expandvars(self.default_store)}/MergeCategorizationStats folder  "
-                f"to {os.path.expandvars(self.default_store)}/MergePreCounter")
+                f"to {os.path.expandvars(self.default_store)}/MergePreCounter and rerun `law index --verbose`.")
         super(MergePreCounter, self).__init__(*args, **kwargs)
 
     def merge_workflow_requires(self):
