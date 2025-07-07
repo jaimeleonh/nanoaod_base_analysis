@@ -17,7 +17,7 @@ from ctypes import c_double
 from analysis_tools.utils import import_root, create_file_dir, randomize
 
 from cmt.base_tasks.plotting import BasePlotTask, PrePlot, FeaturePlot
-from cmt.base_tasks.preprocessing import MergeCategorizationStats
+from cmt.base_tasks.preprocessing import MergePreCounter
 from cmt.base_tasks.base import (
     HTCondorWorkflow, SGEWorkflow, ProcessGroupNameTask, ConfigTaskWithCategory,
     FlatSignalBinMerger
@@ -166,7 +166,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
         """
         All requirements needed:
             * Histograms coming from the PrePlot task.
-            * Number of total events coming from the MergeCategorizationStats task
+            * Number of total events coming from the MergePreCounter task
               (to normalize MC histograms).
         """
 
@@ -185,10 +185,10 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
             reqs["stats"][dataset.name] = {}
 
             if dataset.get_aux("secondary_dataset", None):
-                reqs["stats"][dataset.name]["central"] = MergeCategorizationStats.vreq(self,
+                reqs["stats"][dataset.name]["central"] = MergePreCounter.vreq(self,
                     dataset_name=dataset.get_aux("secondary_dataset"))
             else:
-                reqs["stats"][dataset.name]["central"] = MergeCategorizationStats.vreq(self,
+                reqs["stats"][dataset.name]["central"] = MergePreCounter.vreq(self,
                     dataset_name=dataset.name)
 
         return reqs
@@ -222,7 +222,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
         return ConfigTaskWithCategory.complete(self)
 
     def get_nevents(self, inputs=None):
-        """ Open MergeCategorizationStats outputs and load json files with nevents and nweightedevents (for normalization)
+        """ Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization)
         Arguments : inputs : results of self.input(), facultative, for caching
         Returns tuple :
          - nevents (event count or weights depending on self.apply_weights)

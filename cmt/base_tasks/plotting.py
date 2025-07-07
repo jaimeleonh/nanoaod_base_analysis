@@ -32,7 +32,7 @@ from cmt.base_tasks.base import (
 )
 
 from cmt.base_tasks.preprocessing import (
-    Categorization, MergeCategorization, MergeCategorizationStats, EventCounterDAS,
+    Categorization, MergeCategorization, MergePreCounter, EventCounterDAS,
     DatasetCategoryWrapperTask
 )
 
@@ -644,7 +644,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 --process-group-name etau --feature-names Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta \
 --workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
 --dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
---MergeCategorizationStats-version test_old``
+--MergePreCounter-version test_old``
 
     :param stack: whether to show all backgrounds stacked (True) or normalized to 1 (False)
     :type stack: bool
@@ -848,7 +848,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
             * Histograms coming from the PrePlot task.
 
-            * Number of total events coming from the MergeCategorizationStats task \
+            * Number of total events coming from the MergePreCounter task \
               (to normalize MC histograms).
 
             * If estimating QCD, FeaturePlot for the three additional QCD regions needed.
@@ -884,11 +884,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                         syst = "_".join(elem.split("_")[0:-1])
                         d = elem.split("_")[-1]
                     if dataset.get_aux("secondary_dataset", None):
-                        reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
+                        reqs["stats"][dataset.name][elem] = MergePreCounter.vreq(self,
                             dataset_name=dataset.get_aux("secondary_dataset"),
                             systematic=syst, systematic_direction=d)
                     else:
-                        reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
+                        reqs["stats"][dataset.name][elem] = MergePreCounter.vreq(self,
                             dataset_name=dataset.name, systematic=syst, systematic_direction=d)
 
         if self.do_qcd:
@@ -1843,7 +1843,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                 json.dump(yields, f, indent=4)
 
     def get_nevents(self, inputs=None):
-        """ Open MergeCategorizationStats outputs and load json files with nevents and nweightedevents (for normalization)
+        """ Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization)
         Arguments : inputs : results of self.input(), facultative, for caching
         Returns tuple :
          - nevents (event count or weights depending on self.apply_weights)
@@ -2068,7 +2068,7 @@ class FeaturePlotSyst(FeaturePlot):
 --process-group-name etau --feature-names lep1_pt,lep1_eta \
 --workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
 --dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
---MergeCategorizationStats-version test_old``
+--MergePreCounter-version test_old``
 
     """
 
@@ -2495,7 +2495,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
 --process-group-name etau --feature-names lep1_pt:lep1_eta,Hbb_mass:Htt_svfit_mass \
 --workers 20 --PrePlot2D-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
 --dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
---MergeCategorizationStats-version test_old``
+--MergePreCounter-version test_old``
 
     :param log_z: whether to set y axis to log scale
     :type log_z: bool
@@ -2512,7 +2512,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
 
             * Histograms coming from the PrePlot2D task.
 
-            * Number of total events coming from the MergeCategorizationStats task \
+            * Number of total events coming from the MergePreCounter task \
               (to normalize MC histograms).
 
             * If estimating QCD, FeaturePlot2D for the three additional QCD regions needed.
@@ -2540,11 +2540,11 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
                         syst = elem.split("_")[0]
                         d = elem.split("_")[1]
                     if dataset.get_aux("secondary_dataset", None):
-                        reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
+                        reqs["stats"][dataset.name][elem] = MergePreCounter.vreq(self,
                             dataset_name=dataset.get_aux("secondary_dataset"),
                             systematic=syst, systematic_direction=d)
                     else:
-                        reqs["stats"][dataset.name][elem] = MergeCategorizationStats.vreq(self,
+                        reqs["stats"][dataset.name][elem] = MergePreCounter.vreq(self,
                             dataset_name=dataset.name, systematic=syst, systematic_direction=d)
 
         if self.do_qcd:
@@ -3076,7 +3076,7 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
 --process-group-name etau --feature-names lep1_pt:lep1_pt_sel,lep1_eta:lep1_eta_sel1:lep1_eta_sel2 \
 --workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
 --dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
---MergeCategorizationStats-version test_old``
+--MergePreCounter-version test_old``
 
     """
 

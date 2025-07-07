@@ -1208,7 +1208,7 @@ class MergeCategorizationWrapper(DatasetCategorySystWrapperTask):
             systematic_direction=direction)
 
 
-class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
+class MergePreCounter(DatasetTask, law.tasks.ForestMerge):
     """
     Merges the output from the PreCounter task in order to reduce the
     parallelization entering the plotting tasks.
@@ -1221,7 +1221,7 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
 
     Example command:
 
-    ``law run MergeCategorizationStats --version test --config-name base_config \
+    ``law run MergePreCounter --version test --config-name base_config \
 --dataset-name dy_high --workers 10``
     """
 
@@ -1240,6 +1240,17 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
 
     if os.getenv("CMT_STORE_EOS_PRECOUNTER"):
         default_store = "$CMT_STORE_EOS_PRECOUNTER"
+
+    def __init__(self, *args, **kwargs):
+        print(os.path.join(os.path.expandvars(self.default_store), "MergeCategorizationStats"))
+        if os.path.exists(
+                os.path.join(os.path.expandvars(self.default_store), "MergeCategorizationStats")):
+            raise Exception("MergeCategorizationStats is no longer used. "
+                f"Please rename {os.path.expandvars(self.default_store)}/MergeCategorizationStats folder  "
+                f"to {os.path.expandvars(self.default_store)}/MergePreCounter")
+        import sys
+        sys.exit()
+        super(MergePreCounter, self).__init__(*args, **kwargs)
 
     def merge_workflow_requires(self):
         return PreCounter.vreq(self, _prefer_cli=["workflow"])
@@ -1288,17 +1299,17 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
         output.dump(stats, indent=4, formatter="json")
 
 
-class MergeCategorizationStatsWrapper(DatasetSystWrapperTask):
+class MergePreCounterWrapper(DatasetSystWrapperTask):
     """
-    Wrapper task to run the MergeCategorizationStatsWrapper task over several datasets in parallel.
+    Wrapper task to run the MergePreCounterWrapper task over several datasets in parallel.
 
     Example command:
 
-    ``law run MergeCategorizationStatsWrapper --version test --config-name base_config \
+    ``law run MergePreCounterWrapper --version test --config-name base_config \
 --dataset-names tt_dl,tt_sl --workers 10``
     """
     def atomic_requires(self, dataset, systematic, direction):
-        return MergeCategorizationStats.req(self, dataset_name=dataset.name,
+        return MergePreCounter.req(self, dataset_name=dataset.name,
             systematic=systematic, systematic_direction=direction)
 
 

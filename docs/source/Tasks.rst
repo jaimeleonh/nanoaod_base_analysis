@@ -16,7 +16,7 @@ In the diagram we can see there are two tasks branches before plotting, which we
  
   1. **PreCounter**: Performs a counting of the events with and without applying the necessary weights. Weights are read from the configuration file. In case they have to be computed, RDF modules can be run. It returns one .json file per input file.
 
-  2. **MergeCategorizationStats**: Merges the output from the *PreCounter* task into one .json file in order to reduce the parallelization entering the plotting tasks.
+  2. **MergePreCounter**: Merges the output from the *PreCounter* task into one .json file in order to reduce the parallelization entering the plotting tasks.
 
 - **Processing of the data/MC**: 
 
@@ -28,7 +28,7 @@ In the diagram we can see there are two tasks branches before plotting, which we
 
   4. **PrePlot**: Performs the filling of histograms in parallel for all features considered. If systematics are considered, it also produces the same histograms after applying those.
 
-- **FeaturePlot**: Performs the actual histogram plotting: loads the histograms obtained in *PrePlot* task, rescales them if needed, plots and saves them. Output are .pdf files. For this task to be run both *MergeCategorizationStats* and *PrePlot* outputs are required.
+- **FeaturePlot**: Performs the actual histogram plotting: loads the histograms obtained in *PrePlot* task, rescales them if needed, plots and saves them. Output are .pdf files. For this task to be run both *MergePreCounter* and *PrePlot* outputs are required.
  
 
  
@@ -53,7 +53,7 @@ For a better understanding on how to perform a NanoAOD-base-analysis let's take 
 
   law run PreCounter --version test_ggf --config-name ul_2018 --dataset-name ggf_sm --weights-file weights --workflow local --workers 10
 
-  law run MergeCategorizationStats --version test_ggf --config-name ul_2018 --dataset-name ggf_sm --workflow local --workers 10
+  law run MergePreCounter --version test_ggf --config-name ul_2018 --dataset-name ggf_sm --workflow local --workers 10
 
   law run PreprocessRDF --version test_ggf --category-name base_selection --config-name  ul_2018 --dataset-name ggf_sm --workflow local --workers 10 --modules-file modulesrdf --max-runtime 48h
 
@@ -61,9 +61,9 @@ For a better understanding on how to perform a NanoAOD-base-analysis let's take 
 
   law run MergeCategorization --version test_ggf --category-name etau --config-name  ul_2018 --dataset-name ggf_sm --workflow local --Categorization-base-category-name base_selection --workers 10
 
-  law run PrePlot --version test_ggf --category-name etau --config-name ul_2018 --feature-names Htt_svfit_mass,Htt_svfit_pt,Htt_svfit_eta --dataset-name ggf_sm --PrePlot-workflow local --workers 10 --MergeCategorization-version test_ggf --MergeCategorizationStats-version test_ggf
+  law run PrePlot --version test_ggf --category-name etau --config-name ul_2018 --feature-names Htt_svfit_mass,Htt_svfit_pt,Htt_svfit_eta --dataset-name ggf_sm --PrePlot-workflow local --workers 10 --MergeCategorization-version test_ggf --MergePreCounter-version test_ggf
 
-  law run FeaturePlot --version test_ggf --category-name etau --config-name ul_2018 --process-group-name signal --feature-names Htt_svfit_mass,Htt_svfit_pt,Htt_svfit_eta --region-name etau_os_iso --stack --dataset-name ggf_sm --PrePlot-workflow local --workers 10 --MergeCategorization-version test_ggf --MergeCategorizationStats-version test_ggf --apply-weights False
+  law run FeaturePlot --version test_ggf --category-name etau --config-name ul_2018 --process-group-name signal --feature-names Htt_svfit_mass,Htt_svfit_pt,Htt_svfit_eta --region-name etau_os_iso --stack --dataset-name ggf_sm --PrePlot-workflow local --workers 10 --MergeCategorization-version test_ggf --MergePreCounter-version test_ggf --apply-weights False
 
 
 This is just an example on how to run a NanoAOD-base-analysis, but more specific information on how to run each task can be found in the :ref:`api`, where more examples can be found as well. Also the available options for each task execution command can be checked with the ``--help`` option. 
