@@ -61,12 +61,14 @@ class DatasetSystWrapperTask(DatasetSuperWrapperTask):
         return None
 
     def requires(self):
-        systematics = [("", "")] + list(itertools.product(self.systematic_names, directions))
-        return OrderedDict(
-            ((dataset.name, syst, d),
-                self.atomic_requires(dataset, syst, d))
-            for dataset, (syst, d) in itertools.product(self.datasets, systematics)
-        )
+        output = OrderedDict()
+        for dataset in self.datasets:
+            systematics = [("", "")]
+            if not dataset.process.isData:
+                systematics += list(itertools.product(self.systematic_names, directions))
+            for syst, d in systematics:
+                output[(dataset.name, syst, d)] = self.atomic_requires(dataset, syst, d)
+        return output
 
 
 class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
@@ -110,16 +112,14 @@ class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask
         return None
 
     def requires(self):
-        systematics = [("", "")]
-        if self.systematic_names:
-            systematics += list(itertools.product(self.systematic_names, directions))
-        return OrderedDict(
-            ((dataset.name, category.name, syst, d),
-                self.atomic_requires(dataset, category, syst, d))
-            for dataset, category, (syst, d) in itertools.product(
-                self.datasets, self.categories, systematics)
-                if not dataset.process.name in category.get_aux("skip_processes", [])
-        )
+        output = OrderedDict()
+        for dataset, category in itertools.product(self.datasets, self.categories):
+            systematics = [("", "")]
+            if not dataset.process.isData:
+                systematics += list(itertools.product(self.systematic_names, directions))
+            for syst, d in systematics:
+                output[(dataset.name, category.name, syst, d)] = self.atomic_requires(dataset, category, syst, d)
+        return output
 
 
 class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
@@ -480,7 +480,7 @@ class SystWorkflowBase(PreCounter, DatasetTaskWithCategory):
         super(SystWorkflowBase, self).__init__(*args, **kwargs)
 
         self.systematics = [("", "")]
-        if self.systematic_names:
+        if self.systematic_names and not self.dataset.process.isData:
             self.systematics += list(itertools.product(
                 self.systematic_names, self.systematic_directions))
 
