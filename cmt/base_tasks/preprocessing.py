@@ -157,6 +157,9 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
+    if os.getenv("CMT_STORE_EOS_PRECOUNTER"):
+        default_store = "$CMT_STORE_EOS_PRECOUNTER"
+
     def __init__(self, *args, **kwargs):
         super(PreCounter, self).__init__(*args, **kwargs)
         self.addendum = self.get_addendum()
@@ -1234,6 +1237,9 @@ class MergeCategorizationStats(DatasetTask, law.tasks.ForestMerge):
 
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
+
+    if os.getenv("CMT_STORE_EOS_PRECOUNTER"):
+        default_store = "$CMT_STORE_EOS_PRECOUNTER"
 
     def merge_workflow_requires(self):
         return PreCounter.vreq(self, _prefer_cli=["workflow"])
