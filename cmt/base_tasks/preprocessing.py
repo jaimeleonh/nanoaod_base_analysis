@@ -167,6 +167,9 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         self.threshold = self.dataset.get_aux("event_threshold", None)
         self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
         self.additional_trees = self.dataset.get_aux("additional_trees", [])
+        if self.dataset.process.isData and self.systematic != "":
+            raise ValueError(f"Requested systematic variation {self.systematic} for Data!"
+                " Operation not supported!")
 
     def get_addendum(self):
         if self.systematic:
