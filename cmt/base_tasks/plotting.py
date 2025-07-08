@@ -864,7 +864,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             reqs["bin_opt"] = FlatSignalBinMergerTask.vreq(self, region_name=channel_signal_region, save_root=False)
             self.features_to_flatten = reqs["bin_opt"].features_to_flatten
             self.use_cumulative = reqs["bin_opt"].use_cumulative
-            
         reqs["data"] = OrderedDict(
             ((dataset.name, category.name), PrePlot.vreq(self,
                 dataset_name=dataset.name, category_name=self.get_data_category(category).name))

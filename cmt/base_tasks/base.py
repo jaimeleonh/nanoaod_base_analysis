@@ -1307,11 +1307,7 @@ class FlatSignalBinMerger:
             rebin_process_histo.cmt_bin_yield_error.append(rebin_process_histo.GetBinError(ibin))
         return rebin_process_histo
 
-
-
-
-
-
+    
 class FlatSigCumulativeRebinner:
     """Adaptive rebinning algorithm that flattens the signal histogram using its cumulative distribution targeting a given number of bins that starts from target_bin_count. 
     Each bin is required to contain at least min_MC background MC events. If this is not met, the bin count is reduced iteratively by 1, down to 3.
@@ -1326,7 +1322,6 @@ class FlatSigCumulativeRebinner:
         else:
             assert bins_txt_path
             self._load_bin_edges(bins_txt_path)
-
             
     def _compute_rebinning(self, sgn_histo, bkg_histo):
         ROOT = import_root()
@@ -1373,8 +1368,7 @@ class FlatSigCumulativeRebinner:
                     else:
                         n_bkg_stats[ibin-1] = 0
                 except:
-                    n_bkg_stats[ibin-1] = 0
-                    
+                    n_bkg_stats[ibin-1] = 0  
             n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
 
             if all(n_bkg_passed):
@@ -1442,10 +1436,15 @@ class FlatSigCumulativeRebinner:
             self.edges = list(self.edges_array)
         rebin_process_histo = h.Rebin(self.nbins_real, "" if inplace else f"rebin_{h.GetTitle()}", self.edges_array)
         attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
-                      "cmt_process_name", "cmt_yield", "cmt_yield_error",
-                      "cmt_bin_yield", "cmt_bin_yield_error"]
+                      "cmt_process_name", "cmt_yield", "cmt_yield_error"]
         for histo_attr in attributes:
             try:
                 setattr(rebin_process_histo, histo_attr, getattr(h, histo_attr))
             except AttributeError: pass
+        # Set also bin-related attributes
+        rebin_process_histo.cmt_bin_yield = []
+        rebin_process_histo.cmt_bin_yield_error = []
+        for ibin in range(1, rebin_process_histo.GetNbinsX() + 1):
+            rebin_process_histo.cmt_bin_yield.append(rebin_process_histo.GetBinContent(ibin))
+            rebin_process_histo.cmt_bin_yield_error.append(rebin_process_histo.GetBinError(ibin))
         return rebin_process_histo
