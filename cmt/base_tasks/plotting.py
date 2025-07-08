@@ -281,9 +281,11 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                         syst_list.append(syst)
                 except:
                     continue
-        other_systs = self.config.get_systematics_from_expression(self.category.selection)
-        if self.region:
-            other_systs += self.config.get_systematics_from_expression(self.region.selection)
+        other_systs = []
+        if isMC:
+            other_systs += self.config.get_systematics_from_expression(self.category.selection)
+            if self.region:
+                other_systs += self.config.get_systematics_from_expression(self.region.selection)
         for syst in other_systs:
             if syst in syst_list:
                 continue
