@@ -1322,7 +1322,6 @@ class FlatSigCumulativeRebinner:
         else:
             assert bins_txt_path
             self._load_bin_edges(bins_txt_path)
-            
     def _compute_rebinning(self, sgn_histo, bkg_histo):
         ROOT = import_root()
         # defining original edges for consistency
