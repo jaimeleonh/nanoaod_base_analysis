@@ -477,6 +477,8 @@ class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
 class SystWorkflowBase(PreCounter, DatasetTaskWithCategory):
     systematic_names = law.CSVParameter(default=(), description="names of systematics "
         "to run, default: central only (empty string)")
+    skip_central = luigi.BoolParameter(default=True, description="skip the processing of the "
+        "central shift variation, default: True")
     systematic_directions = ("up", "down")
 
     def __init__(self, *args, **kwargs):
@@ -486,6 +488,9 @@ class SystWorkflowBase(PreCounter, DatasetTaskWithCategory):
         if self.systematic_names and not self.dataset.process.isData:
             self.systematics += list(itertools.product(
                 self.systematic_names, self.systematic_directions))
+
+        if self.skip_central:
+            self.systematics.remove(("", ""))
 
         self.workflow_data = {
             "require_branches": [],
