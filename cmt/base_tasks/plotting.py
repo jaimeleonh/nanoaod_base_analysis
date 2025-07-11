@@ -28,7 +28,7 @@ from analysis_tools.utils import (
 from cmt.base_tasks.base import (
     DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask,
-    get_categorization_merging_factor, FlatSignalBinMerger
+    get_categorization_merging_factor, FlatSignalBinMerger, FakeFactorsTask
 )
 
 from cmt.base_tasks.preprocessing import (
@@ -230,7 +230,7 @@ class BasePlotTask(ConfigTaskWithRegion):
 
 
 class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow,
-        HTCondorWorkflow, SGEWorkflow, SlurmWorkflow):
+        HTCondorWorkflow, SGEWorkflow, SlurmWorkflow, FakeFactorsTask):
     """
     Performs the filling of histograms for all features considered. If systematics are considered,
     it also produces the same histograms after applying those.
@@ -388,12 +388,26 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         :return: Product of all weights to be applied
         :rtype: str
         """
-        if self.config.processes.get(self.dataset.process.name).isData or not self.apply_weights:
-            return "1"
+
+        # when applying the Fake Factor method, we need to add (only in the specific region where the fake
+        # template is built) the FFcomb weight. We need to apply it also to data because the fakes are
+        # estimated as (data-MC)*FFcomb --> at the PrePlot step we can distribute the FFcomb weight
+        if self.do_ff and self.region.name.split("_",1)[1] == self.ff_shape_region:
+            weights = self.config.get_weights_expression(self.config.weights[category], syst_name, syst_direction)
+            FFcomb = self.config.get_weights_expression(self.config.weights["FakeFactor"], syst_name, syst_direction)
+            if not self.apply_weights:
+                return "1"
+            elif self.config.processes.get(self.dataset.process.name).isData:
+                return FFcomb
+            else:
+                return weights+"*"+FFcomb
         else:
-            return self.config.get_weights_expression(
-                self.config.weights[category], syst_name, syst_direction)
-        return self.config.weights.default
+            if self.config.processes.get(self.dataset.process.name).isData or not self.apply_weights:
+                return "1"
+            else:
+                return self.config.get_weights_expression(
+                    self.config.weights[category], syst_name, syst_direction)
+            return self.config.weights.default
 
     def define_histograms(self, dfs, nentries):
         ROOT = import_root()
@@ -635,7 +649,8 @@ class EqualBinWidthTransformer:
                 dummy_hist.GetXaxis().SetLabelOffset(0.02)
                 dummy_hist.GetXaxis().SetTitleOffset(1.9)
 
-class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, ProcessGroupNameTask):
+class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNameTask,
+                  QCDABCDTask, FakeFactorsTask):
     """
     Performs the actual histogram plotting: loads the histograms obtained in the PrePlot tasks,
     rescales them if needed and plots and saves them.
@@ -809,7 +824,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
     def __init__(self, *args, **kwargs):
         super(FeaturePlot, self).__init__(*args, **kwargs)
         # select processes and datasets
-        assert not (self.do_qcd and self.do_sideband)
+        assert not (self.do_qcd and self.do_sideband and self.do_ff)
 
         # get QCD regions when requested
         self.qcd_regions = None
@@ -827,6 +842,15 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             assert self.region.name == "signal"
             self.sideband_regions = {key: self.config.regions.get(key)
                 for key in ["signal", "background"]}
+
+        if self.do_ff:
+            # complain when no data is present
+            if not any(dataset.process.isData for dataset in self.datasets):
+                raise Exception("no real dataset passed for QCD estimation")
+
+            # get shape region for application of fake factor method
+            self.ff_regions = self.config.get_ff_regions(region=self.region, category=self.category,
+                shape_region=self.ff_shape_region, signal_region=self.ff_signal_region)
 
         # obtain the list of systematics that apply to the normalization only if this is done
         self.norm_syst_list = []
@@ -932,6 +956,27 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
                     "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp"])
                 for key, region in self.sideband_regions.items()
             }
+
+        if self.do_ff:
+            # PrePlot needs to be required for the fakes template region with do_ff=True
+            # to make sure that the FFcomb weight is picked up
+            reqs["ff"] = OrderedDict(
+                ((dataset.name, category.name), PrePlot.vreq(self, do_ff=True,
+                    region_name=self.ff_regions[self.ff_shape_region].name,
+                    dataset_name=dataset.name, category_name=self.get_data_category(category).name))
+                for dataset, category in itertools.product(
+                    self.datasets_to_run, self.expand_category())
+            )
+
+            # FeaturePlot needs to be required for the fakes template region with do_ff=False
+            # to make sure that it does not try to apply the FF procedure to itself
+            for key, region in self.ff_regions.items():
+                reqs["ff"][key] = self.req(self, region_name=region.name, blinded=False, hide_data=False,
+                    do_qcd=False, do_ff=False, stack=True, save_root=True, save_pdf=True, save_yields=False,
+                    remove_horns=False,_exclude=["feature_tags", "shape_region",
+                    "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp",
+                    "ff_signal_region", "ff_shape_region"])
+
         if self.optimization_method == "bayesian_blocks":
             from cmt.base_tasks.optimization import BayesianBlocksOptimization
             reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False)
@@ -975,6 +1020,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
             postfix += "__pg_" + self.process_group_name
         if self.do_qcd:
             postfix += "__qcd"
+        if self.do_ff:
+            postfix += "__ff"
         if self.do_sideband:
             postfix += "__sideband"
         if self.hide_data:
@@ -1075,6 +1122,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
         from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
         # helper to extract the qcd shape in a region
+        # same helper can be used to get the fake factors shape template
         def get_qcd(region, files, syst='', bin_limit=0.):
             d_hist = files[region].Get("histograms/" + self.data_names[0])
             if not d_hist:
@@ -1295,6 +1343,33 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, QCDABCDTask, FitBase, Pr
 
                     qcd_hist.cmt_process_name = "qcd"
                     self.histos["shape"][syst_dir].append(qcd_hist)
+
+        if self.do_ff:
+            ff_shape_files = {}
+            for key, region in self.ff_regions.items():
+                ff_shape_files[key] = ROOT.TFile.Open(self.input()["ff"][key]["root"].targets[feature.name].path)
+
+            ff_hist = get_qcd(self.ff_shape_region, ff_shape_files).Clone(randomize("fakes"))
+
+            # store and style
+            yield_error = c_double(0.)
+            ff_hist.cmt_yield = ff_hist.IntegralAndError(
+                0, ff_hist.GetNbinsX() + 1, yield_error)
+            ff_hist.cmt_yield_error = yield_error.value
+            ff_hist.cmt_bin_yield = []
+            ff_hist.cmt_bin_yield_error = []
+            for ibin in range(1, ff_hist.GetNbinsX() + 1):
+                ff_hist.cmt_bin_yield.append(ff_hist.GetBinContent(ibin))
+                ff_hist.cmt_bin_yield_error.append(ff_hist.GetBinError(ibin))
+            ff_hist.cmt_scale = 1.
+            ff_hist.cmt_process_name = "fakes"
+            ff_hist.process_label = "Fakes"
+            ff_hist.SetTitle("Fakes")
+            ff_c = tuple([255, 87, 215])
+            ff_color = ROOT.TColor.GetColor(*ff_c)
+            self.setup_background_hist(ff_hist, ff_color)
+            background_hists.append(ff_hist)
+            all_hists.append(ff_hist)
 
         # sideband files
         sideband_files = None

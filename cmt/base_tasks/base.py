@@ -9,6 +9,7 @@ __all__ = [
     "DatasetWrapperTask", "HTCondorWorkflow", "SGEWorkflow", "SlurmWorkflow" "InputData",
     "fully_split_branch_map", "categorization_branch_map", "get_n_files_after_merging",
     "get_categorization_merging_factor", "get_categorization_reduced_branch", "FlatSignalBinMerger", "FlatSigCumulativeRebinner"
+    "QCDABCDTask", "FakeFactorsTask"
 ]
 
 
@@ -1159,6 +1160,26 @@ class QCDABCDTask(law.Task):
         "for qcd regions ss_iso and ss_inviso, default=default (same as category)")
     do_sideband = luigi.BoolParameter(default=False, description="whether to compute the background "
         "shape from sideband region, default: False")
+
+
+class FakeFactorsTask(law.Task):
+    """
+    :param do_ff: whether to estimate the fakes using the Fake Fators method
+    :type do_ff: bool
+
+    :param ff_signal_region: region to use as signal region for fakes estimation
+    :type ff_signal_region: str
+
+    :param ff_shape_region: region to use as shape region for fakes estimation
+    :type ff_shape_region: str from choice list
+    """
+
+    do_ff = luigi.BoolParameter(default=False, description="whether to apply the fake factors, "
+        "default: False")
+    ff_signal_region = luigi.Parameter(default="os_isoFF", description="signal region, "
+            "default: os_isoFF")
+    ff_shape_region = luigi.Parameter(default="os_invisoFF",
+            significant=True, description="shape region, default: os_invisoFF")
 
 
 class FlatSignalBinMerger:
