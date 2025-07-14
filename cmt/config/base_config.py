@@ -182,12 +182,19 @@ class Config():
             if   runPeriod == "preEE":  fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2022_Summer22/btagging.json.gz"
             elif runPeriod == "postEE": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2022_Summer22EE/btagging.json.gz"
             else:
-                raise ValueError("Wrong year-runPeriod pair.")
+                raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
         elif year == 2023:
             if   runPeriod == "preBPix":  fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23/btagging.json.gz"
             elif runPeriod == "postBPix": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23BPix/btagging.json.gz"
             else:
-                raise ValueError("Wrong year-runPeriod pair.")
+                raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
+        elif year == 2024:
+            # FIXME: use 2023_postBPix since 2024 file is not yet available
+            if runPeriod == "fullYear": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23BPix/btagging.json.gz"
+            else:
+                raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
+        else:
+            raise ValueError(f"Method 'add_bjet_id': year {year} not (yet) supported!")
         
         if self.btag_algo == "DeepFlavB":
             if year >= 2022:
