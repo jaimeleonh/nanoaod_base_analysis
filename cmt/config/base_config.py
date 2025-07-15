@@ -190,6 +190,7 @@ class Config():
                 raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
         elif year == 2024:
             # FIXME: use 2023_postBPix since 2024 file is not yet available
+            print("** WARNING: 2024 bTagging SFs not yet available! Falling back to 2023_postBPix ones for the moment!")
             if runPeriod == "fullYear": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23BPix/btagging.json.gz"
             else:
                 raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
