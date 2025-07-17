@@ -189,11 +189,11 @@ class Config():
             else:
                 raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
         elif year == 2024:
-            # FIXME: use 2023_postBPix since 2024 file is not yet available
-            print("** WARNING: 2024 bTagging SFs not yet available! Falling back to 2023_postBPix ones for the moment!")
-            if runPeriod == "fullYear": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23BPix/btagging.json.gz"
+            if self.btag_algo == "UParTAK4B":
+                # FIXME: using values from https://cms-talk.web.cern.ch/t/ak4-b-tagging-and-c-tagging-working-points-for-runiiisummer24-now-available/126466
+                print("** WARNING: using 2024 UParTAK4B bTagging WPs hardcoded in cmt/config/base_config.py! To be updated soon!")
             else:
-                raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
+                raise ValueError("Only UParTAK4B algo is supported for 2024 b-tagging!")
         else:
             raise ValueError(f"Method 'add_bjet_id': year {year} not (yet) supported!")
         
@@ -223,6 +223,17 @@ class Config():
                                              loose   = corr.evaluate("L"))
             else:
                 raise ValueError("No default PNet for Run2")
+
+        elif self.btag_algo == "UParTAK4B":
+            if year >= 2024:
+                # No 2024 json provided yet in /cvmfs
+                self.btag_algo_wps = DotDict(xxtight = 0.9739,
+                                             xtight  = 0.6298,
+                                             tight   = 0.4648,
+                                             medium  = 0.1272,
+                                             loose   = 0.0246)
+            else:
+                raise ValueError("No default UParTAK4B before 2024")
 
         else:
             raise ValueError("Wrong jet id requested. "
