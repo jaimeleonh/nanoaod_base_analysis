@@ -1591,19 +1591,22 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 equal_bin_width_transformer.convert_labels(dummy_hist, show_ratio=self.show_ratio)
                 ROOT.gPad.SetBottomMargin(0.13)
 
-        dummy_hist.GetYaxis().SetMaxDigits(4)
+        if "TEfficiency" not in str(type(dummy_hist)): 
+            dummy_hist.GetYaxis().SetMaxDigits(4)
 
-        if self.max_y == law.NO_FLOAT:
-            maximum = max([hist.GetMaximum() for hist in draw_hists])
-            dummy_hist.SetMaximum(100 * maximum if self.log_y else 1.35 * maximum)
-        else:
-            maximum = self.max_y
-            dummy_hist.SetMaximum(self.max_y)
+            if self.max_y == law.NO_FLOAT:
+                maximum = max([hist.GetMaximum() for hist in draw_hists])
+                dummy_hist.SetMaximum(100 * maximum if self.log_y else 1.35 * maximum)
+            else:
+                maximum = self.max_y
+                dummy_hist.SetMaximum(self.max_y)
 
-        if self.min_y == law.NO_FLOAT:
-            dummy_hist.SetMinimum(0.0011 if self.log_y else 0.001)
+            if self.min_y == law.NO_FLOAT:
+                dummy_hist.SetMinimum(0.0011 if self.log_y else 0.001)
+            else:
+                dummy_hist.SetMinimum(self.min_y)
         else:
-            dummy_hist.SetMinimum(self.min_y)
+            maximum = 1.05
 
         # get text to plot inside the figure
         inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
