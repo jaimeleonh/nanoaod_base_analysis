@@ -649,6 +649,7 @@ class EqualBinWidthTransformer:
                 dummy_hist.GetXaxis().SetLabelOffset(0.02)
                 dummy_hist.GetXaxis().SetTitleOffset(1.9)
 
+
 class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNameTask,
                   QCDABCDTask, FakeFactorsTask):
     """
@@ -835,7 +836,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 sym=self.qcd_sym_shape)
 
             # complain when no data is present
-            if not any(dataset.process.isData for dataset in self.datasets):
+            if not any(dataset.process.isData or dataset.process.get_aux("isFakeData", False) for dataset in self.datasets):
                 raise Exception("no real dataset passed for QCD estimation")
         self.sideband_regions = None
         if self.do_sideband:  # Several fixes may be needed later for this
@@ -1982,9 +1983,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         # create root tchains for inputs
         inputs = self.input()
 
-        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
+        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData or p.get_aux("isFakeData", False)]
         self.background_names = [p.name for p in self.processes_datasets.keys()
-            if not p.isData and not p.isSignal]
+            if not p.isData and not p.isSignal and not p.get_aux("isFakeData", False)]
 
         if self.plot_systematics:
             systematics = self.get_norm_systematics()
@@ -2105,13 +2106,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                         if process.isSignal:
                             self.setup_signal_hist(process_histo, color)
                             self.histos["signal"].append(process_histo)
-                        elif process.isData:
+                        elif process.isData or process.get_aux("isFakeData", False):
                             self.setup_data_hist(process_histo, color)
                             self.histos["data"].append(process_histo)
                         else:
                             self.setup_background_hist(process_histo, color)
                             self.histos["background"].append(process_histo)
-                        if not process.isData: #or not self.hide_data:
+                        if not (process.isData or process.get_aux("isFakeData", False)): #or not self.hide_data:
                            self.histos["all"].append(process_histo)
                     else:
                         self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)

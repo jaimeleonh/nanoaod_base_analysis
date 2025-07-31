@@ -729,10 +729,11 @@ class RDFModuleTask(DatasetTask):
                     raise ValueError(f"Attempted a redefinition of variable {args[0]}. If you want "
                         "to proceed, please rerun with allow_redefinition = True")
                 else:
-                    print(50 * "-")
-                    print(f"WARNING: Variable {args[0]} is already present in the RDataFrame and "
-                        "will be redefined as allow_redefinition = True")
-                    print(50 * "-")
+                    msg = f"WARNING: Variable {args[0]} is already present in the RDataFrame and " \
+                        "will be redefined as allow_redefinition = True"
+                    print(len(msg) * "-")
+                    print(msg)
+                    print(len(msg) * "-")
                     return type(self)(self.rdf.Redefine(*args),
                         allow_redefinition=self.allow_redefinition)
 
