@@ -1071,6 +1071,26 @@ class CategorizationWrapper(DatasetCategorySystWrapperTask):
             systematic=systematic, systematic_direction=direction)
 
 
+class CategorizationSyst(SystWorkflowBase):
+
+    def requires(self):
+        return {
+            (name, d): Categorization.vreq(self, systematic=name, systematic_direction=d)
+            for (name, d) in self.systematics
+        }
+
+    def output(self):
+        return {key: req.output() for key, req in self.requires().items()}
+
+    def run(self):
+        pass
+
+
+class CategorizationSystWrapper(DatasetCategoryWrapperTask):
+    def atomic_requires(self, dataset, category):
+        return CategorizationSyst.vreq(self, dataset_name=dataset.name, category_name=category.name)
+
+
 class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
     """
     Merges the output from the Categorization or PreprocessRDF tasks in order to reduce the
@@ -1199,6 +1219,7 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                 empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
                 empty_tree.Write()
                 tf.Close()
+
 
 class MergeCategorizationWrapper(DatasetCategorySystWrapperTask):
     """
