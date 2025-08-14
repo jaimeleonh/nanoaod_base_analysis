@@ -22,6 +22,7 @@ from cmt.util import hist_to_array, hist_to_graph, get_graph_maximum, update_gra
 
 from ctypes import c_double
 
+from analysis_tools import Process
 from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
@@ -1127,13 +1128,16 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
     def get_norm_systematics(self):
         return self.config.get_norm_systematics(self.processes_datasets, self.region)
 
-    def plot(self, feature, ifeat=0):
+    def plot(self, feature, ifeat=0, compute_qcd=None):
         """
         Performs the actual plotting.
         """
         ROOT = import_root()
         import plotlib.root as r
         from plotting_tools.root import get_labels, Canvas, RatioCanvas
+
+        if compute_qcd == None:
+            compute_qcd = self.do_qcd
 
         # helper to extract the qcd shape in a region
         # same helper can be used to get the fake factors shape template
@@ -1208,7 +1212,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
         # qcd shape files
         qcd_shape_files = None
-        if self.do_qcd:
+        if compute_qcd:
             qcd_shape_files = {}
             for key, region in self.qcd_regions.items():
                 if self.qcd_category_name != "default":
@@ -3352,6 +3356,8 @@ class EfficiencyPlot(ComparisonPlot):
 
 
 class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
+    recompute_qcd = luigi.BoolParameter(default=False, description="whether to compute the QCD shape "
+        "using all configs, default: False (extracted per config)")
 
     def __init__(self, *args, **kwargs):
         super(MultiConfigFeaturePlot, self).__init__(*args, **kwargs)
@@ -3377,11 +3383,17 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
             self.load_config(self.config_names[0]))
 
     def requires(self):
-        return {
+        reqs = {}
+        feature_plot_reqs = FeaturePlot.requires(self)
+        reqs["histos"] = {
             config_name: FeaturePlot.vreq(self, config_name=config_name, save_root=True,
-                stack=True, avoid_normalization=False, normalize_signals=False)
+                stack=True, avoid_normalization=False, normalize_signals=False,
+                do_qcd=self.do_qcd and not self.recompute_qcd)
             for config_name in self.config_names
         }
+        if self.do_qcd and self.recompute_qcd:
+            reqs["qcd"] = feature_plot_reqs["qcd"]
+        return reqs
 
     @law.decorator.notify
     @law.decorator.safe_output
@@ -3394,6 +3406,16 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
 
         ROOT = import_root()
         ROOT.gStyle.SetOptStat(0)
+
+        if self.do_qcd and not self.recompute_qcd:
+            # adding qcd process to the list of processes so that
+            # the corresponding histograms are extracted from the root files
+            self.processes_datasets[Process("qcd", "QCD", color=(255, 87, 215))] = []
+
+        self.data_names = [p.name for p in self.processes_datasets.keys()
+            if p.isData or p.get_aux("isFakeData", False)]
+        self.background_names = [p.name for p in self.processes_datasets.keys()
+            if not p.isData and not p.isSignal and not p.get_aux("isFakeData", False)]
 
         processes = list(self.processes_datasets.keys())
         #if self.do_qcd_bis:
@@ -3436,8 +3458,9 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
                     process_histo.Sumw2()
 
                     # loop over configs
-                    for inputs in self.input().values():
+                    for inputs in self.input()["histos"].values():
                         tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                        print(inputs["root"].targets[feature.name].path, "histograms/" + process.name)
                         histo = copy(tf.Get("histograms/" + process.name).Clone())
                         if not "TObject" in str(type(histo)):
                             process_histo.Add(histo)
@@ -3486,4 +3509,7 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
 
             # FIXME: include binning optimization
 
-            self.plot(feature)
+            self.plot(
+                feature,
+                compute_qcd=self.do_qcd and self.recompute_qcd
+            )
