@@ -26,8 +26,9 @@ from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
 from cmt.base_tasks.base import (
-    DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
-    ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask,
+    ConfigTask, DatasetTaskWithCategory, ProcessGroupNameTask, MultiConfigProcessGroupNameTask,
+    HTCondorWorkflow, SGEWorkflow, SlurmWorkflow, ConfigTaskWithCategory,
+    ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask,
     get_categorization_merging_factor, FlatSignalBinMerger, FakeFactorsTask
 )
 
@@ -103,12 +104,15 @@ class BasePlotTask(ConfigTaskWithRegion):
         # select features
         self.features = self.get_features()
 
-    def _find_features(self, names, tags):
+    def _find_features(self, names, tags, config=None):
+        if not config:
+            config = self.config
+
         features = []
 
         used_names = {name: False for name in names if "(" not in name}
         for pattern in names:
-            for feature in self.config.features:
+            for feature in config.features:
                 if law.util.multi_match(feature.name, pattern):
                     used_names[pattern] = True
                     features.append(feature)
@@ -121,7 +125,7 @@ class BasePlotTask(ConfigTaskWithRegion):
 
         used_tags = {tag: False for tag in tags}
         for tag in tags:
-            for feature in self.config.features:
+            for feature in config.features:
                 if feature.has_tag(tag):
                     used_tags[tag] = True
                     if feature not in features:
@@ -832,16 +836,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         assert sum([self.do_qcd, self.do_sideband, self.do_ff]) <= 1
 
         # get QCD regions when requested
-        self.qcd_regions = None
         if self.do_qcd:
-            wp = self.qcd_wp if self.qcd_wp != law.NO_STR else ""
-            self.qcd_regions = self.config.get_qcd_regions(region=self.region, category=self.category,
-                wp=wp, shape_region=self.shape_region, signal_region_wp=self.qcd_signal_region_wp,
-                sym=self.qcd_sym_shape)
+            self.qcd_regions = self.get_qcd_regions()
 
-            # complain when no data is present
-            if not any(dataset.process.isData or dataset.process.get_aux("isFakeData", False) for dataset in self.datasets):
-                raise Exception("no real dataset passed for QCD estimation")
         self.sideband_regions = None
         if self.do_sideband:  # Several fixes may be needed later for this
             assert self.region.name == "signal"
@@ -872,6 +869,22 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
         # initialise empty list to avoid missing variable error being thrown
         self.features_to_flatten = []
+
+    # aux functions to be used inside __init__
+    def get_qcd_regions(self, config=None):
+        if not config:
+            config = self.config
+        wp = self.qcd_wp if self.qcd_wp != law.NO_STR else ""
+        qcd_regions = config.get_qcd_regions(region=self.region, category=self.category,
+            wp=wp, shape_region=self.shape_region, signal_region_wp=self.qcd_signal_region_wp,
+            sym=self.qcd_sym_shape)
+
+        # complain when no data is present
+        if not any(process.isData or process.get_aux("isFakeData", False)
+                for process in self.processes_datasets):
+            raise Exception("no real dataset passed for QCD estimation")
+
+        return qcd_regions
 
     def requires(self):
         """
@@ -3543,3 +3556,140 @@ class MergeFeatureDumpWrapper(DatasetCategoryWrapperTask):
     """
     def atomic_requires(self, dataset, category):
         return MergeFeatureDump.req(self, dataset_name=dataset.name, category_name=category.name)
+
+class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
+
+    def __init__(self, *args, **kwargs):
+        super(MultiConfigFeaturePlot, self).__init__(*args, **kwargs)
+
+    # extracting the category information from the first config
+    def get_category(self, category_name: str):
+        return super(MultiConfigFeaturePlot, self).get_category(
+            category_name,
+            config=self.load_config(self.config_names[0]))
+
+    # extracting the region information from the first config
+    def get_region(self, region_name: str):
+        return super(MultiConfigFeaturePlot, self).get_region(
+            region_name,
+            config=self.load_config(self.config_names[0]))
+
+    def get_qcd_regions(self):
+        return super(MultiConfigFeaturePlot, self).get_qcd_regions(
+            config=self.load_config(self.config_names[0]))
+
+    def _find_features(self, names, tags, config=None):
+        return super(MultiConfigFeaturePlot, self)._find_features(names, tags,
+            self.load_config(self.config_names[0]))
+
+    def requires(self):
+        return {
+            config_name: FeaturePlot.vreq(self, config_name=config_name, save_root=True,
+                stack=True, avoid_normalization=False, normalize_signals=False)
+            for config_name in self.config_names
+        }
+
+    @law.decorator.notify
+    @law.decorator.safe_output
+    def run(self):
+        """
+        Splits processes into data, signal and background. Creates histograms from each process
+        loading them from the input files. Scales the histograms and applies the correct format
+        to them.
+        """
+
+        ROOT = import_root()
+        ROOT.gStyle.SetOptStat(0)
+
+        processes = list(self.processes_datasets.keys())
+        #if self.do_qcd_bis:
+        #    processes.append(self.config.get(self.qcd_process_name))
+        nprocesses = len(processes)
+        if self.fixed_colors:
+            colors = list(range(2, 2 + len(self.processes_datasets.keys())))
+
+        for ifeat, feature in enumerate(self.features):
+            self.histos = {"background": [], "signal": [], "data": [], "all": []}
+
+            binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
+            x_title = (str(feature.get_aux("x_title"))
+                + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
+            y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
+            hist_title = "; %s; %s" % (x_title, y_title)
+
+            systs_directions = [("central", "")]
+            if self.plot_systematics:
+                self.histos["bkg_histo_syst"] = ROOT.TH1D(
+                    randomize("syst"), hist_title, *binning_args)
+            if self.store_systematics:
+                self.histos["shape"] = {}
+                shape_systematics = self.get_systs(feature, True)
+                systs_directions += list(itertools.product(shape_systematics, directions))
+
+            for (syst, d) in systs_directions:
+                feature_name = feature.name if syst == "central" else "%s_%s_%s" % (
+                    feature.name, syst, d)
+                if syst != "central":
+                    self.histos["shape"]["%s_%s" % (syst, d)] = []
+                for iproc, process in enumerate(self.processes_datasets.keys()):
+                    if syst != "central" and process.isData:
+                        continue
+                    if self.do_sideband and not process.isData and not process.isSignal:
+                        continue
+                    process_histo = ROOT.TH1D(randomize(process.name), hist_title, *binning_args)
+                    process_histo.process_label = str(process.label)
+                    process_histo.cmt_process_name = process.name
+                    process_histo.Sumw2()
+
+                    # loop over configs
+                    for inputs in self.input().values():
+                        tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                        histo = copy(tf.Get("histograms/" + process.name).Clone())
+                        if not "TObject" in str(type(histo)):
+                            process_histo.Add(histo)
+                        del histo
+                        tf.Close()
+                        # FIXME: include here treatment of norm systematics, 
+                        # as they may vary per config (e.g. different years)
+
+                    if process.name in self.additional_scaling:
+                        process_histo.Scale(self.additional_scaling[process.name])
+
+                    yield_error = c_double(0.)
+                    process_histo.cmt_yield = process_histo.IntegralAndError(0,
+                        process_histo.GetNbinsX() + 1, yield_error)
+                    process_histo.cmt_yield_error = yield_error.value
+
+                    process_histo.cmt_bin_yield = []
+                    process_histo.cmt_bin_yield_error = []
+                    for ibin in range(1, process_histo.GetNbinsX() + 1):
+                        process_histo.cmt_bin_yield.append(process_histo.GetBinContent(ibin))
+                        process_histo.cmt_bin_yield_error.append(process_histo.GetBinError(ibin))
+
+                    if syst == "central":
+                        if self.fixed_colors:
+                            color = colors[iproc]
+                        elif type(process.color) == tuple:
+                            color = ROOT.TColor.GetColor(*process.color)
+                        else:
+                            color = process.color
+
+                        if process.isSignal:
+                            self.setup_signal_hist(process_histo, color)
+                            self.histos["signal"].append(process_histo)
+                        elif process.isData or process.get_aux("isFakeData", False):
+                            self.setup_data_hist(process_histo, color)
+                            self.histos["data"].append(process_histo)
+                        else:
+                            self.setup_background_hist(process_histo, color)
+                            self.histos["background"].append(process_histo)
+                        if not (process.isData or process.get_aux("isFakeData", False)): #or not self.hide_data:
+                           self.histos["all"].append(process_histo)
+                    else:
+                        self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
+
+                    del process_histo
+
+            # FIXME: include binning optimization
+
+            self.plot(feature)
