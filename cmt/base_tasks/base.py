@@ -278,18 +278,33 @@ class ConfigTask(Task):
 
     def __init__(self, *args, **kwargs):
         super(ConfigTask, self).__init__(*args, **kwargs)
+        self.config = self.load_config(self.config_name)
 
-        # load the config
-        try:
-            config = __import__("config." + self.config_name)
-            self.config = getattr(config, self.config_name).config
-        except ModuleNotFoundError:
-            cmt = __import__("cmt.config." + self.config_name)
-            self.config = getattr(cmt.config, self.config_name).config
+    def load_config(self, config_name: str):
+        if config_name:
+            try:
+                config = __import__("config." + config_name)
+                type(getattr(config, config_name).config)
+                return getattr(config, config_name).config
+            except ModuleNotFoundError:
+                cmt = __import__("cmt.config." + config_name)
+                return getattr(cmt.config, config_name).config
 
     def store_parts(self):
         parts = super(ConfigTask, self).store_parts()
         parts["config_name"] = self.config_name
+        return parts
+
+
+class MultiConfigTask(ConfigTask):
+    config_names = law.CSVParameter(default=(), description="name of the config files to "
+        "load, default: empty")
+
+    config_name = None
+
+    def store_parts(self):
+        parts = super(MultiConfigTask, self).store_parts()
+        parts["config_name"] = "_".join(self.config_names)
         return parts
 
 
@@ -306,11 +321,22 @@ class ConfigTaskWithCategory(ConfigTask):
     def __init__(self, *args, **kwargs):
         super(ConfigTaskWithCategory, self).__init__(*args, **kwargs)
 
-        self.category = self.config.categories.get(self.category_name)
+        self.category = self.get_category(self.category_name)
 
         if self.category.subcategories and not self.allow_composite_category:
             raise Exception("category '{}' is composite, prohibited by task {}".format(
                 self.category.name, self))
+
+    def get_category(self, category_name: str, config=None):
+        if not config:
+            config = self.config
+        category = config.categories.get(category_name)
+
+        if category.subcategories and not self.allow_composite_category:
+            raise Exception("category '{}' is composite, prohibited by task {}".format(
+                category.name, self))
+
+        return category
 
     def store_parts(self):
         parts = super(ConfigTaskWithCategory, self).store_parts()
@@ -341,10 +367,13 @@ class ConfigTaskWithRegion(ConfigTask):
 
     def __init__(self, *args, **kwargs):
         super(ConfigTaskWithRegion, self).__init__(*args, **kwargs)
+        self.region = self.get_region(self.region_name)
 
-        self.region = None
-        if self.region_name and self.region_name != law.NO_STR:
-            self.region = self.config.regions.get(self.region_name)
+    def get_region(self, region_name: str, config=None):
+        if not config:
+            config = self.config
+        if region_name and region_name != law.NO_STR:
+            return config.regions.get(region_name)
 
 
 class DatasetTask(ConfigTask):
@@ -390,6 +419,7 @@ class DatasetTaskWithCategory(ConfigTaskWithCategory, ConfigTaskWithRegion, Data
     def get_n_files_after_merging(self):
         return self.n_files_after_merging
 
+
 class DatasetWrapperTask(ConfigTask):
 
     dataset_names = law.CSVParameter(default=(), description="names or name "
@@ -403,12 +433,12 @@ class DatasetWrapperTask(ConfigTask):
     skip_dataset_tags = law.CSVParameter(default=(), description="list of tags of datasets to "
         "skip, default: ()")
 
-    def _find_datasets(self, names, tags):
+    def _find_datasets(self, names, tags, config):
         datasets = []
 
         used_names = {name: False for name in names}
         for pattern in names:
-            for dataset in self.config.datasets:
+            for dataset in config.datasets:
                 if law.util.multi_match(dataset.name, pattern):
                     used_names[pattern] = True
                     datasets.append(dataset)
@@ -420,7 +450,7 @@ class DatasetWrapperTask(ConfigTask):
 
         used_tags = {tag: False for tag in tags}
         for tag in tags:
-            for dataset in self.config.datasets:
+            for dataset in config.datasets:
                 if dataset.has_tag(tag):
                     used_tags[tag] = True
                     if dataset not in datasets:
@@ -433,38 +463,46 @@ class DatasetWrapperTask(ConfigTask):
             )
         return datasets
 
-    def __init__(self, *args, **kwargs):
-        super(DatasetWrapperTask, self).__init__(*args, **kwargs)
+    def get_datasets(self, config=None):
+        if not config:
+            config = self.config
 
         if getattr(self, "run_period", False):
-            assert self.run_period in self.config.get_run_periods()
+            assert self.run_period in config.get_run_periods()
             self.skip_dataset_tags = list(self.skip_dataset_tags) \
-                + [elem for elem in self.config.get_run_periods() if elem != self.run_period]
+                + [elem for elem in config.get_run_periods() if elem != self.run_period]
 
         if getattr(self, "run_era", False):
-            assert self.config.get_run_period_from_run_era(self.run_era) != None
+            assert config.get_run_period_from_run_era(self.run_era) != None
             self.skip_dataset_tags = list(self.skip_dataset_tags) \
-                + [elem for elem in self.config.get_run_eras() if elem != self.run_era] \
-                + [elem for elem in self.config.get_run_periods()
-                    if elem != self.config.get_run_period_from_run_era(self.run_era)]
+                + [elem for elem in config.get_run_eras() if elem != self.run_era] \
+                + [elem for elem in config.get_run_periods()
+                    if elem != config.get_run_period_from_run_era(self.run_era)]
 
         # first get datasets to skip
-        skip_datasets = self._find_datasets(self.skip_dataset_names, self.skip_dataset_tags)
+        skip_datasets = self._find_datasets(self.skip_dataset_names, self.skip_dataset_tags, config=config)
 
         # then get actual datasets and filter
         dataset_names = list(self.dataset_names)
         if not dataset_names and self.process_names:
-            for dataset in self.config.datasets:
-                if any([self.config.is_process_from_dataset(process, dataset=dataset)
+            for dataset in config.datasets:
+                if any([config.is_process_from_dataset(process, dataset=dataset)
                         for process in self.process_names]):
                     dataset_names.append(dataset.name)
 
         if not dataset_names and not self.dataset_tags:
             dataset_names = self.get_default_dataset_names()
-        self.datasets = [
-            dataset for dataset in self._find_datasets(dataset_names, self.dataset_tags)
+
+        return [
+            dataset for dataset in self._find_datasets(dataset_names, self.dataset_tags, config=config)
             if dataset not in skip_datasets
         ]
+
+    def __init__(self, *args, **kwargs):
+        super(DatasetWrapperTask, self).__init__(*args, **kwargs)
+
+        if self.config_name:
+            self.datasets = self.get_datasets()
 
     def get_default_dataset_names(self):
         return list(self.config.datasets.names())
@@ -1084,27 +1122,41 @@ class ProcessGroupNameTask(DatasetWrapperTask):
 
     def __init__(self, *args, **kwargs):
         super(ProcessGroupNameTask, self).__init__(*args, **kwargs)
-        try:
-            processes_in_process_group_name = self.config.process_group_names[
-                self.process_group_name]
-        except KeyError:
-            processes_in_process_group_name = self.config.process_group_names[
-                self.default_process_group_name]
+        if isinstance(self.config_name, str):
+            self.processes_datasets, self.datasets_to_run = self.get_processes_datasets()
 
-        self.processes_datasets = {}
-        self.datasets_to_run = []
+    def get_processes_in_process_group_name(self, config=None):
+        if config == None:
+            config = self.config
+        try:
+            return config.process_group_names[self.process_group_name]
+        except KeyError:
+            return config.process_group_names[self.default_process_group_name]
+
+    def get_processes_datasets(self, config=None, datasets=None):
+        if not config:
+            config = self.config
+
+        if not datasets:
+            print(type(self))
+            datasets = self.datasets
+
+        processes_datasets = {}
+        datasets_to_run = []
+
+        processes_in_process_group_name = self.get_processes_in_process_group_name(config)
 
         def get_processes(dataset=None, process=None):
             processes = ObjectCollection()
             if dataset and not process:
-                process = self.config.processes.get(dataset.process.name)
+                process = config.processes.get(dataset.process.name)
             processes.append(process)
             if process.parent_process:
-                processes += get_processes(process=self.config.processes.get(
+                processes += get_processes(process=config.processes.get(
                     process.parent_process))
             return processes
 
-        for dataset in self.datasets:
+        for dataset in datasets:
             processes = get_processes(dataset=dataset)
             filtered_processes = ObjectCollection()
             for process in processes:
@@ -1115,13 +1167,50 @@ class ProcessGroupNameTask(DatasetWrapperTask):
                     % (self.process_group_name, ", ".join(filtered_processes.names)))
             elif len(filtered_processes) == 1:
                 process = filtered_processes[0]
-                if process not in self.processes_datasets:
-                    self.processes_datasets[process] = []
-                self.processes_datasets[process].append(dataset)
-                self.datasets_to_run.append(dataset)
-        if len(self.datasets_to_run) == 0:
+                if process not in processes_datasets:
+                    processes_datasets[process] = []
+                processes_datasets[process].append(dataset)
+                datasets_to_run.append(dataset)
+        if len(datasets_to_run) == 0:
             raise ValueError("No datasets were selected. Are you sure you want to use"
                 " %s as process_group_name?" % self.process_group_name)
+
+        return processes_datasets, datasets_to_run
+
+
+class MultiConfigProcessGroupNameTask(ProcessGroupNameTask, MultiConfigTask):
+    config_name = None
+
+    def __init__(self, *args, **kwargs):
+        super(MultiConfigProcessGroupNameTask, self).__init__(*args, **kwargs)
+
+        # extracting the all processes from the process_group_name as stated in the first config
+        config = self.load_config(self.config_names[0])
+        processes_in_process_group_name = self.get_processes_in_process_group_name(config)
+
+        # extracting the processes that are considered 
+        processes_datasets, _ = self.get_processes_datasets(config, self.get_datasets(config))
+
+        process_count = {
+            config.processes.get(p):
+                (True if config.processes.get(p) in processes_datasets else False)
+            for p in processes_in_process_group_name
+        }
+
+        for config_name in self.config_names[1:]:
+            config = self.load_config(config_name)
+            assert self.get_processes_in_process_group_name(config) == processes_in_process_group_name,\
+                f"process_group_name {self.process_group_name} considers different processes in configs "\
+                    f"{self.config_names[0]} and {config_name}"
+
+            for p in self.get_processes_datasets(config, self.get_datasets(config)):
+                process_count[p] = True
+
+        self.processes_datasets = {p: [] for p in process_count if process_count[p]}
+
+        # to allow the use of self.config throughout the code,
+        # we'll take the config from the first config_name in the list
+        self.config = self.load_config(self.config_names[0])
 
 
 class QCDABCDTask(law.Task):
@@ -1331,9 +1420,13 @@ class FlatSignalBinMerger:
 
     
 class FlatSigCumulativeRebinner:
-    """Adaptive rebinning algorithm that flattens the signal histogram using its cumulative distribution targeting a given number of bins that starts from target_bin_count. 
-    Each bin is required to contain at least min_MC background MC events. If this is not met, the bin count is reduced iteratively by 1, down to 3.
-    In the 3 bin configuration, if the requirement is still not met, the algorithm further adjusts the bin positions to find a configuration that satisfies the background event threshold.
+    """
+    Adaptive rebinning algorithm that flattens the signal histogram using
+    its cumulative distribution targeting a given number of bins that starts from target_bin_count.
+    Each bin is required to contain at least min_MC background MC events.
+    If this is not met, the bin count is reduced iteratively by 1, down to 3.
+    In the 3 bin configuration, if the requirement is still not met, the algorithm
+    further adjusts the bin positions to find a configuration that satisfies the background event threshold.
     """
     def __init__(self, sgn_histo=None, bkg_histo=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10):
         if sgn_histo:
