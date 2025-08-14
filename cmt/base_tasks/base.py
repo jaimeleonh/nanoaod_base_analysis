@@ -335,6 +335,17 @@ class ConfigTaskWithCategory(ConfigTask):
 
         return category
 
+    def get_category(self, category_name: str, config=None):
+        if not config:
+            config = self.config
+        category = config.categories.get(category_name)
+
+        if category.subcategories and not self.allow_composite_category:
+            raise Exception("category '{}' is composite, prohibited by task {}".format(
+                category.name, self))
+
+        return category
+
     def store_parts(self):
         parts = super(ConfigTaskWithCategory, self).store_parts()
         parts["category_name"] = "cat_" + self.category_name

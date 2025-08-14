@@ -3358,6 +3358,7 @@ class EfficiencyPlot(ComparisonPlot):
             feature_to_save.name = "_".join([f.name for f in feature_set])
             self.plot(feature_to_save)
 
+<<<<<<< HEAD
 #########################
 #  FeatureDump Methods  #
 #########################
@@ -3564,6 +3565,10 @@ class MergeFeatureDumpWrapper(DatasetCategoryWrapperTask):
 class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
     recompute_qcd = luigi.BoolParameter(default=False, description="whether to compute the QCD shape "
         "using all configs, default: False (extracted per config)")
+=======
+
+class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
+>>>>>>> 3a8529d (First implementation of MultiConfigFeaturePlot)
 
     def __init__(self, *args, **kwargs):
         super(MultiConfigFeaturePlot, self).__init__(*args, **kwargs)
@@ -3589,6 +3594,7 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
             self.load_config(self.config_names[0]))
 
     def requires(self):
+<<<<<<< HEAD
         reqs = {}
         feature_plot_reqs = FeaturePlot.requires(self)
         reqs["histos"] = {
@@ -3600,6 +3606,13 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
         if self.do_qcd and self.recompute_qcd:
             reqs["qcd"] = feature_plot_reqs["qcd"]
         return reqs
+=======
+        return {
+            config_name: FeaturePlot.vreq(self, config_name=config_name, save_root=True,
+                stack=True, avoid_normalization=False, normalize_signals=False)
+            for config_name in self.config_names
+        }
+>>>>>>> 3a8529d (First implementation of MultiConfigFeaturePlot)
 
     @law.decorator.notify
     @law.decorator.safe_output
@@ -3613,6 +3626,7 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
         ROOT = import_root()
         ROOT.gStyle.SetOptStat(0)
 
+<<<<<<< HEAD
         if self.do_qcd and not self.recompute_qcd:
             # adding qcd process to the list of processes so that
             # the corresponding histograms are extracted from the root files
@@ -3623,6 +3637,8 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
         self.background_names = [p.name for p in self.processes_datasets.keys()
             if not p.isData and not p.isSignal and not p.get_aux("isFakeData", False)]
 
+=======
+>>>>>>> 3a8529d (First implementation of MultiConfigFeaturePlot)
         processes = list(self.processes_datasets.keys())
         #if self.do_qcd_bis:
         #    processes.append(self.config.get(self.qcd_process_name))
@@ -3664,9 +3680,14 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
                     process_histo.Sumw2()
 
                     # loop over configs
+<<<<<<< HEAD
                     for inputs in self.input()["histos"].values():
                         tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
                         print(inputs["root"].targets[feature.name].path, "histograms/" + process.name)
+=======
+                    for inputs in self.input().values():
+                        tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+>>>>>>> 3a8529d (First implementation of MultiConfigFeaturePlot)
                         histo = copy(tf.Get("histograms/" + process.name).Clone())
                         if not "TObject" in str(type(histo)):
                             process_histo.Add(histo)
@@ -3715,7 +3736,6 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
 
             # FIXME: include binning optimization
 
-            self.plot(feature)
             self.plot(
                 feature,
                 compute_qcd=self.do_qcd and self.recompute_qcd
