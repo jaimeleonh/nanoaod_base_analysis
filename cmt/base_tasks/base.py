@@ -334,6 +334,17 @@ class ConfigTaskWithCategory(ConfigTask):
 
         return category
 
+    def get_category(self, category_name: str, config=None):
+        if not config:
+            config = self.config
+        category = config.categories.get(category_name)
+
+        if category.subcategories and not self.allow_composite_category:
+            raise Exception("category '{}' is composite, prohibited by task {}".format(
+                category.name, self))
+
+        return category
+
     def store_parts(self):
         parts = super(ConfigTaskWithCategory, self).store_parts()
         parts["category_name"] = "cat_" + self.category_name
@@ -1134,6 +1145,10 @@ class ProcessGroupNameTask(DatasetWrapperTask):
             config = self.config
 
         if not datasets:
+<<<<<<< HEAD
+=======
+            print(type(self))
+>>>>>>> 3a8529d8c241f6d763197f4f684395beba20f658
             datasets = self.datasets
 
         processes_datasets = {}
@@ -1202,7 +1217,10 @@ class MultiConfigProcessGroupNameTask(ProcessGroupNameTask, MultiConfigTask):
                 process_count[p] = True
 
         self.processes_datasets = {p: [] for p in process_count if process_count[p]}
+<<<<<<< HEAD
         self.datasets_to_run = []
+=======
+>>>>>>> 3a8529d8c241f6d763197f4f684395beba20f658
 
         # to allow the use of self.config throughout the code,
         # we'll take the config from the first config_name in the list

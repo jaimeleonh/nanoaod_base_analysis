@@ -3460,7 +3460,6 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
                     # loop over configs
                     for inputs in self.input()["histos"].values():
                         tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
-                        print(inputs["root"].targets[feature.name].path, "histograms/" + process.name)
                         histo = copy(tf.Get("histograms/" + process.name).Clone())
                         if not "TObject" in str(type(histo)):
                             process_histo.Add(histo)
