@@ -156,10 +156,10 @@ class CreateDatacards(CombineBase, FeaturePlot):
     def __init__(self, *args, **kwargs):
         super(CreateDatacards, self).__init__(*args, **kwargs)
 
-        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData]
+        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData or p.get_aux("isFakeData", False)]
         if len(self.data_names) > 1:
             raise ValueError("Only 1 data process can be provided inside the process group")
-        self.non_data_names = [p.name for p in self.processes_datasets.keys() if not p.isData]
+        self.non_data_names = [p.name for p in self.processes_datasets.keys() if not p.isData and not p.get_aux("isFakeData", False)]
 
         if self.do_qcd:
             self.non_data_names.append("qcd")
@@ -730,7 +730,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
                 for name, histo in histos.items():
-                    if "data" in name:
+                    if name in self.data_names:
                         name = "data_obs"
                     histo.Write(name)
                 tf.Close()
