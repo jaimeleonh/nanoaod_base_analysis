@@ -1145,10 +1145,6 @@ class ProcessGroupNameTask(DatasetWrapperTask):
             config = self.config
 
         if not datasets:
-<<<<<<< HEAD
-=======
-            print(type(self))
->>>>>>> 3a8529d8c241f6d763197f4f684395beba20f658
             datasets = self.datasets
 
         processes_datasets = {}
@@ -1217,10 +1213,7 @@ class MultiConfigProcessGroupNameTask(ProcessGroupNameTask, MultiConfigTask):
                 process_count[p] = True
 
         self.processes_datasets = {p: [] for p in process_count if process_count[p]}
-<<<<<<< HEAD
         self.datasets_to_run = []
-=======
->>>>>>> 3a8529d8c241f6d763197f4f684395beba20f658
 
         # to allow the use of self.config throughout the code,
         # we'll take the config from the first config_name in the list
