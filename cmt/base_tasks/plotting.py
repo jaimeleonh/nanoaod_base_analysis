@@ -1143,8 +1143,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         hist.SetLineColor(color)
         hist.SetBinErrorOption((ROOT.TH1.kPoisson if self.stack else ROOT.TH1.kNormal))
 
-    def get_norm_systematics(self):
-        return self.config.get_norm_systematics(self.processes_datasets, self.region)
+    def get_norm_systematics(self, config=None):
+        if not config:
+            config = self.config
+        return config.get_norm_systematics(self.processes_datasets, self.region)
 
     def get_labels_to_draw(self, signal_hists, data_hists, bkg_histo, draw_hists, maximum, label_scaling):
 
@@ -2074,7 +2076,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                                     histo = copy(rootfile.Get(feature_name))
                                 rootfile.Close()
                                 if not histo:
-                                    print(f"****WARNING: Histogram not found: {feature_name}   in file: {elem.path}")
+                                    print(f"****WARNING: Histogram not found: {feature_name} in file: {elem.path}")
                                 if not isinstance(histo, ROOT.TH1):
                                     print(f"****WARNING: Object {feature_name} is not a TH1 histogram in file: {elem.path}")
                                 if histo.GetEntries() != 0:
@@ -3639,6 +3641,13 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
         }
 >>>>>>> 3a8529d (First implementation of MultiConfigFeaturePlot)
 
+    def get_norm_systematics(self, config=None):
+        systematics = {}
+        for config_name in self.config_names:
+            systematics[config_name] = self.load_config(config_name).get_norm_systematics(
+                self.processes_datasets, self.region)
+        return systematics
+
     def get_labels_to_draw(self, signal_hists, data_hists, bkg_histo, draw_hists, maximum, label_scaling):
 
         # get text to plot inside the figure
@@ -3711,6 +3720,9 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
             # the corresponding histograms are extracted from the root files
             self.processes_datasets[Process("qcd", "QCD", color=(255, 87, 215))] = []
 
+        if self.plot_systematics:
+            systematics = self.get_norm_systematics()
+
         self.data_names = [p.name for p in self.processes_datasets.keys()
             if p.isData or p.get_aux("isFakeData", False)]
         self.background_names = [p.name for p in self.processes_datasets.keys()
@@ -3759,15 +3771,25 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
                     process_histo.Sumw2()
 
                     # loop over configs
-                    for inputs in self.input()["histos"].values():
+                    for config_name, inputs in self.input()["histos"].items():
                         tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
                         histo = copy(tf.Get("histograms/" + process.name).Clone())
                         if not "TObject" in str(type(histo)):
                             process_histo.Add(histo)
                         del histo
                         tf.Close()
-                        # FIXME: include here treatment of norm systematics,
-                        # as they may vary per config (e.g. different years)
+
+                        if self.plot_systematics and not process.isData and not process.isSignal \
+                                and syst == "central":
+                            syst_histo = histo.Clone()
+                            for ibin in range(1, syst_histo.GetNbinsX() + 1):
+                                # some processes may not have any systematics
+                                if process.name in systematics[config_name]:
+                                    syst_histo.SetBinError(ibin,
+                                        float(syst_histo.GetBinContent(ibin))\
+                                            * systematics[config_name][process.name]
+                                    )
+                            self.histos["bkg_histo_syst"].Add(syst_histo)
 
                     if process.name in self.additional_scaling:
                         process_histo.Scale(self.additional_scaling[process.name])
