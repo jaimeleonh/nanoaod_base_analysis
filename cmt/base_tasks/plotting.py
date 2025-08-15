@@ -18,7 +18,7 @@ import numpy as np
 
 import law
 import luigi
-from cmt.util import hist_to_array, hist_to_graph, get_graph_maximum, update_graph_values
+from cmt.util import hist_to_array, hist_to_graph, get_graph_maximum, update_graph_values, get_lumi_string
 
 from ctypes import c_double
 
@@ -26,6 +26,8 @@ from analysis_tools import Process
 from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
+from plotting_tools.root import get_labels
+
 from cmt.base_tasks.base import (
     ConfigTask, DatasetTaskWithCategory, ProcessGroupNameTask, MultiConfigProcessGroupNameTask,
     HTCondorWorkflow, SGEWorkflow, SlurmWorkflow, ConfigTaskWithCategory,
@@ -1128,13 +1130,81 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
     def get_norm_systematics(self):
         return self.config.get_norm_systematics(self.processes_datasets, self.region)
 
+    def get_labels_to_draw(self, signal_hists, data_hists, bkg_histo, draw_hists, maximum, label_scaling):
+
+        print("Running get_labels_to_draw from FeaturePlot")
+
+        # get text to plot inside the figure
+        inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
+
+        if self.normalize_signals and self.stack and signal_hists and bkg_histo:
+            scale_text = []
+            for hist in signal_hists:
+                scale = hist.cmt_scale
+                if scale != 1.:
+                    if scale < 100:
+                        scale = "{:.1f}".format(scale)
+                    elif scale < 10000:
+                        scale = "{}".format(int(round(scale)))
+                    else:
+                        scale = "{:.2e}".format(scale).replace("+0", "").replace("+", "")
+                    scale_text.append("{} x{}".format(hist.process_label, scale))
+            inner_text.append("#scale[0.75]{{{}}}".format(",  ".join(scale_text)))
+
+        if (maximum > 1e4 or maximum < 1e-4) and not self.log_y:
+            upper_left_offset = 0.05
+        else:
+            upper_left_offset = 0.0
+
+        if not (self.hide_data or not len(data_hists) > 0) or self.stack:
+            if not type(self.config.lumi_fb) == dict:
+                upper_right="{}, {} ".format(
+                    self.config.year,
+                    get_lumi_string(self.config.lumi_fb),
+                ) + "({} TeV)".format(self.config.ecm)
+            else:
+                if self.run_era != "":
+                    era_label = " " + self.run_era
+                    lumi_label = self.config.lumi_fb[self.config.get_run_period_from_run_era(self.run_era)][self.run_era]
+                else:
+                    era_label = self.run_period
+                    if self.run_period != "":
+                        era_label = " " + era_label
+                        lumi_label = sum(self.config.lumi_fb.get(self.run_period, {}).values())
+                    else:
+                        lumi_label = sum(sum(period_dict.values()) for period_dict in self.config.lumi_fb.values())
+                upper_right="{}{}, {} ".format(
+                    self.config.year,
+                    era_label,
+                    get_lumi_string(lumi_label),
+                ) + "({} TeV)".format(self.config.ecm)
+        else:
+            upper_right="{} Simulation ({} TeV)".format(
+                self.config.year,
+                self.config.ecm,
+            )
+
+        try:
+            m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
+        except AttributeError:  # TEfficiency doesn't have GetMaximum()
+            m = None
+
+        return get_labels(
+            upper_left=self.config.upper_left_text,
+            upper_left_offset=upper_left_offset,
+            upper_right=upper_right,
+            scaling=label_scaling,
+            inner_text=inner_text,
+            max=m
+        )
+
     def plot(self, feature, ifeat=0, compute_qcd=None):
         """
         Performs the actual plotting.
         """
         ROOT = import_root()
         import plotlib.root as r
-        from plotting_tools.root import get_labels, Canvas, RatioCanvas
+        from plotting_tools.root import Canvas, RatioCanvas
 
         if compute_qcd == None:
             compute_qcd = self.do_qcd
@@ -1609,7 +1679,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 equal_bin_width_transformer.convert_labels(dummy_hist, show_ratio=self.show_ratio)
                 ROOT.gPad.SetBottomMargin(0.13)
 
-        if "TEfficiency" not in str(type(dummy_hist)): 
+        if "TEfficiency" not in str(type(dummy_hist)):
             dummy_hist.GetYaxis().SetMaxDigits(4)
 
             if self.max_y == law.NO_FLOAT:
@@ -1626,80 +1696,12 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         else:
             maximum = 1.05
 
-        # get text to plot inside the figure
-        inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
-
-        if self.normalize_signals and self.stack and signal_hists and bkg_histo:
-            scale_text = []
-            for hist in signal_hists:
-                scale = hist.cmt_scale
-                if scale != 1.:
-                    if scale < 100:
-                        scale = "{:.1f}".format(scale)
-                    elif scale < 10000:
-                        scale = "{}".format(int(round(scale)))
-                    else:
-                        scale = "{:.2e}".format(scale).replace("+0", "").replace("+", "")
-                    scale_text.append("{} x{}".format(hist.process_label, scale))
-            inner_text.append("#scale[0.75]{{{}}}".format(",  ".join(scale_text)))
-
-        if maximum > 1e4 and not self.log_y:
-            upper_left_offset = 0.05
-        else:
-            upper_left_offset = 0.0
-
-        def get_lumi_string(lumi_value):
-            unit = "fb^{-1}"
-            if lumi_value < 1.0:
-                lumi_value *= 1000
-                unit = "pb^{-1}"
-            return "{:.1f} ".format(lumi_value) + unit
-
-        if not (self.hide_data or not len(data_hists) > 0) or self.stack:
-            if not type(self.config.lumi_fb) == dict:
-                upper_right="{}, {} ".format(
-                    self.config.year,
-                    get_lumi_string(self.config.lumi_fb),
-                ) + "({} TeV)".format(self.config.ecm)
-            else:
-                if self.run_era != "":
-                    era_label = " " + self.run_era
-                    lumi_label = self.config.lumi_fb[self.config.get_run_period_from_run_era(self.run_era)][self.run_era]
-                else:
-                    era_label = self.run_period
-                    if self.run_period != "":
-                        era_label = " " + era_label
-                        lumi_label = sum(self.config.lumi_fb.get(self.run_period, {}).values())
-                    else:
-                        lumi_label = sum(sum(period_dict.values()) for period_dict in self.config.lumi_fb.values())
-                upper_right="{}{}, {} ".format(
-                    self.config.year,
-                    era_label,
-                    get_lumi_string(lumi_label),
-                ) + "({} TeV)".format(self.config.ecm)
-        else:
-            upper_right="{} Simulation ({} TeV)".format(
-                self.config.year,
-                self.config.ecm,
-            )
-
-        try:
-            m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
-        except AttributeError:  # TEfficiency doesn't have GetMaximum()
-            m = None
-
-        draw_labels = get_labels(
-            upper_left=self.config.upper_left_text,
-            upper_left_offset=upper_left_offset,
-            upper_right=upper_right,
-            scaling=label_scaling,
-            inner_text=inner_text,
-            max=m
-        )
+        draw_labels = self.get_labels_to_draw(signal_hists, data_hists, bkg_histo, draw_hists,
+            maximum, label_scaling)
 
         dummy_hist.Draw()
 
-        for ih, hist in enumerate(draw_hists):
+        for hist in draw_hists:
             option = "HIST,SAME" if hist.hist_type != "data" else "PE0Z,SAME"
             hist.Draw(option)
 
@@ -3287,17 +3289,17 @@ class EfficiencyPlot(ComparisonPlot):
 
     Example command:
 
-    ``law run EfficiencyPlot --version version_name --category-name category_name 
+    ``law run EfficiencyPlot --version version_name --category-name category_name
 --config-name config_name --feature-names numerator1:denominator1,numerator2:denominator2``
 
     """
-    
+
     # law run EfficiencyPlot --version version_name --category-name category_name
     # --config-name config_name --feature-names numerator1:denominator1,numerator2:denominator2
 
     max_y = 1.
     stack = True
-    isEfficiency = True  # uses Efficiency as y axis title    
+    isEfficiency = True  # uses Efficiency as y axis title
 
     def requires(self):
         """
@@ -3362,6 +3364,10 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
     def __init__(self, *args, **kwargs):
         super(MultiConfigFeaturePlot, self).__init__(*args, **kwargs)
 
+        # when combining configs, it doesn't make a lot of sense to restrict to an era or period
+        # this can be included later if it's found useful
+        assert not self.run_period and not self.run_era
+
     # extracting the category information from the first config
     def get_category(self, category_name: str):
         return super(MultiConfigFeaturePlot, self).get_category(
@@ -3374,10 +3380,12 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
             region_name,
             config=self.load_config(self.config_names[0]))
 
+    # extracting the qcd regions from the first config
     def get_qcd_regions(self):
         return super(MultiConfigFeaturePlot, self).get_qcd_regions(
             config=self.load_config(self.config_names[0]))
 
+    # extracting the features to run from the first config
     def _find_features(self, names, tags, config=None):
         return super(MultiConfigFeaturePlot, self)._find_features(names, tags,
             self.load_config(self.config_names[0]))
@@ -3394,6 +3402,61 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
         if self.do_qcd and self.recompute_qcd:
             reqs["qcd"] = feature_plot_reqs["qcd"]
         return reqs
+
+    def get_labels_to_draw(self, signal_hists, data_hists, bkg_histo, draw_hists, maximum, label_scaling):
+        print("Running get_labels_to_draw from MultiConfigFeaturePlot")
+
+        # get text to plot inside the figure
+        inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
+
+        if self.normalize_signals and self.stack and signal_hists and bkg_histo:
+            scale_text = []
+            for hist in signal_hists:
+                scale = hist.cmt_scale
+                if scale != 1.:
+                    if scale < 100:
+                        scale = "{:.1f}".format(scale)
+                    elif scale < 10000:
+                        scale = "{}".format(int(round(scale)))
+                    else:
+                        scale = "{:.2e}".format(scale).replace("+0", "").replace("+", "")
+                    scale_text.append("{} x{}".format(hist.process_label, scale))
+            inner_text.append("#scale[0.75]{{{}}}".format(",  ".join(scale_text)))
+
+        if (maximum > 1e4 or maximum < 1e-4) and not self.log_y:
+            upper_left_offset = 0.05
+        else:
+            upper_left_offset = 0.0
+
+        # Given that we are scaling the input histograms to lumi to maintain the proportions,
+        # lumi will be included in the labels, regardless of the final histograms being or not
+        # normalized to unity
+        lumi_per_ecm = {}
+        for config_name in self.config_names:
+            config = self.load_config(config_name)
+            lumi = (config.lumi_fb if not type(config.lumi_fb) == dict
+                else sum(sum(period_dict.values()) for period_dict in self.config.lumi_fb.values()))
+            if not type(config.lumi_fb) == dict:
+                if config.ecm not in lumi_per_ecm:
+                    lumi_per_ecm[config.ecm] = 0
+                lumi_per_ecm[config.ecm] += lumi
+
+        upper_right = " + ".join([f"{get_lumi_string(lumi)} ({ecm} TeV)"
+            for ecm, lumi in lumi_per_ecm.items()])
+
+        try:
+            m = max([hist.GetMaximum() for hist in draw_hists]) if not self.log_y else None
+        except AttributeError:  # TEfficiency doesn't have GetMaximum()
+            m = None
+
+        return get_labels(
+            upper_left=self.config.upper_left_text,
+            upper_left_offset=upper_left_offset,
+            upper_right=upper_right,
+            scaling=label_scaling,
+            inner_text=inner_text,
+            max=m
+        )
 
     @law.decorator.notify
     @law.decorator.safe_output
@@ -3465,7 +3528,7 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
                             process_histo.Add(histo)
                         del histo
                         tf.Close()
-                        # FIXME: include here treatment of norm systematics, 
+                        # FIXME: include here treatment of norm systematics,
                         # as they may vary per config (e.g. different years)
 
                     if process.name in self.additional_scaling:

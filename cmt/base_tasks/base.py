@@ -1191,15 +1191,15 @@ class MultiConfigProcessGroupNameTask(ProcessGroupNameTask, MultiConfigTask):
         super(MultiConfigProcessGroupNameTask, self).__init__(*args, **kwargs)
 
         # extracting the all processes from the process_group_name as stated in the first config
-        config = self.load_config(self.config_names[0])
-        processes_in_process_group_name = self.get_processes_in_process_group_name(config)
+        config_base = self.load_config(self.config_names[0])
+        processes_in_process_group_name = self.get_processes_in_process_group_name(config_base)
 
-        # extracting the processes that are considered 
-        processes_datasets, _ = self.get_processes_datasets(config, self.get_datasets(config))
+        # extracting the processes that are considered
+        processes_datasets, _ = self.get_processes_datasets(
+            config_base, self.get_datasets(config_base))
 
         process_count = {
-            config.processes.get(p):
-                (True if config.processes.get(p) in processes_datasets else False)
+            p: (True if config_base.processes.get(p) in processes_datasets else False)
             for p in processes_in_process_group_name
         }
 
@@ -1209,10 +1209,12 @@ class MultiConfigProcessGroupNameTask(ProcessGroupNameTask, MultiConfigTask):
                 f"process_group_name {self.process_group_name} considers different processes in configs "\
                     f"{self.config_names[0]} and {config_name}"
 
-            for p in self.get_processes_datasets(config, self.get_datasets(config)):
-                process_count[p] = True
+            processes_datasets, _ = self.get_processes_datasets(config, self.get_datasets(config))
+            for p in processes_datasets:
+                process_count[p.name] = True
 
-        self.processes_datasets = {p: [] for p in process_count if process_count[p]}
+        self.processes_datasets = {config_base.processes.get(p): []
+            for p in process_count if process_count[p]}
         self.datasets_to_run = []
 
         # to allow the use of self.config throughout the code,
@@ -1425,7 +1427,7 @@ class FlatSignalBinMerger:
             rebin_process_histo.cmt_bin_yield_error.append(rebin_process_histo.GetBinError(ibin))
         return rebin_process_histo
 
-    
+
 class FlatSigCumulativeRebinner:
     """
     Adaptive rebinning algorithm that flattens the signal histogram using
@@ -1489,7 +1491,7 @@ class FlatSigCumulativeRebinner:
                     else:
                         n_bkg_stats[ibin-1] = 0
                 except:
-                    n_bkg_stats[ibin-1] = 0  
+                    n_bkg_stats[ibin-1] = 0
             n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
 
             if all(n_bkg_passed):
