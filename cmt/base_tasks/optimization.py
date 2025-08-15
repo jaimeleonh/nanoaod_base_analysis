@@ -16,7 +16,7 @@ from ctypes import c_double
 
 from analysis_tools.utils import import_root, create_file_dir, randomize
 
-from cmt.base_tasks.plotting import BasePlotTask, PrePlot, FeaturePlot
+from cmt.base_tasks.plotting import BasePlotTask, PrePlot, FeaturePlot, MultiConfigFeaturePlot
 from cmt.base_tasks.preprocessing import MergePreCounter
 from cmt.base_tasks.base import (
     HTCondorWorkflow, SGEWorkflow, ProcessGroupNameTask, ConfigTaskWithCategory,
@@ -39,14 +39,16 @@ class BaseOptimizationTask(FeaturePlot, law.LocalWorkflow, HTCondorWorkflow, SGE
         return len(self.features)
 
     def workflow_requires(self):
-        return {"histo": FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False,
+        return {"histo": eval(self.optimization_plotting_task).vreq(
+            self, save_root=True, stack=True, hide_data=False,
             n_bins=self.n_mini_bins, plot_systematics=False, optimization_method="")}
 
     def requires(self):
         """
         Needs as input the root file provided by the FeaturePlot task
         """
-        return {"histo": FeaturePlot.vreq(self, save_root=True, stack=True, hide_data=False,
+        return {"histo": eval(self.optimization_plotting_task).vreq(
+            self, save_root=True, stack=True, hide_data=False,
             n_bins=self.n_mini_bins, plot_systematics=False, optimization_method="")}
 
     def output(self):
