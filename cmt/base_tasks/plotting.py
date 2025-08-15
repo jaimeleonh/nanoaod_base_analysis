@@ -100,6 +100,10 @@ class BasePlotTask(ConfigTaskWithRegion):
         "from distributions, default: False")
     optimization_method = luigi.ChoiceParameter(default="", choices=("", "flat_sgn", "bayesian_blocks"),
         significant=False, description="optimization method to be used, default: none")
+    optimization_plotting_task = luigi.ChoiceParameter(default="FeaturePlot",
+        choices=("FeaturePlot", "MultiConfigFeaturePlot"), significant=False,
+        description="optimization method to be used, default: none")
+
     preplot_foldered_by_feature=luigi.BoolParameter(default=False, description="whether to store"
         " PrePlot histograms organised in folders in the ROOT file, default: False")
 
@@ -257,6 +261,9 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         " MergeCategorization task, default: False")
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default=law.NO_STR)
+
+    process_group_name = luigi.Parameter(default="default", description="the name of the process "
+        "grouping to be used in the optimization, default: default")
     dataset_names = law.CSVParameter(description="dataset_names to use for optimization",
         default=())
 
@@ -907,6 +914,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             reqs["bin_opt"] = FlatSignalBinMergerTask.vreq(self, region_name=channel_signal_region, save_root=False)
             self.features_to_flatten = reqs["bin_opt"].features_to_flatten
             self.use_cumulative = reqs["bin_opt"].use_cumulative
+
+        elif self.optimization_method == "bayesian_blocks":
+            from cmt.base_tasks.optimization import BayesianBlocksOptimization
+            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False)
+
         reqs["data"] = OrderedDict(
             ((dataset.name, category.name), PrePlot.vreq(self,
                 dataset_name=dataset.name, category_name=self.get_data_category(category).name))
@@ -993,10 +1005,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     remove_horns=False,_exclude=["feature_tags", "shape_region",
                     "qcd_category_name", "qcd_sym_shape", "qcd_signal_region_wp",
                     "ff_signal_region", "ff_shape_region"])
-
-        if self.optimization_method == "bayesian_blocks":
-            from cmt.base_tasks.optimization import BayesianBlocksOptimization
-            reqs["bin_opt"] = BayesianBlocksOptimization.vreq(self, plot_systematics=False)
 
         if self.include_fit:
             import yaml
@@ -1131,8 +1139,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         return self.config.get_norm_systematics(self.processes_datasets, self.region)
 
     def get_labels_to_draw(self, signal_hists, data_hists, bkg_histo, draw_hists, maximum, label_scaling):
-
-        print("Running get_labels_to_draw from FeaturePlot")
 
         # get text to plot inside the figure
         inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
@@ -3368,6 +3374,8 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
         # this can be included later if it's found useful
         assert not self.run_period and not self.run_era
 
+        self.optimization_plotting_task = "MultiConfigFeaturePlot"
+
     # extracting the category information from the first config
     def get_category(self, category_name: str):
         return super(MultiConfigFeaturePlot, self).get_category(
@@ -3393,6 +3401,7 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
     def requires(self):
         reqs = {}
         feature_plot_reqs = FeaturePlot.requires(self)
+        self.config_name = self.config_name
         reqs["histos"] = {
             config_name: FeaturePlot.vreq(self, config_name=config_name, save_root=True,
                 stack=True, avoid_normalization=False, normalize_signals=False,
@@ -3401,10 +3410,13 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
         }
         if self.do_qcd and self.recompute_qcd:
             reqs["qcd"] = feature_plot_reqs["qcd"]
+
+        if self.optimization_method != "":
+            reqs["bin_opt"] = feature_plot_reqs["bin_opt"]
+
         return reqs
 
     def get_labels_to_draw(self, signal_hists, data_hists, bkg_histo, draw_hists, maximum, label_scaling):
-        print("Running get_labels_to_draw from MultiConfigFeaturePlot")
 
         # get text to plot inside the figure
         inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)

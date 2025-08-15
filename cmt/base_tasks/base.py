@@ -273,12 +273,16 @@ class Task(law.Task):
 
 class ConfigTask(Task):
 
-    config_name = luigi.Parameter(default="base_2018", description="name of the config file to "
-        "load, default: base_2018")
+    config_name = luigi.Parameter(default="", description="name of the config file to "
+        "load, default: empty")
+    config_names = law.CSVParameter(default=(), description="name of the config files to "
+        "load, default: empty")
 
     def __init__(self, *args, **kwargs):
         super(ConfigTask, self).__init__(*args, **kwargs)
-        self.config = self.load_config(self.config_name)
+        assert self.config_name or self.config_names,\
+            "Please specify a config_name or a list of config_names"
+        self.config = self.load_config(self.config_name if self.config_name else self.config_names[0])
 
     def load_config(self, config_name: str):
         if config_name:
@@ -292,19 +296,10 @@ class ConfigTask(Task):
 
     def store_parts(self):
         parts = super(ConfigTask, self).store_parts()
-        parts["config_name"] = self.config_name
-        return parts
-
-
-class MultiConfigTask(ConfigTask):
-    config_names = law.CSVParameter(default=(), description="name of the config files to "
-        "load, default: empty")
-
-    config_name = None
-
-    def store_parts(self):
-        parts = super(MultiConfigTask, self).store_parts()
-        parts["config_name"] = "_".join(self.config_names)
+        if self.config_name:
+            parts["config_name"] = self.config_name
+        else:
+            parts["config_name"] = "_".join(self.config_names)
         return parts
 
 
@@ -1145,7 +1140,10 @@ class ProcessGroupNameTask(DatasetWrapperTask):
             config = self.config
 
         if not datasets:
-            datasets = self.datasets
+            if getattr(self, "datasets", False):
+                datasets = self.datasets
+            else:
+                datasets = self.config.datasets
 
         processes_datasets = {}
         datasets_to_run = []
@@ -1184,7 +1182,7 @@ class ProcessGroupNameTask(DatasetWrapperTask):
         return processes_datasets, datasets_to_run
 
 
-class MultiConfigProcessGroupNameTask(ProcessGroupNameTask, MultiConfigTask):
+class MultiConfigProcessGroupNameTask(ProcessGroupNameTask):
     config_name = None
 
     def __init__(self, *args, **kwargs):
