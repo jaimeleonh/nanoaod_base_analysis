@@ -493,6 +493,14 @@ def update_graph_values(graph, update_fn):
             graph.SetPoint(i, *new_values)
 
 
+def get_lumi_string(lumi_value):
+    unit = "fb^{-1}"
+    if lumi_value < 1.0:
+        lumi_value *= 1000
+        unit = "pb^{-1}"
+    return "{:.1f} ".format(lumi_value) + unit
+
+
 def optimize_binning(full_edges, s_vals, b_vals, s_errs, b_errs, n_start_bins, n_min_bins, y_low,
         y_high, x_min=None, x_max=None, callback=None, silent=False):
     import numpy as np
@@ -722,3 +730,4 @@ def chunked_list(lst, n):
         end = start + chunk_size + (1 if i < remainder else 0)
         yield lst[start:end]
         start = end
+
