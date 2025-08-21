@@ -190,8 +190,7 @@ class Config():
                 raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
         elif year == 2024:
             if self.btag_algo == "UParTAK4B":
-                # FIXME: using values from https://cms-talk.web.cern.ch/t/ak4-b-tagging-and-c-tagging-working-points-for-runiiisummer24-now-available/126466
-                print("** WARNING: using 2024 UParTAK4B bTagging WPs hardcoded in cmt/config/base_config.py! To be updated soon!")
+                fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2024_Summer24/btagging.json.gz"
             else:
                 raise ValueError("Only UParTAK4B algo is supported for 2024 b-tagging!")
         else:
@@ -226,12 +225,12 @@ class Config():
 
         elif self.btag_algo == "UParTAK4B":
             if year >= 2024:
-                # No 2024 json provided yet in /cvmfs
-                self.btag_algo_wps = DotDict(xxtight = 0.9739,
-                                             xtight  = 0.6298,
-                                             tight   = 0.4648,
-                                             medium  = 0.1272,
-                                             loose   = 0.0246)
+                corr = getcorrectionlut(fname, "UParTAK4_wp_values")
+                self.btag_algo_wps = DotDict(xxtight = corr.evaluate("XXT"),
+                                             xtight  = corr.evaluate("XT"),
+                                             tight   = corr.evaluate("T"),
+                                             medium  = corr.evaluate("M"),
+                                             loose   = corr.evaluate("L"))
             else:
                 raise ValueError("No default UParTAK4B before 2024")
 
