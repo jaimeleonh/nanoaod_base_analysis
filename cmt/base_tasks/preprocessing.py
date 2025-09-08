@@ -262,9 +262,14 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
             # Additional tree RDF
             additional_dfs = []
             for additional_tree in self.additional_trees:
-                df_additional = self.RDataFrame(additional_tree, self.get_path(inp),
-                    allow_redefinition=self.allow_redefinition)
-                additional_dfs.append(df_additional)
+                try:
+                    df_additional = self.RDataFrame(additional_tree, self.get_path(inp),
+                        allow_redefinition=self.allow_redefinition)
+                    additional_dfs.append(df_additional)
+                except TypeError:
+                    print(f"** PreCounter warning: no {additional_tree} in {self.get_path(inp)}. Passing! "
+                          f"Please make sure to manually check that the file is not corrupted and {additional_tree} is correctly missing.")
+
 
         # friend tree
         else:
