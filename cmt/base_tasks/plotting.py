@@ -389,25 +389,30 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         :rtype: str
         """
 
-        # when applying the Fake Factor method, we need to add (only in the specific region where the fake
-        # template is built) the FFcomb weight. We need to apply it also to data because the fakes are
-        # estimated as (data-MC)*FFcomb --> at the PrePlot step we can distribute the FFcomb weight
-        if self.do_ff and self.region.name.split("_",1)[1] == self.ff_shape_region:
-            weights = self.config.get_weights_expression(self.config.weights[category], syst_name, syst_direction)
+        # retrieve weigths from the main configuration file
+        weights = self.config.get_weights_expression(self.config.weights[category], syst_name, syst_direction)
+        if self.do_ff:
             FFcomb = self.config.get_weights_expression(self.config.weights["FakeFactor"], syst_name, syst_direction)
-            if not self.apply_weights:
-                return "1"
-            elif self.config.processes.get(self.dataset.process.name).isData:
+
+        # no weigth applied at all
+        if not self.apply_weights:
+            return "1"
+
+        if self.config.processes.get(self.dataset.process.name).isData:
+            # apply it also to data because the fakes are estimated as (data-MC)*FFcomb
+            # --> at the PrePlot step we can distribute the FFcomb weight
+            if self.do_ff and self.region.name.endswith(self.ff_shape_region):
                 return FFcomb
+            # no weigth applied to data otherwise
             else:
-                return weights+"*"+FFcomb
-        else:
-            if self.config.processes.get(self.dataset.process.name).isData or not self.apply_weights:
                 return "1"
-            else:
-                return self.config.get_weights_expression(
-                    self.config.weights[category], syst_name, syst_direction)
-            return self.config.weights.default
+
+        # all weights applied to MC
+        else:
+            return weights
+
+        # apply default weights if no other condition is fulfilled
+        return self.config.weights.default
 
     def define_histograms(self, dfs, nentries):
         ROOT = import_root()
@@ -533,8 +538,8 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             syst = ""
             d = ""
             if "_" in elem:
-                syst = elem.split("_")[0]
-                d = elem.split("_")[1]
+                syst = elem.rsplit("_", 1)[0]
+                d = elem.rsplit("_", 1)[1]
             if not empty_file:
                 modules = self.get_feature_modules(self.preplot_modules_file,
                     systematic=syst, systematic_direction=d)
@@ -825,7 +830,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
     def __init__(self, *args, **kwargs):
         super(FeaturePlot, self).__init__(*args, **kwargs)
         # select processes and datasets
-        assert not (self.do_qcd and self.do_sideband and self.do_ff)
+        assert sum([self.do_qcd, self.do_sideband, self.do_ff]) <= 1
 
         # get QCD regions when requested
         self.qcd_regions = None
@@ -847,7 +852,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         if self.do_ff:
             # complain when no data is present
             if not any(dataset.process.isData for dataset in self.datasets):
-                raise Exception("no real dataset passed for QCD estimation")
+                raise Exception("No real dataset passed for Fake Factor method application")
 
             # get shape region for application of fake factor method
             self.ff_regions = self.config.get_ff_regions(region=self.region, category=self.category,

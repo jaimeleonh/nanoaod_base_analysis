@@ -756,7 +756,7 @@ class RDFModuleTask(DatasetTask):
                 return result
             return fn
 
-    def get_feature_modules(self, filename, **kwargs):
+    def get_feature_modules(self, filename, **fct_kwargs):
         module_params = None
 
         # check for default modules file inside the config
@@ -798,10 +798,10 @@ class RDFModuleTask(DatasetTask):
                 nargs, kwargs = eval('_args(%s)' % parameter_str)
 
                 # include systematics
-                systematic = kwargs.pop("systematic", getattr(self, "systematic", None))
+                systematic = fct_kwargs.get("systematic", getattr(self, "systematic", None))
                 if systematic:
                     systematic = self.config.systematics.get(systematic)
-                    systematic_direction = kwargs.pop("systematic_direction",
+                    systematic_direction = fct_kwargs.get("systematic_direction",
                         getattr(self, "systematic_direction", None))
                     module_syst_type = systematic.get_aux("module_syst_type")
                     if isinstance(module_syst_type, str) or isinstance(module_syst_type, list) :
@@ -819,6 +819,8 @@ class RDFModuleTask(DatasetTask):
                         # module_syst_type={syst_name={up: up_exp, down: down_exp},}
                         for syst_type, syst_expr in module_syst_type.items():
                             kwargs[syst_type] = eval(f"syst_expr['{systematic_direction}']")
+
+                    kwargs["nuisance_name"] = f"{systematic.name}_{systematic_direction}"
 
                 modules.append(getattr(mod, name)(**kwargs)())
 
