@@ -17,6 +17,7 @@ import re
 import os
 import math
 import numpy as np
+import array
 from collections import OrderedDict
 
 import warnings
@@ -1357,8 +1358,11 @@ class FlatSigCumulativeRebinner:
         cumul_s = sgn_histo.GetCumulative()
         cumul_s.Scale(1/sgn_histo.Integral())
         inv_cumul_s = ROOT.TGraph()
-        for ibin in range(cumul_s.GetNbinsX()):
+        # ensuring 0 and 1 as points in the cumulative for robustness (avoid underflow)
+        inv_cumul_s.SetPoint(0, 0.0, cumul_s.GetBinLowEdge(1))
+        for ibin in range(1, cumul_s.GetNbinsX() + 1):
             inv_cumul_s.SetPoint(inv_cumul_s.GetN(), cumul_s.GetBinContent(ibin), cumul_s.GetBinCenter(ibin))
+            inv_cumul_s.SetPoint(inv_cumul_s.GetN(), 1.0, cumul_s.GetBinLowEdge(cumul_s.GetNbinsX() + 1))
 
         # starting from target_bin_count, divide the inverse cumulative in target_bin_count bins
         for n_try in range(self.target_bin_count, 2, -1):
@@ -1371,40 +1375,54 @@ class FlatSigCumulativeRebinner:
                 # for each evaluated fraction, find the closest edge (consistency)
                 for p in perc:
                     target = inv_cumul_s.Eval(p)
-                    closest_edge = min(original_bin_edges, key=lambda x: abs(x - target))
+                    # if cumulative is flat somewhere you might have non-monotonic behaviour, additional check to avoid that
+                    valid_edges = [e for e in original_bin_edges if e > edges[-1]]
+                    if not valid_edges:
+                        break
+                    closest_edge = min(valid_edges, key=lambda x: abs(x - target))
                     edges.append(closest_edge)
                 # including 1 as last edge
                 edges.append(original_bin_edges[-1])
             except Exception as e:
                 print(f"not possible to evaluate   {e}")
                 continue
-            nbins_real = len(edges)-1
-            n_bkg_stats = np.zeros(nbins_real)
-            bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", np.array(edges))
 
+            # check 
+            edges = sorted(list(set(edges)))
+            nbins_real = len(edges) - 1
+            if nbins_real < 1:
+                continue
+            edges_arr = array.array('d', edges)
+            #####
+
+            try:
+                tmp_bkg = bkg_histo.Clone(f"h_bkg_tmp_{n_try}")
+                bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", edges_arr)
+            except Exception as e:
+                print(f"*** ERROR ***  rebin failed for {n_try} bins: {e}")
+                continue
+            
+            n_bkg_stats = np.zeros(nbins_real)
             for ibin in range(1, nbins_real + 1):
-                try:
-                    cont = bkg_histo_rebin.GetBinContent(ibin)
-                    err = bkg_histo_rebin.GetBinError(ibin)
-                    if err > 0:
-                        n_bkg_stats[ibin-1] = (cont/err)**2
-                    else:
-                        n_bkg_stats[ibin-1] = 0
-                except:
-                    n_bkg_stats[ibin-1] = 0  
+                cont = bkg_histo_rebin.GetBinContent(ibin)
+                err = bkg_histo_rebin.GetBinError(ibin)
+                if err > 0:
+                    n_bkg_stats[ibin-1] = (cont/err)**2
+                else:
+                    n_bkg_stats[ibin-1] = 0
             n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
 
             if all(n_bkg_passed):
-                print(f"Success with {n_try} bins")
+                print(f"Success with {nbins_real} bins")
                 self.edges = edges
-                self.edges_array = np.array(self.edges)
+                self.edges_array = np.array(edges)
                 self.nbins_real = nbins_real
                 return edges
             else:
                 print(f"Not enough MC events for {n_try} bins -- {n_bkg_stats}")
 
         print("Falling back to 3 bins")
-        frac = round(1 / 3, 5)
+        frac = round(1.0 / 3, 5)
         perc = [round(i * frac, 5) for i in range(1, 3)]
         not_passed = True
 
@@ -1415,15 +1433,22 @@ class FlatSigCumulativeRebinner:
                 # find the closest edge to the evaluated point
                 for p in perc:
                     target = inv_cumul_s.Eval(p)
-                    closest_edge = min(original_bin_edges, key=lambda x: abs(x - target))
+                    valid_edges = [e for e in original_bin_edges if e > edges[-1]]
+                    if not valid_edges:
+                        break
+                    closest_edge = min(valid_edges, key=lambda x: abs(x - target))
                     edges.append(closest_edge)
                 edges.append(original_bin_edges[-1])
             except Exception as e:
                 raise RuntimeError(f"Final fallback evaluation failed: {e}. There are not at least {self.min_MC_events*3} events")
 
+            
+            edges_arr = array.array('d', edges)
             nbins_real = len(edges) - 1
+
+            tmp_bkg = bkg_histo.Clone("h_bkg_tmp_fallback")
+            bkg_histo_rebin = tmp_bkg.Rebin(nbins_real, "h_fallback", edges_arr)
             n_bkg_stats = np.zeros(nbins_real)
-            bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test", np.array(edges))
 
             for ibin in range(1, nbins_real + 1):
                 try:
