@@ -308,11 +308,17 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                             (dataset.name, category.name)].collection.targets.values()
                         for elem in inp:
                             rootfile = ROOT.TFile.Open(elem.path)
-                            histo = copy(rootfile.Get(feature.name))
+                            if self.preplot_foldered_by_feature:
+                                histo = copy(rootfile.Get(f"histograms/{feature.name}_dir/{feature.name}"))
+                            else:
+                                histo = copy(rootfile.Get(feature.name))
                             rootfile.Close()
+                            if not histo:
+                                print(f"****WARNING: Histogram not found: {feature.name}   in file: {elem.path}")
+                            if not isinstance(histo, ROOT.TH1):
+                                print(f"****WARNING: Object {feature.name} is not a TH1 histogram in file: {elem.path}")
                             if histo.GetEntries() != 0:
                                 dataset_histo.Add(histo)
-
                         elem = "central"
                         if self.nevents[dataset.name][elem] != 0:
                             dataset_histo.Scale(self.get_normalization_factor(dataset, elem))
