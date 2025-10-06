@@ -695,7 +695,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             for shape_syst in shape_syst_list:
                 syst_fromConfig = self.config.systematics.get(shape_syst)
                 syst_label = syst_fromConfig.get_aux("alias", shape_syst)
-                shape_systematics[syst_label] = [p_name for p_name in self.non_data_names if not "qcd" in p_name or "fakes" in p_name or self.propagate_syst_qcd]
+                shape_systematics[syst_label] = [p_name for p_name in self.non_data_names if not "qcd" in p_name and not "fakes" in p_name or self.propagate_syst_qcd]
 
             if not self.fit_models and not self.counting:  # binned fits
                 self.log.write("Generating a binned-fit datacard...\n")
