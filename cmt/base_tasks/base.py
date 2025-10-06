@@ -1413,43 +1413,47 @@ class FlatSigCumulativeRebinner:
             n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
 
             if all(n_bkg_passed):
-                print(f"Success with {nbins_real} bins")
+                print(f"\n\nSuccess with {nbins_real} bins")
+                print("Final edges ", edges, "\n\n")
                 self.edges = edges
                 self.edges_array = np.array(edges)
                 self.nbins_real = nbins_real
                 return edges
-            else:
-                print(f"Not enough MC events for {n_try} bins -- {n_bkg_stats}")
 
-        print("Falling back to 3 bins")
-        frac = round(1.0 / 3, 5)
-        perc = [round(i * frac, 5) for i in range(1, 3)]
+
+        # **** FALLBACK solution ***** 
+        print("\n\nFalling back to 3 bins")
+        n_fall_start = 3
         not_passed = True
+        # counter to avoid infinite loop
+        last_edges = None
+        counter = 0
 
-        while not_passed:
-            try:
-                # 0 as first edge
-                edges = [original_bin_edges[0]]
-                # find the closest edge to the evaluated point
-                for p in perc:
-                    target = inv_cumul_s.Eval(p)
-                    valid_edges = [e for e in original_bin_edges if e > edges[-1]]
-                    if not valid_edges:
-                        break
-                    closest_edge = min(valid_edges, key=lambda x: abs(x - target))
-                    edges.append(closest_edge)
-                edges.append(original_bin_edges[-1])
-            except Exception as e:
-                raise RuntimeError(f"Final fallback evaluation failed: {e}. There are not at least {self.min_MC_events*3} events")
+        frac = round(1.0 / n_fall_start, 5)
+        perc = [round(i * frac, 5) for i in range(1, n_fall_start)]
 
-            
+        while not_passed and n_fall_start>=1:
+            # 0 as first edge
+            edges = [original_bin_edges[0]]
+            # find the closest edge to the evaluated point
+            for p in perc:
+                target = inv_cumul_s.Eval(p)
+                # consider only edges largen than the last chosen to ensure increasing bin edges
+                valid_edges = [e for e in original_bin_edges if e > edges[-1]]
+                if not valid_edges:
+                    break
+                closest_edge = min(valid_edges, key=lambda x: abs(x - target))
+                edges.append(closest_edge)
+            edges.append(original_bin_edges[-1])
+
+            # rebin 
             edges_arr = array.array('d', edges)
             nbins_real = len(edges) - 1
-
             tmp_bkg = bkg_histo.Clone("h_bkg_tmp_fallback")
             bkg_histo_rebin = tmp_bkg.Rebin(nbins_real, "h_fallback", edges_arr)
-            n_bkg_stats = np.zeros(nbins_real)
 
+            # check on min mc  
+            n_bkg_stats = np.zeros(nbins_real)
             for ibin in range(1, nbins_real + 1):
                 try:
                     cont = bkg_histo_rebin.GetBinContent(ibin)
@@ -1457,16 +1461,42 @@ class FlatSigCumulativeRebinner:
                     n_bkg_stats[ibin - 1] = (cont / err) ** 2 if err > 0 else 0
                 except:
                     n_bkg_stats[ibin - 1] = 0
-
             n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
 
+            # if success
             if all(n_bkg_passed):
                 not_passed = False
+                print(f"Fallback success with {nbins_real} bins")
+                break
+
+            # check stagnation
+            if np.array_equal(last_edges, edges):
+                counter+=1
             else:
-                for i in range(len(perc)):
-                    idx = i + 1
-                    if idx < len(n_bkg_passed) and not n_bkg_passed[idx]:
-                        perc[i] = max(0.0, perc[i] - 0.01)
+                counter=0
+            # if the edges are not changing
+            if counter>=10:
+                if n_fall_start==2:
+                    edges = [0.0, 1.0]
+                    nbins_real = 1
+                    not_passed = False
+                    print("Could not find a good solution --> one bin only set")
+                    break
+                n_fall_start = n_fall_start-1
+                counter = 0
+                last_edges = None
+                frac = round(1.0 / n_fall_start, 5)
+                perc = [round(i * frac, 5) for i in range(1, n_fall_start)]
+                continue
+
+            # tuning edges for MC requirements
+            for i in range(len(perc)):
+                idx = i + 1
+                if idx < len(n_bkg_passed) and not n_bkg_passed[idx]:
+                    perc[i] = max(0.0, perc[i] - 0.01)
+            last_edges = np.array(edges)
+
+        print("\nFinal edges ", edges, "\n\n")
         self.edges = edges
         self.edges_array = np.array(edges)
         self.nbins_real = nbins_real
