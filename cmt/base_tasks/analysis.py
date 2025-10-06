@@ -164,6 +164,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
         if self.do_qcd:
             self.non_data_names.append("qcd")
 
+        if self.do_ff:
+            self.non_data_names.append("fakes")
+
         if self.fit_models:
             import yaml
             from cmt.utils.yaml_utils import ordered_load
@@ -307,7 +310,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     bkg_counter += 1
             except ValueError:
                 # qcd coming from do_qcd or background coming from data
-                if "qcd" in p_name or "data" in p_name:
+                if "qcd" in p_name or "data" in p_name or "fakes" in p_name:
                     line.append(bkg_counter)
                     bkg_counter += 1
                 else:  # signal coming from a grid
@@ -692,7 +695,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             for shape_syst in shape_syst_list:
                 syst_fromConfig = self.config.systematics.get(shape_syst)
                 syst_label = syst_fromConfig.get_aux("alias", shape_syst)
-                shape_systematics[syst_label] = [p_name for p_name in self.non_data_names if not "qcd" in p_name or self.propagate_syst_qcd]
+                shape_systematics[syst_label] = [p_name for p_name in self.non_data_names if not "qcd" in p_name or "fakes" in p_name or self.propagate_syst_qcd]
 
             if not self.fit_models and not self.counting:  # binned fits
                 self.log.write("Generating a binned-fit datacard...\n")
@@ -706,6 +709,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
                             name_to_save = name
                             name_from_featureplot = name
                         elif self.do_qcd and name == "qcd":
+                            continue
+                        elif self.do_ff and name == "fakes":
                             continue
                         else:
                             syst_alias = self.config.systematics.get(syst).get_aux("alias", None)
