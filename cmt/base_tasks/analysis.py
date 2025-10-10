@@ -721,6 +721,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         if self.clip_negative_integrals and histo.Integral() < 0.0:
                             print(f"** WARNING: histo {histo.GetName()} ({syst} - {d}) has integral {histo.Integral()}. Clipping it to 0.01 to avoid Combine issues!")
                             histo.Scale(0.01/histo.Integral())
+                        if self.clip_negative_integrals and histo.Integral() == 0.0: 
+                            if histo.GetEntries() == 0:
+                                print(f"** WARNING: histo {histo.GetName()} ({syst} - {d}) is empty. Setting integral to 0.0001 to avoid Combine issues.")
+                            else:
+                                print(f"** WARNING: histo {histo.GetName()} ({syst} - {d}) has integral 0 (sum of bins = 0). Adding 0.0001 to first bin")
+                            # mathematical artifact, not physically motivated    
+                            histo.SetBinContent(1,  histo.GetBinContent(1) + 0.0001)
                         histos[name_to_save] = histo
                 tf.Close()
 
