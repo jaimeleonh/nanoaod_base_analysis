@@ -136,12 +136,14 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
         return {
             key: {
                 ext: self.local_target(f"table_{key}.{ext}")
-                for ext in ["txt", "tex"]
+                for ext in ["txt", "tex", "csv"]
             }
             for key in self.keys
         }
 
     def run(self):
+        import csv
+
         inputs = self.input()
         tables = {key: [] for key in self.keys}
         cutflows = OrderedDict()
@@ -185,4 +187,15 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
                     fancy_tab = fancy_tab.replace("\$", "$")
                 with open(create_file_dir(self.output()[key][ext].path), "w+") as f:
                     f.write(fancy_tab)
+
+            # csv printing
+            # first line includes the different filter names
+            # next includes the dataset name and the values after each filter
+            csv_table = [["dataset"] + [line[0] for line in tables[key]]]
+            for id, d in enumerate(self.datasets):
+                csv_table.append([d.process.name] + [line[id + 1] for line in tables[key]])
+
+            with open(create_file_dir(self.output()[key]["csv"].path), 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerows(csv_table)
 
