@@ -3341,6 +3341,10 @@ class EfficiencyPlot(ComparisonPlot):
             feature_to_save.name = "_".join([f.name for f in feature_set])
             self.plot(feature_to_save)
 
+#########################
+#  FeatureDump Methods  #
+#########################
+
 class FeatureDump(PrePlot):
     """
     Applies all the needed selections (category, channel, feature) and dumps in
@@ -3486,3 +3490,56 @@ class FeatureDumpWrapper(DatasetCategoryWrapperTask):
     """
     def atomic_requires(self, dataset, category):
         return FeatureDump.req(self, dataset_name=dataset.name, category_name=category.name)
+
+
+class MergeFeatureDump(DatasetTaskWithCategory, law.tasks.ForestMerge):
+    """
+    Merge the output from the FeatureDump task in order to have
+    a single output file for each channel/category/dataset.
+    """
+
+    merge_factor = 16
+
+    def __init__(self, *args, **kwargs):
+        super(MergeFeatureDump, self).__init__(*args, **kwargs)
+
+    def merge_workflow_requires(self):
+        return FeatureDump.vreq(self, _prefer_cli=["workflow"])
+
+    def merge_requires(self, start_leaf, end_leaf):
+        return FeatureDump.vreq(self, workflow="local",
+            branches=((start_leaf, end_leaf),), _exclude={"branch"})
+
+    def trace_merge_inputs(self, inputs):
+        return [inp for inp in inputs["collection"].targets.values()]
+
+    def merge_output(self):
+        postfix = "__" + self.region.name
+        return self.local_target(f"data{postfix}.json")
+
+    def merge(self, inputs, output):
+        # Output content
+        outputs = []
+
+        # Merge inputs
+        for inp in inputs:
+            try:
+                if "json" in inp.path:
+                    values = inp.load(formatter="json")
+            except:
+                raise ValueError(f"MergeFeatureDump : error loading input file {inp}")
+
+            # Add inputs
+            outputs += values
+
+        # Write output
+        output.parent.touch()
+        output.dump(outputs, indent=4, formatter="json")
+
+
+class MergeFeatureDumpWrapper(DatasetCategoryWrapperTask):
+    """
+    Wrapper task to run the MergeFeatureDump task over several datasets in parallel.
+    """
+    def atomic_requires(self, dataset, category):
+        return MergeFeatureDump.req(self, dataset_name=dataset.name, category_name=category.name)
