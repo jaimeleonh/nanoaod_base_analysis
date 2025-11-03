@@ -11,14 +11,14 @@ from copy import deepcopy as copy
 import json
 import math
 import itertools
-import functools
 import array
 from collections import OrderedDict
 import numpy as np
+import pandas as pd
 
 import law
 import luigi
-from cmt.util import hist_to_array, hist_to_graph, get_graph_maximum, update_graph_values
+from cmt.util import hist_to_graph
 
 from ctypes import c_double
 
@@ -32,8 +32,7 @@ from cmt.base_tasks.base import (
 )
 
 from cmt.base_tasks.preprocessing import (
-    Categorization, MergeCategorization, MergePreCounter, EventCounterDAS,
-    DatasetCategoryWrapperTask
+    Categorization, MergeCategorization, MergePreCounter, DatasetCategoryWrapperTask
 )
 
 EMPTY = -1.e5
@@ -3341,3 +3340,149 @@ class EfficiencyPlot(ComparisonPlot):
             feature_to_save = copy(feature_set[1])
             feature_to_save.name = "_".join([f.name for f in feature_set])
             self.plot(feature_to_save)
+
+class FeatureDump(PrePlot):
+    """
+    Applies all the needed selections (category, channel, feature) and dumps in
+    and output dictionary all the requested features.
+
+    :param run_period_name: name of the run period to be added as feature.
+    :type run_period_name: str
+    """
+
+    # Name of the run period to be stored in the output dictionary
+    run_period_name = luigi.Parameter(default="", description="Run period name,"
+        " allowed values: 2022, 2022EE, 2023, 2023BPix, 2024 - default: None")
+
+    # We only care about the central value
+    store_systematics = False
+
+    def __init__(self, *args, **kwargs):
+        super(FeatureDump, self).__init__(*args, **kwargs)
+        if self.run_period_name not in ["2022", "2022EE", "2023", "2023BPix", "2024"]:
+            raise ValueError(f"Run period requested ({self.run_period_name}) not"
+                " among allowed options: 2022, 2022EE, 2023, 2023BPix, 2024")
+
+    def output(self):
+        """
+        :return: One output file per input file
+        :rtype: `.json`
+        """
+        return self.local_target("data{}_{}.json".format(
+            self.get_output_postfix(), self.branch))
+
+    @law.decorator.notify
+    @law.decorator.localize(input=False)
+    def run(self):
+        """
+        Creates one RDataFrame per input file, applies selections and
+        dumps requested features into the output dictionary
+        """
+        ROOT = import_root()
+
+        # prepare inputs and outputs
+        if self.skip_processing:
+            inp = self.get_input()
+        else:
+            inp = self.input()
+        outp = self.output().path
+
+        ROOT.ROOT.EnableThreadSafety()
+        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+
+        # Create RDF
+        elem = "central"
+        if self.skip_processing:
+            inp_to_consider = self.get_path(inp[elem])[0]
+            if not self.dataset.friend_datasets:
+                df = self.RDataFrame(self.tree_name, self.get_path(inp[elem]),
+                    allow_redefinition=self.allow_redefinition)
+            # friend tree
+            else:
+                tchain = ROOT.TChain()
+                for f in self.get_path(inp[elem]):
+                    tchain.Add("{}/{}".format(f, self.tree_name))
+                friend_tchain = ROOT.TChain()
+                for f in self.get_path(inp[elem], 1):
+                    friend_tchain.Add("{}/{}".format(f, self.tree_name))
+                tchain.AddFriend(friend_tchain, "friend")
+                df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
+        elif self.skip_merging:
+            inp_to_consider = inp[elem]["root"].path
+            df = self.RDataFrame(self.tree_name, inp_to_consider,
+                allow_redefinition=self.allow_redefinition)
+        else:
+            inp_to_consider = inp[elem].targets[self.branch].path
+            df = self.RDataFrame(self.tree_name, inp_to_consider,
+                allow_redefinition=self.allow_redefinition)
+
+        empty_file = False
+        tf = ROOT.TFile.Open(inp_to_consider)
+        tree = tf.Get(self.tree_name)
+        if not tree: # no tree inside the file
+            raise RuntimeError(f"FeatureDump : Input file '{inp_to_consider}' has no TTree named"
+                               f" '{self.tree_name}'. Try removing the file and running the task again.")
+        nentries = tree.GetEntries()
+        if nentries == 0: # tree with 0 entries
+            empty_file = True
+        tf.Close()
+
+        if not empty_file:
+            # Define selections
+            selection = "1"
+            dataset_selection = self.config.get_object_expression(
+                self.dataset.get_aux("selection", "1"), self.dataset.process.isMC)
+
+            if self.skip_processing:
+                selection = self.config.get_object_expression(
+                    self.category, self.dataset.process.isMC)
+
+            if dataset_selection and dataset_selection != "1":
+                if selection != "1":
+                    selection = join_root_selection(dataset_selection, selection, op="and")
+                else:
+                    selection = dataset_selection
+
+            if self.region_name != law.NO_STR:
+                region_selection = self.config.get_object_expression(
+                    self.config.regions.get(self.region_name).selection,
+                    self.dataset.process.isMC)
+                if selection != "1":
+                    selection = join_root_selection(region_selection, selection, op="and")
+                else:
+                    selection = region_selection
+
+            # Apply selection
+            if selection != "1":
+                df = df.Define("selection", selection).Filter("selection")
+
+            # Snapshot the needed branches to a pandas DataFrame
+            pdf = df.AsNumpy(list(self.feature_names))
+            pdf = pd.DataFrame(pdf)
+
+            # Add year value
+            pdf["year"] = self.run_period_name
+
+            # Rename luminosityBlock -> lumi if needed
+            if "luminosityBlock" in self.feature_names:
+                pdf = pdf.rename(columns={"luminosityBlock": "lumi"})
+
+            # Convert to list of dictionaries
+            records = pdf.to_dict(orient="records")
+
+            # Save output
+            with open(create_file_dir(self.output().path), "w+") as f:
+                json.dump(records, f, indent=4)
+
+        else: # empty input file case
+            # Save empty list
+            with open(create_file_dir(self.output().path), "w+") as f:
+                json.dump([], f, indent=4)
+
+
+class FeatureDumpWrapper(DatasetCategoryWrapperTask):
+    """
+    Wrapper for FeatureDump task
+    """
+    def atomic_requires(self, dataset, category):
+        return FeatureDump.req(self, dataset_name=dataset.name, category_name=category.name)
