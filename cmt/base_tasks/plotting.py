@@ -2018,7 +2018,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         # create root tchains for inputs
         inputs = self.input()
 
-        self.data_names = [p.name for p in self.processes_datasets.keys() if p.isData or p.get_aux("isFakeData", False)]
+        self.data_names = [p.name for p in self.processes_datasets.keys()
+            if p.isData or p.get_aux("isFakeData", False)]
         self.background_names = [p.name for p in self.processes_datasets.keys()
             if not p.isData and not p.isSignal and not p.get_aux("isFakeData", False)]
 
@@ -3779,6 +3780,7 @@ class MultiConfigFeaturePlot(FeaturePlot, MultiConfigProcessGroupNameTask):
                         del histo
                         tf.Close()
 
+                        # FIXME: Check this works properly
                         if self.plot_systematics and not process.isData and not process.isSignal \
                                 and syst == "central":
                             syst_histo = histo.Clone()
