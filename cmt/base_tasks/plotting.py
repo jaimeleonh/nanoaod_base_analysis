@@ -1555,7 +1555,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         # Create a dummy histogram for plotting axes and stuff
         dummy_hist = all_hists[0].Clone(randomize("dummy"))
         # Clear away all the content and initial plotting options
-        dummy_hist.Reset("M")
+        if not getattr(self, "isEfficiency", False):
+            dummy_hist.Reset("M")
         binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
         x_title = (str(feature.get_aux("x_title"))
             + (" [%s]" % feature.get_aux("units") if feature.get_aux("units") else ""))
