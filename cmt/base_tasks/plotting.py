@@ -3325,13 +3325,13 @@ class EfficiencyPlot(ComparisonPlot):
 
                     if not den_histo:
                         den_histo = copy(tf.Get("histograms/" + process.name))
-                        den_histo.SetTitle(f"CACA; {den_histo.GetXaxis().GetTitle()}; Efficiency")
+                        den_histo.SetTitle(f"; {den_histo.GetXaxis().GetTitle()}; Efficiency")
                     else:
                         num_histo = copy(tf.Get("histograms/" + process.name))
-                        den_histo.SetTitle(f"CACA; {den_histo.GetXaxis().GetTitle()}; Efficiency")
+                        den_histo.SetTitle(f"; {den_histo.GetXaxis().GetTitle()}; Efficiency")
 
                 process_histo = ROOT.TEfficiency(num_histo, den_histo)
-                process_histo.SetTitle(f"CACA; {den_histo.GetXaxis().GetTitle()}; Efficiency")
+                process_histo.SetTitle(f"; {den_histo.GetXaxis().GetTitle()}; Efficiency")
                 process_histo.cmt_process_name = process.name
                 process_histo.process_label = str(process.label)
                 self.setup_signal_hist(process_histo, colors[iprocess])
