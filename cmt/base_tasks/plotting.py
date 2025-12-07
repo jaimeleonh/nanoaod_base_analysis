@@ -1118,9 +1118,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
     def get_norm_systematics(self):
         return self.config.get_norm_systematics(self.processes_datasets, self.region)
 
-    def plot(self, feature, ifeat=0):
+    def plot(self, feature, ifeat=0, relative_syst_variations=None):
         """
-        Performs the actual plotting.
+        - Performs the actual plotting for one feature
+        - 'relative_syst_variations' is a tuple (down, up) of numpy arrays giving the
+          combined-in-quadrature relative variation of systematics for background
         """
         ROOT = import_root()
         import plotlib.root as r
@@ -1699,6 +1701,15 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
 
         if self.show_ratio:
+            """ What is shown on ratio graph :
+             - data points with their uncertainty (Poisson uncertainty rescaled to nominal background count)
+             - MC stat uncertainty band (sum of square weights for sum of all backgrounds), will also include QCD stat uncertainty
+             - MC normalization uncertainty (ie those that are log-normals in datacards)
+             - MC shape variations (shape templates in the datacard)
+            (last 2 usually combined)
+            MC syst uncertainties are combined by quadratic sum
+            """
+            # Dummy histogram for plotting
             dummy_ratio_hist = dummy_hist.Clone(randomize("dummy"))
             r.setup_hist(dummy_ratio_hist, pad=c.get_pad(2),
                 props={"Minimum": self.ratio_min, "Maximum": self.ratio_max})
@@ -1706,6 +1717,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 props={"Ndivisions": self.ratio_ndivisions})
             dummy_ratio_hist.GetYaxis().SetTitle("Data / MC")
 
+            # Define graphs from data and bkg histograms
             data_graph = hist_to_graph(data_histo, remove_zeros=False, errors=True,
                 asymm=True, overflow=False, underflow=False,
                 attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
@@ -1713,31 +1725,34 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 asymm=True, overflow=False, underflow=False,
                 attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
 
+            # Ratio graph
             ratio_graph = ROOT.TGraphAsymmErrors(binning_args[0])
+            r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
+
+            # MC stat error graph
             mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
             setattr(mc_unc_graph, "title", "MC stat.")
-            r.setup_graph(ratio_graph, props={"MarkerStyle": 20, "MarkerSize": 0.5})
+            r.setup_graph(mc_unc_graph, props={"FillStyle": 3017, "LineColor": 0,
+                "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
+            entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
+
+            # Systematics plots setup
             if self.plot_systematics:
-                r.setup_graph(mc_unc_graph, props={"FillStyle": 3017, "LineColor": 0,
-                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
-                entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
-                syst_graph = hist_to_graph(bkg_histo_syst, remove_zeros=False, errors=True,
-                    asymm=True, overflow=False, underflow=False,
-                    attrs=["cmt_process_name", "cmt_hist_type", "cmt_legend_style"])
-                syst_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                setattr(syst_unc_graph, "title", "Norm. syst.")
+
+                # MC systematic variations (norm+shape). Plotted as "MC Syst"
+                syst_unc_graph = ROOT.TGraphAsymmErrors(binning_args[0])
+                setattr(syst_unc_graph, "title", "MC Syst.")
                 r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
-                all_unc_graph = ROOT.TGraphErrors(binning_args[0])
-                setattr(all_unc_graph, "title", "MC Stat. + Norm. Syst.")
+
+                # Sum in quadrature of stat error & syst error. Plotted as "Stat+Syst"
+                all_unc_graph = ROOT.TGraphAsymmErrors(binning_args[0])
+                setattr(all_unc_graph, "title", "MC Stat. + Syst.")
                 entries.append((all_unc_graph, all_unc_graph.title, "f"))
                 r.setup_graph(all_unc_graph, props={"FillStyle": 3001, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
-            else:
-                r.setup_graph(mc_unc_graph, props={"FillStyle": 3001, "LineColor": 0,
-                    "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
-                entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
 
+            # Set graphs values
             for i in range(binning_args[0]):
                 x, d, b = c_double(0.), c_double(0.), c_double(0.)
                 data_graph.GetPoint(i, x, d)
@@ -1759,17 +1774,23 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     mc_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
                         mc_error)
                     if self.plot_systematics:
-                    # syst only
+                        # syst only (not really plotted, but keep for safety)
                         syst_unc_graph.SetPoint(i, x, 1.)
-                        syst_error = syst_graph.GetErrorYhigh(i) / b
-                        syst_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
-                            syst_error)
-                        # syst + stat
+                        syst_unc_graph.SetPointError(
+                            i,
+                            dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                            dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                            relative_syst_variations[0][i+1], # The +1 is because histo bins (non-overflow)
+                            relative_syst_variations[1][i+1]) # start at 1, but graph points start at 0
+                        # syst + stat combined in quadrature
                         all_unc_graph.SetPoint(i, x, 1.)
-                        tot_unc = math.sqrt(mc_error ** 2 + syst_error ** 2)
-                        all_unc_graph.SetPointError(i, dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
-                            tot_unc)
+                        all_unc_graph.SetPointError(i,
+                            dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                            dummy_ratio_hist.GetBinWidth(i + 1) / 2.,
+                            math.sqrt(mc_error ** 2 + relative_syst_variations[0][i+1] ** 2),
+                            math.sqrt(mc_error ** 2 + relative_syst_variations[1][i+1] ** 2))
 
+            # Draw all graphs on ratio pad
             c.get_pad(2).cd()
             c.get_pad(2).SetGridy()
             if self.equal_bin_width:
@@ -1780,7 +1801,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 # Draw options (from TGraphPainter)
                 # P -> plot marker
                 # 0 -> draw error bars even when point is outside range
-                # Z -> do not draw small horizontal and vertical lines the end of the error bars
+                # Z -> do not draw small horizontal and vertical lines at end of error bars
                 ratio_graph.Draw("P0Z,SAME")
             if self.plot_systematics:
                 all_unc_graph.Draw("2,SAME")
@@ -1993,7 +2014,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             if not p.isData and not p.isSignal and not p.get_aux("isFakeData", False)]
 
         if self.plot_systematics:
-            systematics = self.get_norm_systematics()
+            norm_systematics = self.get_norm_systematics()
 
         if self.fixed_colors:
             colors = list(range(2, 2 + len(self.processes_datasets.keys())))
@@ -2009,6 +2030,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             y_title = ("Events" if self.stack else "Normalized Events") + y_axis_adendum
             hist_title = "; %s; %s" % (x_title, y_title)
 
+            # Define shape systematics
             systs_directions = [("central", "")]
             if self.plot_systematics:
                 self.histos["bkg_histo_syst"] = ROOT.TH1D(
@@ -2018,27 +2040,39 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 shape_systematics = self.get_systs(feature, True)
                 systs_directions += list(itertools.product(shape_systematics, directions))
 
-            for (syst, d) in systs_directions:
-                feature_name = feature.name if syst == "central" else "%s_%s_%s" % (
-                    feature.name, syst, d)
-                if syst != "central":
-                    self.histos["shape"]["%s_%s" % (syst, d)] = []
-                for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+            # Loop on processes
+            for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
+
+                # Loop on shape systematics
+                for (syst, d) in systs_directions:
+                    feature_name = feature.name if syst == "central" \
+                        else "%s_%s_%s" % (feature.name, syst, d)
+                    # Store shifter shape and skip not interesting cases
+                    if syst != "central":
+                        self.histos["shape"]["%s_%s" % (syst, d)] = []
                     if syst != "central" and process.isData:
                         continue
                     if self.do_sideband and not process.isData and not process.isSignal:
                         continue
+
+                    # Define process histo
                     process_histo = ROOT.TH1D(randomize(process.name), hist_title, *binning_args)
                     process_histo.process_label = str(process.label)
                     process_histo.cmt_process_name = process.name
                     process_histo.Sumw2()
+
+                    # Loop on process's dataset
                     for dataset in datasets:
+                        # Define dataset histo
                         dataset_histo = ROOT.TH1D(randomize("tmp"), hist_title, *binning_args)
                         dataset_histo.Sumw2()
+
+                        # Loop on category
                         for category in self.expand_category():
-                            inp = inputs["data"][
-                                (dataset.name, category.name)].collection.targets.values()
+                            # Loop on input files
+                            inp = inputs["data"][(dataset.name, category.name)].collection.targets.values()
                             for elem in inp:
+                                # Get input historgam
                                 rootfile = ROOT.TFile.Open(elem.path)
                                 if self.preplot_foldered_by_feature:
                                     histo = copy(rootfile.Get(f"histograms/{feature.name}_dir/{feature_name}"))
@@ -2049,8 +2083,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                                     print(f"****WARNING: Histogram not found: {feature_name}   in file: {elem.path}")
                                 if not isinstance(histo, ROOT.TH1):
                                     print(f"****WARNING: Object {feature_name} is not a TH1 histogram in file: {elem.path}")
+                                # Add to dataset histo
                                 if histo.GetEntries() != 0:
                                     dataset_histo.Add(histo)
+
+                            # Scale histo
                             if not process.isData and not self.avoid_normalization:
                                 elem = ("central" if syst == "central" or syst not in self.norm_syst_list
                                     else f"{syst}_{d}")
@@ -2073,18 +2110,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                                                 ibin, dataset_histo.GetBinContent(ibin)
                                                     * new_errors[ibin - 1])
 
+                        # Add to process histo
                         process_histo.Add(dataset_histo)
-                        if self.plot_systematics and not process.isData and not process.isSignal \
-                                and syst == "central":
-                            dataset_histo_syst = dataset_histo.Clone()
-                            for ibin in range(1, dataset_histo_syst.GetNbinsX() + 1):
-                                # some datasets may not have any systematics
-                                if dataset.name in systematics:
-                                    dataset_histo_syst.SetBinError(ibin,
-                                        float(dataset_histo.GetBinContent(ibin))\
-                                            * systematics[dataset.name]
-                                    )
-                            self.histos["bkg_histo_syst"].Add(dataset_histo_syst)
 
                     if process.name in self.additional_scaling:
                         process_histo.Scale(self.additional_scaling[process.name])
@@ -2122,6 +2149,58 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     else:
                         self.histos["shape"]["%s_%s" % (syst, d)].append(process_histo)
 
+                    # For every shape systematic variation, make a sum of every syst varied template
+                    if self.plot_systematics and not process.isData and not process.isSignal:
+                        key_suffix = "" if syst == "central" else "_" + syst + "_" + d
+                        key = f"background_syst{key_suffix}"
+                        if not key in self.histos:
+                            self.histos[key] = process_histo
+                        else:
+                            self.histos[key].Add(process_histo)
+
+                # For every norm systematic variation, make a sum of every syst varied template
+                # Following https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part2/settinguptheanalysis/#a-simple-counting-experiment
+                # the templates should be scaled as:
+                # - Up: always use histo_up = histo.Scale(up_unc)
+                # - Down:
+                #    - if "symmetric" unc  -> histo_dw = histo.Scale(1./dw_unc)
+                #    - if "asymmetric" unc -> histo_dw = histo.Scale(dw_unc)
+                if self.plot_systematics and not process.isData and not process.isSignal:
+                    # Loop on normalization systematics
+                    for norm_syst_name, norm_syst_values_perProcess in norm_systematics.items():
+                        key = f"background_syst_norm_{norm_syst_name}"
+
+                        # Parse norm syst value
+                        norm_syst_value = norm_syst_values_perProcess.get(process.name, None)
+                        if norm_syst_value:
+                            if "/" in norm_syst_value:
+                                down, up = map(float, norm_syst_value.split("/"))
+                            else:
+                                down = float(norm_syst_value)
+                                up = down
+                        else:
+                            up, down = 1., 1.
+                        assert down <= up
+
+                        # Set correct "down scaling" values (see explanation above)
+                        if up == down:
+                            scale_down = 1./down
+                        else:
+                            scale_down = down
+
+                        # Add scaled histos
+                        if key+"_up" in self.histos:
+                            self.histos[key+"_up"].Add(process_histo, up)
+                            self.histos[key+"_down"].Add(process_histo, scale_down)
+                        else:
+                            h_up = process_histo.Clone()
+                            h_up.Scale(up)
+                            self.histos[key+"_up"] = h_up
+                            h_down = process_histo.Clone()
+                            h_down.Scale(scale_down)
+                            self.histos[key+"_down"] = h_down
+
+            # Apply bin merging
             if self.optimization_method == "flat_sgn" and feature.name in self.features_to_flatten:
                 self.histogram_bin_merger = FlatSignalBinMerger(bins_txt_path=self.input()["bin_opt"]["txt"][feature.name].path)
 
@@ -2140,7 +2219,33 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 if self.plot_systematics:
                     self.histos["bkg_histo_syst"] = self.histogram_bin_merger.rebin(self.histos["bkg_histo_syst"], inplace=True)
 
-            self.plot(feature)
+            # Combine all systematic variations in quadrature
+            if self.plot_systematics:
+                # Central variation
+                nominal_histo = self.histos["background_syst"]
+                central_values = np.array(nominal_histo)
+                var_up, var_down = np.zeros_like(central_values), np.zeros_like(central_values)
+
+                # Shape systematics
+                for (syst, d) in systs_directions:
+                    if syst == "central": continue
+                    ar = np.array(self.histos[f"background_syst_{syst}_{d}"]) - central_values
+                    var_up += np.square(np.fmax(ar, 0.)) # keep only positive variations here (an "up" template does not necessarily vary up)
+                    var_down += np.square(np.fmin(ar, 0.)) # negative variations
+
+                # Normalization systematics
+                for norm_syst_name, d in itertools.product(norm_systematics, directions):
+                    # For log-normal up should always be "up", but in case there is a reversed log-normal we still do the min/max
+                    ar = np.array(self.histos[f"background_syst_norm_{norm_syst_name}_{d}"]) - central_values
+                    var_up += np.square(np.fmax(ar, 0.))
+                    var_down += np.square(np.fmin(ar, 0.))
+
+                with np.errstate(divide="ignore", invalid="ignore"): # in case zero expected, do not print any warning
+                    relative_syst_variations = np.sqrt(var_down)/central_values, np.sqrt(var_up)/central_values
+            else:
+                relative_syst_variations = None
+
+            self.plot(feature, relative_syst_variations=relative_syst_variations)
 
 #####################################################################################################
 #####################################################################################################
