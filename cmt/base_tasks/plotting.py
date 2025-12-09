@@ -2149,10 +2149,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 # For every norm systematic variation, make a sum of every syst varied template
                 # Following https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part2/settinguptheanalysis/#a-simple-counting-experiment
                 # the templates should be scaled as:
-                # - Up: always use histo_up = histo.Scale(up_unc)
+                # - Up: always use histo_up = histo.Scale(unc)
                 # - Down:
-                #    - if "symmetric" unc  -> histo_dw = histo.Scale(1./dw_unc)
-                #    - if "asymmetric" unc -> histo_dw = histo.Scale(dw_unc)
+                #    - if "symmetric" unc  -> histo_dw = histo.Scale(1./unc)
+                #    - if "asymmetric" unc -> histo_dw = histo.Scale(unc)
                 if self.plot_systematics and not process.isData and not process.isSignal:
                     # Loop on normalization systematics
                     for norm_syst_name, norm_syst_values_perProcess in norm_systematics.items():
@@ -2161,31 +2161,28 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                         # Parse norm syst value
                         norm_syst_value = norm_syst_values_perProcess.get(process.name, None)
                         if norm_syst_value:
+                            # Asymmetric uncertainty
                             if "/" in norm_syst_value:
                                 down, up = map(float, norm_syst_value.split("/"))
+                            # Symmetric uncertainty
                             else:
-                                down = float(norm_syst_value)
-                                up = down
+                                unc = float(norm_syst_value)
+                                up = unc
+                                down = 1./unc # "Down" is scaled by 1./unc
                         else:
                             up, down = 1., 1.
                         assert down <= up
 
-                        # Set correct "down scaling" values (see explanation above)
-                        if up == down:
-                            scale_down = 1./down
-                        else:
-                            scale_down = down
-
                         # Add scaled histos
                         if key+"_up" in self.histos:
                             self.histos[key+"_up"].Add(process_histo, up)
-                            self.histos[key+"_down"].Add(process_histo, scale_down)
+                            self.histos[key+"_down"].Add(process_histo, down)
                         else:
                             h_up = process_histo.Clone()
                             h_up.Scale(up)
                             self.histos[key+"_up"] = h_up
                             h_down = process_histo.Clone()
-                            h_down.Scale(scale_down)
+                            h_down.Scale(down)
                             self.histos[key+"_down"] = h_down
 
             # Apply bin merging
