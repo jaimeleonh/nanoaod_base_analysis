@@ -2171,7 +2171,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                                 down = 1./unc # "Down" is scaled by 1./unc
                         else:
                             up, down = 1., 1.
-                        assert down <= up
 
                         # Add scaled histos
                         if key+"_up" in self.histos:
