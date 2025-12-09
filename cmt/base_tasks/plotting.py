@@ -1807,18 +1807,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 all_unc_graph.Draw("2,SAME")
             mc_unc_graph.Draw("2,SAME")
 
-            lines = []
-            for y in [0.5, 1.0, 1.5]:
-                if isinstance(feature.binning, tuple):
-                    l = ROOT.TLine(binning_args[1], y, binning_args[2], y)
-                else:
-                    l = ROOT.TLine(binning_args[1][0], y, binning_args[1][-1], y)
-                r.setup_line(l, props={"NDC": False, "LineStyle": 3, "LineWidth": 1,
-                    "LineColor": 1})
-                lines.append(l)
-            for line in lines:
-                line.Draw("same")
-
         if self.show_ratio:
             c.get_pad(1).cd()
 
@@ -2488,18 +2476,6 @@ class FeaturePlotSyst(FeaturePlot):
                 ratio_hist_up.Draw("SAME")
                 ratio_hist_down.Draw("SAME")
                 mc_unc_graph.Draw("2,SAME")
-
-                lines = []
-                for y in [0.5, 1.0, 1.5]:
-                    if isinstance(feature.binning, tuple):
-                        l = ROOT.TLine(binning_args[1], y, binning_args[2], y)
-                    else:
-                        l = ROOT.TLine(binning_args[1][0], y, binning_args[1][-1], y)
-                    r.setup_line(l, props={"NDC": False, "LineStyle": 3, "LineWidth": 1,
-                        "LineColor": 1})
-                    lines.append(l)
-                for line in lines:
-                    line.Draw("same")
 
                 outputs = []
                 if self.save_png:
