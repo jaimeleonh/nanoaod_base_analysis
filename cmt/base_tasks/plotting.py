@@ -2142,7 +2142,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                         key_suffix = "" if syst == "central" else "_" + syst + "_" + d
                         key = f"background_syst{key_suffix}"
                         if not key in self.histos:
-                            self.histos[key] = process_histo
+                            self.histos[key] = process_histo.Clone()
                         else:
                             self.histos[key].Add(process_histo)
 
