@@ -3265,12 +3265,13 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
         return FeaturePlot.vreq(self, feature_names=[f.name for f in self.feature_list],
             save_root=True)
 
+    def get_feature_name(self, feature_set):
+        return "_".join([feature.name for feature in feature_set])
+
     def output(self):
         """
         Output files to be filled: pdf, png, root or json
         """
-        def get_feature_name(feature_set):
-            return "_".join([feature.name for feature in feature_set])
 
         # output definitions, i.e. key, file prefix, extension
         output_data = []
@@ -3284,8 +3285,8 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
             output_data.append(("yields", "yields/", "json"))
         return {
             key: law.SiblingFileCollection(OrderedDict(
-                (get_feature_name(feature), self.local_target("{}{}{}.{}".format(
-                    prefix, get_feature_name(feature), self.get_output_postfix(key), ext)))
+                (self.get_feature_name(feature), self.local_target("{}{}{}.{}".format(
+                    prefix, self.get_feature_name(feature), self.get_output_postfix(key), ext)))
                 for feature in self.features
             ))
             for key, prefix, ext in output_data
@@ -3418,6 +3419,116 @@ class EfficiencyPlot(ComparisonPlot):
             feature_to_save = copy(feature_set[1])
             feature_to_save.name = "_".join([f.name for f in feature_set])
             self.plot(feature_to_save)
+
+
+class EfficiencyComparisonPlot(ComparisonPlot):
+
+    """
+    Plots efficiency comparison plots considering different processes and features.
+
+    Example command:
+
+    ``law run EfficiencyComparisonPlot --version test --category-name etau --config-name ul_2018 \
+--process-group-name etau --feature-names num1_pt:num2_pt:...:den_pt,num1_eta:num2_eta:...:den_eta \
+--workers 20 --PrePlot-workflow local --stack --hide-data False --do-qcd --region-name etau_os_iso\
+--dataset-names tt_dl,tt_sl,dy_high,wjets,data_etau_a,data_etau_b,data_etau_c,data_etau_d \
+--MergePreCounter-version test_old``
+
+    """
+
+    n_features = -1
+    show_ratio = False
+    plot_systematics = False
+    store_systematics = False
+    isEfficiency = True
+    stack = True
+
+    def __init__(self, *args, **kwargs):
+        super(EfficiencyComparisonPlot, self).__init__(*args, **kwargs)
+        self.feature_list = set([f for fs in self.features for f in fs])
+        self.do_qcd_bis = self.do_qcd
+        self.do_qcd = False
+
+    def get_features(self):
+        features = []
+        for feature_set_name in self.feature_names:
+            try:
+                feature_set_names = feature_set_name.split(":")
+            except:
+                print("%s cannot be considered for a efficiency comparison plot" % feature_pair_name)
+                continue
+            feature_pair = []
+            for feature_name in feature_set_names:
+                for feature in self.config.features:
+                    if feature.name == feature_name:
+                        feature_pair.append(feature)
+                        break
+            if self.n_features > 1:
+                if len(feature_pair) == self.n_features:
+                    features.append(tuple(feature_pair))
+                else:
+                    raise ValueError(f"Task {type(self)} only allows {self.n_features} per group.")
+            else:
+                features.append(tuple(feature_pair))
+
+        if len(features) == 0:
+            raise ValueError("No features were included. Did you spell them correctly?")
+        return features
+
+    def requires(self):
+        """
+        Root files storing the histograms coming from FeaturePlot
+        """
+        feature_names = []
+        for feature_set in self.features:
+            for feature in feature_set[:-1]:
+                feature_names.append(f"{feature.name}:{feature_set[-1].name}")
+    
+        return EfficiencyPlot.vreq(self, feature_names=feature_names, save_root=True)
+
+    @law.decorator.notify
+    @law.decorator.safe_output
+    def run(self):
+        """
+        Splits processes into data, signal and background. Creates histograms from each process
+        loading them from the input files. Scales the histograms and applies the correct format
+        to them.
+        """
+
+        ROOT = import_root()
+        ROOT.gStyle.SetOptStat(0)
+
+        # create root tchains for inputs
+        inputs = self.input()
+        processes = list(self.processes_datasets.keys())
+        if self.do_qcd_bis:
+            processes.append(self.config.get(self.qcd_process_name))
+        nprocesses = len(processes)
+
+        for feature_set in self.features:
+            self.histos = {"background": [], "signal": [], "data": [], "all": []}
+            colors = list(range(2, 2 + (len(feature_set) - 1) * nprocesses))
+            ihisto = -1
+
+            for process in processes:
+                for feature in feature_set[:-1]:
+                    tf = ROOT.TFile.Open(
+                        inputs["root"].targets[f"{feature.name}_{feature_set[-1].name}"].path)
+                    ihisto += 1
+                    process_histo = copy(tf.Get("histograms/" + process.name))
+                    process_histo.cmt_process_name = process.name
+                    process_histo.process_label = str(process.label)
+                    if feature.get_aux("selection_name"):
+                        process_histo.process_label += f", {feature.get_aux('selection_name')}"
+
+                    self.setup_signal_hist(process_histo, colors[ihisto])
+                    self.histos["signal"].append(process_histo)
+                    self.histos["all"].append(process_histo)
+
+            feature_to_save = copy(feature_set[0])
+            feature_to_save.name = "_".join([f.name for f in feature_set])
+            self.plot(feature_to_save)
+
 
 #########################
 #  FeatureDump Methods  #
