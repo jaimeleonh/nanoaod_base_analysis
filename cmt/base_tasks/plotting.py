@@ -1614,6 +1614,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             else:
                 dummy_hist.SetMinimum(self.min_y)
         else:
+            minimum = 0.0011 if self.log_y else 0.001
             maximum = 1.05
 
         # get text to plot inside the figure
@@ -1688,6 +1689,12 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         )
 
         dummy_hist.Draw()
+        if "TEfficiency" in str(type(dummy_hist)):
+            ROOT.gPad.Update()
+            graph = dummy_hist.GetPaintedGraph()
+            graph.GetYaxis().SetRangeUser(minimum, maximum)
+            ROOT.gPad.Modified()
+            ROOT.gPad.Update()
 
         for ih, hist in enumerate(draw_hists):
             option = "HIST,SAME" if hist.hist_type != "data" else "PE0Z,SAME"
