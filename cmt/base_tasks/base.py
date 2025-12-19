@@ -770,6 +770,11 @@ class RDFModuleTask(DatasetTask):
             from cmt.utils.yaml_utils import ordered_load
 
             tmp_file = self.retrieve_file("config/{}.yaml".format(filename))
+            if tmp_file == "":
+                raise ValueError(
+                    f"Module file {filename}.yaml couldn't be found under any config folder. "
+                    "Check spelling."
+                )
 
             with open(tmp_file) as f:
                 module_params = ordered_load(f, yaml.SafeLoader)
@@ -830,7 +835,13 @@ class RDFModuleTask(DatasetTask):
     def get_branches_to_save(self, branchNames, keep_and_drop_file):
         tmp_filename = self.retrieve_file("config/{}.txt".format(keep_and_drop_file))
         if not os.path.isfile(tmp_filename):
-            return branchNames
+            if keep_and_drop_file == "":
+                return branchNames
+            else:
+                raise ValueError(
+                    f"Keep and drop file {keep_and_drop_file}.txt couldn't be found under any config folder. "
+                    "Check spelling."
+                )
         comment = re.compile(r"#.*")
         ops = []
         with open(tmp_filename) as f:
