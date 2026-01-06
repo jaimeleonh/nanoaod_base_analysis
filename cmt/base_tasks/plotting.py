@@ -1854,20 +1854,26 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             xframe.Draw("same")
 
         n_entries = len(entries)
-        if n_entries <= 4:
-            n_cols = 1
+        n_cols = getattr(self.config, "n_cols", None)
+        if not n_cols:
+            if n_entries <= 4:
+                n_cols = 1
+            elif n_entries <= 8:
+                n_cols = 2
+            else:
+                n_cols = 3
+        if n_cols == 1:
             col_width = getattr(self.config, "single_column_width", 0.2)
         elif n_entries <= 8:
-            n_cols = 2
             col_width = getattr(self.config, "double_column_width", 0.15)
         else:
-            n_cols = 3
             col_width = 0.1
+
         n_rows = math.ceil(n_entries / float(n_cols))
         row_width = 0.06
-        legend_x2 = 0.88
+        legend_x2 = getattr(self.config, "legend_x2", 0.88)
         legend_x1 = legend_x2 - n_cols * col_width
-        legend_y2 = 0.88
+        legend_y2 = getattr(self.config, "legend_y2", 0.88)
         legend_y1 = legend_y2 - n_rows * row_width
 
         legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
@@ -3532,7 +3538,7 @@ class EfficiencyComparisonPlot(ComparisonPlot):
                     self.histos["signal"].append(process_histo)
                     self.histos["all"].append(process_histo)
 
-            feature_to_save = copy(feature_set[0])
+            feature_to_save = copy(feature_set[-1])
             feature_to_save.name = "_".join([f.name for f in feature_set])
             self.plot(feature_to_save)
 
