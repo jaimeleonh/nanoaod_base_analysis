@@ -1187,6 +1187,9 @@ class FakeFactorsTask(law.Task):
 
     :param ff_shape_region: region to use as shape region for fakes estimation
     :type ff_shape_region: str from choice list
+
+    :param keep_negative_bins: whether to keep the negative yield bins
+    :type keep_negative_bins: bool
     """
 
     do_ff = luigi.BoolParameter(default=False, description="whether to apply the fake factors, "
@@ -1195,6 +1198,8 @@ class FakeFactorsTask(law.Task):
             "default: os_isoFF")
     ff_shape_region = luigi.Parameter(default="os_invisoFF",
             significant=True, description="shape region, default: os_invisoFF")
+    keep_negative_bins = luigi.BoolParameter(default=False, description="whether to keep the negative yield bins, "
+        "default: False")
 
 
 class FlatSignalBinMerger:

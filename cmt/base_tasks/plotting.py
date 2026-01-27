@@ -1356,7 +1356,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             for key, region in self.ff_regions.items():
                 ff_shape_files[key] = ROOT.TFile.Open(self.input()["ff"][key]["root"].targets[feature.name].path)
 
-            ff_hist = get_qcd(self.ff_shape_region, ff_shape_files).Clone(randomize("fakes"))
+            bin_limit = 0.0
+            if self.keep_negative_bins: bin_limit = -999.9
+
+            ff_hist = get_qcd(self.ff_shape_region, ff_shape_files).Clone(randomize("fakes"), bin_limit=bin_limit)
 
             # store and style
             yield_error = c_double(0.)
