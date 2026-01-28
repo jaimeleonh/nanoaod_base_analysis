@@ -3034,11 +3034,6 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
                 self.config.ecm,
             )
 
-        draw_labels = get_labels(
-            upper_right=upper_right,
-            inner_text=inner_text
-        )
-
         for ih, hist in enumerate(draw_hists):
             c = Canvas()
             if self.log_z:
@@ -3046,6 +3041,11 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
             dummy_hist.SetMaximum(hist.GetMaximum())
             dummy_hist.Draw()
             hist.Draw("COLZ,SAME")
+
+            draw_labels = get_labels(
+                upper_right=upper_right,
+                inner_text=inner_text + [self.config.processes.get(hist.cmt_process_name).label]
+            )
             for label in draw_labels:
                 label.Draw("same")
 
