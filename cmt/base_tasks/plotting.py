@@ -1359,7 +1359,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             bin_limit = 0.0
             if self.keep_negative_bins: bin_limit = -999.9
 
-            ff_hist = get_qcd(self.ff_shape_region, ff_shape_files).Clone(randomize("fakes"), bin_limit=bin_limit)
+            ff_hist = get_qcd(self.ff_shape_region, ff_shape_files, bin_limit=bin_limit).Clone(randomize("fakes"))
 
             # store and style
             yield_error = c_double(0.)
