@@ -2044,6 +2044,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 shape_systematics = self.get_systs(feature, True)
                 systs_directions += list(itertools.product(shape_systematics, directions))
 
+            # Initialise shape "container"
+            for (syst, d) in systs_directions:
+                if syst != "central":
+                    self.histos["shape"]["%s_%s" % (syst, d)] = []
+
             # Loop on processes
             for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
 
@@ -2051,9 +2056,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 for (syst, d) in systs_directions:
                     feature_name = feature.name if syst == "central" \
                         else "%s_%s_%s" % (feature.name, syst, d)
-                    # Store shifter shape and skip not interesting cases
-                    if syst != "central":
-                        self.histos["shape"]["%s_%s" % (syst, d)] = []
+                    # Skip not interesting cases
                     if syst != "central" and process.isData:
                         continue
                     if self.do_sideband and not process.isData and not process.isSignal:
