@@ -216,6 +216,9 @@ class ConvertSLInputs(SimplifiedLikelihood):
             "${CMSSW_BASE}/src/HiggsAnalysis/CombinedLimit/test/simplifiedLikelihoods/"
             "convertSLRootToPython.py")
 
+        if not os.path.exists(script_path):
+            script_path = os.path.expandvars("${CMT_BASE}/cmt/utils/convertSLRootToPython.py")
+
         for feature in self.features:
             inp = self.input()[feature.name]
             out = create_file_dir(self.output()[feature.name].path)
