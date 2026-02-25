@@ -13,7 +13,7 @@ import itertools
 from collections import OrderedDict, defaultdict
 import os
 import sys
-from subprocess import call
+from subprocess import call, PIPE
 import json
 
 import law
@@ -1212,7 +1212,24 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                     use_hadd = True
                 if use_hadd:
                     print("Merging with hadd...")
-                    law.root.hadd_task(self, good_inputs, tmp_out, local=True)
+                    # hadd option '-f101' is the compression level (ZLIB with default value)
+                    cmd = f"hadd -f101 {create_file_dir(tmp_out.path)} " +  " ".join([f.path for f in good_inputs])
+
+                    # Using 'law.util.interruptable_popen' (instead of 'law.root.hadd_task')
+                    # in order to catch the warning/exceptions raised by 'hadd'
+                    rc, out, errs = law.util.interruptable_popen(cmd, shell=True, stderr=PIPE)
+
+                    # Sometimes 'hadd' prints a warning but returns 0, even though the merge is not complete.
+                    # This can happen e.g. when the branches in the two trees are different.
+                    # Here we want to explicitly catch Errors and/or Warnings from hadd.
+                    if "Error" in errs or "Warning" in errs:
+                        # Split in case multiple errors/warning are fired
+                        errs = errs.strip().split("\n")
+                        for err in errs:
+                            # In CCLUB, since Prod_26_01, we store a class (trigger_regions) with no dictionary,
+                            # so we need to add an hard-coded exception to the catching
+                            if "Warning in <TClass::Init>: no dictionary for class trigger_regions is available" not in err:
+                                raise RuntimeError("hadd returned an Error/Warning -> " + err)
                 else:
                     print("Merging with haddnano.py...")
                     cmd = "python3 %s/bin/%s/haddnano.py %s %s" % (
