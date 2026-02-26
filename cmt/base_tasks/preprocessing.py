@@ -1226,9 +1226,8 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                         # Split in case multiple errors/warning are fired
                         errs = errs.strip().split("\n")
                         for err in errs:
-                            # In CCLUB, since Prod_26_01, we store a class (trigger_regions) with no dictionary,
-                            # so we need to add an hard-coded exception to the catching
-                            if "Warning in <TClass::Init>: no dictionary for class trigger_regions is available" not in err:
+                            # Ignore ROOT "missing dictionaries" warnings
+                            if "Warning in <TClass::Init>: no dictionary for class" not in err:
                                 raise RuntimeError("hadd returned an Error/Warning -> " + err)
                 else:
                     print("Merging with haddnano.py...")
