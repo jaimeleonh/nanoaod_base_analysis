@@ -13,7 +13,6 @@ import itertools
 from collections import OrderedDict, defaultdict
 import os
 import sys
-from subprocess import call, PIPE
 import json
 
 import law
@@ -1173,6 +1172,7 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
         ])
 
     def merge(self, inputs, output):
+        from subprocess import PIPE
         ROOT = import_root()
         with output.localize("w") as tmp_out:
             good_inputs = []
@@ -1204,37 +1204,53 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                     print("MergeCategorization : File %s healthy but empty -> not used" % inp.path)
 
             if len(good_inputs) != 0:
+                # hadd/haddnano difference:
+                # - hadd: is faster and is used for MC samples which are supposed
+                #         to all have the same identical branches.
+                # - haddnano: is slower and is used for data because data is allowed
+                #             to have different trigger paths in the same Era, hence different branches.
+                #             haddnano back-fills the missing boolean-branch entries with 'False'.
                 use_hadd = self.dataset.process.isMC
                 assert not(self.force_haddnano and self.force_hadd)
+
+                # Check whether explicit request was made by user
                 if self.force_haddnano:
                     use_hadd = False
                 elif self.force_hadd:
                     use_hadd = True
+
+                # Define the hadd/haddnano commands
                 if use_hadd:
                     print("Merging with hadd...")
                     # hadd option '-f101' is the compression level (ZLIB with default value)
                     cmd = f"hadd -f101 {create_file_dir(tmp_out.path)} " +  " ".join([f.path for f in good_inputs])
-
-                    # Using 'law.util.interruptable_popen' (instead of 'law.root.hadd_task')
-                    # in order to catch the warning/exceptions raised by 'hadd'
-                    rc, out, errs = law.util.interruptable_popen(cmd, shell=True, stderr=PIPE)
-
-                    # Sometimes 'hadd' prints a warning but returns 0, even though the merge is not complete.
-                    # This can happen e.g. when the branches in the two trees are different.
-                    # Here we want to explicitly catch Errors and/or Warnings from hadd.
-                    if "Error" in errs or "Warning" in errs:
-                        # Split in case multiple errors/warning are fired
-                        errs = errs.strip().split("\n")
-                        for err in errs:
-                            # Ignore ROOT "missing dictionaries" warnings
-                            if "Warning in <TClass::Init>: no dictionary for class" not in err:
-                                raise RuntimeError("hadd returned an Error/Warning -> " + err)
                 else:
                     print("Merging with haddnano.py...")
                     cmd = "python3 %s/bin/%s/haddnano.py %s %s" % (
                         os.environ["CMSSW_BASE"], os.environ["SCRAM_ARCH"],
                         create_file_dir(tmp_out.path), " ".join([f.path for f in good_inputs]))
-                    rc = call(cmd, shell=True)
+
+                # Using 'law.util.interruptable_popen' (instead of 'law.root.hadd_task')
+                # in order to catch the warning/exceptions in the stdout or stderr
+                rc, out, errs = law.util.interruptable_popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+
+                # Sometimes 'hadd' prints a warning but returns 0, even though the merge is not complete.
+                # This can happen e.g. when the branches in the two trees are different.
+                # Here we want to explicitly catch Errors and/or Warnings from hadd.
+                if "Error" in errs or "Warning" in errs:
+                    # Split in case multiple errors/warnings are fired
+                    errs = errs.strip().split("\n")
+                    for err in errs:
+                        # Ignore ROOT "missing dictionaries" warnings
+                        if "no dictionary for class" not in err:
+                            raise RuntimeError("MergeCategorization returned an Error/Warning -> " + err)
+
+                # In case non-booleans branches are missing, 'haddnano.py' prints a message
+                # at screen (in the form: "Did not expect to back fill non-boolean branches...")
+                # which we use to catch such errors.
+                if "Did not expect to back fill non-boolean branches" in out:
+                    raise RuntimeError("MergeCategorization returned an Error/Warning -> " + out)
+
             else:  # if all input files are empty, create an empty ttree as output
                 tf = ROOT.TFile.Open(create_file_dir(tmp_out.path), "RECREATE")
                 empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
