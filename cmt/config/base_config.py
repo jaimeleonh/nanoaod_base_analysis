@@ -327,7 +327,11 @@ class Config():
                     tag = ""
                 else:
                     tag = syst.expression
-                tag += eval("syst.%s" % systematic_direction)
+
+                if isinstance(systematic_direction, int):
+                    tag += eval(f'syst.get_aux("directions")["var{systematic_direction}"]')
+                else:
+                    tag += eval(f"syst.{systematic_direction}")
             else:
                 if feature.central != "":
                     central = self.systematics.get(feature.central)

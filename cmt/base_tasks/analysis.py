@@ -688,6 +688,9 @@ class CreateDatacards(CombineBase, FeaturePlot):
             shape_syst_list = self.get_systs(feature, True)
             systs_directions += list(itertools.product(shape_syst_list, directions))
 
+            # take care of the "multi-dimensional" systematics (LHE QCD SCale)
+            systs_directions = self.deal_with_multi_systs(systs_directions)
+
             # Convert the shape systematics list to a dict with the systs as keys and a list of
             # the processes affected by them (all non-data processes except the qcd if computed
             # in the code)
@@ -715,7 +718,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         else:
                             syst_alias = self.config.systematics.get(syst).get_aux("alias", None)
                             syst_name = syst if not syst_alias else syst_alias
-                            name_to_save = "%s_%s%s" % (name, syst_name, d.capitalize())
+                            name_to_save = "%s_%s%s" % (name, syst_name, str(d).capitalize())
                             name_from_featureplot = "%s_%s_%s" % (name, syst, d)
                         histo = copy(tf.Get("histograms/" + name_from_featureplot))
                         if self.clip_negative_integrals and histo.Integral() < 0.0:

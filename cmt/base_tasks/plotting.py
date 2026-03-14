@@ -215,6 +215,58 @@ class BasePlotTask(ConfigTaskWithRegion):
                 unique_systs.append(syst)
         return unique_systs
 
+    def deal_with_multi_systs(self, systs_directions, for_preplot=False):
+        # pop multi uncertainties
+        multi_systs = []
+        for i in range(len(systs_directions) - 1, -1, -1):
+            s = systs_directions[i][0]
+            if s == "central": continue
+            if self.config.systematics.get(s).get_aux("multi_syst"):
+                multi_systs.append(systs_directions.pop(i))
+
+        # for PrePlot list all the variations that need to be computed
+        if for_preplot:
+            # take care of the multi direction uncertainties
+            for i in range(len(multi_systs) - 1, -1, -1):
+                s = multi_systs[i][0]
+                d = multi_systs[i][1]
+                syst = self.config.systematics.get(s)
+
+                # pop down variation as it is not needed anymore
+                if   d == "down": multi_systs.pop(i)
+                # when enoutring up fill multi-variation
+                elif d == "up":
+                    n = len(syst.get_aux("directions").keys())
+                    for var in range(n):
+                        multi_systs.append((s, var))
+                    # pop up variation as it is not needed anymore
+                    multi_systs.pop(i)
+
+            return multi_systs
+
+        # for all other steps list either the envelope or all variations
+        else:
+            # take care of the multi direction uncertainties
+            for i in range(len(multi_systs) - 1, -1, -1):
+                s = multi_systs[i][0]
+                d = multi_systs[i][1]
+                syst = self.config.systematics.get(s)
+
+                # add all the multi variations if envelope not requested
+                if not syst.get_aux("take_envelope"):
+                    # pop down variation as it is not needed anymore
+                    if   d == "down": multi_systs.pop(i)
+                    # when encoutring up fill multi-variation
+                    elif d == "up":
+                        n = len(syst.get_aux("directions").keys())
+                        for var in range(n):
+                            multi_systs.append((s, var))
+                        # pop up variation as it is not needed anymore
+                        multi_systs.pop(i)
+
+            # join back together standard and multi systs (and remove possible duplicates)
+            return list(OrderedDict.fromkeys(systs_directions+multi_systs).keys())
+
     def get_output_postfix(self):
         postfix = ""
         if self.region:
@@ -429,7 +481,10 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                 systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
 
-            # loop over systematics and up/down variations
+                # take care of the "multi-dimensional" systematics (LHE QCD SCale)
+                multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
+
+            # loop over systematics and up/down/multi variations
             for syst_name, direction in systs_directions:
 
                 # Select the appropriate RDF (input file) depending on the syst and direction
@@ -467,6 +522,67 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                     )
                 else:  # no entries available, append empty histogram
                     histos.append(hist_base)
+
+            multi_histos = {}
+            # loop over systematics and multi variations
+            for syst_name, direction in multi_systs:
+                df = dfs["central"] # multi variations are only in central df
+
+                if syst_name not in multi_histos.keys():
+                    multi_histos[syst_name] = []
+
+                feature_expression = self.config.get_object_expression(
+                    feature, isMC, syst_name, direction)
+                feature_name = feature.name + f"_{syst_name}_{direction}"
+                hist_base = ROOT.TH1D(feature_name, title, *binning_args)
+
+                if nentries[key] > 0:
+                    hmodel = ROOT.RDF.TH1DModel(hist_base)
+                    multi_histos[syst_name].append(
+                        feat_df.Define(
+                            "weight", "{}".format(self.get_weight(
+                                self.category.name, syst_name, direction))
+                        ).Define(
+                            "var", feature_expression).Histo1D(hmodel, "var", "weight")
+                    )
+                else:  # no entries available, append empty histogram
+                    histos.append(hist_base)
+
+            multi_histos_to_save = []
+            # make envelopes of multi variations
+            for syst_name in multi_histos.keys():
+                syst = self.config.systematics.get(syst_name)
+                process = self.dataset.process
+
+                feature_expression = self.config.get_object_expression(
+                    feature, isMC, syst_name, direction)
+                feature_name = feature.name + f'_{syst_name}'
+                hist_base = ROOT.TH1D(feature_name, title, *binning_args)
+
+                if not syst.get_aux("take_envelope"):
+                    multi_histos_to_save.extend(multi_histos[syst_name])
+
+                else:
+                    # create stack of all histograms (here stack is not a TStack, but an array of arrays with all bin entries)
+                    envelope_array = np.stack([np.array(h.GetValue()) for h in multi_histos[syst_name]])
+
+                    # get the largest entry out of all variations and take it as up variation
+                    h_envelope_up = hist_base.Clone(randomize(process.name))
+                    h_envelope_up.SetName(f"{feature_name}_up")
+                    h_envelope_up.Set(len(h_envelope_up), np.max(envelope_array, axis=0))
+                    h_envelope_up.SetEntries(multi_histos[syst_name][0].GetEntries()) # manully set entries because Set does not
+                    multi_histos_to_save.append(h_envelope_up)
+
+                    # get the smallest entry out of all variations and take it as down variation
+                    h_envelope_down = hist_base.Clone(randomize(process.name))
+                    h_envelope_down.SetName(f"{feature_name}_down")
+                    h_envelope_down.Set(len(h_envelope_down), np.min(envelope_array, axis=0))
+                    h_envelope_down.SetEntries(multi_histos[syst_name][0].GetEntries()) # manully set entries because Set does not
+                    multi_histos_to_save.append(h_envelope_down)
+
+            # concatenate final version of all the histos to save
+            histos.extend(multi_histos_to_save)
+
         return histos
 
     @law.decorator.notify
@@ -2044,6 +2160,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 shape_systematics = self.get_systs(feature, True)
                 systs_directions += list(itertools.product(shape_systematics, directions))
 
+                # take care of the "multi-dimensional" systematics (LHE QCD SCale)
+                systs_directions = self.deal_with_multi_systs(systs_directions)
+
             # Initialise shape "container"
             for (syst, d) in systs_directions:
                 if syst != "central":
@@ -2158,7 +2277,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
                     # For every shape systematic variation, make a sum of every syst varied template
                     if self.plot_systematics and not process.isData and not process.isSignal:
-                        key_suffix = "" if syst == "central" else "_" + syst + "_" + d
+                        key_suffix = "" if syst == "central" else f"_{syst}_{d}"
                         key = f"background_syst{key_suffix}"
                         if not key in self.histos:
                             self.histos[key] = process_histo.Clone()
