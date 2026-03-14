@@ -179,18 +179,24 @@ class Config():
 
         # read WPs directly from json corrections
         if year == 2022:
-            if   runPeriod == "preEE":  fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2022_Summer22/btagging.json.gz"
-            elif runPeriod == "postEE": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2022_Summer22EE/btagging.json.gz"
+            if   runPeriod == "preEE":  fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-22CDSep23-Summer22-NanoAODv12/latest/btagging.json.gz"
+            elif runPeriod == "postEE": fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-22EFGSep23-Summer22EE-NanoAODv12/latest/btagging.json.gz"
             else:
                 raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
         elif year == 2023:
-            if   runPeriod == "preBPix":  fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23/btagging.json.gz"
-            elif runPeriod == "postBPix": fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23BPix/btagging.json.gz"
+            if   runPeriod == "preBPix":  fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-23CSep23-Summer23-NanoAODv12/latest/btagging.json.gz"
+            elif runPeriod == "postBPix": fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-23DSep23-Summer23BPix-NanoAODv12/latest/btagging.json.gz"
             else:
                 raise ValueError(f"Wrong year-runPeriod pair selected: {year}_{runPeriod}")
         elif year == 2024:
             if self.btag_algo == "UParTAK4B":
-                fname = "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2024_Summer24/btagging.json.gz"
+                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/latest/btagging.json.gz"
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2024 b-tagging!")
+        elif year == 2025:
+            if self.btag_algo == "UParTAK4B":
+                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/add_2025_b_and_c_WPs/btagging_v0.json.gz"
+                print(f"** WARNING: 2025 bTagging SFs from preliminary file: {fname}!")
             else:
                 raise ValueError("Only UParTAK4B algo is supported for 2024 b-tagging!")
         else:
