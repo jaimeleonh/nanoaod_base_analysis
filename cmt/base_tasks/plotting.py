@@ -547,7 +547,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                             "var", feature_expression).Histo1D(hmodel, "var", "weight")
                     )
                 else:  # no entries available, append empty histogram
-                    histos.append(hist_base)
+                    multi_histos[syst_name].append(hist_base)
 
             multi_histos_to_save = []
             # make envelopes of multi variations
@@ -565,16 +565,17 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
 
                 else:
                     # create stack of all histograms (here stack is not a TStack, but an array of arrays with all bin entries)
-                    envelope_array = np.stack([np.array(h.GetValue()) for h in multi_histos[syst_name]])
+                    # (need to make the distinction between standard TH1D and RDF lazy TH1D when creating the array stack)
+                    envelope_array = np.stack([np.array(h) if isinstance(h, ROOT.TH1D) else np.array(h.GetValue()) for h in multi_histos[syst_name]])
 
-                    # get the largest entry out of all variations and take it as up variation
+                    # per each bin get the largest entry out of all variations and take it as up variation
                     h_envelope_up = hist_base.Clone(randomize(process.name))
                     h_envelope_up.SetName(f"{feature_name}_up")
                     h_envelope_up.Set(len(h_envelope_up), np.max(envelope_array, axis=0))
                     h_envelope_up.SetEntries(multi_histos[syst_name][0].GetEntries()) # manully set entries because Set does not
                     multi_histos_to_save.append(h_envelope_up)
 
-                    # get the smallest entry out of all variations and take it as down variation
+                    # per each bin get the smallest entry out of all variations and take it as down variation
                     h_envelope_down = hist_base.Clone(randomize(process.name))
                     h_envelope_down.SetName(f"{feature_name}_down")
                     h_envelope_down.Set(len(h_envelope_down), np.min(envelope_array, axis=0))
