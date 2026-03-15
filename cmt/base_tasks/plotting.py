@@ -477,6 +477,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             title = "; %s; %s" % (x_title, y_title)
 
             systs_directions = [("central", "")]
+            multi_systs = []
             if isMC and self.store_systematics:
                 systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
