@@ -496,6 +496,10 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         default=False,
         description="Use shared preprocessed pNTuples stored in /eos/cms/store/group/phys_higgs/HHbbtautau/PreprocessRDF, default: False"
     )
+    run_branches_single_process = luigi.BoolParameter(
+        default=False,
+        description="run all branches in one single law run call. With force_multiprocessing=false (the default), will not use fork with workers=1, this allows to not re-JIT-compile for each task, but rather only once per job. Has no effect unless tasks-per-jobs > 1"
+    )
 
     exclude_params_branch = {"max_runtime", "htcondor_central_scheduler", "custom_condor_tag"}
 
@@ -549,6 +553,17 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
 
     def htcondor_use_local_scheduler(self):
         return not self.htcondor_central_scheduler
+    
+    def htcondor_job_file(self):
+        if not self.run_branches_single_process:
+            return super().htcondor_job_file()
+        from law.job.base import JobInputFile
+        return JobInputFile(
+            path=os.path.expandvars("$CMT_BASE/cmt/files/law_jobs_singleProcess.sh"),
+            copy=True,
+            share=True,
+            render_job=True,
+        )
 
 
 class SlurmWorkflow(law.slurm.SlurmWorkflow):
