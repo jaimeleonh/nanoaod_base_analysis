@@ -98,6 +98,15 @@ class BasePlotTask(ConfigTaskWithRegion):
     preplot_foldered_by_feature=luigi.BoolParameter(default=False, description="whether to store"
         " PrePlot histograms organised in folders in the ROOT file, default: False")
 
+    color_scheme_6 = [
+        (87, 144, 252), (248, 156, 32), (228, 37, 54),
+        (150, 74, 139), (156, 156, 161), (122, 33, 221)
+    ]
+    color_scheme_10 = [
+        (63, 144, 218), (255, 169, 14), (189, 31, 1), (148, 164, 162), (131, 45, 182),
+        (169, 107, 89), (231, 99, 0), (185, 172, 112), (113, 117, 129), (146, 218, 221)
+    ]
+
     def __init__(self, *args, **kwargs):
         super(BasePlotTask, self).__init__(*args, **kwargs)
         # select features
@@ -278,6 +287,14 @@ class BasePlotTask(ConfigTaskWithRegion):
         if self.n_bins != law.NO_INT:
             postfix += "__%s_bins" % self.n_bins
         return postfix
+
+    def get_color_list(self, size):
+        if size <= 6:
+            return self.color_scheme_6
+        elif size <= 10:
+            return self.color_scheme_10
+        else:
+            return list(range(2, 2 + size))
 
 
 class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow,
@@ -2139,7 +2156,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             norm_systematics = self.get_norm_systematics()
 
         if self.fixed_colors:
-            colors = list(range(2, 2 + len(self.processes_datasets.keys())))
+            colors = self.get_color_list(len(self.processes_datasets.keys()))
 
         self.nevents, self.nweightedevents, self.nunweightedevents = self.get_nevents(inputs)
 
@@ -3464,7 +3481,7 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
 
         for feature_set in self.features:
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
-            colors = list(range(2, 2 + len(feature_set) * nprocesses))
+            colors = self.get_color_list(len(feature_set) * nprocesses)
             ihisto = -1
 
             for process in processes:
@@ -3477,7 +3494,11 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
                     if feature.get_aux("selection_name"):
                         process_histo.process_label += f", {feature.get_aux('selection_name')}"
 
-                    self.setup_signal_hist(process_histo, colors[ihisto])
+                    color = colors[ihisto]
+                    if type(color) == tuple:
+                        color = ROOT.TColor.GetColor(*color)
+
+                    self.setup_signal_hist(process_histo, color)
                     self.histos["signal"].append(process_histo)
                     self.histos["all"].append(process_histo)
 
@@ -3534,7 +3555,7 @@ class EfficiencyPlot(ComparisonPlot):
 
         for feature_set in self.features:
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
-            colors = list(range(2, 2 + len(feature_set) * nprocesses))
+            colors = self.get_color_list(len(feature_set) * nprocesses)
 
             for iprocess, process in enumerate(processes):
                 num_histo, den_histo = None, None
@@ -3647,7 +3668,7 @@ class EfficiencyComparisonPlot(ComparisonPlot):
 
         for feature_set in self.features:
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
-            colors = list(range(2, 2 + (len(feature_set) - 1) * nprocesses))
+            colors = self.get_color_list((len(feature_set) - 1) * nprocesses)
             ihisto = -1
 
             for process in processes:
