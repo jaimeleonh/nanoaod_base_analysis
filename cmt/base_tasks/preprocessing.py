@@ -253,13 +253,14 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow
         ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
+        # Additional tree RDF
+        additional_dfs = []
+
         # create RDataFrame
         inp = self.get_input()
         if not self.dataset.friend_datasets:
             df = self.RDataFrame(self.tree_name, self.get_path(inp),
                 allow_redefinition=self.allow_redefinition)
-            # Additional tree RDF
-            additional_dfs = []
             for additional_tree in self.additional_trees:
                 try:
                     df_additional = self.RDataFrame(additional_tree, self.get_path(inp),
