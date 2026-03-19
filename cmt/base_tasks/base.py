@@ -497,7 +497,7 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         description="Use shared preprocessed pNTuples stored in /eos/cms/store/group/phys_higgs/HHbbtautau/PreprocessRDF, default: False"
     )
     run_branches_single_process = luigi.BoolParameter(
-        default=False,
+        default=True,
         description="run all branches in one single law run call. With force_multiprocessing=false (the default), will not use fork with workers=1, this allows to not re-JIT-compile for each task, but rather only once per job. Has no effect unless tasks-per-jobs > 1"
     )
 
