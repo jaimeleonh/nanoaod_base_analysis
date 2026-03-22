@@ -1216,6 +1216,253 @@ class FakeFactorsTask(law.Task):
     keep_negative_bins = luigi.BoolParameter(default=False, description="whether to keep the negative yield bins, "
         "default: False")
 
+class FlatSignalBackgroundBinMerger:
+    """ Algorithm to merge histogram bins whilst keeping enough brackground MC events.
+    Uses two successive methods, picking the first one that succeeds.
+    Procedure 1: flatten signal/background distribution, in N bins, such that each bin has enough background events, both on central sample and systematic samples.
+                 Then merge the distribution from the left if that doesn't affect significance.
+                 Check that every bin has at least 10 MC events.
+                 if failed, repeat procedure with N-1 bins, N-2, etc until 3 bins.
+
+    If procedure 1 fails also for 3 bins, apply the following.
+
+    Procedure 2: find the value X such that the sum across bins higher than X has at least 10 MC events
+                 and has at least 30% of the signal. Then make a 2-bin histogram split at X.
+                 (this is mainly for extreme signal/bkg separation)
+    """
+    def __init__(self, sgn_histo=None, bkg_histo=None,  sig_syst=None, bkg_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_MC_events_lower_bins=None):
+        if sgn_histo:
+            assert not bins_txt_path
+            self.target_bin_count = target_bin_count
+            self.min_MC_events = min_MC_events
+            if min_MC_events_lower_bins:
+                self.min_MC_events_lower_bins = min_MC_events_lower_bins
+            else:
+                self.min_MC_events_lower_bins = min_MC_events
+            self._compute_rebinning(sgn_histo, bkg_histo, bkg_syst)
+        else:
+            assert bins_txt_path
+            self._load_bin_edges(bins_txt_path)
+
+    def _compute_rebinning(self, sgn_histo, bkg_histo, bkg_syst):
+        integral = sgn_histo.Integral()
+
+        if sgn_histo.GetBinContent(0)!= 0 or sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1)!=0:
+            print("## WARNING overflow bins contain this fraction of the yield : "
+                 f"{ (sgn_histo.GetBinContent(0)+sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1))/sgn_histo.Integral(0, sgn_histo.GetNbinsX()+1)}")
+
+        if integral == 0:
+            edges = [0, 1.0]
+            nbins_real = 1
+
+        else:
+            success = False
+            for nbins in range(self.target_bin_count, 3, -1):
+                edges = [1.]
+                sig_yield = 0.0
+                bkg_yield = 0.0
+                bkg_error = 0.0
+                bkg_syst_yield = {key: 0.0 for key in bkg_syst.keys()}
+                bkg_syst_error = {key: 0.0 for key in bkg_syst.keys()}
+                quantile = integral
+                i_bin = self.target_bin_count
+                for i in range(sgn_histo.GetNbinsX(), 1, -1):
+                    if len(edges) == nbins: break
+                    sig_yield += sgn_histo.GetBinContent(i)
+                    bkg_yield += bkg_histo.GetBinContent(i)
+                    bkg_error += bkg_histo.GetBinError(i)**2
+                    for key, value in bkg_syst.items():
+                        bkg_syst_yield[key] += value.GetBinContent(i)
+                        bkg_syst_error[key] += value.GetBinError(i)**2
+                    try:
+                        bkg_yields = list(bkg_syst_yield.values())
+                        bkg_yields.append(bkg_yield)
+                        bkg_errors = list(bkg_syst_error.values()) 
+                        bkg_errors.append(bkg_error)
+                        bkg_stats = min(map(lambda x,y: x ** 2/y, bkg_yields, bkg_errors))
+                    except:
+                        bkg_stats = 0
+
+                    # check that bin has enough background MC events
+                    if len(edges) == 1 and bkg_stats < self.min_MC_events: continue
+                    if len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins: continue 
+
+                    # check that bin has enough signal events
+                    if sig_yield >= quantile / i_bin:
+                        print(" ### INFO: Adding", sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        # compute the remaining yield to be subdivided
+                        quantile = quantile - sig_yield
+                        # move to the next bin to the left
+                        i_bin = i_bin - 1
+                        sig_yield = 0.0
+                        bkg_yield = 0.0
+                        bkg_error = 0.0
+                        for key, value in bkg_syst.items():
+                            bkg_syst_yield[key] = 0.0
+                            bkg_syst_error[key] = 0.0
+                edges.append(0.0)
+                edges = edges[::-1]
+                nbins_real = len(edges)-1
+
+                # merge bins if they do not contribute to overall significance
+                bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_rebin_bkg", np.array(edges))
+                sgn_histo_rebin = sgn_histo.Rebin(nbins_real, f"h_rebin_sig", np.array(edges))
+                merged_bounds = [0.0]
+                merged_s, merged_b, merged_ds, merged_db = sgn_histo_rebin.GetBinContent(1), bkg_histo_rebin.GetBinContent(1), \
+                                sgn_histo_rebin.GetBinError(1) ** 2, bkg_histo_rebin.GetBinError(1) ** 2
+                
+                significance_top_bin = self._compute_asimov_significance_squared(sgn_histo_rebin.GetBinContent(nbins_real), \
+                                                bkg_histo_rebin.GetBinContent(nbins_real), bkg_histo_rebin.GetBinError(nbins_real))
+                for ibin in range(2, nbins_real + 1):
+                    curr_bin_s, curr_bin_b = sgn_histo_rebin.GetBinContent(ibin), bkg_histo_rebin.GetBinContent(ibin)
+                    curr_bin_ds, curr_bin_db = sgn_histo_rebin.GetBinError(ibin) ** 2, bkg_histo_rebin.GetBinError(ibin) ** 2
+                    significance_split, significance_merged = self._compare_significance_sq_merging(merged_s, merged_b, curr_bin_s, curr_bin_b)
+                    if np.sqrt(significance_split) > np.sqrt(significance_merged) + np.sqrt(significance_top_bin)/10.:
+                        merged_bounds.append(edges[ibin - 1])
+                        merged_s = curr_bin_s
+                        merged_b = curr_bin_b
+                        merged_ds = curr_bin_ds
+                        merged_db = curr_bin_db
+                    else:
+                        merged_s += curr_bin_s
+                        merged_s += curr_bin_b
+                        merged_ds += curr_bin_ds
+                        merged_ds += curr_bin_db
+              
+                merged_bounds.append(1.0)
+
+                # check that it has enough background MC events
+                nbins_real = len(merged_bounds)-1
+                bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test_bkg", np.array(merged_bounds))
+                n_bkg_stats = np.zeros(nbins_real)
+                for ibin in range(1, nbins_real + 1):
+                    try:
+                        # number of equivalent unweighted bkg events
+                        n_bkg_stats[ibin-1] = (bkg_histo_rebin.GetBinContent(ibin) / bkg_histo_rebin.GetBinError(ibin))**2
+                    except:
+                        n_bkg_stats[ibin-1] = 0
+                n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
+
+                if not all(n_bkg_passed):
+                    print(" ### INFO: ", nbins, " not passing bkg requirement")
+                    continue
+
+                else:
+                    print("Procedure 1 success")
+                    success = True
+                    break
+
+            # if the first procedure failed
+            if not success:
+                print(" Procedure 2 :")
+                edges = [1.0]
+                sig_yield = 0.0
+                bkg_yield = 0.0
+                bkg_error = 0.0
+                for i in range(sgn_histo.GetNbinsX(), 1, -1):
+                    sig_yield += sgn_histo.GetBinContent(i)
+                    bkg_yield += bkg_histo.GetBinContent(i)
+                    bkg_error += bkg_histo.GetBinError(i)**2
+                    try:
+                        bkg_stats = bkg_yield**2/bkg_error
+                    except:
+                        bkg_stats = 0
+                    #print(bkg_stats, sig_yield/integral)
+                    if (bkg_stats > self.min_MC_events and sig_yield/integral > 0.3):
+                        edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
+                        print(" ### INFO: Procedure 2 found border at ", sgn_histo.GetXaxis().GetBinLowEdge(i), \
+                                " with ", bkg_stats, " equivalent background events")
+                        if len(edges) > 2: break
+                        sig_yield = 0.0
+                        bkg_yield = 0.0
+                        bkg_error = 0.0
+                if len(edges) <= 1:
+                    raise RuntimeError(f"Procedure 2 failed. Final bkg statistics {bkg_stats}  - Final fraction of signal : {sig_yield/integral}")
+
+                edges.append(0.)
+                edges = edges[::-1]
+                nbins_real = len(edges)-1
+                merged_bounds = edges
+        self.edges = merged_bounds
+        self.edges_array = np.array(self.edges)
+        self.nbins_real = nbins_real
+        return edges
+
+    def _load_bin_edges(self, path):
+        self.edges_array = np.loadtxt(path)
+        self.edges = list(self.edges_array)
+        self.nbins_real = len(self.edges)-1
+    
+    def _compute_asimov_significance_squared(self, s, b, sigma_B=0.):
+        """ Asimov significance squared. sigma_B is relative
+        Taken from https://root.cern.ch/doc/master/RooStatsUtils_8cxx_source.html#l00059
+        """
+        if isinstance(s, float):
+            S, B = s, b 
+        else:
+            S, B = np.float64(s.value), np.float64(b.value)
+        # return S/(3/2+np.sqrt(B)) # 3=nb of sigmas  # this formula (from Punzi paper) has the davantage to be proportionnal to signal, but it does not take into account uncertainties
+        
+        if sigma_B == 0.:
+            return np.where(B>0, 2.*( (S+B) * np.log(1. + S/B) -S ), 0.)
+        else:
+            if sigma_B == "MCstat":
+                sigma_B = np.sqrt(b.variance)
+            else:
+                assert not isinstance(sigma_B, str)
+                sigma_B = B*sigma_B
+            assert np.all(np.square(sigma_B)/B>1e-12)
+            sb2 = np.square(sigma_B)
+            bpsb2 = B + sb2
+            b2 = np.square(B)
+            spb = S+B
+            return 2.*( (spb)* np.log( ( spb)*(bpsb2)/(b2+ spb*sb2) ) - (b2/sb2) * np.log(1. + ( sb2 * S)/(B * bpsb2) ) )
+
+    def _compute_asimov_significance_batched(self, S, B, sigma_B=0.):
+        return np.sqrt(self._compute_asimov_significance_squared(S, B, sigma_B=sigma_B))
+
+    def _compute_asimov_significance(self, S, B, sigma_B=0.): # this functions combines the significances
+        return np.sqrt(np.sum(self._compute_asimov_significance_squared(S, B, sigma_B=sigma_B)))
+
+    def _compare_significance_sq_merging(self, S1, B1, S2, B2, sigma_B=0.):
+        """ Compute the significance for two hypotheses : bins separetyd or bins merged """
+        return self._compute_asimov_significance_squared(S1, B1, sigma_B=sigma_B)+self._compute_asimov_significance_squared(S2, B2, sigma_B=sigma_B), self._compute_asimov_significance_squared(S1+S2, B1+B2, sigma_B=sigma_B)
+    
+    def _compare_significance_merging(self, total_sign_sq, S1, B1, S2, B2, sigma_B=0.):
+        """ 
+        total_sign_sq should be the total sign. with bins split
+        Split : sqrt(total)
+        Merged : sqrt(total - split + merged)
+            as total - split = significance in all other bins
+        """
+        split, merged = compare_significance_sq_merging(S1, B1, S2, B2, sigma_B=sigma_B)
+        if total_sign_sq - split + merged < 0:
+            if total_sign_sq - split + merged > -1e12: return 0
+            else: raise ValueError(total_sign_sq - split + merged)
+        return math.sqrt(total_sign_sq - split + merged)
+
+    def rebin(self, h, inplace=False, equal_bin_width=False):
+        """ rebin an histogram using the previously computed edges """
+        if equal_bin_width:
+            self.edges_array = np.arange(0,self.edges_array.shape[0],1.)
+            self.edges = list(self.edges_array)
+        rebin_process_histo = h.Rebin(self.nbins_real, "" if inplace else f"rebin_{h.GetTitle()}", self.edges_array)
+        attributes = ["hist_type", "process_label", "legend_style", "cmt_scale",
+                      "cmt_process_name", "cmt_yield", "cmt_yield_error"]
+        for histo_attr in attributes:
+            try:
+                setattr(rebin_process_histo, histo_attr, getattr(h, histo_attr))
+            except AttributeError: pass
+        # Set also bin-related attributes
+        rebin_process_histo.cmt_bin_yield = []
+        rebin_process_histo.cmt_bin_yield_error = []
+        for ibin in range(1, rebin_process_histo.GetNbinsX() + 1):
+            rebin_process_histo.cmt_bin_yield.append(rebin_process_histo.GetBinContent(ibin))
+            rebin_process_histo.cmt_bin_yield_error.append(rebin_process_histo.GetBinError(ibin))
+        return rebin_process_histo
+
+
 
 class FlatSignalBinMerger:
     """ Algorithm to merge histogram bins whilst keeping enough brackground MC events.
@@ -1229,7 +1476,7 @@ class FlatSignalBinMerger:
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """
-    def __init__(self, sgn_histo=None, bkg_histo=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10):
+    def __init__(self, sgn_histo=None, bkg_histo=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, **kwargs):
         if sgn_histo:
             assert not bins_txt_path
             self.target_bin_count = target_bin_count
@@ -1369,7 +1616,7 @@ class FlatSigCumulativeRebinner:
     Each bin is required to contain at least min_MC background MC events. If this is not met, the bin count is reduced iteratively by 1, down to 3.
     In the 3 bin configuration, if the requirement is still not met, the algorithm further adjusts the bin positions to find a configuration that satisfies the background event threshold.
     """
-    def __init__(self, sgn_histo=None, bkg_histo=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10):
+    def __init__(self, sgn_histo=None, bkg_histo=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, **kwargs):
         if sgn_histo:
             assert not bins_txt_path
             self.target_bin_count = target_bin_count
