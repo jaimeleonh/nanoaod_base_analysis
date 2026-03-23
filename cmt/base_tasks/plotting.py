@@ -546,6 +546,13 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             for syst_name, direction in multi_systs:
                 df = dfs["central"] # multi variations are only in central df
 
+                # apply selection if needed
+                if feature.selection and nentries[key] > 0:
+                    feat_df = df.Define("feat_selection", self.config.get_object_expression(
+                        feature.selection, isMC, syst_name, direction)).Filter("feat_selection")
+                else:
+                    feat_df = df
+
                 if syst_name not in multi_histos.keys():
                     multi_histos[syst_name] = []
 
