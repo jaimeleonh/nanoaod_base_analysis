@@ -2310,7 +2310,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
                     if syst == "central":
                         if self.fixed_colors:
-                            color = colors[iproc]
+                            color = (colors[iproc] if type(colors[iproc]) != tuple
+                                else ROOT.TColor.GetColor(*colors[iproc]))
                         elif type(process.color) == tuple:
                             color = ROOT.TColor.GetColor(*process.color)
                         else:
@@ -3525,7 +3526,7 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
                     tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
                     ihisto += 1
                     process_histo = copy(tf.Get("histograms/" + process.name))
-                    process_histo.cmt_process_name = process.name
+                    process_histo.cmt_process_name = f"{process.name}__{feature.name}"
                     process_histo.process_label = str(process.label)
                     if feature.get_aux("selection_name"):
                         process_histo.process_label += f", {feature.get_aux('selection_name')}"
@@ -3609,7 +3610,12 @@ class EfficiencyPlot(ComparisonPlot):
                 process_histo.SetTitle(f"; {den_histo.GetXaxis().GetTitle()}; Efficiency")
                 process_histo.cmt_process_name = process.name
                 process_histo.process_label = str(process.label)
-                self.setup_signal_hist(process_histo, colors[iprocess])
+
+                color = colors[iprocess]
+                if type(color) == tuple:
+                    color = ROOT.TColor.GetColor(*color)
+                self.setup_signal_hist(process_histo, color)
+
                 self.histos["signal"].append(process_histo)
                 self.histos["all"].append(process_histo)
 
@@ -3713,12 +3719,16 @@ class EfficiencyComparisonPlot(ComparisonPlot):
                         inputs["root"].targets[f"{feature.name}_{feature_set[-1].name}"].path)
                     ihisto += 1
                     process_histo = copy(tf.Get("histograms/" + process.name))
-                    process_histo.cmt_process_name = process.name
+                    process_histo.cmt_process_name = f"{process.name}__{feature.name}"
                     process_histo.process_label = str(process.label)
                     if feature.get_aux("selection_name"):
                         process_histo.process_label += f", {feature.get_aux('selection_name')}"
 
-                    self.setup_signal_hist(process_histo, colors[ihisto])
+                    color = colors[ihisto]
+                    if type(color) == tuple:
+                        color = ROOT.TColor.GetColor(*color)
+                    self.setup_signal_hist(process_histo, color)
+
                     self.histos["signal"].append(process_histo)
                     self.histos["all"].append(process_histo)
 
