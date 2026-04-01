@@ -1537,7 +1537,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 ff_hist.cmt_process_name = f"fakes{syst}"
                 ff_hist.process_label = f"Fakes{syst}"
                 ff_hist.SetTitle(f"Fakes{syst}")
-                ff_c = tuple([255, 87, 215])
+                ff_c = getattr(self.config, "fakes_color", tuple([255, 87, 215]))
                 ff_color = ROOT.TColor.GetColor(*ff_c)
                 self.setup_background_hist(ff_hist, ff_color)
                 background_hists.append(ff_hist)
