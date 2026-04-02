@@ -2223,8 +2223,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                         else "%s_%s_%s" % (feature.name, syst, d)
                     # Skip not interesting cases
                     if syst != "central" and process.isData:
-                        # in the region where the shape is taken, data will alss have the systematic
+                        # in the region where the shape is taken, data will also have the systematic
                         # variation of the FFs, so for this syst we should not 'continue'
+                        # Note: 'self.do_ff=True' means we are in the SR, but we evaluate the
+                        #       up/down FF templates in the invisoFF region, so we only keep
+                        #       the FF syst when self.do_ff=False
                         if self.do_ff or "FF" not in syst or not self.region.name.endswith(self.ff_shape_region):
                             continue
 
