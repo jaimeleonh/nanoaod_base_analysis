@@ -1540,8 +1540,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 ff_c = getattr(self.config, "fakes_color", tuple([255, 87, 215]))
                 ff_color = ROOT.TColor.GetColor(*ff_c)
                 self.setup_background_hist(ff_hist, ff_color)
-                background_hists.append(ff_hist)
                 all_hists.append(ff_hist)
+                # add ot the background list only the central one, otherwise the stack will contain
+                # central+up+down variations
+                if syst == '': background_hists.append(ff_hist)
 
         # sideband files
         sideband_files = None
@@ -1868,9 +1870,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         for label in draw_labels:
             label.Draw("same")
 
-        # Define entries object to be used later when filling the legend
+        # Define entries object to be used later when filling the legend (skip Fakes systematics)
         # Can be updated with the fits and the uncertainty bands
-        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
+        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists if not "FF" in hist.cmt_process_name]
 
         if self.show_ratio:
             """ What is shown on ratio graph :
