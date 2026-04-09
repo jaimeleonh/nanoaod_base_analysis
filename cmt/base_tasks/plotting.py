@@ -205,8 +205,8 @@ class BasePlotTask(ConfigTaskWithRegion):
     def get_feature_systematics(self, feature):
         return feature.systematics
 
-    def get_systs(self, feature, isMC, category=None):
-        if not isMC:
+    def get_systs(self, feature, isMC, category=None, includeFFdataSyst=False):
+        if not isMC and not includeFFdataSyst:
             return []
         if category == None:
             category = self.category
@@ -215,6 +215,14 @@ class BasePlotTask(ConfigTaskWithRegion):
         systs += self.config.get_systematics_from_expression(category.selection)
         if self.region:
             systs += self.config.get_systematics_from_expression(self.region.selection)
+
+        # for the application of FFs, the data is scaled with the FFs
+        # so for Data the FF nuisances need to be stored
+        if not isMC and includeFFdataSyst:
+            weight_systs = self.config.get_weights_systematics(self.config.weights[category.name], True)
+            # select only FF weights' systs
+            systs = [s for s in weight_systs if "FF" in s]
+
         return self.get_unique_systs(systs)
 
     def get_unique_systs(self, systs):
@@ -502,6 +510,12 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                 # take care of the "multi-dimensional" systematics (LHE QCD SCale)
                 multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
 
+            # for the application of FFs, the data is scaled with the FFs
+            # so for Data the FF nuisances need to be stored
+            if not isMC and self.store_systematics and self.do_ff and self.region.name.endswith(self.ff_shape_region):
+                systs = self.get_systs(feature, isMC, includeFFdataSyst=True)
+                systs_directions += list(itertools.product(systs, directions))
+
             # loop over systematics and up/down/multi variations
             for syst_name, direction in systs_directions:
 
@@ -518,7 +532,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                 else:
                     feat_df = df
                 # define tag just for the histogram's name
-                if syst_name != "central" and isMC:
+                if syst_name != "central":
                     tag = "_%s" % syst_name
                     if direction != "":
                         tag += "_%s" % direction
@@ -1272,8 +1286,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
         # helper to extract the qcd shape in a region
         # same helper can be used to get the fake factors shape template
-        def get_qcd(region, files, syst='', bin_limit=0.):
-            d_hist = files[region].Get("histograms/" + self.data_names[0])
+        def get_qcd(region, files, syst='', data_syst='', bin_limit=0.):
+            d_hist = files[region].Get("histograms/" + self.data_names[0] + data_syst)
             if not d_hist:
                 raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
                     self.data_names[0], region, files[region]))
@@ -1501,27 +1515,35 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             bin_limit = 0.0
             if self.keep_negative_bins: bin_limit = -999.9
 
-            ff_hist = get_qcd(self.ff_shape_region, ff_shape_files, bin_limit=bin_limit).Clone(randomize("fakes"))
+            FFsysts = ['']
+            for syst in self.get_systs(feature, False, includeFFdataSyst=True):
+                for d in directions:
+                    FFsysts.append(f"_{syst}_{d}")
 
-            # store and style
-            yield_error = c_double(0.)
-            ff_hist.cmt_yield = ff_hist.IntegralAndError(
-                0, ff_hist.GetNbinsX() + 1, yield_error)
-            ff_hist.cmt_yield_error = yield_error.value
-            ff_hist.cmt_bin_yield = []
-            ff_hist.cmt_bin_yield_error = []
-            for ibin in range(1, ff_hist.GetNbinsX() + 1):
-                ff_hist.cmt_bin_yield.append(ff_hist.GetBinContent(ibin))
-                ff_hist.cmt_bin_yield_error.append(ff_hist.GetBinError(ibin))
-            ff_hist.cmt_scale = 1.
-            ff_hist.cmt_process_name = "fakes"
-            ff_hist.process_label = "Fakes"
-            ff_hist.SetTitle("Fakes")
-            ff_c = tuple([255, 87, 215])
-            ff_color = ROOT.TColor.GetColor(*ff_c)
-            self.setup_background_hist(ff_hist, ff_color)
-            background_hists.append(ff_hist)
-            all_hists.append(ff_hist)
+            for syst in FFsysts:
+                ff_hist = get_qcd(self.ff_shape_region, ff_shape_files, data_syst=syst, bin_limit=bin_limit).Clone(randomize("fakes"))
+
+                # store and style
+                yield_error = c_double(0.)
+                ff_hist.cmt_yield = ff_hist.IntegralAndError(
+                    0, ff_hist.GetNbinsX() + 1, yield_error)
+                ff_hist.cmt_yield_error = yield_error.value
+                ff_hist.cmt_bin_yield = []
+                ff_hist.cmt_bin_yield_error = []
+                for ibin in range(1, ff_hist.GetNbinsX() + 1):
+                    ff_hist.cmt_bin_yield.append(ff_hist.GetBinContent(ibin))
+                    ff_hist.cmt_bin_yield_error.append(ff_hist.GetBinError(ibin))
+                ff_hist.cmt_scale = 1.
+                ff_hist.cmt_process_name = f"fakes{syst}"
+                ff_hist.process_label = f"Fakes{syst}"
+                ff_hist.SetTitle(f"Fakes{syst}")
+                ff_c = getattr(self.config, "fakes_color", tuple([255, 87, 215]))
+                ff_color = ROOT.TColor.GetColor(*ff_c)
+                self.setup_background_hist(ff_hist, ff_color)
+                all_hists.append(ff_hist)
+                # add ot the background list only the central one, otherwise the stack will contain
+                # central+up+down variations
+                if syst == '': background_hists.append(ff_hist)
 
         # sideband files
         sideband_files = None
@@ -1848,9 +1870,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         for label in draw_labels:
             label.Draw("same")
 
-        # Define entries object to be used later when filling the legend
+        # Define entries object to be used later when filling the legend (skip Fakes systematics)
         # Can be updated with the fits and the uncertainty bands
-        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists]
+        entries = [(hist, hist.process_label, hist.legend_style) for hist in all_hists if not "FF" in hist.cmt_process_name]
 
         if self.show_ratio:
             """ What is shown on ratio graph :
@@ -2203,7 +2225,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                         else "%s_%s_%s" % (feature.name, syst, d)
                     # Skip not interesting cases
                     if syst != "central" and process.isData:
-                        continue
+                        # in the region where the shape is taken, data will also have the systematic
+                        # variation of the FFs, so for this syst we should not 'continue'
+                        # Note: 'self.do_ff=True' means we are in the SR, but we evaluate the
+                        #       up/down FF templates in the invisoFF region, so we only keep
+                        #       the FF syst when self.do_ff=False
+                        if self.do_ff or "FF" not in syst or not self.region.name.endswith(self.ff_shape_region):
+                            continue
+
                     if self.do_sideband and not process.isData and not process.isSignal:
                         continue
 

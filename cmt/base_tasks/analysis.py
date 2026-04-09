@@ -700,6 +700,10 @@ class CreateDatacards(CombineBase, FeaturePlot):
                 syst_label = syst_fromConfig.get_aux("alias", shape_syst)
                 shape_systematics[syst_label] = [p_name for p_name in self.non_data_names if not "qcd" in p_name and not "fakes" in p_name or self.propagate_syst_qcd]
 
+                # add fakes systematics to fakes column
+                if "FF" in syst_label:
+                    shape_systematics[syst_label].append("fakes")
+
             if not self.fit_models and not self.counting:  # binned fits
                 self.log.write("Generating a binned-fit datacard...\n")
                 histos = {}
@@ -714,7 +718,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
                         elif self.do_qcd and name == "qcd":
                             continue
                         elif self.do_ff and name == "fakes":
-                            continue
+                            if "FF" in syst:
+                                syst_alias = self.config.systematics.get(syst).get_aux("alias", None)
+                                syst_name = syst if not syst_alias else syst_alias
+                                name_to_save = "%s_%s%s" % (name, syst_name, str(d).capitalize())
+                                name_from_featureplot = "%s_%s_%s" % (name, syst, d)
+                            else:
+                                continue
                         else:
                             syst_alias = self.config.systematics.get(syst).get_aux("alias", None)
                             syst_name = syst if not syst_alias else syst_alias
