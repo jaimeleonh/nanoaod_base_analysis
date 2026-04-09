@@ -1326,9 +1326,9 @@ class FlatSignalBackgroundBinMerger:
                         merged_db = curr_bin_db
                     else:
                         merged_s += curr_bin_s
-                        merged_s += curr_bin_b
+                        merged_b += curr_bin_b
                         merged_ds += curr_bin_ds
-                        merged_ds += curr_bin_db
+                        merged_db += curr_bin_db
               
                 merged_bounds.append(1.0)
 
