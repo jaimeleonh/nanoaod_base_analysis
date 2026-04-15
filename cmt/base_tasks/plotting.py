@@ -2809,7 +2809,7 @@ class PrePlot2D(PrePlot, BasePlotMultiDTask):
                 # apply selection if needed
                 feat_df = df
                 for ifeat, feature in enumerate(feature_pair):
-                    if feature.selection:
+                    if feature.selection and nentries[key] > 0:
                         feat_df = feat_df.Define(
                             "feat%s_selection" % ifeat, self.config.get_object_expression(
                                 feature.selection, isMC, syst_name, direction)).Filter(
