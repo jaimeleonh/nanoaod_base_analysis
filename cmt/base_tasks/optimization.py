@@ -308,13 +308,14 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
             # skip features that are not requested to be flattened
             if feature.name not in self.features_to_flatten: continue
 
-            self.histos = {"background": [], "signal": []}
-            
-            self.histos["shape_bkg"] = {}
+            self.histos = {"background": [], "signal": [], "DY": [], "TT": [], "shape_bkg": {}, "shape_DY": {}, "shape_TT": {}}
+
             shape_systematics = self.get_systs(feature, True)
-            
+
             systs_directions = [("central", "")]
-            systs_directions += [("CMS_scale_j", "up"), ("CMS_scale_j", "down"), ("CMS_scale_t", "up"), ("CMS_scale_t", "down")]
+            systs_directions += [("CMS_scale_j", "up"), ("CMS_scale_j", "down"), ("CMS_scale_t", "up"), ("CMS_scale_t", "down"), \
+                                 ("CMS_res_j", "up"), ("CMS_res_j", "down"), ("CMS_res_e", "up"), ("CMS_res_e", "down"), \
+                                 ("CMS_scale_e", "up"), ("CMS_scale_e", "down")]
             for (syst, d) in systs_directions:
                 if syst != "central":
                     self.histos["shape_bkg"]["%s_%s" % (syst, d)] = []
@@ -396,9 +397,17 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                             self.histos["signal"].append(process_histo)
                         else:
                             self.histos["background"].append(process_histo)
+                        if process.name == "DY":
+                            self.histos["DY"] = process_histo.Clone()
+                        if process.name == "TT":
+                            self.histos["TT"] = process_histo.Clone()
                     else:
                         if not process.isSignal:
                             self.histos["shape_bkg"]["%s_%s" % (syst, d)].append(process_histo)
+                        if process.name == "DY":
+                            self.histos["shape_DY"]["%s_%s" % (syst, d)] = process_histo.Clone()
+                        if process.name == "TT":
+                            self.histos["shape_TT"]["%s_%s" % (syst, d)] = process_histo.Clone()
 
             signal_sum = None
             background_sum = None
@@ -423,6 +432,10 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                     sgn_histo=signal_sum,
                     bkg_histo=background_sum,
                     bkg_syst=bkg_syst,
+                    dy_histo = self.histos["DY"],
+                    tt_histo = self.histos["TT"],
+                    dy_syst = self.histos["shape_DY"],
+                    tt_syst = self.histos["shape_TT"],
                     target_bin_count=feature.get_aux("target_bin_count", 20),
                     min_MC_events=feature.get_aux("min_MC_events", 10),
                     min_MC_events_lower_bins=feature.get_aux("min_MC_events_lower_bins", 25)

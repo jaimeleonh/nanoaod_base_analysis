@@ -1230,7 +1230,7 @@ class FlatSignalBackgroundBinMerger:
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """
-    def __init__(self, sgn_histo=None, bkg_histo=None,  sig_syst=None, bkg_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_MC_events_lower_bins=None):
+    def __init__(self, sgn_histo=None, bkg_histo=None,  sig_syst=None, bkg_syst=None, dy_histo=None, tt_histo=None, dy_syst=None, tt_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_MC_events_lower_bins=None):
         if sgn_histo:
             assert not bins_txt_path
             self.target_bin_count = target_bin_count
@@ -1239,12 +1239,12 @@ class FlatSignalBackgroundBinMerger:
                 self.min_MC_events_lower_bins = min_MC_events_lower_bins
             else:
                 self.min_MC_events_lower_bins = min_MC_events
-            self._compute_rebinning(sgn_histo, bkg_histo, bkg_syst)
+            self._compute_rebinning(sgn_histo, bkg_histo, bkg_syst, dy_histo, dy_syst, tt_histo, tt_syst)
         else:
             assert bins_txt_path
             self._load_bin_edges(bins_txt_path)
 
-    def _compute_rebinning(self, sgn_histo, bkg_histo, bkg_syst):
+    def _compute_rebinning(self, sgn_histo, bkg_histo, bkg_syst, dy_histo, dy_syst, tt_histo, tt_syst):
         integral = sgn_histo.Integral()
 
         if sgn_histo.GetBinContent(0)!= 0 or sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1)!=0:
@@ -1261,8 +1261,12 @@ class FlatSignalBackgroundBinMerger:
                 edges = [1.]
                 sig_yield = 0.0
                 bkg_yield = 0.0
+                dy_yield = 0.0
+                ttbar_yield = 0.0
                 bkg_error = 0.0
                 bkg_syst_yield = {key: 0.0 for key in bkg_syst.keys()}
+                dy_syst_yield = {key: 0.0 for key in dy_syst.keys()}
+                ttbar_syst_yield = {key: 0.0 for key in tt_syst.keys()}
                 bkg_syst_error = {key: 0.0 for key in bkg_syst.keys()}
                 quantile = integral
                 i_bin = self.target_bin_count
@@ -1270,20 +1274,35 @@ class FlatSignalBackgroundBinMerger:
                     if len(edges) == nbins: break
                     sig_yield += sgn_histo.GetBinContent(i)
                     bkg_yield += bkg_histo.GetBinContent(i)
+                    dy_yield += dy_histo.GetBinContent(i)
+                    ttbar_yield += tt_histo.GetBinContent(i)
                     bkg_error += bkg_histo.GetBinError(i)**2
                     for key, value in bkg_syst.items():
                         bkg_syst_yield[key] += value.GetBinContent(i)
                         bkg_syst_error[key] += value.GetBinError(i)**2
+                    for key, value in dy_syst.items():
+                        dy_syst_yield[key] += value.GetBinContent(i)
+                    for key, value in tt_syst.items():
+                        ttbar_syst_yield[key] += value.GetBinContent(i)
                     try:
                         bkg_yields = list(bkg_syst_yield.values())
                         bkg_yields.append(bkg_yield)
                         bkg_errors = list(bkg_syst_error.values()) 
                         bkg_errors.append(bkg_error)
+                        dy_yields = list(dy_syst_yield.values())
+                        dy_yields.append(dy_yield)
+                        ttbar_yields = list(ttbar_syst_yield.values())
+                        ttbar_yields.append(ttbar_yield)
                         bkg_stats = min(map(lambda x,y: x ** 2/y, bkg_yields, bkg_errors))
+                        dy_stats = min(dy_yields)
+                        ttbar_stats = min(ttbar_yields)
                     except:
                         bkg_stats = 0
+                        dy_stats = 0
+                        ttbar_stats = 0
 
                     # check that bin has enough background MC events
+                    if dy_stats <= 0 or ttbar_stats <= 0: continue
                     if len(edges) == 1 and bkg_stats < self.min_MC_events: continue
                     if len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins: continue 
 
@@ -1298,9 +1317,13 @@ class FlatSignalBackgroundBinMerger:
                         sig_yield = 0.0
                         bkg_yield = 0.0
                         bkg_error = 0.0
+                        dy_stats = 0
+                        ttbar_stats = 0
                         for key, value in bkg_syst.items():
                             bkg_syst_yield[key] = 0.0
                             bkg_syst_error[key] = 0.0
+                            dy_syst_yield[key] = 0.0
+                            ttbar_syst_yield[key] = 0.0
                 edges.append(0.0)
                 edges = edges[::-1]
                 nbins_real = len(edges)-1
@@ -1378,7 +1401,8 @@ class FlatSignalBackgroundBinMerger:
                         bkg_yield = 0.0
                         bkg_error = 0.0
                 if len(edges) <= 1:
-                    raise RuntimeError(f"Procedure 2 failed. Final bkg statistics {bkg_stats}  - Final fraction of signal : {sig_yield/integral}")
+                    print(f"Procedure 2 failed. Final bkg statistics {bkg_stats}  - Final fraction of signal : {sig_yield/integral}")
+                    print("The distribution will only have one bin")
 
                 edges.append(0.)
                 edges = edges[::-1]
