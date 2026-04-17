@@ -1268,9 +1268,7 @@ class FlatSignalBackgroundBinMerger:
                 dy_syst_yield = {key: 0.0 for key in dy_syst.keys()}
                 ttbar_syst_yield = {key: 0.0 for key in tt_syst.keys()}
                 bkg_syst_error = {key: 0.0 for key in bkg_syst.keys()}
-                quantile = integral
-                i_bin = nbins
-                i_bin_decrement = 0.0
+                nbin_decrement = 0.0
                 for i in range(sgn_histo.GetNbinsX(), 1, -1):
                     if len(edges) == nbins: break
                     sig_yield += sgn_histo.GetBinContent(i)
@@ -1303,19 +1301,16 @@ class FlatSignalBackgroundBinMerger:
                         ttbar_stats = 0
 
                     # check that bin has enough signal events
-                    if sig_yield >= quantile / (i_bin - i_bin_decrement):
+                    if sig_yield >= integral / (nbins - nbin_decrement):
                         # check that bin has enough bkg events
                         if (dy_stats <= 0 or ttbar_stats <= 0) or \
                            (len(edges) == 1 and bkg_stats < self.min_MC_events) or \
                            (len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins): 
-                            i_bin_decrement += 0.25
+                            nbin_decrement += 0.25
                         else:
                             print(" ### INFO: Adding", sgn_histo.GetXaxis().GetBinLowEdge(i))
                             edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
-                            # compute the remaining yield to be subdivided
-                            quantile = quantile - sig_yield
                             # move to the next bin to the left
-                            i_bin = i_bin - 1
                             sig_yield = 0.0
                             bkg_yield = 0.0
                             bkg_error = 0.0
