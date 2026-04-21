@@ -1329,27 +1329,35 @@ class FlatSignalBackgroundBinMerger:
                 # merge bins if they do not contribute to overall significance
                 bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_rebin_bkg", np.array(edges))
                 sgn_histo_rebin = sgn_histo.Rebin(nbins_real, f"h_rebin_sig", np.array(edges))
+                dy_histo_rebin = dy_histo.Rebin(nbins_real, f"h_rebin_dy", np.array(edges))
+                tt_histo_rebin = tt_histo.Rebin(nbins_real, f"h_rebin_tt", np.array(edges))
                 merged_bounds = [0.0]
                 merged_s, merged_b, merged_ds, merged_db = sgn_histo_rebin.GetBinContent(1), bkg_histo_rebin.GetBinContent(1), \
                                 sgn_histo_rebin.GetBinError(1) ** 2, bkg_histo_rebin.GetBinError(1) ** 2
-                
+                merged_dy, merged_tt = dy_histo_rebin.GetBinContent(1), tt_histo_rebin.GetBinContent(1)
+
                 significance_top_bin = self._compute_asimov_significance_squared(sgn_histo_rebin.GetBinContent(nbins_real), \
                                                 bkg_histo_rebin.GetBinContent(nbins_real), bkg_histo_rebin.GetBinError(nbins_real))
                 for ibin in range(2, nbins_real + 1):
                     curr_bin_s, curr_bin_b = sgn_histo_rebin.GetBinContent(ibin), bkg_histo_rebin.GetBinContent(ibin)
+                    curr_bin_dy, curr_bin_tt = dy_histo_rebin.GetBinContent(ibin), tt_histo_rebin.GetBinContent(ibin)
                     curr_bin_ds, curr_bin_db = sgn_histo_rebin.GetBinError(ibin) ** 2, bkg_histo_rebin.GetBinError(ibin) ** 2
                     significance_split, significance_merged = self._compare_significance_sq_merging(merged_s, merged_b, curr_bin_s, curr_bin_b)
-                    if np.sqrt(significance_split) > np.sqrt(significance_merged) + np.sqrt(significance_top_bin)/10.:
+                    if (np.sqrt(significance_split) > np.sqrt(significance_merged) + np.sqrt(significance_top_bin)/10.) and merged_dy > 0. and merged_tt > 0.:
                         merged_bounds.append(edges[ibin - 1])
                         merged_s = curr_bin_s
                         merged_b = curr_bin_b
                         merged_ds = curr_bin_ds
                         merged_db = curr_bin_db
+                        merged_dy = curr_bin_dy
+                        merged_tt = curr_bin_tt
                     else:
                         merged_s += curr_bin_s
                         merged_b += curr_bin_b
                         merged_ds += curr_bin_ds
                         merged_db += curr_bin_db
+                        merged_dy += curr_bin_dy
+                        merged_tt += curr_bin_tt
               
                 merged_bounds.append(1.0)
 
