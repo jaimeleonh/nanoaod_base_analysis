@@ -158,6 +158,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
         "in root files, default: False")
     use_cumulative = luigi.BoolParameter(default=False, description="whether to optimize binning using the FlagSigCumulativeRebinner" "default: False") 
     use_bkg_flattening = luigi.BoolParameter(default=False, description="whether to optimize binning using the FlagSigBkgBinMerger" "default: False") 
+    min_low_edge = luigi.FloatParameter(default=0.0, description="the lower edge of the distribution using the FlagSigBkgBinMerger" "default: 0.0")
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
     directions = ["up", "down"]
 
@@ -438,7 +439,8 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                     tt_syst = self.histos["shape_TT"],
                     target_bin_count=feature.get_aux("target_bin_count", 20),
                     min_MC_events=feature.get_aux("min_MC_events", 10),
-                    min_MC_events_lower_bins=feature.get_aux("min_MC_events_lower_bins", 25)
+                    min_MC_events_lower_bins=feature.get_aux("min_MC_events_lower_bins", 25),
+                    min_bin=self.min_low_edge
                 )
             elif self.use_cumulative:
                 self.histogram_bin_merger = FlatSigCumulativeRebinner(

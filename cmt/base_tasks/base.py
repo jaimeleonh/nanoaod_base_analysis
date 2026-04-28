@@ -1230,7 +1230,7 @@ class FlatSignalBackgroundBinMerger:
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """
-    def __init__(self, sgn_histo=None, bkg_histo=None,  sig_syst=None, bkg_syst=None, dy_histo=None, tt_histo=None, dy_syst=None, tt_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_MC_events_lower_bins=None):
+    def __init__(self, sgn_histo=None, bkg_histo=None,  sig_syst=None, bkg_syst=None, dy_histo=None, tt_histo=None, dy_syst=None, tt_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_MC_events_lower_bins=None, min_bin=0.0):
         if sgn_histo:
             assert not bins_txt_path
             self.target_bin_count = target_bin_count
@@ -1239,12 +1239,12 @@ class FlatSignalBackgroundBinMerger:
                 self.min_MC_events_lower_bins = min_MC_events_lower_bins
             else:
                 self.min_MC_events_lower_bins = min_MC_events
-            self._compute_rebinning(sgn_histo, bkg_histo, bkg_syst, dy_histo, dy_syst, tt_histo, tt_syst)
+            self._compute_rebinning(sgn_histo, bkg_histo, bkg_syst, dy_histo, dy_syst, tt_histo, tt_syst, min_bin)
         else:
             assert bins_txt_path
             self._load_bin_edges(bins_txt_path)
 
-    def _compute_rebinning(self, sgn_histo, bkg_histo, bkg_syst, dy_histo, dy_syst, tt_histo, tt_syst):
+    def _compute_rebinning(self, sgn_histo, bkg_histo, bkg_syst, dy_histo, dy_syst, tt_histo, tt_syst, min_bin):
         integral = sgn_histo.Integral()
 
         if sgn_histo.GetBinContent(0)!= 0 or sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1)!=0:
@@ -1259,10 +1259,9 @@ class FlatSignalBackgroundBinMerger:
             success = False
             for nbins in range(self.target_bin_count, 3, -1):
                 edges = [1.]
-                sig_yield = 0.0
-                bkg_yield = 0.0
-                dy_yield = 0.0
-                ttbar_yield = 0.0
+                bottom_edge = 0.0
+                sig_yield, bkg_yield = 0.0, 0.0
+                dy_yield, ttbar_yield = 0.0, 0.0
                 bkg_error = 0.0
                 bkg_syst_yield = {key: 0.0 for key in bkg_syst.keys()}
                 dy_syst_yield = {key: 0.0 for key in dy_syst.keys()}
@@ -1271,6 +1270,9 @@ class FlatSignalBackgroundBinMerger:
                 nbin_decrement = 0.0
                 for i in range(sgn_histo.GetNbinsX(), 1, -1):
                     if len(edges) == nbins: break
+                    if sgn_histo.GetXaxis().GetBinLowEdge(i) < min_bin: 
+                        bottom_edge = sgn_histo.GetXaxis().GetBinLowEdge(i)
+                        break
                     sig_yield += sgn_histo.GetBinContent(i)
                     bkg_yield += bkg_histo.GetBinContent(i)
                     dy_yield += dy_histo.GetBinContent(i)
@@ -1322,7 +1324,7 @@ class FlatSignalBackgroundBinMerger:
                                 bkg_syst_error[key] = 0.0
                                 dy_syst_yield[key] = 0.0
                                 ttbar_syst_yield[key] = 0.0
-                edges.append(0.0)
+                edges.append(bottom_edge)
                 edges = edges[::-1]
                 nbins_real = len(edges)-1
 
@@ -1331,7 +1333,7 @@ class FlatSignalBackgroundBinMerger:
                 sgn_histo_rebin = sgn_histo.Rebin(nbins_real, f"h_rebin_sig", np.array(edges))
                 dy_histo_rebin = dy_histo.Rebin(nbins_real, f"h_rebin_dy", np.array(edges))
                 tt_histo_rebin = tt_histo.Rebin(nbins_real, f"h_rebin_tt", np.array(edges))
-                merged_bounds = [0.0]
+                merged_bounds = [bottom_edge]
                 merged_s, merged_b, merged_ds, merged_db = sgn_histo_rebin.GetBinContent(1), bkg_histo_rebin.GetBinContent(1), \
                                 sgn_histo_rebin.GetBinError(1) ** 2, bkg_histo_rebin.GetBinError(1) ** 2
                 merged_dy, merged_tt = dy_histo_rebin.GetBinContent(1), tt_histo_rebin.GetBinContent(1)
