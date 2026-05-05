@@ -1262,11 +1262,13 @@ class FlatSignalBackgroundBinMerger:
                 bottom_edge = 0.0
                 sig_yield, bkg_yield = 0.0, 0.0
                 dy_yield, ttbar_yield = 0.0, 0.0
-                bkg_error = 0.0
+                bkg_error, dy_error, ttbar_error = 0.0, 0.0, 0.0
                 bkg_syst_yield = {key: 0.0 for key in bkg_syst.keys()}
                 dy_syst_yield = {key: 0.0 for key in dy_syst.keys()}
                 ttbar_syst_yield = {key: 0.0 for key in tt_syst.keys()}
                 bkg_syst_error = {key: 0.0 for key in bkg_syst.keys()}
+                dy_syst_error = {key: 0.0 for key in dy_syst.keys()}
+                ttbar_syst_error = {key: 0.0 for key in tt_syst.keys()}
                 nbin_decrement = 0.0
                 for i in range(sgn_histo.GetNbinsX(), 1, -1):
                     if len(edges) == nbins: break
@@ -1278,13 +1280,17 @@ class FlatSignalBackgroundBinMerger:
                     dy_yield += dy_histo.GetBinContent(i)
                     ttbar_yield += tt_histo.GetBinContent(i)
                     bkg_error += bkg_histo.GetBinError(i)**2
+                    dy_error += dy_histo.GetBinError(i)**2
+                    ttbar_error += tt_histo.GetBinError(i)**2
                     for key, value in bkg_syst.items():
                         bkg_syst_yield[key] += value.GetBinContent(i)
                         bkg_syst_error[key] += value.GetBinError(i)**2
                     for key, value in dy_syst.items():
                         dy_syst_yield[key] += value.GetBinContent(i)
+                        dy_syst_error[key] += value.GetBinError(i)**2
                     for key, value in tt_syst.items():
                         ttbar_syst_yield[key] += value.GetBinContent(i)
+                        ttbar_syst_error[key] += value.GetBinError(i)**2
                     try:
                         bkg_yields = list(bkg_syst_yield.values())
                         bkg_yields.append(bkg_yield)
@@ -1294,9 +1300,16 @@ class FlatSignalBackgroundBinMerger:
                         dy_yields.append(dy_yield)
                         ttbar_yields = list(ttbar_syst_yield.values())
                         ttbar_yields.append(ttbar_yield)
+                        dy_errors = list(dy_syst_error.values())
+                        dy_errors.append(dy_error)
+                        ttbar_errors = list(ttbar_syst_error.values())
+                        ttbar_errors.append(ttbar_error)
+
                         bkg_stats = min(map(lambda x,y: x ** 2/y, bkg_yields, bkg_errors))
                         dy_stats = min(dy_yields)
                         ttbar_stats = min(ttbar_yields)
+                        dy_sigma = min(map(lambda x,y: x ** 2/y, dy_yields, dy_errors))
+                        ttbar_sigma = min(map(lambda x,y: x ** 2/y, ttbar_yields, ttbar_errors))
                     except:
                         bkg_stats = 0
                         dy_stats = 0
@@ -1305,7 +1318,7 @@ class FlatSignalBackgroundBinMerger:
                     # check that bin has enough signal events
                     if sig_yield >= integral / (nbins - nbin_decrement):
                         # check that bin has enough bkg events
-                        if (dy_stats <= 0 or ttbar_stats <= 0) or \
+                        if (dy_stats <= 0 or ttbar_stats <= 0) or (dy_sigma < 5 or ttbar_sigma < 5) or \
                            (len(edges) == 1 and bkg_stats < self.min_MC_events) or \
                            (len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins): 
                             nbin_decrement += 0.25
@@ -1316,8 +1329,10 @@ class FlatSignalBackgroundBinMerger:
                             sig_yield = 0.0
                             bkg_yield = 0.0
                             bkg_error = 0.0
-                            dy_stats = 0
-                            ttbar_stats = 0
+                            dy_yield = 0.0
+                            ttbar_yield = 0.0
+                            dy_error = 0.0
+                            ttbar_error = 0.0
                             i_bin_decrement = 0
                             for key, value in bkg_syst.items():
                                 bkg_syst_yield[key] = 0.0
