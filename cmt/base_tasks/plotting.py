@@ -502,19 +502,18 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             title = "; %s; %s" % (x_title, y_title)
 
             systs_directions = [("central", "")]
-            multi_systs = []
             if isMC and self.store_systematics:
                 systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
-
-                # take care of the "multi-dimensional" systematics (LHE QCD SCale)
-                multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
 
             # for the application of FFs, the data is scaled with the FFs
             # so for Data the FF nuisances need to be stored
             if not isMC and self.store_systematics and self.do_ff and self.region.name.endswith(self.ff_shape_region):
                 systs = self.get_systs(feature, isMC, includeFFdataSyst=True)
                 systs_directions += list(itertools.product(systs, directions))
+
+            # take care of the "multi-dimensional" systematics (LHE QCD SCale and FF template stats)
+            multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
 
             # loop over systematics and up/down/multi variations
             for syst_name, direction in systs_directions:
@@ -1316,6 +1315,48 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             return qcd_hist
 
+        def get_template_stats_error(region, files, syst='', data_syst='', bin_limit=0., CL=0.68):
+            from scipy.stats import chi2
+
+            d_hist_nom = files[region].Get("histograms/" + self.data_names[0])
+            d_hist = files[region].Get("histograms/" + self.data_names[0] + data_syst)
+            qcd_hist = d_hist.Clone(randomize("qcd_" + region + data_syst))
+            alpha = 1 - CL
+
+            max_mean_ff = 1.0
+            # calculating template stat uncertainty (and automatically removing negative bins)
+            for ibin in range(1, qcd_hist.GetNbinsX() + 1):
+                obs_count = d_hist.GetBinContent(ibin)
+                nominal_fakes = d_hist_nom.GetBinContent(ibin)
+                if obs_count > 0:
+                    mean_ff = nominal_fakes / obs_count
+                    # store maximum mean FF
+                    if max_mean_ff == 1.0 or mean_ff > max_mean_ff:
+                        max_mean_ff = mean_ff
+                # if the bin is empty, apply on it the maximum mean FF computed
+                else:
+                    mean_ff = max_mean_ff
+
+                if "up" in data_syst:
+                    # compute Garwood's interval
+                    up_stat_err = 0.5 * chi2.ppf(1 - alpha / 2, df=2 * obs_count + 2)
+                    # scale the interval by the mean fake factor
+                    up_stat_err  *= mean_ff
+                    # subtract uncertanity to the nominal value
+                    nominal_fakes += up_stat_err
+
+                elif "down" in data_syst:
+                    # compute Garwood's interval
+                    low_stat_err = 0.5 * chi2.ppf(alpha / 2, df=2 * obs_count) if obs_count > 0 else 0.0
+                    # scale the interval by the mean fake factor
+                    low_stat_err *= mean_ff
+                    # subtract uncertanity to the nominal value
+                    nominal_fakes -= low_stat_err
+
+                qcd_hist.SetBinContent(ibin, max(nominal_fakes, bin_limit))
+
+            return qcd_hist
+
         # helper to extract data and bkg histos in sideband and signal regions
         def get_sideband(region, files, bin_limit=0.):
             d_hist = files[region].Get("histograms/" + self.data_names[0]).Clone(
@@ -1521,7 +1562,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     FFsysts.append(f"_{syst}_{d}")
 
             for syst in FFsysts:
-                ff_hist = get_qcd(self.ff_shape_region, ff_shape_files, data_syst=syst, bin_limit=bin_limit).Clone(randomize("fakes"))
+                if "template" in syst:
+                    ff_hist = get_template_stats_error(self.ff_shape_region, ff_shape_files, data_syst=syst, bin_limit=bin_limit, CL=0.95).Clone(randomize("fakes"))
+                else:
+                    ff_hist = get_qcd(self.ff_shape_region, ff_shape_files, data_syst=syst, bin_limit=bin_limit).Clone(randomize("fakes"))
 
                 # store and style
                 yield_error = c_double(0.)
@@ -1541,7 +1585,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 ff_color = ROOT.TColor.GetColor(*ff_c)
                 self.setup_background_hist(ff_hist, ff_color)
                 all_hists.append(ff_hist)
-                # add ot the background list only the central one, otherwise the stack will contain
+                # add to the background list only the central one, otherwise the stack will contain
                 # central+up+down variations
                 if syst == '': background_hists.append(ff_hist)
 
