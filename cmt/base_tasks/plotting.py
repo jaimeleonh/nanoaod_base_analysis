@@ -1300,7 +1300,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             d_hist = files[region].Get("histograms/" + self.data_names[0] + data_syst)
             if not d_hist:
                 raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
-                    self.data_names[0], region, files[region]))
+                    self.data_names[0] + data_syst, region, files[region]))
 
             if self.optimization_method == "flat_sgn":
                 d_hist = self.histogram_bin_merger.rebin(d_hist, inplace=True, equal_bin_width=self.equal_bin_width)
