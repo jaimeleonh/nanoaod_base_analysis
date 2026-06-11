@@ -1321,7 +1321,7 @@ class FlatSignalBackgroundBinMerger:
                     # check that bin has enough signal events
                     if sig_yield >= integral / (nbins - nbin_decrement):
                         # check that bin has enough bkg events
-                        if (dy_stats <= 0 or ttbar_stats <= 0) or (dy_sigma < 4 or ttbar_sigma < 4) or \
+                        if (dy_stats <= 0 or ttbar_stats <= 0) or \
                            (len(edges) == 1 and bkg_stats < self.min_MC_events) or \
                            (len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins) or data_yield < self.min_inviso_events: 
                             nbin_decrement += 0.25
