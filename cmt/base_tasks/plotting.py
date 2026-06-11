@@ -735,7 +735,10 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             out.mkdir("histograms")
             out.cd("histograms")
             for feature in self.features:
-                feature_name = feature.name
+                if isinstance(feature, tuple):
+                    feature_name = feature[0].name + feature[1].name
+                else:
+                    feature_name = feature.name
                 out.mkdir(f"histograms/{feature_name}_dir")
                 out.cd(f"histograms/{feature_name}_dir")
 
@@ -845,6 +848,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         total background yield (True) or not (False)
     :type normalize_signals: bool
 
+    :param normalize_signals_half: whether to normalize signals to half of the
+        total background yield (True) or not (False)
+    :type normalize_signals_half: bool
+
     :param avoid_normalization: whether to avoid normalizing by cross section and initial
         number of events
     :type avoid_normalization: bool
@@ -923,6 +930,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
     normalize_signals = luigi.BoolParameter(default=False, description="whether to normalize "
         "signals to the total bkg yield, default: True")
+    normalize_signals_half = luigi.BoolParameter(default=False, description="whether to normalize "
+        "signals to half of the total bkg yield, default: True")
     avoid_normalization = luigi.BoolParameter(default=False, description="whether to avoid "
         "normalizing by cross section and initial number of events, default: False")
     blinded = luigi.BoolParameter(default=False, description="whether to blind bins above a "
@@ -1046,7 +1055,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
         if self.optimization_method == "flat_sgn":
             from cmt.base_tasks.optimization import FlatSignalBinMergerTask
-            channel_signal_region = self.region_name.split("_")[0]+"_os_iso"
+            channel_signal_region = self.region_name.split("_")[0]+"_os_isoFF"
             reqs["bin_opt"] = FlatSignalBinMergerTask.vreq(self, region_name=channel_signal_region, save_root=False)
             self.features_to_flatten = reqs["bin_opt"].features_to_flatten
             self.use_cumulative = reqs["bin_opt"].use_cumulative
@@ -1198,6 +1207,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             postfix += "__logX"
         if self.normalize_signals and key not in ("root", "yields"):
             postfix += "__norm_sig"
+        if self.normalize_signals_half and key not in ("root", "yields"):
+            postfix += "__norm_sig_half"
         if self.equal_bin_width:
             postfix += "__equalBinWidth"
         return postfix
@@ -1735,6 +1746,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     hist.Scale(scale)
                     hist.cmt_scale = scale
 
+            if self.normalize_signals_half and bkg_histo:
+                for hist in signal_hists:
+                    signal_yield = hist.cmt_yield
+                    scale = (bkg_histo.Integral() / signal_yield if signal_yield != 0 else 1.) * 0.5
+                    hist.Scale(scale)
+                    hist.cmt_scale = scale
+
             draw_hists = [background_stack] + signal_hists[::-1]
             if not self.hide_data:
                 # blinding
@@ -1815,7 +1833,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             if self.max_y == law.NO_FLOAT:
                 maximum = max([hist.GetMaximum() for hist in draw_hists])
-                dummy_hist.SetMaximum(100 * maximum if self.log_y else 1.35 * maximum)
+                dummy_hist.SetMaximum(100 * maximum if self.log_y else 1.6 * maximum)
             else:
                 maximum = self.max_y
                 dummy_hist.SetMaximum(self.max_y)
@@ -1831,7 +1849,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         # get text to plot inside the figure
         inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
 
-        if self.normalize_signals and self.stack and signal_hists and bkg_histo:
+        if self.normalize_signals or self.normalize_signals_half and self.stack and signal_hists and bkg_histo:
             scale_text = []
             for hist in signal_hists:
                 scale = hist.cmt_scale
@@ -1949,7 +1967,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             # MC stat error graph
             mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
-            setattr(mc_unc_graph, "title", "MC stat.")
+            setattr(mc_unc_graph, "title", "Stat.")
             r.setup_graph(mc_unc_graph, props={"FillStyle": 3017, "LineColor": 0,
                 "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
             entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
@@ -1959,13 +1977,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
                 # MC systematic variations (norm+shape). Plotted as "MC Syst"
                 syst_unc_graph = ROOT.TGraphAsymmErrors(binning_args[0])
-                setattr(syst_unc_graph, "title", "MC Syst.")
+                setattr(syst_unc_graph, "title", "Syst.")
                 r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
 
                 # Sum in quadrature of stat error & syst error. Plotted as "Stat+Syst"
                 all_unc_graph = ROOT.TGraphAsymmErrors(binning_args[0])
-                setattr(all_unc_graph, "title", "MC Stat. + Syst.")
+                setattr(all_unc_graph, "title", "Stat. + Syst.")
                 entries.append((all_unc_graph, all_unc_graph.title, "f"))
                 r.setup_graph(all_unc_graph, props={"FillStyle": 3001, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
@@ -2069,13 +2087,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         if not n_cols:
             if n_entries <= 4:
                 n_cols = 1
-            elif n_entries <= 8:
+            elif n_entries <= 10:
                 n_cols = 2
             else:
                 n_cols = 3
         if n_cols == 1:
             col_width = getattr(self.config, "single_column_width", 0.2)
-        elif n_entries <= 8:
+        elif n_entries <= 10:
             col_width = getattr(self.config, "double_column_width", 0.15)
         else:
             col_width = 0.1
@@ -2088,6 +2106,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         legend_y1 = legend_y2 - n_rows * row_width
 
         legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
+        ROOT.gStyle.SetLegendTextSize(0.04)
         legend.SetBorderSize(0)
         legend.SetNColumns(n_cols)
         for entry in entries:
@@ -2262,7 +2281,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             # Loop on processes
             for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
-
                 # Loop on shape systematics
                 for (syst, d) in systs_directions:
                     feature_name = feature.name if syst == "central" \
