@@ -1186,7 +1186,7 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
                 tree = tf.Get(self.tree_name)
                 # If the tree is not stored in the file (e.g. because of some issue in the production),
-                # the variable 'tree' will store a TObject instead of a TTree. 
+                # the variable 'tree' will store a TObject instead of a TTree.
                 # So if the opened TTree is not an actual TTree (i.e. its type doesn't include TTree),
                 # we can consider something went wrong and raise a RuntimeError.
                 if not "TTree" in str(type(tree)):

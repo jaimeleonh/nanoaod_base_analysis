@@ -553,7 +553,7 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
 
     def htcondor_use_local_scheduler(self):
         return not self.htcondor_central_scheduler
-    
+
     def htcondor_job_file(self):
         if not self.run_branches_single_process:
             return super().htcondor_job_file()
@@ -1297,7 +1297,7 @@ class FlatSignalBackgroundBinMerger:
                     try:
                         bkg_yields = list(bkg_syst_yield.values())
                         bkg_yields.append(bkg_yield)
-                        bkg_errors = list(bkg_syst_error.values()) 
+                        bkg_errors = list(bkg_syst_error.values())
                         bkg_errors.append(bkg_error)
                         dy_yields = list(dy_syst_yield.values())
                         dy_yields.append(dy_yield)
@@ -1379,7 +1379,7 @@ class FlatSignalBackgroundBinMerger:
                         merged_db += curr_bin_db
                         merged_dy += curr_bin_dy
                         merged_tt += curr_bin_tt
-              
+
                 merged_bounds.append(1.0)
 
                 # check that it has enough background MC events
@@ -1444,17 +1444,17 @@ class FlatSignalBackgroundBinMerger:
         self.edges_array = np.loadtxt(path)
         self.edges = list(self.edges_array)
         self.nbins_real = len(self.edges)-1
-    
+
     def _compute_asimov_significance_squared(self, s, b, sigma_B=0.):
         """ Asimov significance squared. sigma_B is relative
         Taken from https://root.cern.ch/doc/master/RooStatsUtils_8cxx_source.html#l00059
         """
         if isinstance(s, float):
-            S, B = s, b 
+            S, B = s, b
         else:
             S, B = np.float64(s.value), np.float64(b.value)
         # return S/(3/2+np.sqrt(B)) # 3=nb of sigmas  # this formula (from Punzi paper) has the davantage to be proportionnal to signal, but it does not take into account uncertainties
-        
+
         if sigma_B == 0.:
             return np.where(B>0, 2.*( (S+B) * np.log(1. + S/B) -S ), 0.)
         else:
@@ -1479,9 +1479,9 @@ class FlatSignalBackgroundBinMerger:
     def _compare_significance_sq_merging(self, S1, B1, S2, B2, sigma_B=0.):
         """ Compute the significance for two hypotheses : bins separetyd or bins merged """
         return self._compute_asimov_significance_squared(S1, B1, sigma_B=sigma_B)+self._compute_asimov_significance_squared(S2, B2, sigma_B=sigma_B), self._compute_asimov_significance_squared(S1+S2, B1+B2, sigma_B=sigma_B)
-    
+
     def _compare_significance_merging(self, total_sign_sq, S1, B1, S2, B2, sigma_B=0.):
-        """ 
+        """
         total_sign_sq should be the total sign. with bins split
         Split : sqrt(total)
         Merged : sqrt(total - split + merged)
@@ -1847,9 +1847,9 @@ class FlatSignalBinMerger:
             rebin_process_histo.cmt_bin_yield_error.append(rebin_process_histo.GetBinError(ibin))
         return rebin_process_histo
 
-    
+
 class FlatSigCumulativeRebinner:
-    """Adaptive rebinning algorithm that flattens the signal histogram using its cumulative distribution targeting a given number of bins that starts from target_bin_count. 
+    """Adaptive rebinning algorithm that flattens the signal histogram using its cumulative distribution targeting a given number of bins that starts from target_bin_count.
     Each bin is required to contain at least min_MC background MC events. If this is not met, the bin count is reduced iteratively by 1, down to 3.
     In the 3 bin configuration, if the requirement is still not met, the algorithm further adjusts the bin positions to find a configuration that satisfies the background event threshold.
     """
@@ -1902,7 +1902,7 @@ class FlatSigCumulativeRebinner:
                 print(f"not possible to evaluate   {e}")
                 continue
 
-            # check 
+            # check
             edges = sorted(list(set(edges)))
             nbins_real = len(edges) - 1
             if nbins_real < 1:
@@ -1916,7 +1916,7 @@ class FlatSigCumulativeRebinner:
             except Exception as e:
                 print(f"*** ERROR ***  rebin failed for {n_try} bins: {e}")
                 continue
-            
+
             n_bkg_stats = np.zeros(nbins_real)
             for ibin in range(1, nbins_real + 1):
                 cont = bkg_histo_rebin.GetBinContent(ibin)
@@ -1936,7 +1936,7 @@ class FlatSigCumulativeRebinner:
                 return edges
 
 
-        # **** FALLBACK solution ***** 
+        # **** FALLBACK solution *****
         print("\n\nFalling back to 3 bins")
         n_fall_start = 3
         not_passed = True
@@ -1961,13 +1961,13 @@ class FlatSigCumulativeRebinner:
                 edges.append(closest_edge)
             edges.append(original_bin_edges[-1])
 
-            # rebin 
+            # rebin
             edges_arr = array.array('d', edges)
             nbins_real = len(edges) - 1
             tmp_bkg = bkg_histo.Clone("h_bkg_tmp_fallback")
             bkg_histo_rebin = tmp_bkg.Rebin(nbins_real, "h_fallback", edges_arr)
 
-            # check on min mc  
+            # check on min mc
             n_bkg_stats = np.zeros(nbins_real)
             for ibin in range(1, nbins_real + 1):
                 try:
