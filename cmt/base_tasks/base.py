@@ -1230,11 +1230,12 @@ class FlatSignalBackgroundBinMerger:
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """
-    def __init__(self, sgn_histo=None, bkg_histo=None, sig_syst=None, bkg_syst=None, data_histo=None, dy_histo=None, tt_histo=None, dy_syst=None, tt_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_MC_events_lower_bins=None, min_bin=0.0):
+    def __init__(self, sgn_histo=None, bkg_histo=None, sig_syst=None, bkg_syst=None, data_histo=None, dy_histo=None, tt_histo=None, dy_syst=None, tt_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_inviso_events=10, min_MC_events_lower_bins=None, min_bin=0.0):
         if sgn_histo:
             assert not bins_txt_path
             self.target_bin_count = target_bin_count
             self.min_MC_events = min_MC_events
+            self.min_inviso_events = min_inviso_events
             if min_MC_events_lower_bins:
                 self.min_MC_events_lower_bins = min_MC_events_lower_bins
             else:
@@ -1250,7 +1251,7 @@ class FlatSignalBackgroundBinMerger:
         if sgn_histo.GetBinContent(0)!= 0 or sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1)!=0:
             print("## WARNING overflow bins contain this fraction of the yield : "
                  f"{ (sgn_histo.GetBinContent(0)+sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1))/sgn_histo.Integral(0, sgn_histo.GetNbinsX()+1)}")
-        print(integral)
+
         if integral == 0:
             merged_bounds = [0, 1.0]
             nbins_real = 1
@@ -1322,8 +1323,7 @@ class FlatSignalBackgroundBinMerger:
                         # check that bin has enough bkg events
                         if (dy_stats <= 0 or ttbar_stats <= 0) or (dy_sigma < 4 or ttbar_sigma < 4) or \
                            (len(edges) == 1 and bkg_stats < self.min_MC_events) or \
-                           (len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins) or data_yield < 3: 
-                            print(data_yield)
+                           (len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins) or data_yield < self.min_inviso_events: 
                             nbin_decrement += 0.25
                         else:
                             print(" ### INFO: Adding", sgn_histo.GetXaxis().GetBinLowEdge(i))
@@ -1527,7 +1527,7 @@ class Run2SignalBinMerger:
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """
-    def __init__(self, sgn_histo=None, bkg_histo=None,  sig_syst=None, bkg_syst=None, data_histo=None, dy_histo_raw=None, tt_histo_raw=None, dy_syst_raw=None, tt_syst_raw=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_MC_events_lower_bins=None, min_bin=0.0):
+    def __init__(self, sgn_histo=None, bkg_histo=None,  sig_syst=None, bkg_syst=None, data_histo=None, dy_histo=None, tt_histo=None, dy_syst=None, tt_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_MC_events_lower_bins=None, min_bin=0.0):
         if sgn_histo:
             assert not bins_txt_path
             self.target_bin_count = target_bin_count
@@ -1536,12 +1536,12 @@ class Run2SignalBinMerger:
                 self.min_MC_events_lower_bins = min_MC_events_lower_bins
             else:
                 self.min_MC_events_lower_bins = min_MC_events
-            self._compute_rebinning(sgn_histo, bkg_histo, data_histo, bkg_syst, dy_histo_raw, tt_histo_raw, dy_syst_raw, tt_syst_raw, min_bin)
+            self._compute_rebinning(sgn_histo, bkg_histo, data_histo, bkg_syst, dy_histo, tt_histo, dy_syst, tt_syst, min_bin)
         else:
             assert bins_txt_path
             self._load_bin_edges(bins_txt_path)
 
-    def _compute_rebinning(self, sgn_histo, bkg_histo, data_histo, bkg_syst, dy_histo_raw, tt_histo_raw, dy_syst_raw, tt_syst_raw, min_bin):
+    def _compute_rebinning(self, sgn_histo, bkg_histo, data_histo, bkg_syst, dy_histo, tt_histo, dy_syst, tt_syst, min_bin):
         integral = sgn_histo.Integral()
 
         if sgn_histo.GetBinContent(0)!= 0 or sgn_histo.GetBinContent(sgn_histo.GetNbinsX()+1)!=0:
@@ -1553,169 +1553,76 @@ class Run2SignalBinMerger:
             nbins_real = 1
 
         else:
-            success = False
-            for nbins in range(self.target_bin_count, 3, -1):
-                edges = [1.]
-                bottom_edge = 0.0
-                sig_yield, bkg_yield = 0.0, 0.0
-                dy_count, ttbar_count = 0.0, 0.0
-                bkg_error = 0.0
-                bkg_syst_yield = {key: 0.0 for key in bkg_syst.keys()}
-                dy_syst_count = {key: 0.0 for key in dy_syst_raw.keys()}
-                ttbar_syst_count = {key: 0.0 for key in tt_syst_raw.keys()}
-                bkg_syst_error = {key: 0.0 for key in bkg_syst.keys()}
-                for i in range(sgn_histo.GetNbinsX(), 1, -1):
-                    if len(edges) == nbins: break
-                    if sgn_histo.GetXaxis().GetBinLowEdge(i) < min_bin: 
-                        bottom_edge = sgn_histo.GetXaxis().GetBinLowEdge(i)
-                        break
-                    sig_yield += sgn_histo.GetBinContent(i)
-                    bkg_yield += bkg_histo.GetBinContent(i)
-                    dy_count += dy_histo_raw.GetBinContent(i)
-                    ttbar_count += tt_histo_raw.GetBinContent(i)
-                    bkg_error += bkg_histo.GetBinError(i)**2
-                    for key, value in bkg_syst.items():
-                        bkg_syst_yield[key] += value.GetBinContent(i)
-                        bkg_syst_error[key] += value.GetBinError(i)**2
-                    for key, value in dy_syst.items():
-                        dy_syst_count[key] += value.GetBinContent(i)
-                    for key, value in tt_syst.items():
-                        ttbar_syst_count[key] += value.GetBinContent(i)
-                    try:
-                        bkg_yields = list(bkg_syst_yield.values())
-                        bkg_yields.append(bkg_yield)
-                        bkg_errors = list(bkg_syst_error.values()) 
-                        bkg_errors.append(bkg_error)
-                        dy_counts = list(dy_syst_count.values())
-                        dy_counts.append(dy_count)
-                        ttbar_counts = list(ttbar_syst_count.values())
-                        ttbar_counts.append(ttbar_count)
-                        ttbar_errors = list(ttbar_syst_error.values())
-                        ttbar_errors.append(ttbar_error)
-
-                        bkg_yield = min(bkg_yields)
-                        bkg_rel_error = max(map(lambda x,y: np.sqrt(x)/y, bkg_errors, bkg_yields))
-                        dy_stats = min(dy_counts)
-                        ttbar_stats = min(ttbar_counts)
-                    except:
-                        bkg_stats = 0
-                        dy_stats = 0
-                        ttbar_stats = 0
-
-                    # check that bin has enough bkg events
-                    if (dy_stats <= 0 or ttbar_stats <= 0) or (bkg_yield <= 0.03) or \
-                        (bkg_rel_error >= 1): 
-                        continue
-                    else:
-                        print(" ### INFO: Adding", sgn_histo.GetXaxis().GetBinLowEdge(i))
-                        edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
-                        # move to the next bin to the left
-                        sig_yield = 0.0
-                        bkg_yield = 0.0
-                        bkg_error = 0.0
-                        dy_yield = 0.0
-                        ttbar_yield = 0.0
-                        dy_error = 0.0
-                        ttbar_error = 0.0
-                        i_bin_decrement = 0
-                        for key, value in bkg_syst.items():
-                            bkg_syst_yield[key] = 0.0
-                            bkg_syst_error[key] = 0.0
-                            dy_syst_yield[key] = 0.0
-                            ttbar_syst_yield[key] = 0.0
-                edges.append(bottom_edge)
-                edges = edges[::-1]
-                nbins_real = len(edges)-1
-
-                # merge bins if they do not contribute to overall significance
-                bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_rebin_bkg", np.array(edges))
-                sgn_histo_rebin = sgn_histo.Rebin(nbins_real, f"h_rebin_sig", np.array(edges))
-                dy_histo_rebin = dy_histo.Rebin(nbins_real, f"h_rebin_dy", np.array(edges))
-                tt_histo_rebin = tt_histo.Rebin(nbins_real, f"h_rebin_tt", np.array(edges))
-                merged_bounds = [bottom_edge]
-                merged_s, merged_b, merged_ds, merged_db = sgn_histo_rebin.GetBinContent(1), bkg_histo_rebin.GetBinContent(1), \
-                                sgn_histo_rebin.GetBinError(1) ** 2, bkg_histo_rebin.GetBinError(1) ** 2
-                merged_dy, merged_tt = dy_histo_rebin.GetBinContent(1), tt_histo_rebin.GetBinContent(1)
-
-                significance_top_bin = self._compute_asimov_significance_squared(sgn_histo_rebin.GetBinContent(nbins_real), \
-                                                bkg_histo_rebin.GetBinContent(nbins_real), bkg_histo_rebin.GetBinError(nbins_real))
-                for ibin in range(2, nbins_real + 1):
-                    curr_bin_s, curr_bin_b = sgn_histo_rebin.GetBinContent(ibin), bkg_histo_rebin.GetBinContent(ibin)
-                    curr_bin_dy, curr_bin_tt = dy_histo_rebin.GetBinContent(ibin), tt_histo_rebin.GetBinContent(ibin)
-                    curr_bin_ds, curr_bin_db = sgn_histo_rebin.GetBinError(ibin) ** 2, bkg_histo_rebin.GetBinError(ibin) ** 2
-                    significance_split, significance_merged = self._compare_significance_sq_merging(merged_s, merged_b, curr_bin_s, curr_bin_b)
-                    if (np.sqrt(significance_split) > np.sqrt(significance_merged) + np.sqrt(significance_top_bin)/10.) and merged_dy > 0. and merged_tt > 0.:
-                        merged_bounds.append(edges[ibin - 1])
-                        merged_s = curr_bin_s
-                        merged_b = curr_bin_b
-                        merged_ds = curr_bin_ds
-                        merged_db = curr_bin_db
-                        merged_dy = curr_bin_dy
-                        merged_tt = curr_bin_tt
-                    else:
-                        merged_s += curr_bin_s
-                        merged_b += curr_bin_b
-                        merged_ds += curr_bin_ds
-                        merged_db += curr_bin_db
-                        merged_dy += curr_bin_dy
-                        merged_tt += curr_bin_tt
-              
-                merged_bounds.append(1.0)
-
-                # check that it has enough background MC events
-                nbins_real = len(merged_bounds)-1
-                bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_test_bkg", np.array(merged_bounds))
-                n_bkg_stats = np.zeros(nbins_real)
-                for ibin in range(1, nbins_real + 1):
-                    try:
-                        # number of equivalent unweighted bkg events
-                        n_bkg_stats[ibin-1] = (bkg_histo_rebin.GetBinContent(ibin) / bkg_histo_rebin.GetBinError(ibin))**2
-                    except:
-                        n_bkg_stats[ibin-1] = 0
-                n_bkg_passed = [n >= self.min_MC_events for n in n_bkg_stats]
-
-                if not all(n_bkg_passed):
-                    print(" ### INFO: ", nbins, " not passing bkg requirement")
-                    continue
-
-                else:
-                    print("Procedure 1 success")
-                    success = True
+            edges = [1.]
+            bottom_edge = 0.0
+            sig_yield, bkg_yield = 0.0, 0.0
+            dy_count, ttbar_count = 0.0, 0.0
+            bkg_error = 0.0
+            bkg_syst_yield = {key: 0.0 for key in bkg_syst.keys()}
+            dy_syst_count = {key: 0.0 for key in dy_syst.keys()}
+            ttbar_syst_count = {key: 0.0 for key in tt_syst.keys()}
+            bkg_syst_error = {key: 0.0 for key in bkg_syst.keys()}
+            for i in range(sgn_histo.GetNbinsX(), 1, -1):
+                if len(edges) == self.target_bin_count: break
+                if sgn_histo.GetXaxis().GetBinLowEdge(i) < min_bin: 
+                    bottom_edge = sgn_histo.GetXaxis().GetBinLowEdge(i)
                     break
+                sig_yield += sgn_histo.GetBinContent(i)
+                bkg_yield += bkg_histo.GetBinContent(i)
+                dy_count += dy_histo.GetBinContent(i)
+                ttbar_count += tt_histo.GetBinContent(i)
+                bkg_error += bkg_histo.GetBinError(i)**2
+                for key, value in bkg_syst.items():
+                    bkg_syst_yield[key] += value.GetBinContent(i)
+                    bkg_syst_error[key] += value.GetBinError(i)**2
+                for key, value in dy_syst.items():
+                    dy_syst_count[key] += value.GetBinContent(i)
+                for key, value in tt_syst.items():
+                    ttbar_syst_count[key] += value.GetBinContent(i)
+                try:
+                    bkg_yields = list(bkg_syst_yield.values())
+                    bkg_yields.append(bkg_yield)
+                    bkg_errors = list(bkg_syst_error.values()) 
+                    bkg_errors.append(bkg_error)
+                    dy_counts = list(dy_syst_count.values())
+                    dy_counts.append(dy_count)
+                    ttbar_counts = list(ttbar_syst_count.values())
+                    ttbar_counts.append(ttbar_count)
 
-            # if the first procedure failed
-            if not success:
-                print(" Procedure 2 :")
-                edges = [1.0]
-                sig_yield = 0.0
-                bkg_yield = 0.0
-                bkg_error = 0.0
-                for i in range(sgn_histo.GetNbinsX(), 1, -1):
-                    sig_yield += sgn_histo.GetBinContent(i)
-                    bkg_yield += bkg_histo.GetBinContent(i)
-                    bkg_error += bkg_histo.GetBinError(i)**2
-                    try:
-                        bkg_stats = bkg_yield**2/bkg_error
-                    except:
-                        bkg_stats = 0
-                    #print(bkg_stats, sig_yield/integral)
-                    if (bkg_stats > self.min_MC_events and sig_yield/integral > 0.3):
-                        edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
-                        print(" ### INFO: Procedure 2 found border at ", sgn_histo.GetXaxis().GetBinLowEdge(i), \
-                                " with ", bkg_stats, " equivalent background events")
-                        if len(edges) > 2: break
-                        sig_yield = 0.0
-                        bkg_yield = 0.0
-                        bkg_error = 0.0
-                if len(edges) <= 1:
-                    print(f"Procedure 2 failed. Final bkg statistics {bkg_stats}  - Final fraction of signal : {sig_yield/integral}")
-                    print("The distribution will only have one bin")
+                    bkg_yield = min(bkg_yields)
+                    bkg_rel_error = max(map(lambda x,y: np.sqrt(x)/y, bkg_errors, bkg_yields))
+                    dy_stats = min(dy_counts)
+                    ttbar_stats = min(ttbar_counts)
+                except:
+                    bkg_stats = 0
+                    dy_stats = 0
+                    ttbar_stats = 0
+                    bkg_rel_error = 1
 
-                edges.append(0.)
-                edges = edges[::-1]
-                nbins_real = len(edges)-1
-                merged_bounds = edges
-        self.edges = merged_bounds
+                # check that bin has enough bkg events
+                if (dy_stats <= 0 or ttbar_stats <= 0) or (bkg_yield <= 0.03) or \
+                    (bkg_rel_error >= 1) or sig_yield < integral/self.target_bin_count: 
+                    continue
+                else:
+                    print(" ### INFO: Adding", sgn_histo.GetXaxis().GetBinLowEdge(i))
+                    edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
+                    # move to the next bin to the left
+                    sig_yield = 0.0
+                    bkg_yield = 0.0
+                    bkg_error = 0.0
+                    dy_stats = 0.0
+                    ttbar_stats = 0.0
+                    i_bin_decrement = 0
+                    for key, value in bkg_syst.items():
+                        bkg_syst_yield[key] = 0.0
+                        bkg_syst_error[key] = 0.0
+                        dy_syst_count[key] = 0.0
+                        ttbar_syst_count[key] = 0.0
+            edges.append(bottom_edge)
+            edges = edges[::-1]
+            nbins_real = len(edges)-1
+
+        self.edges = edges
         self.edges_array = np.array(self.edges)
         self.nbins_real = nbins_real
         return edges

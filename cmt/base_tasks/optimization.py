@@ -21,7 +21,7 @@ from cmt.base_tasks.preprocessing import MergePreCounter
 from cmt.base_tasks.base import (
     HTCondorWorkflow, SGEWorkflow, ProcessGroupNameTask, ConfigTaskWithCategory,
     FlatSignalBinMerger,FlatSigCumulativeRebinner,FlatSignalBackgroundBinMerger,
-    FakeFactorsTask
+    FakeFactorsTask,Run2SignalBinMerger
 )
 
 
@@ -159,6 +159,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
         "in root files, default: False")
     use_cumulative = luigi.BoolParameter(default=False, description="whether to optimize binning using the FlagSigCumulativeRebinner" "default: False") 
     use_bkg_flattening = luigi.BoolParameter(default=False, description="whether to optimize binning using the FlagSigBkgBinMerger" "default: False") 
+    use_run2_binning = luigi.BoolParameter(default=False, description="whether to optimize binning using the Run2BinMerger" "default: False") 
     min_low_edge = luigi.FloatParameter(default=0.0, description="the lower edge of the distribution using the FlagSigBkgBinMerger" "default: 0.0")
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
     directions = ["up", "down"]
@@ -175,7 +176,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                         self.norm_syst_list.append(syst)
             except:  # weight not defined as a feature -> no syst available
                 continue
-        
+
         self.ff_regions = self.config.get_ff_regions(region=self.region, category=self.category,
                 shape_region=self.ff_shape_region, signal_region=self.ff_signal_region)
     
@@ -486,6 +487,37 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                 else:              data_sum.Add(hist.Clone())
             if self.use_bkg_flattening:
                 self.histogram_bin_merger = FlatSignalBackgroundBinMerger(
+                    sgn_histo=signal_sum,
+                    bkg_histo=background_sum,
+                    data_histo = data_sum,
+                    bkg_syst=bkg_syst,
+                    dy_histo = self.histos["DY"],
+                    tt_histo = self.histos["TT"],
+                    dy_syst = self.histos["shape_DY"],
+                    tt_syst = self.histos["shape_TT"],
+                    target_bin_count=feature.get_aux("target_bin_count", 20),
+                    min_MC_events=feature.get_aux("min_MC_events", 10),
+                    min_MC_events_lower_bins=feature.get_aux("min_MC_events_lower_bins", 25),
+                    min_bin=self.min_low_edge
+                )
+            elif self.use_bkg_flattening:
+                self.histogram_bin_merger = FlatSignalBackgroundBinMerger(
+                    sgn_histo=signal_sum,
+                    bkg_histo=background_sum,
+                    data_histo = data_sum,
+                    bkg_syst=bkg_syst,
+                    dy_histo = self.histos["DY"],
+                    tt_histo = self.histos["TT"],
+                    dy_syst = self.histos["shape_DY"],
+                    tt_syst = self.histos["shape_TT"],
+                    target_bin_count=feature.get_aux("target_bin_count", 20),
+                    min_MC_events=feature.get_aux("min_MC_events", 10),
+                    min_MC_events_lower_bins=feature.get_aux("min_MC_events_lower_bins", 25),
+                    min_inviso_events=feature.get_aux("min_inviso_events", 10),
+                    min_bin=self.min_low_edge
+                )
+            elif self.use_run2_binning:
+                self.histogram_bin_merger = Run2SignalBinMerger(
                     sgn_histo=signal_sum,
                     bkg_histo=background_sum,
                     data_histo = data_sum,

@@ -1056,7 +1056,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
         if self.optimization_method == "flat_sgn":
             from cmt.base_tasks.optimization import FlatSignalBinMergerTask
-            channel_signal_region = self.region_name.split("_")[0]+"_os_iso"
+            channel_signal_region = self.region_name.split("_")[0]+"_os_isoFF"
             reqs["bin_opt"] = FlatSignalBinMergerTask.vreq(self, region_name=channel_signal_region, save_root=False)
             self.features_to_flatten = reqs["bin_opt"].features_to_flatten
             self.use_cumulative = reqs["bin_opt"].use_cumulative
@@ -2237,7 +2237,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             # Loop on processes
             for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
-                print(process)
                 # Loop on shape systematics
                 for (syst, d) in systs_directions:
                     feature_name = feature.name if syst == "central" \
