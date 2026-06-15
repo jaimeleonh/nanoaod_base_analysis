@@ -1280,7 +1280,7 @@ class FlatSignalBackgroundBinMerger:
                     sig_yield += sgn_histo.GetBinContent(i)
                     bkg_yield += bkg_histo.GetBinContent(i)
                     dy_yield += dy_histo.GetBinContent(i)
-                    data_yield += data_histo.GetBinContent(i)
+                    if self.min_inviso_events > 0: data_yield += data_histo.GetBinContent(i)
                     ttbar_yield += tt_histo.GetBinContent(i)
                     bkg_error += bkg_histo.GetBinError(i)**2
                     dy_error += dy_histo.GetBinError(i)**2
@@ -1323,7 +1323,8 @@ class FlatSignalBackgroundBinMerger:
                         # check that bin has enough bkg events
                         if (dy_stats <= 0 or ttbar_stats <= 0) or \
                            (len(edges) == 1 and bkg_stats < self.min_MC_events) or \
-                           (len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins) or data_yield < self.min_inviso_events: 
+                           (len(edges) > 1 and bkg_stats < self.min_MC_events_lower_bins) or \
+                           (self.min_inviso_events > 0 and data_yield < self.min_inviso_events):
                             nbin_decrement += 0.25
                         else:
                             print(" ### INFO: Adding", sgn_histo.GetXaxis().GetBinLowEdge(i))
