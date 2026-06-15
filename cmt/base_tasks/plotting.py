@@ -1351,15 +1351,19 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 if "up" in data_syst:
                     # compute Garwood's interval
                     up_stat_err = 0.5 * chi2.ppf(1 - alpha / 2, df=2 * obs_count + 2)
-                    # scale the interval by the mean fake factor
-                    up_stat_err  *= mean_ff
+                    # compute the error wrt nominal
+                    up_stat_err = up_stat_err - obs_count
+                    # scale the error by the mean fake factor
+                    up_stat_err *= mean_ff
                     # subtract uncertanity to the nominal value
                     nominal_fakes += up_stat_err
 
                 elif "down" in data_syst:
                     # compute Garwood's interval
                     low_stat_err = 0.5 * chi2.ppf(alpha / 2, df=2 * obs_count) if obs_count > 0 else 0.0
-                    # scale the interval by the mean fake factor
+                    # compute the error wrt nominal
+                    low_stat_err = obs_count - low_stat_err
+                    # scale the error by the mean fake factor
                     low_stat_err *= mean_ff
                     # subtract uncertanity to the nominal value
                     nominal_fakes -= low_stat_err
