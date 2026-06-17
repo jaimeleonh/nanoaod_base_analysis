@@ -1326,19 +1326,28 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             return qcd_hist
 
-        def get_template_stats_error(region, files, syst='', data_syst='', bin_limit=0., CL=0.68):
+        def get_template_stats_error(region, files, data_syst='', bin_limit=0., CL=0.68):
             from scipy.stats import chi2
 
             d_hist_nom = files[region].Get("histograms/" + self.data_names[0])
-            d_hist = files[region].Get("histograms/" + self.data_names[0] + data_syst)
-            qcd_hist = d_hist.Clone(randomize("qcd_" + region + data_syst))
+            d_hist_sys = files[region].Get("histograms/" + self.data_names[0] + data_syst)
+            qcd_hist = d_hist_sys.Clone(randomize("qcd_" + region + data_syst))
             alpha = 1 - CL
+
+            # do background subtraction to get nominal fakes value
+            b_hists = []
+            for b_name in self.background_names:
+                b_hist = files[region].Get("histograms/" + b_name)
+                b_hists.append(b_hist)
+            qcd_hist_nom = d_hist_nom.Clone(randomize("qcd_" + region))
+            for hist in b_hists:
+                qcd_hist_nom.Add(hist, -1.)
 
             max_mean_ff = 1.0
             # calculating template stat uncertainty (and automatically removing negative bins)
             for ibin in range(1, qcd_hist.GetNbinsX() + 1):
-                obs_count = d_hist.GetBinContent(ibin)
-                nominal_fakes = d_hist_nom.GetBinContent(ibin)
+                obs_count = d_hist_sys.GetBinContent(ibin)
+                nominal_fakes = qcd_hist_nom.GetBinContent(ibin)
                 if obs_count > 0:
                     mean_ff = nominal_fakes / obs_count
                     # store maximum mean FF
