@@ -1284,11 +1284,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
     def get_norm_systematics(self):
         return self.config.get_norm_systematics(self.processes_datasets, self.region)
 
-    def plot(self, feature, ifeat=0, relative_syst_variations=None):
+    def plot(self, feature, ifeat=0, central_values=None, syst_var_up=None, syst_var_down=None):
         """
         - Performs the actual plotting for one feature
-        - 'relative_syst_variations' is a tuple (down, up) of numpy arrays giving the
-          combined-in-quadrature relative variation of systematics for background
+        - arguments used for plotting the syst uncertainty band
+          - 'central_values' is a numpy array with the nominal background-sum values
+          - 'syst_var_up' is the sum in quadrature of the systematic up variations of the bkg
+          - 'syst_var_down' is the sum in quadrature of the systematic down variations of the bkg
         """
         ROOT = import_root()
         import plotlib.root as r
@@ -1609,9 +1611,29 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 ff_color = ROOT.TColor.GetColor(*ff_c)
                 self.setup_background_hist(ff_hist, ff_color)
                 all_hists.append(ff_hist)
-                # add to the background list only the central one, otherwise the stack will contain
-                # central+up+down variations
-                if syst == '': background_hists.append(ff_hist)
+                if syst == '':
+                    # Add to the background list only the central, otherwise the stack
+                    # will contain central+up+down variations
+                    background_hists.append(ff_hist)
+                    # Get nominal FF histo values
+                    if self.plot_systematics:
+                        ff_central_values = np.array(ff_hist)
+                else:
+                    # Save FF syst-variated templates
+                    if self.plot_systematics:
+                        self.histos[f"background_FF_syst_{syst}"] = ff_hist.Clone()
+
+            # Add the FF systematic variations to "syst_var_up/syst_var_down" for plotting
+            if self.plot_systematics:
+                for syst in FFsysts:
+                    if syst == '':
+                        # Add nominal FF to other nominal values
+                        central_values += ff_central_values
+                    else:
+                        # Sum FF syst variations in quadrature to other variations
+                        ar = np.array(self.histos[f"background_FF_syst_{syst}"]) - ff_central_values
+                        syst_var_up += np.square(np.fmax(ar, 0.)) # keep only positive variations here (an "up" template does not necessarily vary up)
+                        syst_var_down += np.square(np.fmin(ar, 0.)) # negative variations
 
         # sideband files
         sideband_files = None
@@ -2000,6 +2022,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 entries.append((all_unc_graph, all_unc_graph.title, "f"))
                 r.setup_graph(all_unc_graph, props={"FillStyle": 3001, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+
+            # Define the relative_syst_variations for plotting
+            # 'relative_syst_variations' is a tuple (down, up) of numpy arrays giving the
+            # combined-in-quadrature relative variation of systematics for background
+            if self.plot_systematics:
+                with np.errstate(divide="ignore", invalid="ignore"): # in case zero expected, do not print any warning
+                    relative_syst_variations = np.sqrt(syst_var_down)/central_values, np.sqrt(syst_var_up)/central_values
 
             # Set graphs values
             for i in range(binning_args[0]):
@@ -2408,6 +2437,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
                     # For every shape systematic variation, make a sum of every syst varied template
                     if self.plot_systematics and not process.isData and not process.isSignal:
+                        if "CMS_FF" in syst: continue # FF systs are defined only inside self.plot(), so we skip them here
                         key_suffix = "" if syst == "central" else f"_{syst}_{d}"
                         key = f"background_syst{key_suffix}"
                         if not key in self.histos:
@@ -2482,6 +2512,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 # Shape systematics
                 for (syst, d) in systs_directions:
                     if syst == "central": continue
+                    if "CMS_FF" in syst: continue # FF systs are defined only inside self.plot(), so we skip them here
                     ar = np.array(self.histos[f"background_syst_{syst}_{d}"]) - central_values
                     var_up += np.square(np.fmax(ar, 0.)) # keep only positive variations here (an "up" template does not necessarily vary up)
                     var_down += np.square(np.fmin(ar, 0.)) # negative variations
@@ -2493,12 +2524,12 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     var_up += np.square(np.fmax(ar, 0.))
                     var_down += np.square(np.fmin(ar, 0.))
 
-                with np.errstate(divide="ignore", invalid="ignore"): # in case zero expected, do not print any warning
-                    relative_syst_variations = np.sqrt(var_down)/central_values, np.sqrt(var_up)/central_values
             else:
-                relative_syst_variations = None
+                central_values = None
+                var_up = None
+                var_down = None
 
-            self.plot(feature, relative_syst_variations=relative_syst_variations)
+            self.plot(feature, central_values=central_values, syst_var_up=var_up, syst_var_down=var_down)
 
 #####################################################################################################
 #####################################################################################################
