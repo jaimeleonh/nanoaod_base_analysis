@@ -502,19 +502,18 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             title = "; %s; %s" % (x_title, y_title)
 
             systs_directions = [("central", "")]
-            multi_systs = []
             if isMC and self.store_systematics:
                 systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
-
-                # take care of the "multi-dimensional" systematics (LHE QCD SCale)
-                multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
 
             # for the application of FFs, the data is scaled with the FFs
             # so for Data the FF nuisances need to be stored
             if not isMC and self.store_systematics and self.do_ff and self.region.name.endswith(self.ff_shape_region):
                 systs = self.get_systs(feature, isMC, includeFFdataSyst=True)
                 systs_directions += list(itertools.product(systs, directions))
+
+            # take care of the "multi-dimensional" systematics (LHE QCD SCale and FF template stats)
+            multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
 
             # loop over systematics and up/down/multi variations
             for syst_name, direction in systs_directions:
@@ -736,7 +735,10 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             out.mkdir("histograms")
             out.cd("histograms")
             for feature in self.features:
-                feature_name = feature.name
+                if isinstance(feature, tuple):
+                    feature_name = feature[0].name + feature[1].name
+                else:
+                    feature_name = feature.name
                 out.mkdir(f"histograms/{feature_name}_dir")
                 out.cd(f"histograms/{feature_name}_dir")
 
@@ -846,6 +848,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         total background yield (True) or not (False)
     :type normalize_signals: bool
 
+    :param normalize_signals_half: whether to normalize signals to half of the
+        total background yield (True) or not (False)
+    :type normalize_signals_half: bool
+
     :param avoid_normalization: whether to avoid normalizing by cross section and initial
         number of events
     :type avoid_normalization: bool
@@ -924,6 +930,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
     hide_data = luigi.BoolParameter(default=True, description="hide data events, default: True")
     normalize_signals = luigi.BoolParameter(default=False, description="whether to normalize "
         "signals to the total bkg yield, default: True")
+    normalize_signals_half = luigi.BoolParameter(default=False, description="whether to normalize "
+        "signals to half of the total bkg yield, default: True")
     avoid_normalization = luigi.BoolParameter(default=False, description="whether to avoid "
         "normalizing by cross section and initial number of events, default: False")
     blinded = luigi.BoolParameter(default=False, description="whether to blind bins above a "
@@ -1047,7 +1055,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
         if self.optimization_method == "flat_sgn":
             from cmt.base_tasks.optimization import FlatSignalBinMergerTask
-            channel_signal_region = self.region_name.split("_")[0]+"_os_iso"
+            channel_signal_region = self.region_name.split("_")[0]+"_os_isoFF"
             reqs["bin_opt"] = FlatSignalBinMergerTask.vreq(self, region_name=channel_signal_region, save_root=False)
             self.features_to_flatten = reqs["bin_opt"].features_to_flatten
             self.use_cumulative = reqs["bin_opt"].use_cumulative
@@ -1199,6 +1207,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             postfix += "__logX"
         if self.normalize_signals and key not in ("root", "yields"):
             postfix += "__norm_sig"
+        if self.normalize_signals_half and key not in ("root", "yields"):
+            postfix += "__norm_sig_half"
         if self.equal_bin_width:
             postfix += "__equalBinWidth"
         return postfix
@@ -1274,11 +1284,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
     def get_norm_systematics(self):
         return self.config.get_norm_systematics(self.processes_datasets, self.region)
 
-    def plot(self, feature, ifeat=0, relative_syst_variations=None):
+    def plot(self, feature, ifeat=0, central_values=None, syst_var_up=None, syst_var_down=None):
         """
         - Performs the actual plotting for one feature
-        - 'relative_syst_variations' is a tuple (down, up) of numpy arrays giving the
-          combined-in-quadrature relative variation of systematics for background
+        - arguments used for plotting the syst uncertainty band
+          - 'central_values' is a numpy array with the nominal background-sum values
+          - 'syst_var_up' is the sum in quadrature of the systematic up variations of the bkg
+          - 'syst_var_down' is the sum in quadrature of the systematic down variations of the bkg
         """
         ROOT = import_root()
         import plotlib.root as r
@@ -1290,7 +1302,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             d_hist = files[region].Get("histograms/" + self.data_names[0] + data_syst)
             if not d_hist:
                 raise Exception("data histogram '{}' not found for region '{}' in tfile {}".format(
-                    self.data_names[0], region, files[region]))
+                    self.data_names[0] + data_syst, region, files[region]))
 
             if self.optimization_method == "flat_sgn":
                 d_hist = self.histogram_bin_merger.rebin(d_hist, inplace=True, equal_bin_width=self.equal_bin_width)
@@ -1313,6 +1325,61 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             for ibin in range(1, qcd_hist.GetNbinsX() + 1):
                 if qcd_hist.GetBinContent(ibin) < bin_limit:
                     qcd_hist.SetBinContent(ibin, 1.e-6)
+
+            return qcd_hist
+
+        def get_template_stats_error(region, files, data_syst='', bin_limit=0., CL=0.68):
+            from scipy.stats import chi2
+
+            d_hist_nom = files[region].Get("histograms/" + self.data_names[0])
+            d_hist_sys = files[region].Get("histograms/" + self.data_names[0] + data_syst)
+            qcd_hist = d_hist_sys.Clone(randomize("qcd_" + region + data_syst))
+            alpha = 1 - CL
+
+            # do background subtraction to get nominal fakes value
+            b_hists = []
+            for b_name in self.background_names:
+                b_hist = files[region].Get("histograms/" + b_name)
+                b_hists.append(b_hist)
+            qcd_hist_nom = d_hist_nom.Clone(randomize("qcd_" + region))
+            for hist in b_hists:
+                qcd_hist_nom.Add(hist, -1.)
+
+            max_mean_ff = 1.0
+            # calculating template stat uncertainty (and automatically removing negative bins)
+            for ibin in range(1, qcd_hist.GetNbinsX() + 1):
+                obs_count = d_hist_sys.GetBinContent(ibin)
+                nominal_fakes = qcd_hist_nom.GetBinContent(ibin)
+                if obs_count > 0:
+                    mean_ff = nominal_fakes / obs_count
+                    # store maximum mean FF
+                    if max_mean_ff == 1.0 or mean_ff > max_mean_ff:
+                        max_mean_ff = mean_ff
+                # if the bin is empty, apply on it the maximum mean FF computed
+                else:
+                    mean_ff = max_mean_ff
+
+                if "up" in data_syst:
+                    # compute Garwood's interval
+                    up_stat_err = 0.5 * chi2.ppf(1 - alpha / 2, df=2 * obs_count + 2)
+                    # compute the error wrt nominal
+                    up_stat_err = up_stat_err - obs_count
+                    # scale the error by the mean fake factor
+                    up_stat_err *= mean_ff
+                    # subtract uncertanity to the nominal value
+                    nominal_fakes += up_stat_err
+
+                elif "down" in data_syst:
+                    # compute Garwood's interval
+                    low_stat_err = 0.5 * chi2.ppf(alpha / 2, df=2 * obs_count) if obs_count > 0 else 0.0
+                    # compute the error wrt nominal
+                    low_stat_err = obs_count - low_stat_err
+                    # scale the error by the mean fake factor
+                    low_stat_err *= mean_ff
+                    # subtract uncertanity to the nominal value
+                    nominal_fakes -= low_stat_err
+
+                qcd_hist.SetBinContent(ibin, max(nominal_fakes, bin_limit))
 
             return qcd_hist
 
@@ -1521,7 +1588,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     FFsysts.append(f"_{syst}_{d}")
 
             for syst in FFsysts:
-                ff_hist = get_qcd(self.ff_shape_region, ff_shape_files, data_syst=syst, bin_limit=bin_limit).Clone(randomize("fakes"))
+                if "template" in syst:
+                    ff_hist = get_template_stats_error(self.ff_shape_region, ff_shape_files, data_syst=syst, bin_limit=bin_limit, CL=0.95).Clone(randomize("fakes"))
+                else:
+                    ff_hist = get_qcd(self.ff_shape_region, ff_shape_files, data_syst=syst, bin_limit=bin_limit).Clone(randomize("fakes"))
 
                 # store and style
                 yield_error = c_double(0.)
@@ -1541,9 +1611,29 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 ff_color = ROOT.TColor.GetColor(*ff_c)
                 self.setup_background_hist(ff_hist, ff_color)
                 all_hists.append(ff_hist)
-                # add ot the background list only the central one, otherwise the stack will contain
-                # central+up+down variations
-                if syst == '': background_hists.append(ff_hist)
+                if syst == '':
+                    # Add to the background list only the central, otherwise the stack
+                    # will contain central+up+down variations
+                    background_hists.append(ff_hist)
+                    # Get nominal FF histo values
+                    if self.plot_systematics:
+                        ff_central_values = np.array(ff_hist)
+                else:
+                    # Save FF syst-variated templates
+                    if self.plot_systematics:
+                        self.histos[f"background_FF_syst_{syst}"] = ff_hist.Clone()
+
+            # Add the FF systematic variations to "syst_var_up/syst_var_down" for plotting
+            if self.plot_systematics:
+                for syst in FFsysts:
+                    if syst == '':
+                        # Add nominal FF to other nominal values
+                        central_values += ff_central_values
+                    else:
+                        # Sum FF syst variations in quadrature to other variations
+                        ar = np.array(self.histos[f"background_FF_syst_{syst}"]) - ff_central_values
+                        syst_var_up += np.square(np.fmax(ar, 0.)) # keep only positive variations here (an "up" template does not necessarily vary up)
+                        syst_var_down += np.square(np.fmin(ar, 0.)) # negative variations
 
         # sideband files
         sideband_files = None
@@ -1691,6 +1781,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     hist.Scale(scale)
                     hist.cmt_scale = scale
 
+            if self.normalize_signals_half and bkg_histo:
+                for hist in signal_hists:
+                    signal_yield = hist.cmt_yield
+                    scale = (bkg_histo.Integral() / signal_yield if signal_yield != 0 else 1.) * 0.5
+                    hist.Scale(scale)
+                    hist.cmt_scale = scale
+
             draw_hists = [background_stack] + signal_hists[::-1]
             if not self.hide_data:
                 # blinding
@@ -1771,7 +1868,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             if self.max_y == law.NO_FLOAT:
                 maximum = max([hist.GetMaximum() for hist in draw_hists])
-                dummy_hist.SetMaximum(100 * maximum if self.log_y else 1.35 * maximum)
+                dummy_hist.SetMaximum(100 * maximum if self.log_y else 1.6 * maximum)
             else:
                 maximum = self.max_y
                 dummy_hist.SetMaximum(self.max_y)
@@ -1787,7 +1884,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         # get text to plot inside the figure
         inner_text = self.config.get_inner_text_for_plotting(self.category, self.region)
 
-        if self.normalize_signals and self.stack and signal_hists and bkg_histo:
+        if self.normalize_signals or self.normalize_signals_half and self.stack and signal_hists and bkg_histo:
             scale_text = []
             for hist in signal_hists:
                 scale = hist.cmt_scale
@@ -1905,7 +2002,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             # MC stat error graph
             mc_unc_graph = ROOT.TGraphErrors(binning_args[0])
-            setattr(mc_unc_graph, "title", "MC stat.")
+            setattr(mc_unc_graph, "title", "Stat.")
             r.setup_graph(mc_unc_graph, props={"FillStyle": 3017, "LineColor": 0,
                 "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kBlue + 2})
             entries.append((mc_unc_graph, mc_unc_graph.title, "f"))
@@ -1915,16 +2012,23 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
                 # MC systematic variations (norm+shape). Plotted as "MC Syst"
                 syst_unc_graph = ROOT.TGraphAsymmErrors(binning_args[0])
-                setattr(syst_unc_graph, "title", "MC Syst.")
+                setattr(syst_unc_graph, "title", "Syst.")
                 r.setup_graph(syst_unc_graph, props={"FillStyle": 3005, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kRed + 2})
 
                 # Sum in quadrature of stat error & syst error. Plotted as "Stat+Syst"
                 all_unc_graph = ROOT.TGraphAsymmErrors(binning_args[0])
-                setattr(all_unc_graph, "title", "MC Stat. + Syst.")
+                setattr(all_unc_graph, "title", "Stat. + Syst.")
                 entries.append((all_unc_graph, all_unc_graph.title, "f"))
                 r.setup_graph(all_unc_graph, props={"FillStyle": 3001, "LineColor": 0,
                     "MarkerColor": 0, "MarkerSize": 0., "FillColor": ROOT.kGray + 2})
+
+            # Define the relative_syst_variations for plotting
+            # 'relative_syst_variations' is a tuple (down, up) of numpy arrays giving the
+            # combined-in-quadrature relative variation of systematics for background
+            if self.plot_systematics:
+                with np.errstate(divide="ignore", invalid="ignore"): # in case zero expected, do not print any warning
+                    relative_syst_variations = np.sqrt(syst_var_down)/central_values, np.sqrt(syst_var_up)/central_values
 
             # Set graphs values
             for i in range(binning_args[0]):
@@ -2025,13 +2129,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         if not n_cols:
             if n_entries <= 4:
                 n_cols = 1
-            elif n_entries <= 8:
+            elif n_entries <= 10:
                 n_cols = 2
             else:
                 n_cols = 3
         if n_cols == 1:
             col_width = getattr(self.config, "single_column_width", 0.2)
-        elif n_entries <= 8:
+        elif n_entries <= 10:
             col_width = getattr(self.config, "double_column_width", 0.15)
         else:
             col_width = 0.1
@@ -2044,6 +2148,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         legend_y1 = legend_y2 - n_rows * row_width
 
         legend = ROOT.TLegend(legend_x1, legend_y1, legend_x2, legend_y2)
+        ROOT.gStyle.SetLegendTextSize(0.04)
         legend.SetBorderSize(0)
         legend.SetNColumns(n_cols)
         for entry in entries:
@@ -2218,7 +2323,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             # Loop on processes
             for iproc, (process, datasets) in enumerate(self.processes_datasets.items()):
-
                 # Loop on shape systematics
                 for (syst, d) in systs_directions:
                     feature_name = feature.name if syst == "central" \
@@ -2333,6 +2437,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
                     # For every shape systematic variation, make a sum of every syst varied template
                     if self.plot_systematics and not process.isData and not process.isSignal:
+                        if "CMS_FF" in syst: continue # FF systs are defined only inside self.plot(), so we skip them here
                         key_suffix = "" if syst == "central" else f"_{syst}_{d}"
                         key = f"background_syst{key_suffix}"
                         if not key in self.histos:
@@ -2407,6 +2512,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 # Shape systematics
                 for (syst, d) in systs_directions:
                     if syst == "central": continue
+                    if "CMS_FF" in syst: continue # FF systs are defined only inside self.plot(), so we skip them here
                     ar = np.array(self.histos[f"background_syst_{syst}_{d}"]) - central_values
                     var_up += np.square(np.fmax(ar, 0.)) # keep only positive variations here (an "up" template does not necessarily vary up)
                     var_down += np.square(np.fmin(ar, 0.)) # negative variations
@@ -2418,12 +2524,12 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     var_up += np.square(np.fmax(ar, 0.))
                     var_down += np.square(np.fmin(ar, 0.))
 
-                with np.errstate(divide="ignore", invalid="ignore"): # in case zero expected, do not print any warning
-                    relative_syst_variations = np.sqrt(var_down)/central_values, np.sqrt(var_up)/central_values
             else:
-                relative_syst_variations = None
+                central_values = None
+                var_up = None
+                var_down = None
 
-            self.plot(feature, relative_syst_variations=relative_syst_variations)
+            self.plot(feature, central_values=central_values, syst_var_up=var_up, syst_var_down=var_down)
 
 #####################################################################################################
 #####################################################################################################
