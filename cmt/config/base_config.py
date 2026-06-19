@@ -98,7 +98,6 @@ class Config():
                 process_group_ids=()
             )
         }
-
         return ObjectCollection(processes), process_group_names, process_training_names
 
 
@@ -144,20 +143,8 @@ class Config():
     def add_tau_id(self, year, tauId_algo):
         self.tauId_algo = tauId_algo
 
-        if year <= 2018 and self.tauId_algo == "idDeepTau2018v2p5":
-            raise ValueError("Wrong tau id requested. "
-                             "Only idDeepTau2017v2p1 available in Run2 MC.")
 
-        elif year <= 2018 and self.tauId_algo == "idDeepTau2017v2p1":
-            # DeepTau2017v2p1 wpbit is in power 2 in Run2 MC NanoAOD
-            self.tauId_algo_wps=DotDict(
-                vsjet=DotDict(VVVLoose = 1, VVLoose = 3, VLoose = 7, Loose = 15,
-                              Medium = 31, Tight = 63, VTight = 127, VVTight = 255),
-                vse=DotDict(VVVLoose = 1, VVLoose = 3, VLoose = 7, Loose = 15,
-                            Medium = 31, Tight = 63, VTight = 127, VVTight = 255),
-                vsmu=DotDict(VLoose = 1, Loose = 3, Medium = 7, Tight = 15) )
-
-        elif year >= 2022 and (self.tauId_algo == "idDeepTau2018v2p5" or self.tauId_algo == "idDeepTau2017v2p1"):
+        if (self.tauId_algo == "idDeepTau2018v2p5" or self.tauId_algo == "idDeepTau2017v2p1"):
             # DeepTau2017v2p1/DeepTau2018v2p5 wpbit is integer in latest NanoAOD
             self.tauId_algo_wps=DotDict(
                 vsjet = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
@@ -167,10 +154,7 @@ class Config():
                 vsmu  = DotDict(VLoose = 1, Loose = 2, Medium = 3, Tight = 4) )
 
         else:
-            raise ValueError("Wrong tau id requested. "
-                             "Only idDeepTau2017v2p1 (for Run2) or "
-                             "idDeepTau2017v2p1/idDeepTau2018v2p5 (for Run3) "
-                             "available at the moment.")
+            raise ValueError("Wrong tau id requested. ")
 
         return self
 
@@ -198,6 +182,26 @@ class Config():
                 fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/latest/btagging.json.gz"
             else:
                 raise ValueError("Only UParTAK4B algo is supported for 2025 b-tagging!")
+        elif year == 2018:
+            if self.btag_algo == "UParTAK4B":
+                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2018-UL-NanoAODv15/latest/btagging.json.gz"
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2018 b-tagging!")
+        elif year == 2017:
+            if self.btag_algo == "UParTAK4B":
+                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2017-UL-NanoAODv15/latest/btagging.json.gz"
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2017 b-tagging!")
+        elif year == 2016:
+            if self.btag_algo == "UParTAK4B":
+                if runPeriod == "ULpreVFP": 
+                    fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2016preVFP-UL-NanoAODv15/latest/btagging.json.gz"
+                elif runPeriod == "ULpostVFP": 
+                    fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2016postVFP-UL-NanoAODv15/latest/btagging.json.gz"
+                else:
+                    raise ValueError(f"Unsupported runPeriod {runPeriod} for 2016 b-tagging")
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2017 b-tagging!")
         else:
             raise ValueError(f"Method 'add_bjet_id': year {year} not (yet) supported!")
         
@@ -229,15 +233,12 @@ class Config():
                 raise ValueError("No default PNet for Run2")
 
         elif self.btag_algo == "UParTAK4B":
-            if year >= 2024:
-                corr = getcorrectionlut(fname, "UParTAK4_wp_values")
-                self.btag_algo_wps = DotDict(xxtight = corr.evaluate("XXT"),
-                                             xtight  = corr.evaluate("XT"),
-                                             tight   = corr.evaluate("T"),
-                                             medium  = corr.evaluate("M"),
-                                             loose   = corr.evaluate("L"))
-            else:
-                raise ValueError("No default UParTAK4B before 2024")
+            corr = getcorrectionlut(fname, "UParTAK4_wp_values")
+            self.btag_algo_wps = DotDict(xxtight = corr.evaluate("XXT"),
+                                         xtight  = corr.evaluate("XT"),
+                                         tight   = corr.evaluate("T"),
+                                         medium  = corr.evaluate("M"),
+                                         loose   = corr.evaluate("L"))
 
         else:
             raise ValueError("Wrong jet id requested. "
