@@ -162,7 +162,27 @@ class Config():
         self.btag_algo = btag_algo
 
         # read WPs directly from json corrections
-        if year == 2022:
+        if year == 2016:
+            if self.btag_algo == "UParTAK4B":
+                if runPeriod == "ULpreVFP": 
+                    fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2016preVFP-UL-NanoAODv15/latest/btagging.json.gz"
+                elif runPeriod == "ULpostVFP": 
+                    fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2016postVFP-UL-NanoAODv15/latest/btagging.json.gz"
+                else:
+                    raise ValueError(f"Unsupported runPeriod {runPeriod} for 2016 b-tagging")
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2017 b-tagging!")
+        elif year == 2017:
+            if self.btag_algo == "UParTAK4B":
+                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2017-UL-NanoAODv15/latest/btagging.json.gz"
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2017 b-tagging!")
+        elif year == 2018:
+            if self.btag_algo == "UParTAK4B":
+                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2018-UL-NanoAODv15/latest/btagging.json.gz"
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2018 b-tagging!")
+        elif year == 2022:
             if   runPeriod == "preEE":  fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-22CDSep23-Summer22-NanoAODv12/latest/btagging.json.gz"
             elif runPeriod == "postEE": fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-22EFGSep23-Summer22EE-NanoAODv12/latest/btagging.json.gz"
             else:
@@ -182,26 +202,6 @@ class Config():
                 fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/latest/btagging.json.gz"
             else:
                 raise ValueError("Only UParTAK4B algo is supported for 2025 b-tagging!")
-        elif year == 2018:
-            if self.btag_algo == "UParTAK4B":
-                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2018-UL-NanoAODv15/latest/btagging.json.gz"
-            else:
-                raise ValueError("Only UParTAK4B algo is supported for 2018 b-tagging!")
-        elif year == 2017:
-            if self.btag_algo == "UParTAK4B":
-                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2017-UL-NanoAODv15/latest/btagging.json.gz"
-            else:
-                raise ValueError("Only UParTAK4B algo is supported for 2017 b-tagging!")
-        elif year == 2016:
-            if self.btag_algo == "UParTAK4B":
-                if runPeriod == "ULpreVFP": 
-                    fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2016preVFP-UL-NanoAODv15/latest/btagging.json.gz"
-                elif runPeriod == "ULpostVFP": 
-                    fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2016postVFP-UL-NanoAODv15/latest/btagging.json.gz"
-                else:
-                    raise ValueError(f"Unsupported runPeriod {runPeriod} for 2016 b-tagging")
-            else:
-                raise ValueError("Only UParTAK4B algo is supported for 2017 b-tagging!")
         else:
             raise ValueError(f"Method 'add_bjet_id': year {year} not (yet) supported!")
         
