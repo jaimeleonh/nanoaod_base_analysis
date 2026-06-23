@@ -171,7 +171,7 @@ class Config():
                 else:
                     raise ValueError(f"Unsupported runPeriod {runPeriod} for 2016 b-tagging")
             else:
-                raise ValueError("Only UParTAK4B algo is supported for 2017 b-tagging!")
+                raise ValueError("Only UParTAK4B algo is supported for 2016 b-tagging!")
         elif year == 2017:
             if self.btag_algo == "UParTAK4B":
                 fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2017-UL-NanoAODv15/latest/btagging.json.gz"
