@@ -233,6 +233,8 @@ class Config():
                 raise ValueError("No default PNet for Run2")
 
         elif self.btag_algo == "UParTAK4B":
+            if year in [2022, 2023]:
+                raise ValueError("UParTAK4B not yet commissioned in our analysis for 2022 or 2023")
             corr = getcorrectionlut(fname, "UParTAK4_wp_values")
             self.btag_algo_wps = DotDict(xxtight = corr.evaluate("XXT"),
                                          xtight  = corr.evaluate("XT"),
