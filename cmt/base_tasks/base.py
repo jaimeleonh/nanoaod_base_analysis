@@ -731,6 +731,8 @@ class RDFModuleTask(DatasetTask):
             ROOT = import_root()
             if len(args) != 1 or isinstance(args[0], ROOT.TChain):
                 self.rdf = ROOT.RDataFrame(*args)
+                if os.environ['CMT_REMOTE_JOB'] == '0':
+                    ROOT.RDF.Experimental.AddProgressBar(self.rdf)
             else:  # rdf coming from another df after some modification (e.g. Define)
                 self.rdf = args[0]
             self.allow_redefinition = kwargs.pop("allow_redefinition", False)
