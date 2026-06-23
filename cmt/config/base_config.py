@@ -215,11 +215,9 @@ class Config():
                                              medium  = corr.evaluate("M"),
                                              loose   = corr.evaluate("L"))
             else:
-                # https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
-                self.btag_algo_wps = DotDict(tight  = 0.7264,
-                                             medium = 0.2770,
-                                             loose  = 0.0494)
-
+                raise ValueError(f"DeepFlavB is not supported for run 2 (in nanov15). Year requested: {year}")
+                
+                
         elif self.btag_algo == "PNetB":
             if year >= 2022:
                 # get WPs directy from BTV SF json
