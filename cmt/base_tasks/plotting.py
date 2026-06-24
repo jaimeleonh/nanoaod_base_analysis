@@ -1419,8 +1419,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         signal_hists = self.histos["signal"]
         data_hists = self.histos["data"]
         all_hists = self.histos["all"]
-        if self.plot_systematics:
-            bkg_histo_syst = self.histos["bkg_histo_syst"]
 
         # qcd shape files
         qcd_shape_files = None
@@ -1727,7 +1725,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     for idx, hist in enumerate(self.histos["shape"][shape]):
                         self.histos["shape"][shape][idx] = equal_bin_width_transformer.convert(hist)
             if self.plot_systematics:
-                self.histos["bkg_histo_syst"] = equal_bin_width_transformer.convert(self.histos["bkg_histo_syst"])
+                for systname in self.histos["background_sum"]:
+                    self.histos["background_sum"][systname] = equal_bin_width_transformer.convert(self.histos["background_sum"][systname])
 
         if not self.hide_data:
             all_hists += data_hists
@@ -1756,9 +1755,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             if bkg_histo:
                 scale = 1. / (bkg_histo.Integral() or 1.)
                 bkg_histo.Scale(scale)
-                if self.plot_systematics:
-                    scale = 1. / (bkg_histo_syst.Integral() or 1.)
-                    bkg_histo_syst.Scale(scale)
             if data_histo:
                 scale = 1. / (data_histo.Integral() or 1.)
                 data_histo.Scale(scale)
@@ -2296,6 +2292,8 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
         for ifeat, feature in enumerate(self.features):
             self.histos = {"background": [], "signal": [], "data": [], "all": []}
+            if self.plot_systematics:
+                self.histos["background_sum"] = {}
 
             binning_args, y_axis_adendum = self.get_binning(feature, ifeat)
             x_title = (str(feature.get_aux("x_title"))
@@ -2305,9 +2303,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             # Define shape systematics
             systs_directions = [("central", "")]
-            if self.plot_systematics:
-                self.histos["bkg_histo_syst"] = ROOT.TH1D(
-                    randomize("syst"), hist_title, *binning_args)
             if self.store_systematics:
                 self.histos["shape"] = {}
                 shape_systematics = self.get_systs(feature, True)
@@ -2438,12 +2433,11 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     # For every shape systematic variation, make a sum of every syst varied template
                     if self.plot_systematics and not process.isData and not process.isSignal:
                         if "CMS_FF" in syst: continue # FF systs are defined only inside self.plot(), so we skip them here
-                        key_suffix = "" if syst == "central" else f"_{syst}_{d}"
-                        key = f"background_syst{key_suffix}"
-                        if not key in self.histos:
-                            self.histos[key] = process_histo.Clone()
+                        key = "nominal" if syst == "central" else f"{syst}_{d}"
+                        if not key in self.histos["background_sum"]:
+                            self.histos["background_sum"][key] = process_histo.Clone()
                         else:
-                            self.histos[key].Add(process_histo)
+                            self.histos["background_sum"][key].Add(process_histo)
 
                 # For every norm systematic variation, make a sum of every syst varied template
                 # Following https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part2/settinguptheanalysis/#a-simple-counting-experiment
@@ -2455,7 +2449,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 if self.plot_systematics and not process.isData and not process.isSignal:
                     # Loop on normalization systematics
                     for norm_syst_name, norm_syst_values_perProcess in norm_systematics.items():
-                        key = f"background_syst_norm_{norm_syst_name}"
 
                         # Parse norm syst value
                         norm_syst_value = norm_syst_values_perProcess.get(process.name, None)
@@ -2472,16 +2465,16 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                             up, down = 1., 1.
 
                         # Add scaled histos
-                        if key+"_up" in self.histos:
-                            self.histos[key+"_up"].Add(process_histo, up)
-                            self.histos[key+"_down"].Add(process_histo, down)
+                        if norm_syst_name+"_up" in self.histos["background_sum"]:
+                            self.histos["background_sum"][norm_syst_name+"_up"].Add(process_histo, up)
+                            self.histos["background_sum"][norm_syst_name+"_down"].Add(process_histo, down)
                         else:
                             h_up = process_histo.Clone()
                             h_up.Scale(up)
-                            self.histos[key+"_up"] = h_up
+                            self.histos["background_sum"][norm_syst_name+"_up"] = h_up
                             h_down = process_histo.Clone()
                             h_down.Scale(down)
-                            self.histos[key+"_down"] = h_down
+                            self.histos["background_sum"][norm_syst_name+"_down"] = h_down
 
             # Apply bin merging
             if self.optimization_method == "flat_sgn" and feature.name in self.features_to_flatten:
@@ -2500,12 +2493,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                         for idx, hist in enumerate(self.histos["shape"][shape]):
                             self.histos["shape"][shape][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
                 if self.plot_systematics:
-                    self.histos["bkg_histo_syst"] = self.histogram_bin_merger.rebin(self.histos["bkg_histo_syst"], inplace=True)
+                    for systname in self.histos["background_sum"]:
+                        self.histos["background_sum"][systname] = self.histogram_bin_merger.rebin(hist, inplace=True)
 
             # Combine all systematic variations in quadrature
             if self.plot_systematics:
                 # Central variation
-                nominal_histo = self.histos["background_syst"]
+                nominal_histo = self.histos["background_sum"]["nominal"]
                 central_values = np.array(nominal_histo)
                 var_up, var_down = np.zeros_like(central_values), np.zeros_like(central_values)
 
@@ -2513,14 +2507,14 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 for (syst, d) in systs_directions:
                     if syst == "central": continue
                     if "CMS_FF" in syst: continue # FF systs are defined only inside self.plot(), so we skip them here
-                    ar = np.array(self.histos[f"background_syst_{syst}_{d}"]) - central_values
+                    ar = np.array(self.histos["background_sum"][f"{syst}_{d}"]) - central_values
                     var_up += np.square(np.fmax(ar, 0.)) # keep only positive variations here (an "up" template does not necessarily vary up)
                     var_down += np.square(np.fmin(ar, 0.)) # negative variations
 
                 # Normalization systematics
                 for norm_syst_name, d in itertools.product(norm_systematics, directions):
                     # For log-normal up should always be "up", but in case there is a reversed log-normal we still do the min/max
-                    ar = np.array(self.histos[f"background_syst_norm_{norm_syst_name}_{d}"]) - central_values
+                    ar = np.array(self.histos["background_sum"][f"{norm_syst_name}_{d}"]) - central_values
                     var_up += np.square(np.fmax(ar, 0.))
                     var_down += np.square(np.fmin(ar, 0.))
 
