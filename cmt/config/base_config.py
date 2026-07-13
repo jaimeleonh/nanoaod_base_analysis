@@ -202,6 +202,12 @@ class Config():
                 fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/latest/btagging.json.gz"
             else:
                 raise ValueError("Only UParTAK4B algo is supported for 2025 b-tagging!")
+        elif year == 2026:
+            print("** WARNING: 2026 bTagging WPs not yet available! Falling back to 2025 ones for the moment!")
+            if self.btag_algo == "UParTAK4B":
+                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/latest/btagging.json.gz"
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2026 b-tagging!")
         else:
             raise ValueError(f"Method 'add_bjet_id': year {year} not (yet) supported!")
         
