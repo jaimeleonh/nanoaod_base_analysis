@@ -425,7 +425,6 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
 
         outp = self.output()['root']
-        # print(outp.path)
 
         selection = self.category.selection
         # dataset_selection = self.dataset.get_aux("selection")
@@ -439,29 +438,35 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         else:
             filtered_df = df
 
-        modules = self.get_feature_modules(self.modules_file)
-        if len(modules) > 0:
-            for module in modules:
-                try:
-                    filtered_df, add_branches = module.run(filtered_df)
-                except Exception as e:
-                    print("Exception: %s. Exiting" % e)
-                    sys.exit(1)
-                branches += add_branches
-        branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-        if self.compute_filter_efficiency == True:
-            report = filtered_df.Report()
+        # In case of input file with 0 events: save output without running any module
+        if filtered_df.Count().GetValue() == 0:
+            # Save ensuring presence of TTree in output file
+            snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
+        # Else process normally the inputs
+        else:
+            modules = self.get_feature_modules(self.modules_file)
+            if len(modules) > 0:
+                for module in modules:
+                    try:
+                        filtered_df, add_branches = module.run(filtered_df)
+                    except Exception as e:
+                        print("Exception: %s. Exiting" % e)
+                        sys.exit(1)
+                    branches += add_branches
+            branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
+            if self.compute_filter_efficiency == True:
+                report = filtered_df.Report()
 
-        # Save ensuring presence of TTree in output file
-        snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
+            # Save ensuring presence of TTree in output file
+            snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
 
-        if self.compute_filter_efficiency == True:
-            json_res = {cutReport.GetName() : {
-                "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
-                for cutReport in report.GetValue()
-            }
-            with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                json.dump(json_res, f, indent=4)
+            if self.compute_filter_efficiency == True:
+                json_res = {cutReport.GetName() : {
+                    "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
+                    for cutReport in report.GetValue()
+                }
+                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                    json.dump(json_res, f, indent=4)
 
 
 class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
