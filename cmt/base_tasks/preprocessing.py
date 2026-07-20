@@ -442,7 +442,13 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         if filtered_df.Count().GetValue() == 0:
             # Save ensuring presence of TTree in output file
             snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
-        # Else process normally the inputs
+
+            if self.compute_filter_efficiency == True:
+                json_res = {}
+                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                    json.dump(json_res, f, indent=4)
+
+        # Else: process normally
         else:
             modules = self.get_feature_modules(self.modules_file)
             if len(modules) > 0:
