@@ -440,6 +440,10 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
 
         # In case of input file with 0 events: save output without running any module
         if filtered_df.Count().GetValue() == 0:
+            # Print warning
+            print(f"Warning! File {self.get_path(inp)} has 0 entries!\n"
+                   "         Returning an empty output TTree!")
+
             # Save ensuring presence of TTree in output file
             snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
 
