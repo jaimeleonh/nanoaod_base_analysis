@@ -26,10 +26,11 @@ from analysis_tools.utils import (
 )
 
 from cmt.base_tasks.base import (
-    ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+    DatasetTaskWithCategory, ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     DatasetWrapperTask, FitBase, ProcessGroupNameTask, QCDABCDTask
 )
-from cmt.base_tasks.plotting import BasePlotTask, FeaturePlot
+from cmt.base_tasks.preprocessing import DatasetCategoryWrapperTask
+from cmt.base_tasks.plotting import BasePlotTask, PrePlot, FeaturePlot
 
 directions = ["up", "down"]
 
@@ -979,6 +980,122 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
             self.log.write(f"Finished with feature: {feature.name}\n\n")
         self.log.close()
+
+
+class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow,
+        HTCondorWorkflow, SGEWorkflow, SlurmWorkflow):
+    """
+    Fills ancillary TTrees with the requested branches to be used in Combine.
+
+    Example command:
+
+    ``law run FillDatacardAnnexTrees --version test --category-name etau --config-name ul_2018 \
+--process-group-name etau --branches-to-store Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta \
+--workers 20 --dataset-names gghh_kl1,gghh_kl0,qqhh_kl1,qqhh_kl0 ``
+    """
+    skip_processing = luigi.BoolParameter(default=False, description="whether to skip"
+        " preprocessing and categorization steps, default: False")
+    skip_merging = luigi.BoolParameter(default=False, description="whether to skip"
+        " MergeCategorization task, default: False")
+    branches_to_store = law.CSVParameter(description="branches to be stored in output file alongside histograms",
+        default=())
+
+    def __init__(self, *args, **kwargs):
+        super(FillDatacardAnnexTrees, self).__init__(*args, **kwargs)
+
+    def create_branch_map(self):
+        # Output for this task is always only just one file
+        return 1
+
+    def input(self):
+        def preplot_branch_map():
+            input_data_count = lambda : len(self.dataset.get_files(
+                    os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
+                    check_empty=True))
+            if self.skip_processing:
+                return input_data_count()
+            elif self.skip_merging:
+                categorization_max_events = self.dataset.get_aux("categorization_max_events", None)
+                if categorization_max_events is None:
+                    categorization_merging_factor = get_categorization_merging_factor(self.dataset, self.category)
+                    if categorization_merging_factor:
+                        return min(categorization_merging_factor,input_data_count())
+                    else:
+                        return input_data_count()
+                else:
+                    # in case we have used the Categorization splitting output
+                    with open(create_file_dir(os.path.expandvars(
+                            "$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
+                            self.config_name, categorization_max_events, self.dataset.name)))) as f:
+                        return len(json.load(f))
+            return self.n_files_after_merging # in case we use MergeCategorization
+
+        return law.SiblingFileCollection([
+            PrePlot.vreq(
+                self,
+                branch=i,
+                dataset_name=self.dataset_name,
+                category_name=self.category_name,
+                branches_to_store=self.branches_to_store,
+            ).output()
+            for i in range(preplot_branch_map())
+        ])
+
+    def workflow_requires(self):
+        """
+        All requirements needed:
+            * Events tree coming from the PrePlot task.
+        """
+        reqs = {"data": PrePlot.vreq(self, branch=self.branch,
+                dataset_name=self.dataset_name, category_name=self.category_name,
+                branches_to_store=self.branches_to_store)}
+
+        return reqs
+
+    def requires(self):
+        """
+        All requirements needed:
+            * Events tree coming from the PrePlot task.
+        """
+        reqs = {"data": PrePlot.vreq(self, branch=self.branch,
+                dataset_name=self.dataset_name, category_name=self.category_name,
+                branches_to_store=self.branches_to_store)}
+
+        return reqs
+
+    def output(self):
+        """
+        Returns
+        """
+        return self.local_target(f"DatacardAnnexTree_{self.region.name}.root")
+
+    @law.decorator.notify
+    @law.decorator.localize(input=False)
+    def run(self):
+
+        ROOT = import_root()
+
+        inp_chain = ROOT.TChain("Events")
+        for inp in self.input().targets:
+            inp_chain.Add(inp.path)
+
+        inp_chain.SetBranchStatus("*", 0)
+        for b in self.branches_to_store:
+            inp_chain.SetBranchStatus(b, 1)
+
+        output_tree = inp_chain.CloneTree(0)
+        output_tree.CopyEntries(inp_chain)
+
+        f = ROOT.TFile.Open(create_file_dir(self.output().path), "RECREATE")
+        f.cd()
+        output_tree.Write()
+        f.Close()
+
+
+class FillDatacardAnnexTreesWrapper(DatasetCategoryWrapperTask, BasePlotTask):
+
+    def atomic_requires(self, dataset, category):
+        return FillDatacardAnnexTrees.req(self, dataset_name=dataset.name, category_name=category.name)
 
 
 class Fit(FeaturePlot, FitBase):
