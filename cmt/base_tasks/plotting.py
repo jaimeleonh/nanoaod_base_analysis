@@ -28,9 +28,9 @@ from analysis_tools.utils import (
 from cmt.base_tasks.base import (
     DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
     ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask,
-    get_categorization_merging_factor, FlatSignalBinMerger, FakeFactorsTask
+    get_categorization_merging_factor, FlatSignalBinMerger, FakeFactorsTask,
+    snapshot_ensuring_output_tree
 )
-
 from cmt.base_tasks.preprocessing import (
     Categorization, MergeCategorization, MergePreCounter, DatasetCategoryWrapperTask
 )
@@ -327,6 +327,8 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default=law.NO_STR)
     dataset_names = law.CSVParameter(description="dataset_names to use for optimization",
+        default=())
+    branches_to_store = law.CSVParameter(description="branches to be stored in output file alongside histograms",
         default=())
 
     def __init__(self, *args, **kwargs):
@@ -758,8 +760,13 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                 out.cd()
                 histo.Write()
 
-
         out.Close()
+
+        # store branches that are explicitly requested
+        if len(self.branches_to_store) > 0:
+            opts = ROOT.RDF.RSnapshotOptions()
+            opts.fMode = "UPDATE"
+            snapshot_ensuring_output_tree(dfs["central"], self.tree_name, outp, list(self.branches_to_store), opts)
 
 
 class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
@@ -1241,7 +1248,6 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         Task is completed when all output are present
         """
         return ConfigTaskWithCategory.complete(self)
-
 
     def setup_signal_hist(self, hist, color):
         """
