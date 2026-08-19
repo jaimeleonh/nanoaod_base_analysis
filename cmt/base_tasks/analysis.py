@@ -1079,9 +1079,10 @@ class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         for inp in self.input().targets:
             inp_chain.Add(inp.path)
 
-        inp_chain.SetBranchStatus("*", 0)
-        for b in self.branches_to_store:
-            inp_chain.SetBranchStatus(b, 1)
+        if self.branches_to_store:
+            inp_chain.SetBranchStatus("*", 0)
+            for b in self.branches_to_store:
+                inp_chain.SetBranchStatus(b, 1)
 
         output_tree = inp_chain.CloneTree(0)
         output_tree.CopyEntries(inp_chain)
