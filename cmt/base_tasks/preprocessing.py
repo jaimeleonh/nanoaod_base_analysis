@@ -477,18 +477,6 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                 filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
             else:
                 filtered_df = df
-            modules = self.get_feature_modules(self.modules_file)
-            if len(modules) > 0:
-                for module in modules:
-                    try:
-                        filtered_df, add_branches = module.run(filtered_df)
-                    except Exception as e:
-                        print("Exception: %s. Exiting" % e)
-                        sys.exit(1)
-                    branches += add_branches
-            branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-            if self.compute_filter_efficiency == True:
-                report = filtered_df.Report()
 
             # In case of input file with 0 events: save output without running any module
             if filtered_df.Count().GetValue() == 0:
