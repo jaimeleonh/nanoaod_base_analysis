@@ -161,7 +161,8 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
     use_bkg_flattening = luigi.BoolParameter(default=False, description="whether to optimize binning using the FlagSigBkgBinMerger" "default: False") 
     use_run2_binning = luigi.BoolParameter(default=False, description="whether to optimize binning using the Run2BinMerger" "default: False") 
     min_low_edge = luigi.FloatParameter(default=0.0, description="the lower edge of the distribution using the FlagSigBkgBinMerger" "default: 0.0")
-    apply_FF_template_min = luigi.BoolParameter(default=False, description="whether to guarantee a minimum statistics in the fakes template region" "default: False")
+    apply_FF_template_min = luigi.IntParameter(default=0, description="number of minimum statistics in the fakes template region" "default: 0")
+    do_merging = luigi.BoolParameter(default=False, description="whether to do the second pass merging the low sensitivity bins" "default: False")
     additional_scaling = {"dummy": 1}  # Temporary fix, the DictParameter fails when empty
     directions = ["up", "down"]
 
@@ -199,8 +200,8 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
 
         if self.apply_FF_template_min:
             reqs["ff"] = OrderedDict(
-                ((dataset.name, category.name), PrePlot.vreq(self, do_ff=True,
-                    region_name=self.ff_shape_region, apply_weights=False,
+                ((dataset.name, category.name), PrePlot.vreq(self, do_ff=True, apply_weights=False,
+                    region_name=self.region.name.split("_")[0]+"_"+self.ff_shape_region,
                     dataset_name=dataset.name, category_name=self.get_data_category(category).name))
                 for dataset, category in itertools.product(
                     self.datasets_to_run, self.expand_category())
@@ -241,11 +242,19 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
 
         channel = self.region.name.split("_")[0]
 
+        mergetag = ""
+        if self.do_merging:
+            mergetag = "_lowSensitivityMerged"
+
+        fftag = ""
+        if self.apply_FF_template_min:
+            fftag = f"_InvIsoMin{self.apply_FF_template_min}"
+
         return {
             key: law.SiblingFileCollection(OrderedDict(
                 (feature.name, self.local_target("{}{}_{}_{}.{}".format(
                     prefix, feature.name, channel,
-                    "tb"+str(feature.get_aux("target_bin_count", 20)), ext)))
+                    "tb"+str(feature.get_aux("target_bin_count", 20))+mergetag+fftag, ext)))
                 for feature in self.features if feature.name in self.features_to_flatten
             ))
             for key, prefix, ext in output_data
@@ -503,8 +512,9 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                     target_bin_count=feature.get_aux("target_bin_count", 20),
                     min_MC_events=feature.get_aux("min_MC_events", 10),
                     min_MC_events_lower_bins=feature.get_aux("min_MC_events_lower_bins", 25),
-                    min_inviso_events=feature.get_aux("min_inviso_events", 10)  if self.apply_FF_template_min else -1,
-                    min_bin=self.min_low_edge
+                    min_inviso_events=feature.get_aux("min_inviso_events", self.apply_FF_template_min),
+                    min_bin=self.min_low_edge,
+                    do_merging=self.do_merging
                 )
             elif self.use_run2_binning:
                 self.histogram_bin_merger = Run2SignalBinMerger(

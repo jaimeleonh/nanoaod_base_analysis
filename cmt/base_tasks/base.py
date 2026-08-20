@@ -147,7 +147,7 @@ def get_categorization_merging_factor(dataset, category, dataset_input_files=1E5
 def get_categorization_reduced_branch(branch_data):
     return f"{branch_data['reduced_branch_nb']}"
 
-def snapshot_ensuring_output_tree(df, tree_name, output_path, branches):
+def snapshot_ensuring_output_tree(df, tree_name, output_path, branches, opts=None):
     """
     Run the Snapshot method making sure that in case the RDF has
     zero events, an empty TTree is added in the output TFile
@@ -156,7 +156,10 @@ def snapshot_ensuring_output_tree(df, tree_name, output_path, branches):
     future_counts = df.Count()
 
     # Run snapshot
-    df.Snapshot(tree_name, output_path, branches)
+    if opts:
+        df.Snapshot(tree_name, output_path, branches, opts)
+    else:
+        df.Snapshot(tree_name, output_path, branches)
 
     # If the RDF was empty, add an empty TTree in the output file
     if future_counts.GetValue() == 0:
@@ -1232,12 +1235,13 @@ class FlatSignalBackgroundBinMerger:
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """
-    def __init__(self, sgn_histo=None, bkg_histo=None, sig_syst=None, bkg_syst=None, data_histo=None, dy_histo=None, tt_histo=None, dy_syst=None, tt_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_inviso_events=10, min_MC_events_lower_bins=None, min_bin=0.0):
+    def __init__(self, sgn_histo=None, bkg_histo=None, sig_syst=None, bkg_syst=None, data_histo=None, dy_histo=None, tt_histo=None, dy_syst=None, tt_syst=None, bins_txt_path=None, target_bin_count=20, min_MC_events=10, min_inviso_events=0, min_MC_events_lower_bins=None, min_bin=0.0, do_merging=False):
         if sgn_histo:
             assert not bins_txt_path
             self.target_bin_count = target_bin_count
             self.min_MC_events = min_MC_events
             self.min_inviso_events = min_inviso_events
+            self.do_merging = do_merging
             if min_MC_events_lower_bins:
                 self.min_MC_events_lower_bins = min_MC_events_lower_bins
             else:
@@ -1259,6 +1263,9 @@ class FlatSignalBackgroundBinMerger:
             nbins_real = 1
 
         else:
+            if self.min_inviso_events:
+                print(f" ### INFO: requesting a minimum of {self.min_inviso_events} data events in the fakes template region")
+
             success = False
             for nbins in range(self.target_bin_count, 3, -1):
                 edges = [1.]
@@ -1276,7 +1283,7 @@ class FlatSignalBackgroundBinMerger:
                 nbin_decrement = 0.0
                 for i in range(sgn_histo.GetNbinsX(), 1, -1):
                     if len(edges) == nbins: break
-                    if sgn_histo.GetXaxis().GetBinLowEdge(i) < min_bin: 
+                    if sgn_histo.GetXaxis().GetBinLowEdge(i) < min_bin:
                         bottom_edge = sgn_histo.GetXaxis().GetBinLowEdge(i)
                         break
                     sig_yield += sgn_histo.GetBinContent(i)
@@ -1350,40 +1357,45 @@ class FlatSignalBackgroundBinMerger:
                 edges = edges[::-1]
                 nbins_real = len(edges)-1
 
-                # merge bins if they do not contribute to overall significance
-                bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_rebin_bkg", np.array(edges))
-                sgn_histo_rebin = sgn_histo.Rebin(nbins_real, f"h_rebin_sig", np.array(edges))
-                dy_histo_rebin = dy_histo.Rebin(nbins_real, f"h_rebin_dy", np.array(edges))
-                tt_histo_rebin = tt_histo.Rebin(nbins_real, f"h_rebin_tt", np.array(edges))
-                merged_bounds = [bottom_edge]
-                merged_s, merged_b, merged_ds, merged_db = sgn_histo_rebin.GetBinContent(1), bkg_histo_rebin.GetBinContent(1), \
-                                sgn_histo_rebin.GetBinError(1) ** 2, bkg_histo_rebin.GetBinError(1) ** 2
-                merged_dy, merged_tt = dy_histo_rebin.GetBinContent(1), tt_histo_rebin.GetBinContent(1)
+                if self.do_merging:
+                    print(" ### INFO: Running second pass merging low sensitivity bins from the right.")
+                    # merge bins if they do not contribute to overall significance
+                    bkg_histo_rebin = bkg_histo.Rebin(nbins_real, f"h_rebin_bkg", np.array(edges))
+                    sgn_histo_rebin = sgn_histo.Rebin(nbins_real, f"h_rebin_sig", np.array(edges))
+                    dy_histo_rebin = dy_histo.Rebin(nbins_real, f"h_rebin_dy", np.array(edges))
+                    tt_histo_rebin = tt_histo.Rebin(nbins_real, f"h_rebin_tt", np.array(edges))
+                    merged_bounds = [bottom_edge]
+                    merged_s, merged_b, merged_ds, merged_db = sgn_histo_rebin.GetBinContent(1), bkg_histo_rebin.GetBinContent(1), \
+                                    sgn_histo_rebin.GetBinError(1) ** 2, bkg_histo_rebin.GetBinError(1) ** 2
+                    merged_dy, merged_tt = dy_histo_rebin.GetBinContent(1), tt_histo_rebin.GetBinContent(1)
 
-                significance_top_bin = self._compute_asimov_significance_squared(sgn_histo_rebin.GetBinContent(nbins_real), \
-                                                bkg_histo_rebin.GetBinContent(nbins_real), bkg_histo_rebin.GetBinError(nbins_real))
-                for ibin in range(2, nbins_real + 1):
-                    curr_bin_s, curr_bin_b = sgn_histo_rebin.GetBinContent(ibin), bkg_histo_rebin.GetBinContent(ibin)
-                    curr_bin_dy, curr_bin_tt = dy_histo_rebin.GetBinContent(ibin), tt_histo_rebin.GetBinContent(ibin)
-                    curr_bin_ds, curr_bin_db = sgn_histo_rebin.GetBinError(ibin) ** 2, bkg_histo_rebin.GetBinError(ibin) ** 2
-                    significance_split, significance_merged = self._compare_significance_sq_merging(merged_s, merged_b, curr_bin_s, curr_bin_b)
-                    if (np.sqrt(significance_split) > np.sqrt(significance_merged) + np.sqrt(significance_top_bin)/10.) and merged_dy > 0. and merged_tt > 0.:
-                        merged_bounds.append(edges[ibin - 1])
-                        merged_s = curr_bin_s
-                        merged_b = curr_bin_b
-                        merged_ds = curr_bin_ds
-                        merged_db = curr_bin_db
-                        merged_dy = curr_bin_dy
-                        merged_tt = curr_bin_tt
-                    else:
-                        merged_s += curr_bin_s
-                        merged_b += curr_bin_b
-                        merged_ds += curr_bin_ds
-                        merged_db += curr_bin_db
-                        merged_dy += curr_bin_dy
-                        merged_tt += curr_bin_tt
+                    significance_top_bin = self._compute_asimov_significance_squared(sgn_histo_rebin.GetBinContent(nbins_real), \
+                                                    bkg_histo_rebin.GetBinContent(nbins_real), bkg_histo_rebin.GetBinError(nbins_real))
+                    for ibin in range(2, nbins_real + 1):
+                        curr_bin_s, curr_bin_b = sgn_histo_rebin.GetBinContent(ibin), bkg_histo_rebin.GetBinContent(ibin)
+                        curr_bin_dy, curr_bin_tt = dy_histo_rebin.GetBinContent(ibin), tt_histo_rebin.GetBinContent(ibin)
+                        curr_bin_ds, curr_bin_db = sgn_histo_rebin.GetBinError(ibin) ** 2, bkg_histo_rebin.GetBinError(ibin) ** 2
+                        significance_split, significance_merged = self._compare_significance_sq_merging(merged_s, merged_b, curr_bin_s, curr_bin_b)
+                        if (np.sqrt(significance_split) > np.sqrt(significance_merged) + np.sqrt(significance_top_bin)/10.) and merged_dy > 0. and merged_tt > 0.:
+                            merged_bounds.append(edges[ibin - 1])
+                            merged_s = curr_bin_s
+                            merged_b = curr_bin_b
+                            merged_ds = curr_bin_ds
+                            merged_db = curr_bin_db
+                            merged_dy = curr_bin_dy
+                            merged_tt = curr_bin_tt
+                        else:
+                            merged_s += curr_bin_s
+                            merged_b += curr_bin_b
+                            merged_ds += curr_bin_ds
+                            merged_db += curr_bin_db
+                            merged_dy += curr_bin_dy
+                            merged_tt += curr_bin_tt
 
-                merged_bounds.append(1.0)
+                    merged_bounds.append(1.0)
+
+                else:
+                    merged_bounds = edges
 
                 # check that it has enough background MC events
                 nbins_real = len(merged_bounds)-1
@@ -1413,16 +1425,22 @@ class FlatSignalBackgroundBinMerger:
                 sig_yield = 0.0
                 bkg_yield = 0.0
                 bkg_error = 0.0
+                data_yield = 0.0
                 for i in range(sgn_histo.GetNbinsX(), 1, -1):
+                    if sgn_histo.GetXaxis().GetBinLowEdge(i) < min_bin:
+                        bottom_edge = sgn_histo.GetXaxis().GetBinLowEdge(i)
+                        break
                     sig_yield += sgn_histo.GetBinContent(i)
                     bkg_yield += bkg_histo.GetBinContent(i)
                     bkg_error += bkg_histo.GetBinError(i)**2
+                    if self.min_inviso_events > 0: data_yield += data_histo.GetBinContent(i)
                     try:
                         bkg_stats = bkg_yield**2/bkg_error
                     except:
                         bkg_stats = 0
                     #print(bkg_stats, sig_yield/integral)
-                    if (bkg_stats > self.min_MC_events and sig_yield/integral > 0.3):
+                    if (bkg_stats > self.min_MC_events and sig_yield/integral > 0.3) and \
+                       (self.min_inviso_events <= 0 or data_yield > self.min_inviso_events):
                         edges.append(sgn_histo.GetXaxis().GetBinLowEdge(i))
                         print(" ### INFO: Procedure 2 found border at ", sgn_histo.GetXaxis().GetBinLowEdge(i), \
                                 " with ", bkg_stats, " equivalent background events")
@@ -1434,7 +1452,7 @@ class FlatSignalBackgroundBinMerger:
                     print(f"Procedure 2 failed. Final bkg statistics {bkg_stats}  - Final fraction of signal : {sig_yield/integral}")
                     print("The distribution will only have one bin")
 
-                edges.append(0.)
+                edges.append(bottom_edge)
                 edges = edges[::-1]
                 nbins_real = len(edges)-1
                 merged_bounds = edges
@@ -1567,7 +1585,7 @@ class Run2SignalBinMerger:
             bkg_syst_error = {key: 0.0 for key in bkg_syst.keys()}
             for i in range(sgn_histo.GetNbinsX(), 1, -1):
                 if len(edges) == self.target_bin_count: break
-                if sgn_histo.GetXaxis().GetBinLowEdge(i) < min_bin: 
+                if sgn_histo.GetXaxis().GetBinLowEdge(i) < min_bin:
                     bottom_edge = sgn_histo.GetXaxis().GetBinLowEdge(i)
                     break
                 sig_yield += sgn_histo.GetBinContent(i)

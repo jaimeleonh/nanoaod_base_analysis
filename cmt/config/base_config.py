@@ -144,17 +144,19 @@ class Config():
         self.tauId_algo = tauId_algo
 
 
-        if (self.tauId_algo == "idDeepTau2018v2p5" or self.tauId_algo == "idDeepTau2017v2p1"):
-            # DeepTau2017v2p1/DeepTau2018v2p5 wpbit is integer in latest NanoAOD
+        if (self.tauId_algo == "idDeepTau2017v2p1" or
+            self.tauId_algo == "idDeepTau2018v2p5" or
+            self.tauId_algo == "idPNet" or
+            self.tauId_algo == "idUParT"):
+            # Tau wpbit is integer in latest NanoAOD
             self.tauId_algo_wps=DotDict(
                 vsjet = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
                                 Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
                 vse   = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
                                 Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
                 vsmu  = DotDict(VLoose = 1, Loose = 2, Medium = 3, Tight = 4) )
-
         else:
-            raise ValueError("Wrong tau id requested. ")
+            raise ValueError(f"Wrong tau id requested: {self.tauId_algo}, please check!")
 
         return self
 
@@ -202,6 +204,12 @@ class Config():
                 fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/latest/btagging.json.gz"
             else:
                 raise ValueError("Only UParTAK4B algo is supported for 2025 b-tagging!")
+        elif year == 2026:
+            print("** WARNING: 2026 bTagging WPs not yet available! Falling back to 2025 ones for the moment!")
+            if self.btag_algo == "UParTAK4B":
+                fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/latest/btagging.json.gz"
+            else:
+                raise ValueError("Only UParTAK4B algo is supported for 2026 b-tagging!")
         else:
             raise ValueError(f"Method 'add_bjet_id': year {year} not (yet) supported!")
         
