@@ -418,7 +418,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                     print(f"Prefetching input file {fil}")
                     infile=os.getenv("TMPDIR") + "/" + outp.path.split("/")[-1].replace(".root",f"-input{ifil}.root") # recycling hash from outputfile          
                     if os.path.isfile(infile):
-                        raise RuntimeError(f"Precatching file {infile} already exists. This shouldnt happen")
+                        raise RuntimeError(f"Precatching file {infile} already exists. This shouldn't happen!")
                     import subprocess
                     for attempt in range(5):
                         try:
