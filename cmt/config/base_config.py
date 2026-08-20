@@ -144,17 +144,19 @@ class Config():
         self.tauId_algo = tauId_algo
 
 
-        if (self.tauId_algo == "idDeepTau2018v2p5" or self.tauId_algo == "idDeepTau2017v2p1"):
-            # DeepTau2017v2p1/DeepTau2018v2p5 wpbit is integer in latest NanoAOD
+        if (self.tauId_algo == "idDeepTau2017v2p1" or
+            self.tauId_algo == "idDeepTau2018v2p5" or
+            self.tauId_algo == "idPNet" or
+            self.tauId_algo == "idUParT"):
+            # Tau wpbit is integer in latest NanoAOD
             self.tauId_algo_wps=DotDict(
                 vsjet = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
                                 Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
                 vse   = DotDict(VVVLoose = 1, VVLoose = 2, VLoose = 3, Loose = 4, 
                                 Medium = 5, Tight = 6, VTight = 7, VVTight = 8),
                 vsmu  = DotDict(VLoose = 1, Loose = 2, Medium = 3, Tight = 4) )
-
         else:
-            raise ValueError("Wrong tau id requested. ")
+            raise ValueError(f"Wrong tau id requested: {self.tauId_algo}, please check!")
 
         return self
 
