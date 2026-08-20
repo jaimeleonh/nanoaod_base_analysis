@@ -370,6 +370,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     compute_filter_efficiency = luigi.BoolParameter(description="compute efficiency of each filter "
         "applied, default: False", default=False)
     weights_file = None
+    prefetch = luigi.BoolParameter(default=False, description="Run prefetching of files")
 
     default_store = "$CMT_STORE_EOS_PREPROCESSING"
     default_wlcg_fs = "wlcg_fs_categorization"
@@ -405,12 +406,49 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
-        print(self.output()["root"].path)
+        outp=self.output()["root"]
+        print(outp.path)
 
         # create RDataFrame
         inp = self.get_input()
         if not self.dataset.friend_datasets:
-            df = self.RDataFrame(self.tree_name, self.get_path(inp),
+            if self.prefetch:
+                infiles=[]
+                for ifil,fil in enumerate(self.get_path(inp)):
+                    print(f"Prefetching input file {fil}")
+                    infile=os.getenv("TMPDIR") + "/" + outp.path.split("/")[-1].replace(".root",f"-input{ifil}.root") # recycling hash from outputfile          
+                    if os.path.isfile(infile):
+                        raise RuntimeError(f"Precatching file {infile} already exists. This shouldnt happen")
+                    import subprocess
+                    for attempt in range(5):
+                        try:
+                            subprocess.run(["xrdcp", fil, infile], check=True,
+                                capture_output=True, text=True)
+                            print("Prefetching done")
+                            break
+                        except subprocess.CalledProcessError as e:
+                            stderr = e.stderr.strip() if e.stderr else ""
+                            stdout = e.stdout.strip() if e.stdout else ""
+                            details = " ".join(part for part in [stdout, stderr] if part)
+                            
+                            if attempt < 2:
+                                print(f"Prefetching failed for {fil} on attempt {attempt + 1}/3, retrying. xrdcp output: {details}" if details else "")
+                                if os.path.exists(infile):
+                                   try:
+                                      os.remove(infile)
+                                   except OSError:
+                                      pass
+                            else:
+                                print(f"Prefetching failed after 5 attempts for {fil} -> {infile}."
+                                  + (f" xrdcp output: {details}" if details else "")
+                                )
+                                print("Rolling back to running remotely. Good luck") 
+                                os.remove(infile)
+                                infile = fil
+                    infiles.append(infile)
+            else:
+                infiles=self.get_path(inp)
+            df = self.RDataFrame(self.tree_name, infiles,
                 allow_redefinition=self.allow_redefinition)
 
         # friend tree
@@ -424,45 +462,55 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
             tchain.AddFriend(friend_tchain, "friend")
             df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
 
-        outp = self.output()['root']
-        # print(outp.path)
+        try:
+            outp = self.output()['root']
+            # print(outp.path)
 
-        selection = self.category.selection
-        # dataset_selection = self.dataset.get_aux("selection")
-        # if dataset_selection and dataset_selection != "1":
-            # selection = jrs(dataset_selection, selection, op="and")
+            selection = self.category.selection
+            # dataset_selection = self.dataset.get_aux("selection")
+            # if dataset_selection and dataset_selection != "1":
+                # selection = jrs(dataset_selection, selection, op="and")
 
-        branches = list(df.GetColumnNames())
+            branches = list(df.GetColumnNames())
 
-        if selection != "":
-            filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
-        else:
-            filtered_df = df
+            if selection != "":
+                filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
+            else:
+                filtered_df = df
+            modules = self.get_feature_modules(self.modules_file)
+            if len(modules) > 0:
+                for module in modules:
+                    try:
+                        filtered_df, add_branches = module.run(filtered_df)
+                    except Exception as e:
+                        print("Exception: %s. Exiting" % e)
+                        sys.exit(1)
+                    branches += add_branches
+            branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
+            if self.compute_filter_efficiency == True:
+                report = filtered_df.Report()
 
-        modules = self.get_feature_modules(self.modules_file)
-        if len(modules) > 0:
-            for module in modules:
-                try:
-                    filtered_df, add_branches = module.run(filtered_df)
-                except Exception as e:
-                    print("Exception: %s. Exiting" % e)
-                    sys.exit(1)
-                branches += add_branches
-        branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-        if self.compute_filter_efficiency == True:
-            report = filtered_df.Report()
+            # Save ensuring presence of TTree in output file
+            snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
 
-        # Save ensuring presence of TTree in output file
-        snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
+            if self.compute_filter_efficiency == True:
+                json_res = {cutReport.GetName() : {
+                    "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
+                    for cutReport in report.GetValue()
+                }
+                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                    json.dump(json_res, f, indent=4)
+        except Exception as e:
+            print("Exception: %s. Exiting" % e)
 
-        if self.compute_filter_efficiency == True:
-            json_res = {cutReport.GetName() : {
-                "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
-                for cutReport in report.GetValue()
-            }
-            with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                json.dump(json_res, f, indent=4)
-
+        finally:
+            if self.prefetch:
+                for fil in infiles:
+                    if os.path.isfile(fil):
+                        try:
+                            os.remove(fil)
+                        except OSError:
+                            pass
 
 class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
     """
@@ -1230,7 +1278,6 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                     cmd = "python3 %s/bin/%s/haddnano.py %s %s" % (
                         os.environ["CMSSW_BASE"], os.environ["SCRAM_ARCH"],
                         create_file_dir(tmp_out.path), " ".join([f.path for f in good_inputs]))
-
                 # Using 'law.util.interruptable_popen' (instead of 'law.root.hadd_task')
                 # in order to catch the warning/exceptions in the stdout or stderr
                 rc, out, errs = law.util.interruptable_popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
