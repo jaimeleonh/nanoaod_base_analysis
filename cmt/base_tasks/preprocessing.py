@@ -420,7 +420,8 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                     if os.path.isfile(infile):
                         raise RuntimeError(f"Precatching file {infile} already exists. This shouldn't happen!")
                     import subprocess
-                    for attempt in range(5):
+                    nattempts=5
+                    for attempt in range(nattempts):
                         try:
                             subprocess.run(["xrdcp", fil, infile], check=True,
                                 capture_output=True, text=True)
@@ -431,15 +432,15 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                             stdout = e.stdout.strip() if e.stdout else ""
                             details = " ".join(part for part in [stdout, stderr] if part)
                             
-                            if attempt < 2:
-                                print(f"Prefetching failed for {fil} on attempt {attempt + 1}/3, retrying. xrdcp output: {details}" if details else "")
+                            if attempt < nattempts-1:
+                                print(f"Prefetching failed for {fil} on attempt {attempt + 1}/{nattempts}, retrying. xrdcp output: {details}" if details else "")
                                 if os.path.exists(infile):
                                    try:
                                       os.remove(infile)
                                    except OSError:
                                       pass
                             else:
-                                print(f"Prefetching failed after 5 attempts for {fil} -> {infile}."
+                                print(f"Prefetching failed after {nattempts} attempts for {fil} -> {infile}."
                                   + (f" xrdcp output: {details}" if details else "")
                                 )
                                 print("Rolling back to running remotely. Good luck") 
