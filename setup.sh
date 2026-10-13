@@ -258,13 +258,13 @@ action() {
 
         export COMBINE_PATH="HiggsAnalysis/CombinedLimit"
         if [ ! -d "$COMBINE_PATH" ]; then
-          git clone https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git -b v9.1.0 HiggsAnalysis/CombinedLimit
+          git clone https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git -b v11.1.0 HiggsAnalysis/CombinedLimit
           compile="1"
         fi
 
         export COMBINEHARVESTER_PATH="CombineHarvester"
         if [ ! -d "$COMBINEHARVESTER_PATH" ]; then
-          git clone https://github.com/cms-analysis/CombineHarvester -b v2.1.0
+          git clone https://github.com/cms-analysis/CombineHarvester -b v3.0.0
           cd CombineHarvester
           rm -r CombinePdfs
           rm CombineTools/bin/*
