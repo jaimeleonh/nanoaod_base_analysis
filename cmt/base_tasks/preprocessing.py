@@ -22,7 +22,7 @@ from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
 
 from cmt.base_tasks.base import (
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SlurmWorkflow,
     InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask,
     fully_split_branch_map, get_categorization_merging_factor, categorization_branch_map,
     get_categorization_reduced_branch, snapshot_ensuring_output_tree
@@ -121,7 +121,7 @@ class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask
         return output
 
 
-class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow,
         SplittedTask):
     """
     Performs a counting of the events with and without applying the necessary weights.

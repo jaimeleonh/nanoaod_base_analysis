@@ -26,7 +26,7 @@ from analysis_tools.utils import (
 )
 
 from cmt.base_tasks.base import (
-    ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+    ConfigTaskWithCategory, HTCondorWorkflow, SlurmWorkflow,
     DatasetWrapperTask, FitBase, ProcessGroupNameTask, QCDABCDTask
 )
 from cmt.base_tasks.plotting import BasePlotTask, FeaturePlot

@@ -26,7 +26,7 @@ from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
 from cmt.base_tasks.base import (
-    DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+    DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SlurmWorkflow,
     ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask,
     get_categorization_merging_factor, FlatSignalBinMerger, FakeFactorsTask,
     snapshot_ensuring_output_tree
@@ -306,7 +306,7 @@ class BasePlotTask(ConfigTaskWithRegion):
 
 
 class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow,
-        HTCondorWorkflow, SGEWorkflow, SlurmWorkflow, FakeFactorsTask):
+        HTCondorWorkflow, SlurmWorkflow, FakeFactorsTask):
     """
     Performs the filling of histograms for all features considered. If systematics are considered,
     it also produces the same histograms after applying those.

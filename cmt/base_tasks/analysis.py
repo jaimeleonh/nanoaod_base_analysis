@@ -26,7 +26,7 @@ from analysis_tools.utils import (
 )
 
 from cmt.base_tasks.base import (
-    DatasetTaskWithCategory, ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+    DatasetTaskWithCategory, ConfigTaskWithCategory, HTCondorWorkflow, SlurmWorkflow,
     DatasetWrapperTask, FitBase, ProcessGroupNameTask, QCDABCDTask
 )
 from cmt.base_tasks.preprocessing import DatasetCategoryWrapperTask
@@ -983,7 +983,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
 
 class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow,
-        HTCondorWorkflow, SGEWorkflow, SlurmWorkflow):
+        HTCondorWorkflow, SlurmWorkflow):
     """
     Fills ancillary TTrees with the requested branches to be used in Combine.
 
@@ -1558,7 +1558,7 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
 
 
 class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
-        law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow):
+        law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow):
     """
     Task that creates the Combine workspace from the datacards obtained from
     :class:`.CreateDatacards` or :class:`.CombineDatacards`.
@@ -1807,8 +1807,7 @@ class BasePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
         return postfix
 
 
-class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow,
-                    SGEWorkflow, SlurmWorkflow):
+class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow):
     """
     Task that obtains the pulls and impacts over the workspace created by :class:`.CreateWorkspace`.
     Based on https://gitlab.cern.ch/hh/tools/inference/-/blob/master/dhi/tasks/pulls_impacts.py

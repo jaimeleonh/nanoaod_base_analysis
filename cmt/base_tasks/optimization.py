@@ -19,13 +19,13 @@ from analysis_tools.utils import import_root, create_file_dir, randomize
 from cmt.base_tasks.plotting import BasePlotTask, PrePlot, FeaturePlot
 from cmt.base_tasks.preprocessing import MergePreCounter
 from cmt.base_tasks.base import (
-    HTCondorWorkflow, SGEWorkflow, ProcessGroupNameTask, ConfigTaskWithCategory,
+    HTCondorWorkflow, ProcessGroupNameTask, ConfigTaskWithCategory,
     FlatSignalBinMerger,FlatSigCumulativeRebinner,FlatSignalBackgroundBinMerger,
     FakeFactorsTask,Run2SignalBinMerger
 )
 
 
-class BaseOptimizationTask(FeaturePlot, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
+class BaseOptimizationTask(FeaturePlot, law.LocalWorkflow, HTCondorWorkflow):
     n_mini_bins = 100
     n_max_bins = 10
 

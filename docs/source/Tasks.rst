@@ -72,7 +72,7 @@ This is just an example on how to run a NanoAOD-base-analysis, but more specific
 Batch submission
 ----------------
 
-This framework gives you the option to submit the jobs in different CPU's infraestructures of HTCondor at CIEMAT and CERN and SGE at IC. This is possible using just a couple of parameters for the *PreCounter*, *PreprocessRDF*, *Categorization* and *PrePlot* tasks, the rest of the tasks will run in the same user interface you're using, as they don't require so much time to be done.
+This framework gives you the option to submit the jobs in different CPU's infraestructures of HTCondor at CIEMAT, CERN and at IC. This is possible using just a couple of parameters for the *PreCounter*, *PreprocessRDF*, *Categorization* and *PrePlot* tasks, the rest of the tasks will run in the same user interface you're using, as they don't require so much time to be done.
 
 - **CIEMAT CPU's**: ``--workflow htcondor --htcondor-scheduler condorsc1.ciemat.es --transfer-logs true``
 
@@ -80,7 +80,7 @@ This framework gives you the option to submit the jobs in different CPU's infrae
 
 - **CERN**: ``--workflow htcondor --transfer-logs true``
 
-- **IC**: ``--workflow sge``. Logs and errors are saved in the usual paths (under your home directory).
+- **IC**: ``--workflow htcondor --transfer-logs true``
 
 
 Where the parameter ``--transfer-logs true`` saves the logs from HTCondor in your repository so you can see them in the *$CMT_STORE_LOCAL* folder. These logs are especially useful in case you need to review any error that may have occurred during the execution of the tasks.
