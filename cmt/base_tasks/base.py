@@ -480,10 +480,10 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
     htcondor_central_scheduler = luigi.BoolParameter(default=False, significant=False,
         description="whether or not remote tasks should connect to the central scheduler, default: "
         "False")
-    # custom_condor_tag = law.CSVParameter(default=(),
-       # description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
+    custom_condor_tag = law.CSVParameter(default=(),
+        description="Custom condor attributes to add to submit file ('as is', strings separated by commas)")
     custom_output_tag = luigi.Parameter(default="",
-       description="Custom output tag for submission and status files")
+        description="Custom output tag for submission and status files")
     request_memory = luigi.IntParameter(
         default=-1,
         description="required amount of memory in MiB that this job needs, default: -1"
