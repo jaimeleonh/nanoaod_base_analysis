@@ -15,6 +15,7 @@ import os
 import sys
 import json
 import tabulate
+import matplotlib.pyplot as plt
 
 import law
 import luigi
@@ -133,14 +134,24 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
         return d
 
     def output(self):
-        return {
+        # tables
+        outputs = {
             key: {
                 ext: self.local_target(f"table_{key}.{ext}")
                 for ext in ["txt", "tex", "csv"]
             }
             for key in self.keys
         }
-
+        # plots
+        outputs["plots"] = {
+            key: {
+                ext: self.local_target(f"plot_{key}.{ext}")
+                for ext in ["png", "pdf"]
+            }
+            for key in self.keys
+        }
+        return outputs
+        
     def run(self):
         import csv
 
@@ -199,3 +210,34 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
                 writer = csv.writer(f)
                 writer.writerows(csv_table)
 
+        # draw corresponding plots
+        # create a plot for the efficiency per filter
+        plot_info = {
+            "total":    { "ylabel": "Counts per step",           "ylim": None},
+            "rel":      { "ylabel": "Efficiency over total [%]", "ylim": (0, 105)},
+            "rel_step": { "ylabel": "Step efficiency [%]",       "ylim": (0, 105)}
+        }
+        for key, info in plot_info.items():
+            rows = tables[key]
+            filters = [row[0] for row in rows]
+            fig, ax = plt.subplots(figsize=(6, 5))
+            
+            # get values
+            for i, dataset in enumerate(self.datasets):
+                values = [ float(row[i + 1]) if row[i + 1] != "-" else float("nan") for row in rows]
+                ax.plot(filters, values, marker="o", markersize=5, linewidth=1.8, label=dataset.process.name)
+
+            # plot style
+            ax.set_ylabel(info["ylabel"])
+            ax.set_xlabel("Filter")
+            ax.tick_params(axis="x", rotation=45)
+            ax.grid(True, axis="y", linestyle="--", linewidth=0.7, alpha=0.5)
+            if info["ylim"] is not None:
+                ax.set_ylim(*info["ylim"])
+            ax.text(0.00, 1.02, "CMS", transform=ax.transAxes, fontsize=18, fontweight="bold", va="bottom")
+            ax.text(0.125, 1.025, "Work in progress", transform=ax.transAxes, fontsize=13, style="italic", va="bottom")
+            ax.legend(loc="best", frameon=False, fontsize=9)
+            fig.tight_layout()
+            fig.savefig(create_file_dir(self.output()["plots"][key]["png"].path), dpi=200, bbox_inches="tight")
+            fig.savefig(create_file_dir(self.output()["plots"][key]["pdf"].path), dpi=200, bbox_inches="tight")
+            plt.close(fig)
