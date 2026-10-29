@@ -521,6 +521,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                         json.dump(json_res, f, indent=4)
         except Exception as e:
             print("Exception: %s. Exiting" % e)
+            sys.exit(1)
 
         finally:
             if self.prefetch:
