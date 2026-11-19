@@ -1,5 +1,9 @@
 image: gitlab-registry.cern.ch/cms-phys-ciemat/test-corrections/custom-alma9:v0
 
+stages:
+  - run
+  - pages
+
 setup:
   stage: run
   tags:
@@ -27,10 +31,10 @@ setup:
 
 pages:
   stage: pages
-    only:
-      - py3
-      - main
-      - master
+  only:
+    - py3
+    - main
+    - master
   script:
     - mkdir -p public
     - cp -r docs/build/html/* public
