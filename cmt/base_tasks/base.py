@@ -676,7 +676,7 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
         config.custom_content.append(("RequestCpus", self.request_cpus))
         if self.request_memory > 0:
             config.custom_content.append(("request_memory", self.request_memory))
-        if self.custom_condor_tag:
+        if getattr(self, "custom_condor_tag", None):
             for elem in self.custom_condor_tag:
                 config.custom_content.append((elem, None))
 
