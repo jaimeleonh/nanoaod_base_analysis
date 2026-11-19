@@ -1,4 +1,4 @@
-cmssw_setup:
+pages:
   image: gitlab-registry.cern.ch/cms-phys-ciemat/test-corrections/custom-alma9:v0
   tags:
     - cvmfs
@@ -17,6 +17,14 @@ cmssw_setup:
     - law index --verbose
     - cd docs
     - make html
+    - mkdir -p ../public
+    - cp -r build/* ../public
+artifacts:
+  paths:
+    - public
+
+
+  
       #- cp -r build/* ../_readthedocs 
       #- cd ..
       #    - git config --global user.email "ci@nanoaod_base_analysis.com"
