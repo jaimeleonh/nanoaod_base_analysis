@@ -20,9 +20,9 @@ pages:
     - make html
     - mkdir -p ../public
     - cp -r build/* ../public
-artifacts:
-  paths:
-    - public
+  artifacts:
+    paths:
+      - public
 
 
   
