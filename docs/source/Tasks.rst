@@ -30,7 +30,9 @@ In the diagram we can see there are two tasks branches before plotting, which we
 
 - **FeaturePlot**: Performs the actual histogram plotting: loads the histograms obtained in *PrePlot* task, rescales them if needed, plots and saves them. Output are .pdf files. For this task to be run both *MergePreCounter* and *PrePlot* outputs are required.
  
+Datacard creation and limit extraction can be done via the **CreateDatacards** and **RunCombine** tasks. Other `combine`-related tasks can be found under `base_tasks/analysis.py` and `base_tasks/combine.py`.
 
+There are plenty other tasks that can complement the *standard* analysis chain: obtaining cutflow tables and different kinds of plots, applying systematics, ... Feel free to have a look at the :doc:`api/index`.
  
 The general structure of the bash commands to run each law task is:
 
