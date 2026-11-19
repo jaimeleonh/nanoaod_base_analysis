@@ -19,7 +19,7 @@ pages:
     - cd docs
     - make html
     - mkdir -p ../public
-    - cp -r build/* ../public
+    - cp -r build/html/* ../public
   artifacts:
     paths:
       - public
