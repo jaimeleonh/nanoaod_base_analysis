@@ -13,3 +13,9 @@ muon SF using GEMethod
 .. autoclass:: MuonSF
    :members:
 
+``MuonSFproducer``
+------------------------------
+
+.. autoclass:: MuonSFproducer
+   :members:
+

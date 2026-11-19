@@ -169,11 +169,37 @@ def snapshot_ensuring_output_tree(df, tree_name, output_path, branches, opts=Non
 #------------------------------------------------------------------------------------------------------------
 
 class Target():
+    """
+    Minimal container for a target path, used to wrap external input data referenced by a
+    plain path rather than a conventional law target.
+
+    :param path: path (or collection of paths) the target points to
+    :type path: str
+    """
     def __init__(self, path, *args, **kwargs):
         self.path = path
 
 
 class Task(law.Task):
+    """
+    Base task of the framework, defining common parameters and the helpers used by all
+    tasks to build their targets.
+
+    Output paths are assembled from the ``store_parts`` and ``store_parts_ext`` dictionaries,
+    either locally under ``$CMT_STORE`` (`local_path`, `local_target`) or on a WLCG storage
+    (`wlcg_path`, `wlcg_target`), with `dynamic_target` choosing between the two based on the
+    task type. `retrieve_file` looks up auxiliary files in the known repository locations.
+
+    :param version: version of the outputs to produce, defaults to the version configured for
+        the task family
+    :type version: str
+
+    :param request_cpus: number of CPUs requested when submitted to a batch system
+    :type request_cpus: int
+
+    :param notify: telegram notification parameters
+    :type notify: str
+    """
 
     version = luigi.Parameter(description="version of outputs to produce")
     request_cpus = luigi.IntParameter(default=1, description="number of cpus requested, default: 1")
@@ -273,6 +299,16 @@ class Task(law.Task):
 
 
 class ConfigTask(Task):
+    """
+    Task that loads an analysis configuration, stored as ``self.config``.
+
+    The configuration module is imported from ``config.<config_name>`` or, when not found
+    there, from ``cmt.config.<config_name>``. The config name is also encoded into the
+    output paths.
+
+    :param config_name: name of the config file to load
+    :type config_name: str
+    """
 
     config_name = luigi.Parameter(default="base_2018", description="name of the config file to "
         "load, default: base_2018")
@@ -295,6 +331,18 @@ class ConfigTask(Task):
 
 
 class ConfigTaskWithCategory(ConfigTask):
+    """
+    `ConfigTask` bound to a single category of the configuration, stored as ``self.category``,
+    whose selection rules are applied downstream.
+
+    Composite categories (those with subcategories) are rejected unless the class attribute
+    ``allow_composite_category`` is set. `expand_category` returns the list of leaf categories
+    of the requested one, and `get_data_category` the category used to define the data
+    regions.
+
+    :param category_name: name of the category whose selection rules are applied
+    :type category_name: str
+    """
 
     category_name = luigi.Parameter(default="baseline_even", description="the name of a category "
         "whose selection rules are applied, default: baseline_even")
@@ -336,6 +384,15 @@ class ConfigTaskWithCategory(ConfigTask):
 
 
 class ConfigTaskWithRegion(ConfigTask):
+    """
+    `ConfigTask` that optionally selects a region of the configuration.
+
+    When ``region_name`` is set and not empty, the corresponding region is stored as
+    ``self.region``, otherwise ``self.region`` stays ``None``.
+
+    :param region_name: optional name of a region to apply on the fly, default: empty
+    :type region_name: str
+    """
 
     region_name = luigi.Parameter(default=law.NO_STR, description="an optional name of a region "
         "to apply live, default: empty")
@@ -349,6 +406,20 @@ class ConfigTaskWithRegion(ConfigTask):
 
 
 class DatasetTask(ConfigTask):
+    """
+    `ConfigTask` bound to a single dataset of the configuration, stored as ``self.dataset``
+    together with its main process in ``self.process``.
+
+    The name of the tree to process is taken from (in order of priority) the ``tree_name``
+    parameter, the ``tree_name`` attribute of the config, and the ``treename`` attribute of
+    the dataset.
+
+    :param dataset_name: name of the dataset to process
+    :type dataset_name: str
+
+    :param tree_name: name of the tree inside the ROOT file, default: empty
+    :type tree_name: str
+    """
 
     dataset_name = luigi.Parameter(default="hh_ggf", description="name of the dataset to process, "
         "default: hh_ggf")
@@ -378,6 +449,13 @@ class DatasetTask(ConfigTask):
 
 
 class DatasetTaskWithCategory(ConfigTaskWithCategory, ConfigTaskWithRegion, DatasetTask):
+    """
+    Task combining `DatasetTask`, `ConfigTaskWithCategory` and `ConfigTaskWithRegion`, for
+    dataset-wise processing restricted to a category and, optionally, a region.
+
+    It also determines the number of output files produced per branch,
+    ``n_files_after_merging``, from the merging settings of the dataset.
+    """
 
     def __init__(self, *args, **kwargs):
         super(DatasetTaskWithCategory, self).__init__(*args, **kwargs)
@@ -392,6 +470,31 @@ class DatasetTaskWithCategory(ConfigTaskWithCategory, ConfigTaskWithRegion, Data
         return self.n_files_after_merging
 
 class DatasetWrapperTask(ConfigTask):
+    """
+    `ConfigTask` that collects the datasets to be processed by the downstream tasks it
+    requires, stored as ``self.datasets``.
+
+    Datasets are selected through name patterns and tags, and deselected through the
+    complementary skip parameters; names or tags that match no dataset raise a ``ValueError``.
+    When neither dataset nor process names are given, all datasets of the config are used.
+    In addition, when a ``run_period`` or ``run_era`` attribute is set, datasets belonging to
+    other periods or eras are automatically skipped.
+
+    :param dataset_names: names or name patterns of datasets to use, all when empty
+    :type dataset_names: list of str
+
+    :param process_names: names or name patterns of processes whose datasets to use
+    :type process_names: list of str
+
+    :param dataset_tags: tags for filtering the datasets selected via dataset_names
+    :type dataset_tags: list of str
+
+    :param skip_dataset_names: names or name patterns of datasets to skip
+    :type skip_dataset_names: list of str
+
+    :param skip_dataset_tags: tags of datasets to skip
+    :type skip_dataset_tags: list of str
+    """
 
     dataset_names = law.CSVParameter(default=(), description="names or name "
         "patterns of datasets to use, uses all datasets when empty, default: ()")
@@ -472,6 +575,44 @@ class DatasetWrapperTask(ConfigTask):
 
 
 class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
+    """
+    Workflow for submitting jobs to the CERN HTCondor batch system, configuring the job
+    bootstrap file, the submission metadata directory and the job file contents (runtime,
+    CPUs, memory and custom condor attributes) for that environment.
+
+    The job bootstrap file can be switched to the one setting up shared preprocessed
+    pNTuples, submission metadata can be stored next to the outputs on eos via ``logs_to_eos``,
+    and when ``run_branches_single_process`` is set, all branches of a job are executed in a
+    single process to avoid re-JIT-compilation per task.
+
+    :param only_missing: skip tasks that are considered complete
+    :type only_missing: bool
+
+    :param max_runtime: maximum job runtime in hours
+    :type max_runtime: float
+
+    :param htcondor_central_scheduler: whether remote tasks connect to the central scheduler
+    :type htcondor_central_scheduler: bool
+
+    :param custom_condor_tag: custom condor attributes added to the submit file as they are
+    :type custom_condor_tag: list of str
+
+    :param custom_output_tag: custom tag added to submission and status file names
+    :type custom_output_tag: str
+
+    :param request_memory: required amount of memory in MiB, not requested when negative
+    :type request_memory: int
+
+    :param logs_to_eos: save job logs to the same location as the outputs
+    :type logs_to_eos: bool
+
+    :param shared_preprocessed: use shared preprocessed pNTuples from the central storage area
+    :type shared_preprocessed: bool
+
+    :param run_branches_single_process: run all branches in one single law run call, avoiding
+        one re-JIT-compilation per task when running more than one task per job
+    :type run_branches_single_process: bool
+    """
 
     only_missing = luigi.BoolParameter(default=True, significant=False, description="skip tasks "
         "that are considered complete, default: True")
@@ -641,6 +782,16 @@ class SlurmWorkflow(law.slurm.SlurmWorkflow):
 
 
 class CategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
+    """
+    `DatasetWrapperTask` requiring one task per category for each selected dataset.
+
+    Subclasses must implement `atomic_requires`, returning the requirement of a single
+    category, which `requires` collects in an ordered mapping keyed by category name.
+
+    :param category_names: names of the categories to run
+    :type category_names: list of str
+    """
+
     category_names = law.CSVParameter(default=(), description="names of categories "
         "to run, default: none")
 
@@ -656,16 +807,40 @@ class CategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
 
 
 class SplittedTask():
+    """
+    Mixin for tasks whose work is split into several branches, requiring subclasses to
+    implement `get_splitted_branches` to describe how branches map to input pieces.
+    """
+
     @abstractmethod
     def get_splitted_branches(self):
         return
 
 
 class RDFModuleTask(DatasetTask):
+    """
+    `DatasetTask` running RDataFrame-based modules on the input trees.
+
+    `get_feature_modules` instantiates the analysis modules declared in a yaml module file,
+    passing their parameters and, when running a systematic variation, the corresponding
+    variation expression as configured through the ``module_syst_type`` auxiliary of the
+    systematic. `get_branches_to_save` resolves the branches to write out from a keep/drop
+    file, and `build_rdf` builds the input RDataFrame from the task inputs, chaining friend
+    trees when present. Variable redefinitions are rejected unless ``allow_redefinition`` is
+    set, in which case they are turned into ``Redefine`` calls.
+
+    :param allow_redefinition: whether to allow redefinition of variables already in the
+        RDataFrame
+    :type allow_redefinition: bool
+    """
+
     allow_redefinition = luigi.BoolParameter(default=False, description="whether to allow "
         "redefinition of variables already in the RDataFrame, default: False")
 
     class RDataFrame():
+        """Thin wrapper around ``ROOT.RDataFrame`` that controls variable redefinitions and
+        wraps newly created data frames back into this class."""
+
         def __init__(self, *args, **kwargs):
             ROOT = import_root()
             if len(args) != 1 or isinstance(args[0], ROOT.TChain):
@@ -873,6 +1048,19 @@ class RDFModuleTask(DatasetTask):
 
 
 class InputData(DatasetTask, law.ExternalTask):
+    """
+    External task providing the input files of a dataset, which are always considered
+    complete.
+
+    Its outputs are WLCG targets pointing at the dataset files inside the temporary
+    directory: either the single file given by ``file_index`` (together with the
+    corresponding files of its friend datasets, when defined) or the collection of all
+    files of the dataset.
+
+    :param file_index: index of the external file to refer to, points to the collection of
+        all files when empty
+    :type file_index: int
+    """
 
     file_index = luigi.IntParameter(default=law.NO_INT, description="index of the external file to "
         "refer to, points to the collection of all files when empty, default: empty")
@@ -912,6 +1100,16 @@ class InputData(DatasetTask, law.ExternalTask):
 
 
 class FitBase(ConfigTask):
+    """
+    Base task for the fit-related tasks, providing the helpers to build RooFit fit models.
+
+    Fit parameter specifications are normalized to tuples of floats (`convert_parameters`), the
+    observable of the fit is created as a `RooRealVar` on a given range, optionally defining
+    sideband ranges around a blinded region (`get_x`), and the fit probability density function
+    together with its `RooRealVar` parameters is built for one of the supported models
+    (`get_fit`): `voigtian`, `gaussian`, `polynomial`, `constant`, `exponential` and `powerlaw`.
+    """
+
     def convert_parameters(self, d):
         for param, val in d.items():
             if isinstance(val, str):
@@ -1046,6 +1244,24 @@ class FitBase(ConfigTask):
 
 
 class ProcessGroupNameTask(DatasetWrapperTask):
+    """
+    `DatasetWrapperTask` that groups the selected datasets by process, keeping only the
+    processes belonging to a given process group.
+
+    For each dataset, its process and parent processes are filtered against the processes of
+    the requested process group name: a single match assigns the dataset to that process in
+    ``processes_datasets``, zero matches drop the dataset, and several matches raise an error
+    since the processes of a group must be orthogonal. The selected datasets are collected
+    in ``datasets_to_run``, and an error is raised when none is left.
+
+    :param process_group_name: name of the process grouping, only encoded into output paths
+        when changed
+    :type process_group_name: str
+
+    :param default_process_group_name: name of the process grouping used when
+        process_group_name is not found in the config
+    :type default_process_group_name: str
+    """
 
     process_group_name = luigi.Parameter(default="default", description="the name of the process "
         "grouping, only encoded into output paths when changed, default: default")
@@ -1161,6 +1377,7 @@ class FlatSignalBackgroundBinMerger:
     """ Algorithm to merge histogram bins whilst keeping enough brackground MC events.
     Uses two successive methods, picking the first one that succeeds.
     Procedure 1: flatten signal/background distribution, in N bins, such that each bin has enough background events, both on central sample and systematic samples.
+
                  Then merge the distribution from the left if that doesn't affect significance.
                  Check that every bin has at least 10 MC events.
                  if failed, repeat procedure with N-1 bins, N-2, etc until 3 bins.
@@ -1168,6 +1385,7 @@ class FlatSignalBackgroundBinMerger:
     If procedure 1 fails also for 3 bins, apply the following.
 
     Procedure 2: find the value X such that the sum across bins higher than X has at least 10 MC events
+
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """
@@ -1474,6 +1692,7 @@ class Run2SignalBinMerger:
     """ Algorithm to merge histogram bins whilst keeping enough brackground MC events.
     Uses two successive methods, picking the first one that succeeds.
     Procedure 1: flatten signal/background distribution, in N bins, such that each bin has enough background events, both on central sample and systematic samples.
+
                  Then merge the distribution from the left if that doesn't affect significance.
                  Check that every bin has at least 10 MC events.
                  if failed, repeat procedure with N-1 bins, N-2, etc until 3 bins.
@@ -1481,6 +1700,7 @@ class Run2SignalBinMerger:
     If procedure 1 fails also for 3 bins, apply the following.
 
     Procedure 2: find the value X such that the sum across bins higher than X has at least 10 MC events
+
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """
@@ -1662,11 +1882,13 @@ class FlatSignalBinMerger:
     """ Algorithm to merge histogram bins whilst keeping enough brackground MC events.
     Uses two successive methods, picking the first one that succeeds.
     Procedure 1: flatten signal distribution, in N bins. Check that every bin has at least 10 MC events.
+
                  if failed, repeat procedure with N-1 bins, N-2, etc until 3 bins.
 
     If procedure 1 fails also for 3 bins, apply the following.
 
     Procedure 2: find the value X such that the sum across bins higher than X has at least 10 MC events
+
                  and has at least 30% of the signal. Then make a 2-bin histogram split at X.
                  (this is mainly for extreme signal/bkg separation)
     """

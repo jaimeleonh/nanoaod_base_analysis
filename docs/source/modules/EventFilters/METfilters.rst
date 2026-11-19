@@ -1,7 +1,7 @@
 METfilters
 ==========
 
-.. currentmodule:: Event.Filters.METfilters
+.. currentmodule:: Base.Filters.METfilters
 
 .. contents::
 
@@ -9,5 +9,17 @@ METfilters
 ----------------
 
 .. autoclass:: MetFilterRDF
+   :members:
+
+``MetFilterProducer``
+--------------------------
+
+.. autoclass:: MetFilterProducer
+   :members:
+
+``MetFilterRDFProducer``
+------------------------
+
+.. autoclass:: MetFilterRDFProducer
    :members:
 

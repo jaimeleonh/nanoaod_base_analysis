@@ -987,11 +987,11 @@ class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWor
     """
     Fills ancillary TTrees with the requested branches to be used in Combine.
 
-    Example command:
+    Example command::
 
-    ``law run FillDatacardAnnexTrees --version test --category-name etau --config-name ul_2018 \
---process-group-name etau --branches-to-store Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta \
---workers 20 --dataset-names gghh_kl1,gghh_kl0,qqhh_kl1,qqhh_kl0 ``
+        law run FillDatacardAnnexTrees --version test --category-name etau --config-name ul_2018 \
+            --process-group-name etau --branches-to-store Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta \
+            --workers 20 --dataset-names gghh_kl1,gghh_kl0,qqhh_kl1,qqhh_kl0
     """
     skip_processing = luigi.BoolParameter(default=False, description="whether to skip"
         " preprocessing and categorization steps, default: False")
@@ -1094,6 +1094,13 @@ class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWor
 
 
 class FillDatacardAnnexTreesWrapper(DatasetCategoryWrapperTask, BasePlotTask):
+    """
+    Wrapper task to run :class:`.FillDatacardAnnexTrees` over several datasets and categories.
+
+    Requires one :class:`.FillDatacardAnnexTrees` instance for every dataset and (sub)category
+    pair, skipping the pairs whose process is listed in the ``skip_processes`` field of the
+    category.
+    """
 
     def atomic_requires(self, dataset, category):
         return FillDatacardAnnexTrees.req(self, dataset_name=dataset.name, category_name=category.name)
@@ -1796,6 +1803,15 @@ class RunCombine(CreateWorkspace):
 
 
 class BasePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
+    """
+    Base task for the tasks dealing with the pulls and impacts of the nuisance parameters in the
+    combine fits, holding the parameters and output naming shared by :class:`.PullsAndImpacts`,
+    :class:`.MergePullsAndImpacts` and :class:`.PlotPullsAndImpacts`.
+
+    :param robust: Whether to run the fits with the robust fit option (`--robustFit 1`), adding
+        `__robustfit` to the output postfix.
+    :type robust: bool
+    """
 
     robust = luigi.BoolParameter(default=False, description="whether to run pulls and impacts with robust fit, "
         "default: False")

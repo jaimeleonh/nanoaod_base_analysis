@@ -11,3 +11,9 @@ b-tagging
 .. autoclass:: btag_SFRDF
    :members:
 
+``btag_SFRDFProducer``
+----------------------
+
+.. autoclass:: btag_SFRDFProducer
+   :members:
+

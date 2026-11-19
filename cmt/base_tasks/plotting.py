@@ -770,6 +770,10 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
 
 
 class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
+    """
+    Wrapper task to run the PrePlot task over several datasets and
+    categories in parallel.
+    """
 
     def atomic_requires(self, dataset, category):
         return PrePlot.req(self, dataset_name=dataset.name, category_name=category.name)
@@ -2225,12 +2229,15 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 json.dump(yields, f, indent=4)
 
     def get_nevents(self, inputs=None):
-        """ Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization)
-        Arguments : inputs : results of self.input(), facultative, for caching
-        Returns tuple :
-         - nevents (event count or weights depending on self.apply_weights)
-         - nweightedevents : sum of weights
-         - nunweightedevents : event count
+        """Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization).
+
+        Arguments: inputs - results of self.input(), facultative, for caching
+
+        Returns tuple:
+
+        - nevents (event count or weights depending on self.apply_weights)
+        - nweightedevents: sum of weights
+        - nunweightedevents: event count
         """
         nevents, nweightedevents, nunweightedevents = {}, {}, {}
         if inputs is None:
@@ -2823,6 +2830,18 @@ class FeaturePlotSyst(FeaturePlot):
 #################################################################################################################################
 
 class BasePlotMultiDTask(BasePlotTask):
+    """
+    Base task for the plotting tasks handling several features at once, e.g. 2D
+    histograms or comparison plots. Can't be run.
+
+    Extends :class:`BasePlotTask` so that each entry of *feature_names* defines a
+    group of features, written as a colon-separated list of feature names
+    (e.g. ``lep1_pt:lep1_eta``), which is resolved to a tuple of feature objects.
+    It also provides the combined binning of all the features in a group. The
+    number of features per group is limited to *n_features* when this is larger
+    than one, while it is unrestricted when it is -1 (the default).
+    """
+
     n_features = -1
     def get_features(self):
         features = []
@@ -2861,6 +2880,14 @@ class BasePlotMultiDTask(BasePlotTask):
 
 
 class PrePlot2D(PrePlot, BasePlotMultiDTask):
+    """
+    Performs the filling of 2D histograms for all the pairs of features considered,
+    each pair being defined as a colon-separated entry of *feature_names*
+    (e.g. ``lep1_pt:lep1_eta``). If systematics are considered, it also produces
+    the same histograms after applying those. Exactly two features are allowed
+    per pair.
+    """
+
     n_features = 2
     def get_syst_list(self):
         if self.skip_processing:
@@ -3655,10 +3682,10 @@ class EfficiencyPlot(ComparisonPlot):
     """
     Plots efficiencies for the features and processes included as input.
 
-    Example command:
+    Example command::
 
-    ``law run EfficiencyPlot --version version_name --category-name category_name 
---config-name config_name --feature-names numerator1:denominator1,numerator2:denominator2``
+        law run EfficiencyPlot --version version_name --category-name category_name \
+            --config-name config_name --feature-names numerator1:denominator1,numerator2:denominator2
 
     """
     

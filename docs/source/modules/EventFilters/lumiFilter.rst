@@ -1,7 +1,7 @@
 Luminosity json filter
 ======================
 
-.. currentmodule:: Event.Filters.lumiFilter
+.. currentmodule:: Base.Filters.lumiFilter
 
 .. contents::
 
@@ -9,5 +9,11 @@ Luminosity json filter
 -----------------
 
 .. autoclass:: lumiFilterRDF
+   :members:
+
+``lumiFilterRDFProducer``
+-------------------------
+
+.. autoclass:: lumiFilterRDFProducer
    :members:
 

@@ -13,3 +13,15 @@ muon SF
 .. autoclass:: muSFRDF
    :members:
 
+``muSFRDFProducer``
+------------------------------
+
+.. autoclass:: muSFRDFProducer
+   :members:
+
+``muSSRDFProducer``
+------------------------------
+
+.. autoclass:: muSSRDFProducer
+   :members:
+

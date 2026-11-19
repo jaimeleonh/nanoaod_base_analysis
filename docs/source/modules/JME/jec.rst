@@ -22,3 +22,21 @@ Jet Energy Corrections
 
 .. autoclass:: jecMETRDF
    :members:
+
+``jecProviderRDFProducer``
+--------------------------
+
+.. autoclass:: jecProviderRDFProducer
+   :members:
+
+``jecVarRDFProducer``
+---------------------
+
+.. autoclass:: jecVarRDFProducer
+   :members:
+
+``jecMETRDFProducer``
+---------------------
+
+.. autoclass:: jecMETRDFProducer
+   :members:
