@@ -339,6 +339,8 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
 
         self.syst_list = self.get_syst_list()
 
+        self.all_syst_of_all_features = [("central", "")]
+
     def get_syst_list(self):
         """
         Returns a list of systematic names that affect present or past selections, so dedicated
@@ -507,15 +509,25 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             if isMC and self.store_systematics:
                 systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
+                # store all the systematics of each feature in an array containing all systs of
+                # all features requested to be plotted
+                for syst in itertools.product(systs, directions):
+                    if syst not in self.all_syst_of_all_features:
+                        self.all_syst_of_all_features.append(syst)
 
             # for the application of FFs, the data is scaled with the FFs
             # so for Data the FF nuisances need to be stored
             if not isMC and self.store_systematics and self.do_ff and self.region.name.endswith(self.ff_shape_region):
                 systs = self.get_systs(feature, isMC, includeFFdataSyst=True)
                 systs_directions += list(itertools.product(systs, directions))
+                # store all the systematics of each feature in an array containing all systs of
+                # all features requested to be plotted
+                for syst in itertools.product(systs, directions):
+                    if syst not in self.all_syst_of_all_features:
+                        self.all_syst_of_all_features.append(syst)
 
             # take care of the "multi-dimensional" systematics (LHE QCD SCale and FF template stats)
-            multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
+            self.multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
 
             # loop over systematics and up/down/multi variations
             for syst_name, direction in systs_directions:
@@ -558,7 +570,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
 
             multi_histos = {}
             # loop over systematics and multi variations
-            for syst_name, direction in multi_systs:
+            for syst_name, direction in self.multi_systs:
                 df = dfs["central"] # multi variations are only in central df
 
                 # apply selection if needed
@@ -766,7 +778,46 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         if len(self.branches_to_store) > 0:
             opts = ROOT.RDF.RSnapshotOptions()
             opts.fMode = "UPDATE"
-            snapshot_ensuring_output_tree(dfs["central"], self.tree_name, outp, list(self.branches_to_store), opts)
+
+            # get features associated to the branches requested
+            local_feats = [feature for feature in self._find_features(self.branches_to_store, [])]
+
+            weights_list = ["weight"]
+            # loop over all weights systematics to store the gen weight
+            for syst_name, direction in self.all_syst_of_all_features:
+                if syst_name == "central":
+                    key = "central"
+                    tag = ""
+                else:
+                    key = f"{syst_name}_{direction}"
+                    tag = f"_{syst_name}_{direction}"
+
+                if key in systs_list_to_store:
+                    dfs[key] = dfs[key].Define("weight", self.get_weight(self.category.name, syst_name, direction))
+
+                else:
+                    dfs["central"] = dfs["central"].Define(f"weight{tag}", self.get_weight(self.category.name, syst_name, direction))
+                    weights_list.append(f"weight{tag}")
+
+            # loop over systematics
+            for elem in ["central"] + systs_list_to_store:
+                tag = ""
+                if elem != "central":
+                    tag = "_"+elem
+                    s = elem.rsplit("_", 1)[0]
+                    d = elem.rsplit("_", 1)[1]
+                    # get correct name of the varibale in each dataframe and store a new variable
+                    # with the 'standardized' name that is requested in the command
+                    for b, f in zip(self.branches_to_store, local_feats):
+                        name_with_syst_tag = self.config.get_object_expression(f, self.dataset.process.isMC, s, d)
+                        # skip the caces where no syst tag is ever attached to the name
+                        if b == name_with_syst_tag: continue
+                        dfs[elem] = dfs[elem].Define(b, name_with_syst_tag)
+
+                    snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, outp, list(self.branches_to_store)+["weight"], opts)
+
+                else:
+                    snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, outp, list(self.branches_to_store)+weights_list, opts)
 
 
 class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
