@@ -9,7 +9,7 @@ __all__ = [
     "extract_branch_names", "check_expression", "feature_expression", "get_expression_infos",
     "iter_tree", "evaluate_model_on_tree", "poisson_asym_errors", "hist_to_array", "hist_to_graph",
     "get_graph_maximum", "update_graph_values", "optimize_binning", "parse_workflow_file",
-    "chunked_list"
+    "chunked_list", "OwnedTmpDir"
 ]
 
 
@@ -722,3 +722,140 @@ def chunked_list(lst, n):
         end = start + chunk_size + (1 if i < remainder else 0)
         yield lst[start:end]
         start = end
+
+
+class OwnedTmpDir(object):
+    """
+    Temporary directory that does not outlive its owning process, however that process ends.
+
+    The directory contains a lock file that the owner keeps locked (``flock``) for its whole
+    lifetime. The kernel releases the lock however the process ends, including SIGKILL or an
+    OOM kill, so directories with the same *prefix* whose lock can be acquired belong to dead
+    processes. They are removed (*sweep*) every time a new directory is created, which makes the
+    mechanism independent of the batch system or workflow. In addition, within the process:
+
+    - :py:meth:`cleanup` is meant to be called explicitly (e.g. in a ``finally`` block),
+    - it is registered with :py:mod:`atexit` (uncaught exceptions, ``sys.exit``),
+    - SIGTERM and SIGHUP (e.g. batch job cancelled or over its time limit) are converted into
+      ``SystemExit`` so that the two mechanisms above also run. Python only handles signals
+      between bytecodes, so a signal received during a long C++ call (e.g. an RDataFrame event
+      loop) is handled when that call returns; if the process is SIGKILLed before, the sweep
+      done by the next instance takes care of the directory.
+
+    Directories are only swept from the same *base* directory, so stale directories are removed
+    by the next task that runs with the same TMPDIR (same node, for node-local TMPDIRs).
+    """
+
+    lock_name = ".owner.lock"
+
+    def __init__(self, prefix="cmt_tmp_", base=None, sweep=True, handle_signals=True):
+        import atexit
+        import tempfile
+
+        self.prefix = prefix
+        self.base = base or tempfile.gettempdir()
+        os.makedirs(self.base, exist_ok=True)
+        if sweep:
+            self.sweep(self.base, prefix)
+
+        # create and lock the directory under a name that the sweep ignores, then give it its
+        # final name, so that a concurrent sweep can never see it unlocked
+        staging = tempfile.mkdtemp(prefix=".staging_" + prefix, dir=self.base)
+        self._lock_fd = self._lock(os.path.join(staging, self.lock_name), blocking=True)
+        with open(os.path.join(staging, "owner.txt"), "w") as f:
+            f.write("host {}\npid {}\nstart {}\n".format(
+                os.uname()[1], os.getpid(), time.strftime("%Y-%m-%d %H:%M:%S")))
+        self.path = os.path.join(self.base, prefix + os.path.basename(staging)[
+            len(".staging_" + prefix):])
+        os.rename(staging, self.path)
+
+        self._old_handlers = {}
+        if handle_signals:
+            self._install_signal_handlers()
+        atexit.register(self.cleanup)
+
+    @classmethod
+    def _lock(cls, path, blocking=False):
+        import fcntl
+        fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        except OSError:
+            os.close(fd)
+            raise
+        return fd
+
+    @classmethod
+    def sweep(cls, base, prefix, min_age=60):
+        """
+        Removes the directories ``<base>/<prefix>*`` whose owner is dead (lock not held), and
+        the staging directories of creations that were interrupted, older than *min_age* seconds.
+        """
+        import glob
+        import shutil
+
+        removed = []
+        for path in glob.glob(os.path.join(base, prefix + "*")):
+            if not os.path.isdir(path):
+                continue
+            try:
+                fd = cls._lock(os.path.join(path, cls.lock_name))
+            except OSError:
+                continue  # owner alive (or directory vanished meanwhile)
+            try:
+                shutil.rmtree(path, ignore_errors=True)
+                removed.append(path)
+            finally:
+                os.close(fd)
+        for path in glob.glob(os.path.join(base, ".staging_" + prefix + "*")):
+            try:
+                if time.time() - os.path.getmtime(path) > min_age:
+                    shutil.rmtree(path, ignore_errors=True)
+                    removed.append(path)
+            except OSError:
+                pass
+        if removed:
+            print("Removed {} stale temporary directories in {}: {}".format(
+                len(removed), base, ", ".join(os.path.basename(p) for p in removed)))
+        return removed
+
+    def _install_signal_handlers(self):
+        import signal
+        import threading
+
+        if threading.current_thread() is not threading.main_thread():
+            return
+
+        def handler(signum, frame):
+            raise SystemExit(128 + signum)
+
+        for sig in (signal.SIGTERM, signal.SIGHUP):
+            # do not override handlers that someone else installed
+            if signal.getsignal(sig) == signal.SIG_DFL:
+                self._old_handlers[sig] = signal.signal(sig, handler)
+
+    def _restore_signal_handlers(self):
+        import signal
+        import threading
+
+        if threading.current_thread() is not threading.main_thread():
+            return
+        for sig, old in self._old_handlers.items():
+            signal.signal(sig, old)
+        self._old_handlers = {}
+
+    def cleanup(self):
+        import shutil
+
+        if getattr(self, "_lock_fd", None) is None:
+            return
+        self._restore_signal_handlers()
+        shutil.rmtree(self.path, ignore_errors=True)
+        os.close(self._lock_fd)
+        self._lock_fd = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.cleanup()

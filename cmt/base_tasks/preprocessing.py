@@ -20,6 +20,7 @@ import luigi
 
 from analysis_tools.utils import join_root_selection as jrs
 from analysis_tools.utils import import_root, create_file_dir
+from cmt.util import OwnedTmpDir
 
 from cmt.base_tasks.base import (
     DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
@@ -375,6 +376,27 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
     default_store = "$CMT_STORE_EOS_PREPROCESSING"
     default_wlcg_fs = "wlcg_fs_categorization"
 
+    # Optional cap on the number of PreprocessRDF workflows (= datasets) that one law process runs
+    # at the same time, independent of --workers: export CMT_PREPROCESS_WORKFLOWS=<n>.
+    # It allows running "law run CategorizationWrapper" directly, so that the Categorization of
+    # a dataset starts as soon as its PreprocessRDF is done, while the preprocessing stays throttled.
+    throttle_resource = "preprocess_rdf"
+    # remote (slurm, htcondor) workflows report to luigi the resources of their jobs only: without
+    # this, the "resources" below are ignored and the cap above has no effect
+    include_member_resources = True
+
+    @property
+    def resources(self):
+        if (self.throttle_resource and os.environ.get("CMT_PREPROCESS_WORKFLOWS")
+                and self.is_workflow()):
+            return {self.throttle_resource: 1}
+        return {}
+
+    @property
+    def priority(self):
+        # when throttled, use the free slots before starting more Categorization workflows
+        return 10 if self.resources else 0
+
     def get_addendum(self):
         if self.systematic:
             systematic = self.config.systematics.get(self.systematic)
@@ -409,127 +431,135 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         outp=self.output()["root"]
         print(outp.path)
 
-        # create RDataFrame
-        inp = self.get_input()
-        if not self.dataset.friend_datasets:
-            if self.prefetch:
-                infiles=[]
-                for ifil,fil in enumerate(self.get_path(inp)):
-                    print(f"Prefetching input file {fil}")
-                    infile=os.getenv("TMPDIR") + "/" + outp.path.split("/")[-1].replace(".root",f"-input{ifil}.root") # recycling hash from outputfile          
-                    if os.path.isfile(infile):
-                        raise RuntimeError(f"Precatching file {infile} already exists. This shouldn't happen!")
-                    import subprocess
-                    nattempts=5
-                    for attempt in range(nattempts):
-                        try:
-                            subprocess.run(["xrdcp", fil, infile], check=True,
-                                capture_output=True, text=True)
-                            print("Prefetching done")
-                            break
-                        except subprocess.CalledProcessError as e:
-                            stderr = e.stderr.strip() if e.stderr else ""
-                            stdout = e.stdout.strip() if e.stdout else ""
-                            details = " ".join(part for part in [stdout, stderr] if part)
-                            
-                            if attempt < nattempts-1:
-                                print(f"Prefetching failed for {fil} on attempt {attempt + 1}/{nattempts}, retrying. xrdcp output: {details}" if details else "")
-                                if os.path.exists(infile):
-                                   try:
-                                      os.remove(infile)
-                                   except OSError:
-                                      pass
-                            else:
-                                print(f"Prefetching failed after {nattempts} attempts for {fil} -> {infile}."
-                                  + (f" xrdcp output: {details}" if details else "")
-                                )
-                                print("Rolling back to running remotely. Good luck") 
-                                os.remove(infile)
-                                infile = fil
-                    infiles.append(infile)
-            else:
-                infiles=self.get_path(inp)
-            df = self.RDataFrame(self.tree_name, infiles,
-                allow_redefinition=self.allow_redefinition)
-
-        # friend tree
-        else:
-            tchain = ROOT.TChain()
-            for elem in self.get_path(inp):
-                tchain.Add("{}/{}".format(elem, self.tree_name))
-            friend_tchain = ROOT.TChain()
-            for elem in self.get_path(inp, 1):
-                friend_tchain.Add("{}/{}".format(elem, self.tree_name))
-            tchain.AddFriend(friend_tchain, "friend")
-            df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
-
-
+        # local copies of the input files (prefetch) live in a directory owned by this process. It
+        # is removed at the end of the task or, if the process gets killed, by the next task that
+        # prefetches with the same TMPDIR (see cmt.util.OwnedTmpDir)
+        prefetch_dir = None
         try:
-            outp = self.output()['root']
+            # create RDataFrame
+            inp = self.get_input()
+            if not self.dataset.friend_datasets:
+                if self.prefetch:
+                    prefetch_dir = OwnedTmpDir(prefix="cmt_prefetch_")
+                    infiles = self.prefetch_inputs(self.get_path(inp), prefetch_dir.path,
+                        os.path.basename(outp.path))
+                else:
+                    infiles=self.get_path(inp)
+                df = self.RDataFrame(self.tree_name, infiles,
+                    allow_redefinition=self.allow_redefinition)
 
-            selection = self.category.selection
-            # dataset_selection = self.dataset.get_aux("selection")
-            # if dataset_selection and dataset_selection != "1":
-                # selection = jrs(dataset_selection, selection, op="and")
-
-            branches = list(df.GetColumnNames())
-
-            if selection != "":
-                filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
+            # friend tree
             else:
-                filtered_df = df
-
-            # In case of input file with 0 events: save output without running any module
-            if filtered_df.Count().GetValue() == 0:
-                # Print warning
-                print(f"Warning! File {self.get_path(inp)} has 0 entries!\n"
-                       "         Returning an empty output TTree!")
-    
-                # Save ensuring presence of TTree in output file
-                snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
-    
-                if self.compute_filter_efficiency == True:
-                    json_res = {}
-                    with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                        json.dump(json_res, f, indent=4)
-    
-            # Else: process normally
-            else:
-                modules = self.get_feature_modules(self.modules_file)
-                if len(modules) > 0:
-                    for module in modules:
-                        try:
-                            filtered_df, add_branches = module.run(filtered_df)
-                        except Exception as e:
-                            print("Exception: %s. Exiting" % e)
-                            sys.exit(1)
-                        branches += add_branches
-                branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
-                if self.compute_filter_efficiency == True:
-                    report = filtered_df.Report()
-    
-                # Save ensuring presence of TTree in output file
-                snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
+                tchain = ROOT.TChain()
+                for elem in self.get_path(inp):
+                    tchain.Add("{}/{}".format(elem, self.tree_name))
+                friend_tchain = ROOT.TChain()
+                for elem in self.get_path(inp, 1):
+                    friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+                tchain.AddFriend(friend_tchain, "friend")
+                df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
 
 
-                if self.compute_filter_efficiency == True:
-                    json_res = {cutReport.GetName() : {
-                        "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
-                                for cutReport in report.GetValue()
-                                }
-                    with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                        json.dump(json_res, f, indent=4)
-        except Exception as e:
-            print("Exception: %s. Exiting" % e)
+            try:
+                outp = self.output()['root']
 
+                selection = self.category.selection
+                # dataset_selection = self.dataset.get_aux("selection")
+                # if dataset_selection and dataset_selection != "1":
+                    # selection = jrs(dataset_selection, selection, op="and")
+
+                branches = list(df.GetColumnNames())
+
+                if selection != "":
+                    filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
+                else:
+                    filtered_df = df
+
+                # In case of input file with 0 events: save output without running any module
+                if filtered_df.Count().GetValue() == 0:
+                    # Print warning
+                    print(f"Warning! File {self.get_path(inp)} has 0 entries!\n"
+                           "         Returning an empty output TTree!")
+    
+                    # Save ensuring presence of TTree in output file
+                    snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
+    
+                    if self.compute_filter_efficiency == True:
+                        json_res = {}
+                        with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                            json.dump(json_res, f, indent=4)
+    
+                # Else: process normally
+                else:
+                    modules = self.get_feature_modules(self.modules_file)
+                    if len(modules) > 0:
+                        for module in modules:
+                            try:
+                                filtered_df, add_branches = module.run(filtered_df)
+                            except Exception as e:
+                                print("Exception: %s. Exiting" % e)
+                                sys.exit(1)
+                            branches += add_branches
+                    branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
+                    if self.compute_filter_efficiency == True:
+                        report = filtered_df.Report()
+    
+                    # Save ensuring presence of TTree in output file
+                    snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
+
+
+                    if self.compute_filter_efficiency == True:
+                        json_res = {cutReport.GetName() : {
+                            "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
+                                    for cutReport in report.GetValue()
+                                    }
+                        with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
+                            json.dump(json_res, f, indent=4)
+            except Exception as e:
+                print("Exception: %s. Exiting" % e)
         finally:
-            if self.prefetch:
-                for fil in infiles:
-                    if os.path.isfile(fil):
+            if prefetch_dir is not None:
+                prefetch_dir.cleanup()
+
+    def prefetch_inputs(self, paths, directory, name):
+        """
+        Copies the input files with xrdcp into *directory*. Files whose copy fails after several
+        attempts are read remotely.
+        """
+        import subprocess
+
+        infiles = []
+        nattempts = 5
+        for ifil, fil in enumerate(paths):
+            print(f"Prefetching input file {fil}")
+            # recycling hash from outputfile
+            infile = os.path.join(directory, name.replace(".root", f"-input{ifil}.root"))
+            for attempt in range(nattempts):
+                try:
+                    subprocess.run(["xrdcp", fil, infile], check=True,
+                        capture_output=True, text=True)
+                    print("Prefetching done")
+                    break
+                except subprocess.CalledProcessError as e:
+                    details = " ".join(part.strip() for part in [e.stdout, e.stderr]
+                        if part and part.strip())
+                    # xrdcp may have failed before creating the local file
+                    if os.path.exists(infile):
                         try:
-                            os.remove(fil)
+                            os.remove(infile)
                         except OSError:
                             pass
+                    if attempt < nattempts - 1:
+                        print(f"Prefetching failed for {fil} on attempt {attempt + 1}/{nattempts}, "
+                            "retrying." + (f" xrdcp output: {details}" if details else ""))
+                    else:
+                        print(f"Prefetching failed after {nattempts} attempts for {fil} -> {infile}."
+                            + (f" xrdcp output: {details}" if details else ""))
+                        print("Rolling back to running remotely. Good luck")
+                        infile = fil
+            infiles.append(infile)
+        return infiles
+
 
 class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
     """
@@ -849,6 +879,16 @@ class Categorization(PreprocessRDF):
     # regions not supported
     region_name = None
 
+    # only PreprocessRDF itself is throttled (see PreprocessRDF.resources)
+    throttle_resource = None
+
+    # parameters of the required PreprocessRDF that are taken from the command line
+    # (--PreprocessRDF-<param>) when given there, instead of being copied from this task
+    preprocess_cli_params = ["modules_file", "keep_and_drop_file", "prefetch",
+        "compute_filter_efficiency", "parallel_jobs", "request_memory", "request_cpus",
+        "poll_interval", "max_runtime", "workflow", "slurm_partition", "retries", "tolerance",
+        "acceptance", "walltime", "submission_threads"]
+
     default_store = "$CMT_STORE_EOS_CATEGORIZATION"
     default_wlcg_fs = "wlcg_fs_categorization"
 
@@ -953,7 +993,8 @@ class Categorization(PreprocessRDF):
         if self.skip_preprocess:
             return {"data": InputData.req(self)}
         else:
-            return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name)}
+            return {"data": PreprocessRDF.vreq(self, category_name=self.base_category_name,
+                _prefer_cli=self.preprocess_cli_params)}
 
     def requires(self):
         if self.max_events:
@@ -961,8 +1002,8 @@ class Categorization(PreprocessRDF):
             if self.skip_preprocess:
                 return InputData.req(self, file_index=preprocess_branch)
             else:
-                return PreprocessRDF.vreq(self, category_name=self.base_category_name,
-                    branch=preprocess_branch)
+                return self.check_preprocess_in_job(PreprocessRDF.vreq(self,
+                    category_name=self.base_category_name, branch=preprocess_branch))
 
         else:
             parent_branches = self.branch_data["parent_branches"]
@@ -975,8 +1016,34 @@ class Categorization(PreprocessRDF):
                 elif len(parent_branches) > 1:
                     preprocess_kwargs = dict(branches=parent_branches)
 
-                return PreprocessRDF.vreq(self, category_name=self.base_category_name,
-                    **preprocess_kwargs, _exclude=["branch"])
+                return self.check_preprocess_in_job(PreprocessRDF.vreq(self,
+                    category_name=self.base_category_name, **preprocess_kwargs,
+                    _exclude=["branch"]))
+
+    def check_preprocess_in_job(self, req):
+        """
+        Inside a remote (slurm, htcondor) job, missing PreprocessRDF inputs must not be produced by
+        the job itself: luigi would run them there one after the other, without the
+        --PreprocessRDF-* options of the driver (no prefetch, no cutflow), and every category
+        needing the same files would produce them again at the same time. Fail instead, so that
+        the problem is visible in seconds. CMT_ALLOW_PREPROCESS_IN_JOB=1 restores the old behaviour.
+        """
+        if (not os.environ.get("LAW_JOB_HOME") or os.environ.get("CMT_ALLOW_PREPROCESS_IN_JOB") == "1"
+                or req.complete()):
+            return req
+        def file_targets(t):
+            # workflow output -> collection of branches -> SiblingFileCollection(root, cut_flow)
+            if isinstance(t, law.TargetCollection):
+                return [f for sub in law.util.flatten(t.targets) for f in file_targets(sub)]
+            if isinstance(t, (dict, list, tuple)):
+                return [f for sub in law.util.flatten(t) for f in file_targets(sub)]
+            return [t]
+        missing = [t.path for t in file_targets(req.output()) if not t.exists()]
+        raise RuntimeError(
+            f"Categorization branch {self.branch} ({self.dataset.name}, {self.category.name}): "
+            f"{len(missing)} PreprocessRDF input(s) missing, e.g. {missing[:5]}. Rerun PreprocessRDF "
+            "for this dataset (check for a stale slurm_jobs_*.json in its jobs_meta directory) "
+            "before categorizing.")
 
     def output(self):
         """
@@ -1113,6 +1180,26 @@ class Categorization(PreprocessRDF):
                     sys.exit(1)
                 branches += add_branches
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
+
+        # The columns of a TChain are those of its first file. A branch missing in a later file
+        # (e.g. HLT paths that only exist in part of a run era, like the 2018 non-HPS/HPS tau
+        # triggers) makes the event loop crash, so only branches present in all inputs are saved.
+        if len(non_empty_input_files) > 1:
+            common = None
+            for in_file in non_empty_input_files:
+                tf = ROOT.TFile.Open(in_file)
+                names = {b.GetName() for b in tf.Get(self.tree_name).GetListOfBranches()}
+                tf.Close()
+                common = names if common is None else common & names
+            tf = ROOT.TFile.Open(non_empty_input_files[0])
+            first_file_columns = {b.GetName() for b in tf.Get(self.tree_name).GetListOfBranches()}
+            tf.Close()
+            missing = first_file_columns - common
+            if missing:
+                print("Categorization : not saving branches missing in some input files: "
+                    + ", ".join(sorted(missing)))
+                branches = [b for b in branches if b not in missing]
+
         filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
 
         # Save ensuring presence of TTree in output file
@@ -1386,8 +1473,11 @@ class MergePreCounter(DatasetTask, law.tasks.ForestMerge):
         return PreCounter.vreq(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        return PreCounter.vreq(self, workflow="local", branches=((start_leaf, end_leaf),),
-            _exclude={"branch"})
+        # use the workflow given on the command line (e.g. slurm) instead of forcing "local":
+        # branches whose remote job failed (e.g. xrootd timeouts) would otherwise be re-run
+        # inside the driver job, which then gets killed by the cgroup OOM handler
+        return PreCounter.vreq(self, branches=((start_leaf, end_leaf),),
+            _exclude={"branch"}, _prefer_cli=["workflow"])
 
     def trace_merge_inputs(self, inputs):
         return [inp for inp in inputs["collection"].targets.values()]
@@ -1515,3 +1605,8 @@ class EventCounterDASWrapper(DatasetSuperWrapperTask):
 
     def atomic_requires(self, dataset):
         return EventCounterDAS.req(self, dataset_name=dataset.name)
+
+
+if os.environ.get("CMT_PREPROCESS_WORKFLOWS"):
+    luigi.configuration.get_config().set("resources", PreprocessRDF.throttle_resource,
+        str(int(os.environ["CMT_PREPROCESS_WORKFLOWS"])))

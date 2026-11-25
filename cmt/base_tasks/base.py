@@ -728,16 +728,23 @@ class SplittedTask():
 class RDFModuleTask(DatasetTask):
     allow_redefinition = luigi.BoolParameter(default=False, description="whether to allow "
         "redefinition of variables already in the RDataFrame, default: False")
+    hide_progress_bar = luigi.BoolParameter(default=False, significant=False, description="whether "
+        "to hide the RDataFrame progress bar shown when running locally, default: False")
 
-    class RDataFrame():
+    def RDataFrame(self, *args, **kwargs):
+        kwargs.setdefault("progress_bar", not self.hide_progress_bar)
+        return self._RDataFrame(*args, **kwargs)
+
+    class _RDataFrame():
         def __init__(self, *args, **kwargs):
             ROOT = import_root()
             if len(args) != 1 or isinstance(args[0], ROOT.TChain):
                 self.rdf = ROOT.RDataFrame(*args)
-                if os.environ['CMT_REMOTE_JOB'] == '0':
+                if kwargs.pop("progress_bar", True) and os.environ['CMT_REMOTE_JOB'] == '0':
                     ROOT.RDF.Experimental.AddProgressBar(self.rdf)
             else:  # rdf coming from another df after some modification (e.g. Define)
                 self.rdf = args[0]
+            kwargs.pop("progress_bar", None)
             self.allow_redefinition = kwargs.pop("allow_redefinition", False)
 
         def Define(self, *args):
