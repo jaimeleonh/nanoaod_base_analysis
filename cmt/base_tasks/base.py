@@ -631,7 +631,7 @@ class SlurmWorkflow(law.slurm.SlurmWorkflow):
         config.custom_content.append(("time", job_time))
         config.custom_content.append(("nodes", 1))
         if self.request_memory > 0:
-            config.custom_content.append(f"#SBATCH --mem{self.request_memory}M")
+            config.custom_content.append(f"#SBATCH --mem={self.request_memory}M")
         else:
             config.custom_content.append(f"#SBATCH --mem=3000M")
 
