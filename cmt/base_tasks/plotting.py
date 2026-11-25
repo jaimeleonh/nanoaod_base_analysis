@@ -803,6 +803,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             for elem in ["central"] + systs_list_to_store:
                 tag = ""
                 if elem != "central":
+                    existing_columns = list(dfs[elem].GetColumnNames())
                     tag = "_"+elem
                     s = elem.rsplit("_", 1)[0]
                     d = elem.rsplit("_", 1)[1]
@@ -810,8 +811,8 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                     # with the 'standardized' name that is requested in the command
                     for b, f in zip(self.branches_to_store, local_feats):
                         name_with_syst_tag = self.config.get_object_expression(f, self.dataset.process.isMC, s, d)
-                        # skip the caces where no syst tag is ever attached to the name
-                        if b == name_with_syst_tag: continue
+                        # skip the caces where no syst tag is ever attached to the name or the column exists
+                        if b == name_with_syst_tag or b in existing_columns: continue
                         dfs[elem] = dfs[elem].Define(b, name_with_syst_tag)
 
                     snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, outp, list(self.branches_to_store)+["weight"], opts)
