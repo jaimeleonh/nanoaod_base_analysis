@@ -13,7 +13,6 @@ import itertools
 from collections import OrderedDict, defaultdict
 import os
 import sys
-import json
 import tabulate
 import matplotlib.pyplot as plt
 
@@ -59,7 +58,7 @@ class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
         return [inp for inp in inputs["collection"].targets.values()]
 
     def merge_output(self):
-        return self.local_target(f"cut_flow.json")
+        return self.dynamic_target(f"cut_flow.json")
 
     def merge(self, inputs, output):
         # output content
@@ -68,7 +67,7 @@ class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
         # merge
         for inp in inputs:
             try:
-                if "json" in inp["cut_flow"].path:
+                if "json" in inp["cut_flow"].abspath:
                     _stats = inp["cut_flow"].load(formatter="json")
                 else:
                     continue
@@ -77,7 +76,7 @@ class MergeCutFlow(DatasetTaskWithCategory, law.tasks.ForestMerge):
                 raise
 
             # add pass and all
-            if "json" in inp["cut_flow"].path:
+            if "json" in inp["cut_flow"].abspath:
                 for cutName, cutEffs in _stats.items():
                     for keyPassAll, val in cutEffs.items():
                         stats[cutName][keyPassAll] += val
@@ -137,7 +136,7 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
         # tables
         outputs = {
             key: {
-                ext: self.local_target(f"table_{key}.{ext}")
+                ext: self.dynamic_target(f"table_{key}.{ext}")
                 for ext in ["txt", "tex", "csv"]
             }
             for key in self.keys
@@ -145,13 +144,14 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
         # plots
         outputs["plots"] = {
             key: {
-                ext: self.local_target(f"plot_{key}.{ext}")
+                ext: self.dynamic_target(f"plot_{key}.{ext}")
                 for ext in ["png", "pdf"]
             }
             for key in self.keys
         }
         return outputs
-        
+
+    @law.decorator.localize(input=False)
     def run(self):
         import csv
 
@@ -159,12 +159,12 @@ class CutFlowTable(ConfigTaskWithCategory, DatasetWrapperTask):
         tables = {key: [] for key in self.keys}
         cutflows = OrderedDict()
         for dataset in self.datasets:
-            with open(inputs["preprocess"][dataset.name].path) as f:
-                cutflows[dataset.name] = json.load(f, object_pairs_hook=OrderedDict)
+            cutflows[dataset.name] = inputs["preprocess"][dataset.name].load(
+                formatter="json", object_pairs_hook=OrderedDict)
         if self.add_categorization:
             for dataset in self.datasets:
-                with open(inputs["cat"][dataset.name].path) as f:
-                    cutflows[dataset.name].update(json.load(f, object_pairs_hook=OrderedDict))
+                cutflows[dataset.name].update(inputs["cat"][dataset.name].load(
+                    formatter="json", object_pairs_hook=OrderedDict))
 
         filters = list(cutflows.values())[0].keys()
 

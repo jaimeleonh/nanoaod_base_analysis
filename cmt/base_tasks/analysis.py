@@ -9,7 +9,6 @@ __all__ = []
 import os
 from shutil import move
 from copy import deepcopy as copy
-import json
 import math
 import itertools
 from collections import OrderedDict
@@ -216,6 +215,13 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
             return reqs
 
+    def get_output_target(self, feature, key):
+        # shared factory for the task outputs; also used to obtain the persistent (non-localized)
+        # path of the histograms file that is written inside the datacard content, which must
+        # remain valid after this task finished, even when outputs are localized during run()
+        return self.dynamic_target(
+            "{}{}.{}".format(feature.name, self.get_output_postfix(), key))
+
     def output(self):
         """
         Returns, per feature, one txt storing the datacard and its corresponding root file
@@ -226,8 +232,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             keys.append("root")
         return {
             feature.name: {
-                key: self.local_target("{}{}.{}".format(feature.name, self.get_output_postfix(),
-                    key))
+                key: self.get_output_target(feature, key)
                 for key in keys
             }
             for feature in self.features
@@ -243,9 +248,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         # structure: systematics[syst_name][process_name] = syst_value
         systematics = {}
         for name in self.non_data_names:
-            path = self.input()["inspections"][name][feature_name]["json"].path
-            with open(path) as f:
-                d = json.load(f)
+            d = self.input()["inspections"][name][feature_name]["json"].load(formatter="json")
             for syst_name, values in d.items():
                 up_value = values["integral"]["up"]
                 down_value = values["integral"]["down"]
@@ -277,9 +280,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         # structure: systematics[syst_name][process_name][parameter] = syst_value
         systematics = {}
         for name in self.non_data_names:
-            path = self.input()["inspections"][name][feature_name]["json"].path
-            with open(path) as f:
-                d = json.load(f)
+            d = self.input()["inspections"][name][feature_name]["json"].load(formatter="json")
             for syst_name, values in d.items():
                 for param in values:
                     if param == "integral":
@@ -366,7 +367,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             f.write(n_dashes * "-" + "\n")
 
             f.write("shapes  *  {0}  {1}  $PROCESS  $PROCESS_$SYSTEMATIC\n".format(bin_name,
-                self.output()[feature.name]["root"].path))
+                self.get_output_target(feature, "root").abspath))
 
             f.write(n_dashes * "-" + "\n")
 
@@ -391,9 +392,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         return self.config.processes.get(p_name).isSignal
 
     def get_rate_from_process_in_fit(self, feature, p_name):
-        filename = self.input()["fits"][p_name][feature.name]["json"].path
-        with open(filename) as f:
-            d = json.load(f)
+        d = self.input()["fits"][p_name][feature.name]["json"].load(formatter="json")
         rate = d[""]["integral"]
         if self.additional_scaling.get(p_name, False):
             rate *= float(self.additional_scaling.get(p_name))
@@ -404,7 +403,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
             model = "workspace_{0}:data_obs".format(process_name)
         else:
             model = "workspace_{0}:model_{0}_{1}_{2}".format(process_name, self.category_name, self.region.name)
-        return ["shapes", process_in_datacard, bin_name, self.output()[feature.name]["root"].path,
+        return ["shapes", process_in_datacard, bin_name,
+            self.get_output_target(feature, "root").abspath,
             model]
 
     def write_shape_datacard(self, feature, norm_systematics, shape_systematics,
@@ -459,8 +459,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
                     else event_yield
                 )
         table.append(rate_line)
-        with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
-            json.dump(yields, f, indent=4)
+        self.output()[feature.name]["json"].dump(yields, indent=4, formatter="json")
 
         # normalization systematics
         for norm_syst in norm_systematics:
@@ -519,9 +518,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         else:
             process_to_look = p_name
         # else:
-        filename = self.input()["fits"][process_to_look][feature.name]["json"].path
-        with open(filename) as f:
-            d = json.load(f)
+        d = self.input()["fits"][process_to_look][feature.name]["json"].load(formatter="json")
         rate = d[""]["integral"]
         weight = (0 if d[""]["integral_error"] == 0
             else rate / (d[""]["integral_error"] * d[""]["integral_error"]))
@@ -594,8 +591,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         table.append(rate_line)
 
         yields_to_save = {p_name: val[0] for p_name, val in yields.items()}
-        with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
-            json.dump(yields_to_save, f, indent=4)
+        self.output()[feature.name]["json"].dump(yields_to_save, indent=4, formatter="json")
 
         # normalization systematics
         for norm_syst in norm_systematics:
@@ -630,9 +626,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             f.write(n_dashes * "-" + "\n")
 
             f.write("{:<11}  {}\n".format("bin", bin_name))
-            filename = self.input()["fits"]["data_obs"][feature.name]["json"].path
-            with open(filename) as f_data:
-                d = json.load(f_data)
+            d = self.input()["fits"]["data_obs"][feature.name]["json"].load(formatter="json")
             rate = d[""]["integral"]
             f.write("observation  %s\n" % rate)
 
@@ -650,9 +644,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
     def update_parameters_for_fitting_signal(self, feature, fit_params, fit_parameters,
             workspace_is_available):
         if workspace_is_available:
-            with open(self.input()["fits"][fit_params["process_name"]][feature.name]["json"].path
-                    ) as f:
-                d = json.load(f)
+            d = self.input()["fits"][fit_params["process_name"]][feature.name]["json"].load(
+                formatter="json")
             fit_parameters.update(d[""])
         return fit_parameters
 
@@ -662,7 +655,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         # inside
         # 2) a str that stores the process to consider
         if isinstance(fit_params, str):
-            return self.input()["fits"][fit_params][feature.name]["root"].path
+            return self.input()["fits"][fit_params][feature.name]["root"].abspath
         return self.get_fit_path(fit_params["process_name"], feature)
 
     def model_uses_envelope(self, fit_params, feature):
@@ -673,6 +666,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
         model_tf = ROOT.TFile.Open(self.get_fit_path("data_obs", feature))
         return model_tf.Get("workspace_" + self.data_names[0])
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Splits the processes into data and non-data. Per feature, loads the input histograms,
@@ -710,7 +704,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
             if not self.fit_models and not self.counting:  # binned fits
                 self.log.write("Generating a binned-fit datacard...\n")
                 histos = {}
-                tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].abspath)
                 for name in self.data_names:
                     histos[name] = copy(tf.Get("histograms/" + name))
                 for name in self.non_data_names:
@@ -752,8 +746,7 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
                 self.write_datacard(yields, feature,
                     norm_systematics, shape_systematics, *self.additional_lines)
-                with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
-                    json.dump(yields, f, indent=4)
+                self.output()[feature.name]["json"].dump(yields, indent=4, formatter="json")
 
                 tf = ROOT.TFile.Open(create_file_dir(self.output()[feature.name]["root"].path),
                     "RECREATE")
@@ -794,10 +787,8 @@ class CreateDatacards(CombineBase, FeaturePlot):
 
                         # if needed, include norm term for bkg fits extracted from data
                         if self.norm_bkg_to_data and not self.config.processes.get(fit_params["process_name"]).isSignal:
-                            data_obs_path = self.get_fit_path("data_obs", feature).replace(
-                                ".root", ".json")
-                            with open(data_obs_path) as f:
-                                res = json.load(f)
+                            res = self.input()["fits"]["data_obs"][feature.name]["json"].load(
+                                formatter="json")
                             norm = ROOT.RooRealVar(f"model_{fit_params['process_name']}_{self.category_name}_{self.region.name}_norm",
                                 "Background yield", res[""]["integral"], 0, max(10, 3 * res[""]["integral"]))
 
@@ -1140,7 +1131,7 @@ class FillDatacardAnnexTrees(PrePlot):
         """
         Returns
         """
-        return self.local_target(f"DatacardAnnexTree_{self.region.name}.root")
+        return self.dynamic_target(f"DatacardAnnexTree_{self.region.name}.root")
 
     def get_nevents(self, inputs=None):
         """ Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization)
@@ -1287,7 +1278,7 @@ class FillDatacardAnnexTrees(PrePlot):
                     weights_list.append(f"gen_weight{out_tag}")
 
             # store tree in output file
-            snapshot_ensuring_output_tree(df, self.tree_name+out_tree_tag, self.output().path,
+            snapshot_ensuring_output_tree(df, self.tree_name+out_tree_tag, self.output(),
                                           list(self.branches_to_store)+weights_list, opts)
 
 
@@ -1389,7 +1380,7 @@ class Fit(FeaturePlot, FitBase):
 
         return {
             feature.name: {
-                key: self.local_target("{}__{}__{}__{}_{}{}.{}".format(
+                key: self.dynamic_target("{}__{}__{}__{}_{}{}.{}".format(
                     feature.name, self.process_name, self.method, x, blind, region_name, key
                 ))
                 for key in keys
@@ -1400,6 +1391,7 @@ class Fit(FeaturePlot, FitBase):
     def get_input(self):
         return self.input()["histo"]
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Obtains the fits per feature and systematic.
@@ -1429,7 +1421,7 @@ class Fit(FeaturePlot, FitBase):
                 key = ""
                 if syst_name != "central":
                     key = f"_{syst_name}_{direction}"
-                tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].abspath)
                 try:
                     histo = copy(tf.Get("histograms/" + self.process_name + key))
                     if self.process_name in self.additional_scaling:
@@ -1598,8 +1590,7 @@ class Fit(FeaturePlot, FitBase):
                     if self.save_png:
                         c.SaveAs(create_file_dir(self.output()[feature.name]["png"].path))
 
-            with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
-                json.dump(d, f, indent=4)
+            self.output()[feature.name]["json"].dump(d, indent=4, formatter="json")
 
 
 class InspectFitSyst(Fit):
@@ -1621,14 +1612,15 @@ class InspectFitSyst(Fit):
         region_name = "" if not self.region else "__{}".format(self.region.name)
         return {
             feature.name: {
-                "json": self.local_target("{}__{}__{}{}.json".format(
+                "json": self.dynamic_target("{}__{}__{}{}.json".format(
                     feature.name, self.process_name, self.method, region_name)),
-                "txt": self.local_target("{}__{}__{}{}.txt".format(
+                "txt": self.dynamic_target("{}__{}__{}{}.txt".format(
                     feature.name, self.process_name, self.method, region_name))
             }
             for feature in self.features
         }
 
+    @law.decorator.localize(input=False)
     def run(self):
         def get_params(method):
             if method == "voigtian":
@@ -1655,8 +1647,7 @@ class InspectFitSyst(Fit):
                 for method in self.functions:
                     params.extend(get_params(method.strip()))
 
-            with open(inputs[feature.name]["json"].path) as f:
-                d = json.load(f)
+            d = inputs[feature.name]["json"].load(formatter="json")
 
             table = []
             out = {}
@@ -1680,8 +1671,7 @@ class InspectFitSyst(Fit):
             print(txt)
             with open(create_file_dir(self.output()[feature.name]["txt"].path), "w+") as f:
                 f.write(txt)
-            with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
-                json.dump(out, f, indent=4)
+            self.output()[feature.name]["json"].dump(out, indent=4, formatter="json")
 
 
 class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
@@ -1711,11 +1701,12 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
         Outputs a txt file with the merged datacard
         """
         return {
-            feature.name: self.local_target("{}{}.txt".format(
+            feature.name: self.dynamic_target("{}{}.txt".format(
                 feature.name, self.get_output_postfix()))
             for feature in self.features
         }
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Combines all datacards using combine's combineCards.py
@@ -1730,8 +1721,7 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
                 if self.avoid_empty_processes:
                     null_signal = True
                     null_bkg = True
-                    with open(inputs[category_name][feature.name]['json'].path) as f:
-                        yields = json.load(f)
+                    yields = inputs[category_name][feature.name]['json'].load(formatter="json")
                     is_background_from_data = any(["data" in key for key in yields.keys()])
                     for process_name, value in yields.items():
                         if value != 0:
@@ -1750,9 +1740,11 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
                     if null_signal or (null_bkg and not is_background_from_data):
                         continue
 
-                cmd += f"{category_name}={inputs[category_name][feature.name]['txt'].path} "
-                with open(inputs[category_name][feature.name]['txt'].path) as f:
-                    text = f.read()
+                # combineCards.py reads the datacards with plain POSIX I/O, so stage them
+                with inputs[category_name][feature.name]['txt'].localize("r") as datacard:
+                    cmd += f"{category_name}={datacard.path} "
+                    with open(datacard.path) as f:
+                        text = f.read()
                 if "shapes" in text:
                     force_shape = True
             if force_shape:
@@ -1812,14 +1804,15 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                "root": self.local_target("workspace_{}{}.root".format(
+                "root": self.dynamic_target("workspace_{}{}.root".format(
                     feature.name, self.get_output_postfix())),
-                "log": self.local_target("log_{}{}.txt".format(
+                "log": self.dynamic_target("log_{}{}.txt".format(
                     feature.name, self.get_output_postfix())),
             }
             for feature in self.features
         }
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Obtains the workspace for each provided datacard.
@@ -1828,12 +1821,16 @@ class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
         inputs = self.input()
         for feature in self.features:
             if not self.combine_categories:
-                inp = inputs[list(self.category_names)[self.branch]][feature.name]['txt'].path
+                inp = inputs[list(self.category_names)[self.branch]][feature.name]['txt']
             else:
-                inp = inputs[feature.name].path
-            cmd = "text2workspace.py {} -m {} -o {}".format(
-                inp, self.higgs_mass, create_file_dir(self.output()[feature.name]["root"].path))
-            error_code = os.system(cmd)
+                inp = inputs[feature.name]
+            # text2workspace.py reads the datacard with plain POSIX I/O, so stage it while the
+            # command runs; outputs are written into localized copies moved back afterwards
+            with inp.localize("r") as datacard:
+                cmd = "text2workspace.py {} -m {} -o {}".format(
+                    datacard.path, self.higgs_mass,
+                    create_file_dir(self.output()[feature.name]["root"].path))
+                error_code = os.system(cmd)
             with open(create_file_dir(self.output()[feature.name]["log"].path), "w+") as f:
                 if error_code == 0:
                     f.write("Success")
@@ -1858,13 +1855,14 @@ class ValidateDatacards(CreateWorkspace):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                key: self.local_target("results_{}{}.{}".format(
+                key: self.dynamic_target("results_{}{}.{}".format(
                     feature.name, self.get_output_postfix(), key))
                 for key in ["json", "log"]
             }
             for feature in self.features
         }
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Obtains the workspace for each provided datacard.
@@ -1872,17 +1870,19 @@ class ValidateDatacards(CreateWorkspace):
         inputs = self.input()
         for feature in self.features:
             if not self.combine_categories:
-                inp = inputs[list(self.category_names)[self.branch]][feature.name]['txt'].path
+                inp = inputs[list(self.category_names)[self.branch]][feature.name]['txt']
             else:
-                inp = inputs[feature.name].path
-            filename = randomize("datacard")
-            os.system(f"cp {inp} {filename}.txt")
-            cmd = "ValidateDatacards.py {}.txt --jsonFile {} > {}".format(
-                filename,
-                create_file_dir(self.output()[feature.name]["json"].path),
-                create_file_dir(self.output()[feature.name]["log"].path)
-            )
-            os.system(cmd)
+                inp = inputs[feature.name]
+            # the datacard is read with plain POSIX I/O, so stage it while the command runs
+            with inp.localize("r") as datacard:
+                filename = randomize("datacard")
+                os.system(f"cp {datacard.path} {filename}.txt")
+                cmd = "ValidateDatacards.py {}.txt --jsonFile {} > {}".format(
+                    filename,
+                    create_file_dir(self.output()[feature.name]["json"].path),
+                    create_file_dir(self.output()[feature.name]["log"].path)
+                )
+                os.system(cmd)
 
 
 class RunCombine(CreateWorkspace):
@@ -1927,7 +1927,7 @@ class RunCombine(CreateWorkspace):
             return {
                 feature.name: {
                     q: {
-                        key: self.local_target("results_{}{}_{}.{}".format(
+                        key: self.dynamic_target("results_{}{}_{}.{}".format(
                             feature.name, self.get_output_postfix(), q, key))
                         for key in ["txt", "root"]
                     } for q in keys
@@ -1936,7 +1936,7 @@ class RunCombine(CreateWorkspace):
             }
         return {
             feature.name: {
-                key: self.local_target("results_{}{}.{}".format(
+                key: self.dynamic_target("results_{}{}.{}".format(
                     feature.name, self.get_output_postfix(), key))
                 for key in ["txt", "root"]
             }
@@ -1949,6 +1949,7 @@ class RunCombine(CreateWorkspace):
     def get_inputs(self):
         return self.input()
 
+    @law.decorator.localize()
     def run(self):
         """
         Runs combine over the provided workspaces.
@@ -2104,7 +2105,7 @@ class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, 
         ws_input = CreateWorkspace.vreq(self, branch=0).output()[self.features[0].name]
         if not ws_input.exists():
             return law.no_value
-        return self.extract_nuisance_names(ws_input.path)
+        return self.extract_nuisance_names(ws_input.abspath)
 
     def __init__(self, *args, **kwargs):
         super(PullsAndImpacts, self).__init__(*args, **kwargs)
@@ -2139,13 +2140,14 @@ class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, 
         assert(self.combine_categories or len(self.category_names) == 1)
         return {
             feature.name: {
-                key: self.local_target("results_{}{}__{}.{}".format(
+                key: self.dynamic_target("results_{}{}__{}.{}".format(
                 feature.name, self.get_output_postfix(), self.branch_data, key))
                 for key in ["log", "root", "json"]
             }
             for feature in self.features
         }
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Runs the combine commands needed for pulls and impacts computations.
@@ -2153,8 +2155,6 @@ class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, 
         inp = self.input()["collection"].targets[0]
         robust_fit = "--robustFit 1 " if self.robust else ""
         for feature in self.features:
-            w_path = inp[feature.name]["root"].path
-
             if self.branch == 0:
                 cmd = ("combine -M MultiDimFit -n _initialFit --algo singles "
                     "--redefineSignalPOIs {poi} {toys} -m {mass} -d {workspace} {robust_fit}>"
@@ -2171,16 +2171,19 @@ class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, 
                 toys = ""
             log_file = randomize("log")
 
-            cmd = cmd.format(poi=self.pois[0], toys=toys, mass=self.higgs_mass,
-                workspace=w_path, param=self.branch_data, robust_fit=robust_fit, log_file=log_file)
-            print("Running " + cmd)
-            os.system(cmd)
+            # combine reads the workspace with plain POSIX I/O, so stage it while it runs
+            with inp[feature.name]["root"].localize("r") as workspace:
+                cmd = cmd.format(poi=self.pois[0], toys=toys, mass=self.higgs_mass,
+                    workspace=workspace.path, param=self.branch_data, robust_fit=robust_fit,
+                    log_file=log_file)
+                print("Running " + cmd)
+                os.system(cmd)
 
             move(log_file, create_file_dir(self.output()[feature.name]["log"].path))
             move(out_file.format(param=self.branch_data, mass=self.higgs_mass),
                 create_file_dir(self.output()[feature.name]["root"].path))
 
-            tree = uproot.open(self.output()[feature.name]["root"].path)["limit"]
+            tree = uproot.open(self.output()[feature.name]["root"].abspath)["limit"]
             results = {
                 self.branch_data: tree[self.branch_data].array().tolist()
             }
@@ -2190,8 +2193,7 @@ class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, 
                 results["groups"] = self.workspace_parameters[self.branch_data]["groups"]
                 results["type"] = self.workspace_parameters[self.branch_data]["type"]
 
-            with open(create_file_dir(self.output()[feature.name]["json"].path), "w+") as f:
-                json.dump(results, f)
+            self.output()[feature.name]["json"].dump(results, formatter="json")
 
 
 class MergePullsAndImpacts(BasePullsAndImpacts):
@@ -2213,7 +2215,7 @@ class MergePullsAndImpacts(BasePullsAndImpacts):
         """
         assert(self.combine_categories or len(self.category_names) == 1)
         return {
-            feature.name: self.local_target("results_{}{}.json".format(
+            feature.name: self.dynamic_target("results_{}{}.json".format(
                 feature.name, self.get_output_postfix()))
             for feature in self.features
         }
@@ -2226,8 +2228,7 @@ class MergePullsAndImpacts(BasePullsAndImpacts):
         nuisance_names = list(self.requires().get_branch_map().values())  # includes POI
         for feature in self.features:
             res = {"POIs": [], "params": []}
-            with open(inp[0][feature.name]["json"].path) as f:
-                d = json.load(f)
+            d = inp[0][feature.name]["json"].load(formatter="json")
             res["POIs"].append({
                 "name": nuisance_names[0],
                 "fit": [d[self.pois[0]][1], d[self.pois[0]][0], d[self.pois[0]][2]]
@@ -2235,8 +2236,7 @@ class MergePullsAndImpacts(BasePullsAndImpacts):
 
             for inuis, nuisance_name in enumerate(nuisance_names[1:]):
                 res["params"].append({"name": nuisance_name})
-                with open(inp[inuis + 1][feature.name]["json"].path) as f:
-                    d = json.load(f)
+                d = inp[inuis + 1][feature.name]["json"].load(formatter="json")
                 res["params"][-1]["fit"] = [
                     d[nuisance_name][1], d[nuisance_name][0], d[nuisance_name][2]
                 ]
@@ -2251,8 +2251,7 @@ class MergePullsAndImpacts(BasePullsAndImpacts):
                 res["params"][-1]["groups"] = d["groups"]
                 res["params"][-1]["type"] = d["type"]
 
-            with open(create_file_dir(self.output()[feature.name].path), "w+") as f:
-                json.dump(res, f, indent=4)
+            self.output()[feature.name].dump(res, indent=4, formatter="json")
 
 
 class PlotPullsAndImpacts(MergePullsAndImpacts):
@@ -2274,11 +2273,12 @@ class PlotPullsAndImpacts(MergePullsAndImpacts):
 
         assert(self.combine_categories or len(self.category_names) == 1)
         return {
-            feature.name: self.local_target("impacts_{}{}.pdf".format(
+            feature.name: self.dynamic_target("impacts_{}{}.pdf".format(
                 feature.name, self.get_output_postfix()))
             for feature in self.features
         }
 
+    @law.decorator.localize()
     def run(self):
         """
         Plots the pulls and impacts using CombineHarvester's plotImpacts.py

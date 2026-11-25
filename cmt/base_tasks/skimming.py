@@ -124,8 +124,8 @@ class SkimmingTaskRDF(DatasetTaskWithCategory,law.LocalWorkflow, HTCondorWorkflo
                 "can't be set at once")
 
     def output(self):
-        return {"data": self.local_target("data_%s.root" % self.branch),
-                "stats": self.local_target("data_%s.json" % self.branch)}
+        return {"data": self.dynamic_target("data_%s.root" % self.branch),
+                "stats": self.dynamic_target("data_%s.json" % self.branch)}
         # return self.local_target("{}".format(self.input()["data"].path.split("/")[-1]))
 
     #def get_input(self):
@@ -213,8 +213,7 @@ class SkimmingTaskRDF(DatasetTaskWithCategory,law.LocalWorkflow, HTCondorWorkflo
             'filenames': [str(self.get_path(inp))]
         }
 
-        with open(self.output()["stats"].path, "w+") as f:
-            json.dump(d, f, indent = 4)
+        self.output()["stats"].dump(d, indent=4, formatter="json")
 
         # Saving the skimming Events ttre...
 
@@ -222,7 +221,8 @@ class SkimmingTaskRDF(DatasetTaskWithCategory,law.LocalWorkflow, HTCondorWorkflo
         branch_list = ROOT.vector('string')()
         for branch_name in branches:
             branch_list.push_back(branch_name)
-        # filtered_df.Snapshot(self.tree_name, create_file_dir(outp.path), branch_list)
-        filtered_df.Snapshot(self.tree_name, self.output()["data"].path, branch_list)
+        outp = self.output()["data"]
+        outp.parent.touch()
+        filtered_df.Snapshot(self.tree_name, outp.abspath, branch_list)
 
 # =======================================================================

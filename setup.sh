@@ -132,6 +132,14 @@ action() {
     [ -z "$CMT_STORE_EOS_SHARDS" ] && export CMT_STORE_EOS_SHARDS="$CMT_STORE_EOS"
     [ -z "$CMT_STORE_EOS_EVALUATION" ] && export CMT_STORE_EOS_EVALUATION="$CMT_STORE_EOS"
 
+    # target mode for task inputs/outputs: "local" (default) or "remote"
+    # ("remote" addresses EOS through root:// URLs via gfal2, CMT_EOS_ENDPOINT can be
+    # set to "eosuser" or "eosgroup" to force the endpoint, default: derived from the store path)
+    # per-task override: config.target_modes = {"<TaskClassName>": "remote"} in the analysis
+    # config, or --<Task>-target-mode on the command line; input direction override:
+    # CMT_INPUT_MODE (falls back to CMT_TARGET_MODE)
+    [ -z "$CMT_TARGET_MODE" ] && export CMT_TARGET_MODE="local"
+
     # create some dirs already
     mkdir -p "$CMT_TMP_DIR"
 
@@ -183,6 +191,7 @@ action() {
     export GLOBUS_THREAD_MODEL="none"
     export CMT_GFAL_DIR="$CMT_SOFTWARE/gfal2"
     export GFAL_PLUGIN_DIR="$CMT_GFAL_DIR/lib/gfal2-plugins"
+    export GFAL_CONFIG_DIR="$CMT_GFAL_DIR/etc/gfal2.d"
 
     # certificate proxy handling
     [ "$CMT_REMOTE_JOB" != "1" ] && export X509_USER_PROXY="$CMT_BASE/x509up"
@@ -330,9 +339,13 @@ action() {
         #cmt_add_bin "$CMT_GFAL_DIR/bin"
         #cmt_add_py "$CMT_GFAL_DIR/lib/python3/site-packages"
         #cmt_add_lib "$CMT_GFAL_DIR/lib"
+        # gfal2 runtime dependencies (libpugixml, globus, XRootD client libraries, ...)
+        # live in the UI tree, appended last so they only fill gaps and never shadow
+        # CMSSW/ROOT libraries
+        #export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/cvmfs/grid.cern.ch/alma9-ui-current/usr/lib64"
 
         #if [ ! -d "$CMT_GFAL_DIR" ]; then
-        #    local lcg_base="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr"
+        #    local lcg_base="/cvmfs/grid.cern.ch/alma9-ui-current/usr"
         #    if [ ! -d "$lcg_base" ]; then
         #        2>&1 echo "LCG software directory $lcg_base not existing"
         #        return "1"
@@ -341,15 +354,21 @@ action() {
         #    mkdir -p "$CMT_GFAL_DIR"
         #    (
         #        cd "$CMT_GFAL_DIR"
-        #        mkdir -p include bin lib/gfal2-plugins lib/python3/site-packages
+        #        mkdir -p include bin lib/gfal2-plugins lib/python3/site-packages etc/gfal2.d
         #        ln -s "$lcg_base"/include/gfal2* include
         #        ln -s "$lcg_base"/bin/gfal-* bin
         #        ln -s "$lcg_base"/lib64/libgfal* lib
-        #        ln -s "$lcg_base"/lib64/gfal2-plugins/libgfal* lib/gfal2-plugins
-        #        ln -s "$lcg_base"/lib64/python3/site-packages/gfal* lib/python3/site-packages
-        #        cd lib/gfal2-plugins
-        #        rm libgfal_plugin_http.so libgfal_plugin_xrootd.so
-        #        curl https://cernbox.cern.ch/index.php/s/qgrogVY4bwcuCXt/download > libgfal_plugin_xrootd.so
+        #        # non-gfal runtime dependencies of the gfal2 bindings and libgfal
+        #        ln -s "$lcg_base"/lib64/libcgsi_plugin* "$lcg_base"/lib64/libgsoap* \
+        #            "$lcg_base"/lib64/libpugixml* "$lcg_base"/lib64/libglobus* lib
+        #        # only the plugins required for local and root:// (EOS) access; the others
+        #        # (dcap, gridftp, http, sftp, srm) fail to load without system-wide
+        #        # configuration and libraries that are not guaranteed on every host
+        #        ln -s "$lcg_base"/lib64/gfal2-plugins/libgfal_plugin_file.so \
+        #            "$lcg_base"/lib64/gfal2-plugins/libgfal_plugin_xrootd.so lib/gfal2-plugins
+        #        ln -s "$lcg_base"/lib64/python3*/site-packages/gfal2* lib/python3/site-packages
+        #        # minimal plugin configuration expected by the gfal2 plugins
+        #        printf "[FILE PLUGIN]\n[XROOTD PLUGIN]\n" > etc/gfal2.d/gfal2.conf
         #    )
         #fi
     }

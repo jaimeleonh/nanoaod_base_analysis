@@ -29,7 +29,7 @@ import luigi
 import law
 
 from law.util import merge_dicts
-from cmt.util import chunked_list
+from cmt.util import chunked_list, remote_targets_enabled, remote_input_enabled, to_xrootd_url
 from law.contrib.htcondor.job import HTCondorJobFileFactory
 
 from abc import abstractmethod
@@ -144,24 +144,31 @@ def get_categorization_merging_factor(dataset, category, dataset_input_files=1E5
 def get_categorization_reduced_branch(branch_data):
     return f"{branch_data['reduced_branch_nb']}"
 
-def snapshot_ensuring_output_tree(df, tree_name, output_path, branches, opts=None):
+def snapshot_ensuring_output_tree(df, tree_name, output_target, branches, opts=None):
     """
     Run the Snapshot method making sure that in case the RDF has
-    zero events, an empty TTree is added in the output TFile
+    zero events, an empty TTree is added in the output TFile.
+
+    ``output_target`` is a law file target; its parent directory is created (on the local
+    filesystem or remotely through gfal2) and ``output_target.abspath`` is used as the
+    Snapshot destination, so the output can be a local file or a remote root:// URL.
     """
     # Get future counts
     future_counts = df.Count()
 
+    # Create the output directory (local or remote)
+    output_target.parent.touch()
+
     # Run snapshot
     if opts:
-        df.Snapshot(tree_name, output_path, branches, opts)
+        df.Snapshot(tree_name, output_target.abspath, branches, opts)
     else:
-        df.Snapshot(tree_name, output_path, branches)
+        df.Snapshot(tree_name, output_target.abspath, branches)
 
     # If the RDF was empty, add an empty TTree in the output file
     if future_counts.GetValue() == 0:
         ROOT = import_root()
-        output_file = ROOT.TFile(output_path, "UPDATE")
+        output_file = ROOT.TFile.Open(output_target.abspath, "UPDATE")
         empty_tree = ROOT.TTree(tree_name, tree_name)
         empty_tree.Write()
         output_file.Close()
@@ -171,13 +178,20 @@ def snapshot_ensuring_output_tree(df, tree_name, output_path, branches, opts=Non
 class Target():
     """
     Minimal container for a target path, used to wrap external input data referenced by a
-    plain path rather than a conventional law target.
+    plain path rather than a conventional law target. When remote input addressing is
+    enabled (``CMT_INPUT_MODE=remote``, falling back to ``CMT_TARGET_MODE``), ``abspath``
+    maps EOS mount paths to their ``root://`` URLs, so consumers should always pass
+    ``target.abspath`` to ROOT or shell tools and reserve ``target.path`` for bookkeeping.
 
     :param path: path (or collection of paths) the target points to
     :type path: str
     """
     def __init__(self, path, *args, **kwargs):
         self.path = path
+
+    @property
+    def abspath(self):
+        return to_xrootd_url(self.path) if remote_input_enabled() else self.path
 
 
 class Task(law.Task):
@@ -202,6 +216,9 @@ class Task(law.Task):
     """
 
     version = luigi.Parameter(description="version of outputs to produce")
+    target_mode = luigi.Parameter(default=law.NO_STR, significant=False, description="where to "
+        "place the outputs of this task: 'local' or 'remote', defaults to the entry for the "
+        "task class name in config.target_modes, then $CMT_TARGET_MODE, then 'local'")
     request_cpus = luigi.IntParameter(default=1, description="number of cpus requested, default: 1")
     notify = law.telegram.NotifyTelegramParameter()
 
@@ -209,7 +226,7 @@ class Task(law.Task):
     default_wlcg_fs = "wlcg_fs"
 
     # law related configs
-    exclude_params_req = {"notify"}
+    exclude_params_req = {"notify", "target_mode"}
     exclude_params_branch = {"notify"}
     exclude_params_workflow = {"notify"}
     exclude_params_repr = {"notify"}
@@ -258,16 +275,27 @@ class Task(law.Task):
         return cls(self.local_path(*args, store=kwargs.pop("store", None)), **kwargs)
 
     def wlcg_path(self, *path, **kwargs):
-        if "InputData" in str(type(self)):
+        if isinstance(self, InputData):
             parts = list(path)[0]
             return "/".join([parts])
         else:
             parts = tuple(self.store_parts().values()) + tuple(self.store_parts_ext().values()) + path
             return os.path.join(*[str(p) for p in parts])
 
+    def get_wlcg_fs_name(self):
+        # return the law.cfg filesystem section defining the remote endpoint: the default
+        # sections point to eosuser.cern.ch, while the *_group sections point to
+        # eosgroup.cern.ch and are selected via CMT_EOS_ENDPOINT=eosgroup or when the store
+        # itself lives in /eos/group
+        endpoint = os.getenv("CMT_EOS_ENDPOINT", "").lower()
+        store = os.path.expandvars(os.path.expanduser(self.default_store))
+        if endpoint == "eosgroup" or (not endpoint and store.startswith("/eos/group/")):
+            return self.default_wlcg_fs + "_group"
+        return self.default_wlcg_fs
+
     def wlcg_target(self, *args, **kwargs):
-        kwargs.setdefault("fs", self.default_wlcg_fs)
-        if "InputData" in str(type(self)):
+        kwargs.setdefault("fs", self.get_wlcg_fs_name())
+        if isinstance(self, InputData):
             cls = Target
         else:
             cls = (law.wlcg.WLCGDirectoryTarget if kwargs.pop("dir", False)
@@ -276,11 +304,23 @@ class Task(law.Task):
         kwargs.pop("avoid_store", False)
         return cls(path, **kwargs)
 
+    def get_target_mode(self):
+        # resolve where the outputs of this task live, precedence: explicit target_mode
+        # parameter > config.target_modes[<class name>] > $CMT_TARGET_MODE > "local"
+        mode = self.target_mode
+        if mode == law.NO_STR:
+            config = getattr(self, "config", None)
+            mode = getattr(config, "target_modes", {}).get(type(self).__name__, law.NO_STR)
+        if mode == law.NO_STR:
+            mode = os.getenv("CMT_TARGET_MODE", "local")
+        return str(mode).lower()
+
     def dynamic_target(self, *args, **kwargs):
-        if (
-            "InputData" in str(type(self)) or
-            ("PreprocessRDF" in str(type(self)) and os.getenv("CMT_REMOTE_PREPROCESSING", "0") == "1")
-        ):
+        # single factory for task targets: remote root:// targets on EOS (handled through
+        # gfal2) when the resolved target mode (get_target_mode) is "remote", local targets
+        # otherwise; InputData always goes through wlcg_target, whose Target wrapper maps
+        # paths to root:// URLs on demand
+        if self.get_target_mode() == "remote" or isinstance(self, InputData):
             return self.wlcg_target(*args, **kwargs)
         else:
             return self.local_target(*args, **kwargs)
@@ -1019,10 +1059,12 @@ class RDFModuleTask(DatasetTask):
     def get_path(self, inp, index=None):
         if not index:
             index = 0
+        # use abspath so that remote targets resolve to root:// URLs while local ones
+        # stay plain paths
         if not self.merging_factor and not self.threshold:
-            return (inp[index].path,)
+            return (inp[index].abspath,)
         else:
-            return tuple([t[index].path for t in inp])
+            return tuple([t[index].abspath for t in inp])
 
     def build_rdf(self):
         ROOT = import_root()

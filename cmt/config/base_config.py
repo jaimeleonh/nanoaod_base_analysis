@@ -69,6 +69,7 @@ class Config():
         self.systematics = self.add_systematics()
         self.features = self.add_features()
         self.versions = self.add_versions()
+        self.target_modes = self.add_target_modes()
         self.weights = self.add_weights()
         self.default_module_files = self.add_default_module_files()
 
@@ -126,6 +127,12 @@ class Config():
     def add_versions(self):
         versions = {}
         return versions
+
+    def add_target_modes(self):
+        # optional mapping of task class names ("PreprocessRDF", "Categorization", ...) to
+        # output target modes ("local" or "remote"), overriding $CMT_TARGET_MODE per task;
+        # can also be passed as the target_modes keyword to the constructor
+        return dict(self.cfg_kwargs.get("target_modes", {}))
 
     def add_weights(self):
         weights = DotDict()

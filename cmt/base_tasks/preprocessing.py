@@ -278,7 +278,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkfl
         :return: One file per input file
         :rtype: `.json`
         """
-        return self.local_target(f"data_{self.addendum}{self.branch}.json")
+        return self.dynamic_target(f"data_{self.addendum}{self.branch}.json")
 
     def get_weight(self, weights, syst_name, syst_direction, **kwargs):
         """
@@ -303,36 +303,48 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkfl
         from shutil import copy
         ROOT = import_root()
         ROOT.ROOT.EnableThreadSafety()
-        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+        if self.request_cpus > 1:
+            ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # Additional tree RDF
         additional_dfs = []
 
         # create RDataFrame
-        inp = self.get_input()
-        if not self.dataset.friend_datasets:
-            df = self.RDataFrame(self.tree_name, self.get_path(inp),
-                allow_redefinition=self.allow_redefinition)
-            for additional_tree in self.additional_trees:
-                try:
-                    df_additional = self.RDataFrame(additional_tree, self.get_path(inp),
-                        allow_redefinition=self.allow_redefinition)
-                    additional_dfs.append(df_additional)
-                except TypeError:
-                    print(f"** PreCounter warning: no {additional_tree} in {self.get_path(inp)}. Passing! "
-                          f"Please make sure to manually check that the file is not corrupted and {additional_tree} is correctly missing.")
+        try:
+            inp = self.get_input()
+            if not self.dataset.friend_datasets:
+                df = self.RDataFrame(self.tree_name, self.get_path(inp),
+                    allow_redefinition=self.allow_redefinition)
+                for additional_tree in self.additional_trees:
+                    try:
+                        df_additional = self.RDataFrame(additional_tree, self.get_path(inp),
+                            allow_redefinition=self.allow_redefinition)
+                        additional_dfs.append(df_additional)
+                    except TypeError:
+                        print(f"** PreCounter warning: no {additional_tree} in {self.get_path(inp)}. Passing! "
+                            f"Please make sure to manually check that the file is not corrupted and {additional_tree} is correctly missing.")
 
+            # friend tree
+            else:
+                tchain = ROOT.TChain()
+                for elem in self.get_path(inp):
+                    tchain.Add("{}/{}".format(elem, self.tree_name))
+                friend_tchain = ROOT.TChain()
+                for elem in self.get_path(inp, 1):
+                    friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+                tchain.AddFriend(friend_tchain, "friend")
+                df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
+            
+            branches = df.GetColumnNames()
+        except:
+            d = {
+                "nevents": 0,
+                "nweightedevents": 0,
+                "filenames": [str(self.get_path(inp))]
+            }
 
-        # friend tree
-        else:
-            tchain = ROOT.TChain()
-            for elem in self.get_path(inp):
-                tchain.Add("{}/{}".format(elem, self.tree_name))
-            friend_tchain = ROOT.TChain()
-            for elem in self.get_path(inp, 1):
-                friend_tchain.Add("{}/{}".format(elem, self.tree_name))
-            tchain.AddFriend(friend_tchain, "friend")
-            df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
+            self.output().dump(d, indent=4, formatter="json")
+            return
 
         weight_modules = self.get_feature_modules(self.weights_file)
         if len(weight_modules) > 0:
@@ -374,8 +386,7 @@ class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkfl
             "filenames": [str(self.get_path(inp))]
         }
 
-        with open(create_file_dir(self.output().path), "w+") as f:
-            json.dump(d, f, indent=4)
+        self.output().dump(d, indent=4, formatter="json")
 
 
 class PreCounterWrapper(DatasetSystWrapperTask):
@@ -439,10 +450,9 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         :return: One file per input file with the tree + additional branches
         :rtype: `.root`
         """
-        out = {"root" : self.local_target(f"data_{self.addendum}{self.branch}.root")}
-        #out = {"root" : self.dynamic_target(f"data_{self.addendum}{self.branch}.root")}
+        out = {"root" : self.dynamic_target(f"data_{self.addendum}{self.branch}.root")}
         if self.compute_filter_efficiency:
-            out["cut_flow"] = self.local_target(f"cutflow_{self.addendum}{self.branch}.json")
+            out["cut_flow"] = self.dynamic_target(f"cutflow_{self.addendum}{self.branch}.json")
         out = law.SiblingFileCollection(out)
         return out
 
@@ -456,64 +466,70 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
         from shutil import copy
         ROOT = import_root()
         ROOT.ROOT.EnableThreadSafety()
-        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+        if self.request_cpus > 1:
+            ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
-        outp=self.output()["root"]
-        print(outp.path)
+        outp = self.output()["root"]
+        print(outp.abspath)
 
         # create RDataFrame
-        inp = self.get_input()
-        if not self.dataset.friend_datasets:
-            if self.prefetch:
-                infiles=[]
-                for ifil,fil in enumerate(self.get_path(inp)):
-                    print(f"Prefetching input file {fil}")
-                    infile=os.getenv("TMPDIR") + "/" + outp.path.split("/")[-1].replace(".root",f"-input{ifil}.root") # recycling hash from outputfile          
-                    if os.path.isfile(infile):
-                        raise RuntimeError(f"Precatching file {infile} already exists. This shouldn't happen!")
-                    import subprocess
-                    nattempts=5
-                    for attempt in range(nattempts):
-                        try:
-                            subprocess.run(["xrdcp", fil, infile], check=True,
-                                capture_output=True, text=True)
-                            print("Prefetching done")
-                            break
-                        except subprocess.CalledProcessError as e:
-                            stderr = e.stderr.strip() if e.stderr else ""
-                            stdout = e.stdout.strip() if e.stdout else ""
-                            details = " ".join(part for part in [stdout, stderr] if part)
-                            
-                            if attempt < nattempts-1:
-                                print(f"Prefetching failed for {fil} on attempt {attempt + 1}/{nattempts}, retrying. xrdcp output: {details}" if details else "")
-                                if os.path.exists(infile):
-                                   try:
-                                      os.remove(infile)
-                                   except OSError:
-                                      pass
-                            else:
-                                print(f"Prefetching failed after {nattempts} attempts for {fil} -> {infile}."
-                                  + (f" xrdcp output: {details}" if details else "")
-                                )
-                                print("Rolling back to running remotely. Good luck") 
-                                os.remove(infile)
-                                infile = fil
-                    infiles.append(infile)
-            else:
-                infiles=self.get_path(inp)
-            df = self.RDataFrame(self.tree_name, infiles,
-                allow_redefinition=self.allow_redefinition)
+        try:
+            inp = self.get_input()
+            if not self.dataset.friend_datasets:
+                if self.prefetch:
+                    infiles=[]
+                    for ifil,fil in enumerate(self.get_path(inp)):
+                        print(f"Prefetching input file {fil}")
+                        infile=os.getenv("TMPDIR") + "/" + outp.path.split("/")[-1].replace(".root",f"-input{ifil}.root") # recycling hash from outputfile
+                        if os.path.isfile(infile):
+                            raise RuntimeError(f"Precatching file {infile} already exists. This shouldn't happen!")
+                        import subprocess
+                        nattempts=5
+                        for attempt in range(nattempts):
+                            try:
+                                subprocess.run(["xrdcp", fil, infile], check=True,
+                                    capture_output=True, text=True)
+                                print("Prefetching done")
+                                break
+                            except subprocess.CalledProcessError as e:
+                                stderr = e.stderr.strip() if e.stderr else ""
+                                stdout = e.stdout.strip() if e.stdout else ""
+                                details = " ".join(part for part in [stdout, stderr] if part)
 
-        # friend tree
-        else:
-            tchain = ROOT.TChain()
-            for elem in self.get_path(inp):
-                tchain.Add("{}/{}".format(elem, self.tree_name))
-            friend_tchain = ROOT.TChain()
-            for elem in self.get_path(inp, 1):
-                friend_tchain.Add("{}/{}".format(elem, self.tree_name))
-            tchain.AddFriend(friend_tchain, "friend")
-            df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
+                                if attempt < nattempts-1:
+                                    print(f"Prefetching failed for {fil} on attempt {attempt + 1}/{nattempts}, retrying. xrdcp output: {details}" if details else "")
+                                    if os.path.exists(infile):
+                                       try:
+                                          os.remove(infile)
+                                       except OSError:
+                                          pass
+                                else:
+                                    print(f"Prefetching failed after {nattempts} attempts for {fil} -> {infile}."
+                                      + (f" xrdcp output: {details}" if details else "")
+                                    )
+                                    print("Rolling back to running remotely. Good luck")
+                                    os.remove(infile)
+                                    infile = fil
+                    infiles.append(infile)
+                else:
+                    infiles=self.get_path(inp)
+                df = self.RDataFrame(self.tree_name, infiles,
+                    allow_redefinition=self.allow_redefinition)
+
+            # friend tree
+            else:
+                tchain = ROOT.TChain()
+                for elem in self.get_path(inp):
+                    tchain.Add("{}/{}".format(elem, self.tree_name))
+                friend_tchain = ROOT.TChain()
+                for elem in self.get_path(inp, 1):
+                    friend_tchain.Add("{}/{}".format(elem, self.tree_name))
+                tchain.AddFriend(friend_tchain, "friend")
+                df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
+        except:
+            raise Exception("Input file is corrupted")
+            tf = ROOT.TFile.Open(self.output()['root'].abspath, "RECREATE")
+            tf.Close()
 
 
         try:
@@ -536,15 +552,13 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                 # Print warning
                 print(f"Warning! File {self.get_path(inp)} has 0 entries!\n"
                        "         Returning an empty output TTree!")
-    
+
                 # Save ensuring presence of TTree in output file
-                snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
-    
+                snapshot_ensuring_output_tree(filtered_df, self.tree_name, outp, branches)
+
                 if self.compute_filter_efficiency == True:
-                    json_res = {}
-                    with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                        json.dump(json_res, f, indent=4)
-    
+                    self.output()["cut_flow"].dump({}, indent=4, formatter="json")
+
             # Else: process normally
             else:
                 modules = self.get_feature_modules(self.modules_file)
@@ -559,18 +573,16 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                 branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
                 if self.compute_filter_efficiency == True:
                     report = filtered_df.Report()
-    
-                # Save ensuring presence of TTree in output file
-                snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp.path), branches)
 
+                # Save ensuring presence of TTree in output file
+                snapshot_ensuring_output_tree(filtered_df, self.tree_name, outp, branches)
 
                 if self.compute_filter_efficiency == True:
                     json_res = {cutReport.GetName() : {
                         "pass": cutReport.GetPass(), "all": cutReport.GetAll()}
                                 for cutReport in report.GetValue()
                                 }
-                    with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                        json.dump(json_res, f, indent=4)
+                    self.output()["cut_flow"].dump(json_res, indent=4, formatter="json")
         except Exception as e:
             print("Exception: %s. Exiting" % e)
             sys.exit(1)
@@ -1048,7 +1060,7 @@ class Categorization(PreprocessRDF):
                 os.path.expandvars("$CMT_TMP_DIR/%s/splitted_branches_categorization_%s/%s.json" % (
                     self.config_name, self.max_events, self.dataset.name))):
             ROOT = import_root()
-            files = [target["root"].path for target in self.get_input()["data"]["collection"].targets.values()]
+            files = [target["root"].abspath for target in self.get_input()["data"]["collection"].targets.values()]
             branches = []
             for ifil, fil in enumerate(files):
                 nevents = -1
@@ -1126,9 +1138,9 @@ class Categorization(PreprocessRDF):
         else:
             branch = get_categorization_reduced_branch(self.branch_data)
 
-        out = {"root" : self.local_target(f"data_{self.addendum}{branch}.root")}
+        out = {"root" : self.dynamic_target(f"data_{self.addendum}{branch}.root")}
         if self.compute_filter_efficiency:
-            out["cut_flow"] = self.local_target(f"cutflow_{self.addendum}{branch}.json")
+            out["cut_flow"] = self.dynamic_target(f"cutflow_{self.addendum}{branch}.json")
         out = law.SiblingFileCollection(out)
         return out
 
@@ -1139,10 +1151,10 @@ class Categorization(PreprocessRDF):
         Creates one RDataFrame per input file, runs the desired RDFModules and applies a
         post-selection
         """
-        from shutil import copy
         ROOT = import_root()
         ROOT.ROOT.EnableThreadSafety()
-        ROOT.ROOT.EnableImplicitMT(self.request_cpus)
+        if self.request_cpus > 1:
+            ROOT.ROOT.EnableImplicitMT(self.request_cpus)
 
         # prepare outputs and inputs
         outp = self.output()
@@ -1151,16 +1163,16 @@ class Categorization(PreprocessRDF):
             if self.skip_preprocess:
                 input_files = [self.get_path(inp)[0]]
             else:
-                input_files = [self.input()["root"].path]
+                input_files = [self.input()["root"].abspath]
         else:
             if self.skip_preprocess:
-                input_files = [t[0].path for t in self.input()]
+                input_files = [t[0].abspath for t in self.input()]
             else:
                 if len(self.branch_data["parent_branches"]) == 1:
-                    input_files = [self.input()["root"].path]
+                    input_files = [self.input()["root"].abspath]
                 else:
                     try:
-                        input_files = [x["root"].path for x in self.input()["collection"].targets.values()]
+                        input_files = [x["root"].abspath for x in self.input()["collection"].targets.values()]
                     except Exception as e:
                         raise Exception(f'Categorization : did not find file paths in task input collection {repr(self.input()["collection"].targets)}. branch_data={self.branch_data}') from e
 
@@ -1189,10 +1201,9 @@ class Categorization(PreprocessRDF):
         # if files are healthy but all empty create empty output and return
         if len(non_empty_input_files) == 0:
             print(f"Categorization : All healthy but empty input files. Copying first empty input to output.")
-            copy(input_files[0], outp["root"].path)
+            outp["root"].copy_from(input_files[0])
             if self.compute_filter_efficiency:
-                with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                    json.dump({}, f, indent=4)
+                self.output()["cut_flow"].dump({}, indent=4, formatter="json")
             return
 
         if len(non_empty_input_files) == 1 and not self.dataset.friend_datasets:
@@ -1217,7 +1228,7 @@ class Categorization(PreprocessRDF):
                     # only one friend dataset is supported
                     assert (len(input_target) == 2)
                     # InputData output is a tuple, assume second element is the friend
-                    sts = friend_tchain.AddFile(input_target[1].path, 0)
+                    sts = friend_tchain.AddFile(input_target[1].abspath, 0)
                     if not sts:
                         # this error should actually always be caught by the checks done above
                         raise RuntimeError(f"Input file for branch '{in_file}' is corrupted or missing. If it was produced "
@@ -1254,15 +1265,14 @@ class Categorization(PreprocessRDF):
         filtered_df = df.Define("selection", selection).Filter("selection", self.category.name)
 
         # Save ensuring presence of TTree in output file
-        snapshot_ensuring_output_tree(filtered_df, self.tree_name, create_file_dir(outp["root"].path), branches)
+        snapshot_ensuring_output_tree(filtered_df, self.tree_name, outp["root"], branches)
 
         if self.compute_filter_efficiency:
             report = filtered_df.Report()
             json_res = {cutReport.GetName():
                 {"pass": cutReport.GetPass(), "all": cutReport.GetAll()}
                 for cutReport in report.GetValue()}
-            with open(create_file_dir(self.output()["cut_flow"].path), "w+") as f:
-                json.dump(json_res, f, indent=4)
+            self.output()["cut_flow"].dump(json_res, indent=4, formatter="json")
 
 
 class CategorizationWrapper(DatasetCategorySystWrapperTask):
@@ -1396,7 +1406,7 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
     def merge_output(self):
         addendum = PreprocessRDF.get_addendum(self)
         return law.SiblingFileCollection([
-            self.local_target("data_{}{}.root".format(addendum, i))
+            self.dynamic_target("data_{}{}.root".format(addendum, i))
             for i in range(self.n_files_after_merging)
         ])
 
@@ -1407,10 +1417,10 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
             good_inputs = []
             for inp in inputs:  # merge only files with a filled tree
                 try:
-                    tf = ROOT.TFile.Open(inp.path)
+                    tf = ROOT.TFile.Open(inp.abspath)
                 except:
                     inp = inp.targets["root"]
-                    tf = ROOT.TFile.Open(inp.path)
+                    tf = ROOT.TFile.Open(inp.abspath)
 
                 tree = tf.Get(self.tree_name)
                 # If the tree is not stored in the file (e.g. because of some issue in the production),
@@ -1452,12 +1462,12 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                 if use_hadd:
                     print("Merging with hadd...")
                     # hadd option '-f101' is the compression level (ZLIB with default value)
-                    cmd = f"hadd -f101 {create_file_dir(tmp_out.path)} " +  " ".join([f.path for f in good_inputs])
+                    cmd = f"hadd -f101 {create_file_dir(tmp_out.path)} " +  " ".join([f.abspath for f in good_inputs])
                 else:
                     print("Merging with haddnano.py...")
                     cmd = "python3 %s/bin/%s/haddnano.py %s %s" % (
                         os.environ["CMSSW_BASE"], os.environ["SCRAM_ARCH"],
-                        create_file_dir(tmp_out.path), " ".join([f.path for f in good_inputs]))
+                        create_file_dir(tmp_out.path), " ".join([f.abspath for f in good_inputs]))
                 # Using 'law.util.interruptable_popen' (instead of 'law.root.hadd_task')
                 # in order to catch the warning/exceptions in the stdout or stderr
                 rc, out, errs = law.util.interruptable_popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
@@ -1478,7 +1488,6 @@ class MergeCategorization(DatasetTaskWithCategory, law.tasks.ForestMerge):
                 # which we use to catch such errors.
                 if "Did not expect to back fill non-boolean branches" in out:
                     raise RuntimeError("MergeCategorization returned an Error/Warning -> " + out)
-
             else:  # if all input files are empty, create an empty ttree as output
                 tf = ROOT.TFile.Open(create_file_dir(tmp_out.path), "RECREATE")
                 empty_tree = ROOT.TTree(self.tree_name, self.tree_name)
@@ -1558,7 +1567,7 @@ class MergePreCounter(DatasetTask, law.tasks.ForestMerge):
         # Adjust addendum name for systematic variations
         if addendum != "":
             addendum = "_"+addendum[:-1]
-        return self.local_target(f"stats{addendum}.json")
+        return self.dynamic_target(f"stats{addendum}.json")
 
     def merge(self, inputs, output):
         # output content
@@ -1567,16 +1576,16 @@ class MergePreCounter(DatasetTask, law.tasks.ForestMerge):
         # merge
         for inp in inputs:
             try:
-                if "json" in inp.path:
+                if "json" in inp.abspath:
                     _stats = inp.load(formatter="json")
-                elif "root" in inp.path:
+                elif "root" in inp.abspath:
                     _stats = inp.load(formatter="root")
             except:
                 print("error leading input target {}".format(inp))
                 raise
 
             # add nevents
-            if "json" in inp.path:
+            if "json" in inp.abspath:
                 stats["nevents"] += _stats["nevents"]
                 stats["nweightedevents"] += _stats["nweightedevents"]
                 stats["filenames"] += _stats["filenames"]
@@ -1635,7 +1644,7 @@ class EventCounterDAS(DatasetTask):
         :return: One file for the whole dataset
         :rtype: `.json`
         """
-        return self.local_target("stats.json")
+        return self.dynamic_target("stats.json")
 
     def run(self):
         """
@@ -1659,8 +1668,7 @@ class EventCounterDAS(DatasetTask):
                 "nevents": d[0]["nevents"],
                 "nweightedevents": d[0]["nevents"],
             }
-        with open(create_file_dir(self.output().path), "w+") as f:
-            json.dump(output_d, f, indent=4)
+        self.output().dump(output_d, indent=4, formatter="json")
         os.remove(tmpname)
 
 

@@ -8,10 +8,12 @@ __all__ = []
 
 
 from collections import OrderedDict
+from contextlib import contextmanager
 
 import six
 import law
 import luigi
+from law.target.file import localize_file_targets
 
 from cmt.base_tasks.base import Task, ConfigTask, HTCondorWorkflow, SlurmWorkflow
 from cmt.base_tasks.shards import MergeShards
@@ -173,7 +175,9 @@ class TrainingTask(ConfigTask):
             training_config_name = self.training_config_name
 
         # data_specs is a nested (ordered) dictionary with the structure
-        # {training_process.name: {"shards": [files], "label": int}}
+        # {training_process.name: {"shards": [file targets], "label": int}}
+        # where the shard targets are turned into local paths when they are staged locally
+        # via localize_data_specs
         # built from shards_req which can have the following structure(s)
         # {split_name: [{dataset_name: law.FileCollection, ...}, ...}
         # or
@@ -208,9 +212,21 @@ class TrainingTask(ConfigTask):
 
                     # add to data_spec
                     data_spec.setdefault(training_process.name, {"shards": [], "label": label})
-                    data_spec[training_process.name]["shards"] += [inp.path for inp in coll.targets]
+                    data_spec[training_process.name]["shards"] += list(coll.targets)
 
         return data_specs
+
+    @contextmanager
+    def localize_data_specs(self, data_specs):
+        # stage all shard files locally (e.g. copied from remote storage through gfal2) since they
+        # are read through posix-only readers such as tf.data.TFRecordDataset, and yield the same
+        # structure with plain local shard paths, which are only valid within this context
+        with localize_file_targets(data_specs, "r") as loc_specs:
+            yield OrderedDict(
+                (split, OrderedDict(
+                    (name, {"shards": [t.path for t in spec["shards"]], "label": spec["label"]})
+                    for name, spec in split_specs.items()))
+                for split, split_specs in loc_specs.items())
 
     def update_cross_evaluation(self, category, expanded_categories=None):
         if expanded_categories is None:
@@ -390,11 +406,11 @@ class Training(MultiConfigTrainingTask):
         return reqs
 
     def output(self):
-        targets = {"model": self.local_target("model.h5")}
+        targets = {"model": self.dynamic_target("model.h5")}
         if self.save_tensorboard:
-            targets["tensorboard"] = self.local_target("tensorboard", dir=True)
+            targets["tensorboard"] = self.dynamic_target("tensorboard", dir=True)
         if self.save_metrics:
-            targets["metrics"] = self.local_target("metrics.json")
+            targets["metrics"] = self.dynamic_target("metrics.json")
 
         return law.SiblingFileCollection(targets)
 
@@ -422,7 +438,6 @@ class Training(MultiConfigTrainingTask):
         return _features
 
     @law.decorator.notify
-    @law.decorator.localize(input=False, output_kwargs={"mode": "a"})
     def run(self):
         inputs = self.input()
 
@@ -490,22 +505,25 @@ class Training(MultiConfigTrainingTask):
         from cmt.training.util import configure_cpu
         configure_cpu(self.n_threads)
 
-        # run the training
+        # run the training, staging the output files and the shard inputs locally since keras,
+        # the metrics writing and tf.data rely on posix paths
         with self.publish_step("running training ...", runtime=True):
-            tensorboard_dir = outputs.targets["tensorboard"].path if self.save_tensorboard else None
-            model_metrics_path = outputs.targets["metrics"].path if self.save_metrics else None
-            step_fn = self.create_progress_callback(self.max_steps)
-            train(data_specs["train"], data_specs["valid"], training_features,
-                self.architecture, self.loss_name, self.learning_rate, self.batch_size,
-                self.batch_norm, self.dropout_rate, self.l2_norm, event_weight_feature=ew_feature,
-                event_weight_fn=event_weight_fn,
-                process_group_ids=self.training_config.process_group_ids, acc_weights=acc_weights,
-                class_weights=class_weights, max_steps=self.max_steps, log_every=10,
-                validate_every=100, stopper_patience=15, seed=self.random_seed or None,
-                n_threads=self.n_threads, model_path=outputs.targets["model"].path,
-                model_metrics_path=model_metrics_path, tensorboard_dir=tensorboard_dir,
-                step_fn=step_fn, stop_fn=self.stop_on_scheduler_message,
-                log_fn=self.publish_message)
+            with localize_file_targets(outputs.targets, "a") as targets, \
+                    self.localize_data_specs(data_specs) as data_specs:
+                tensorboard_dir = targets["tensorboard"].path if self.save_tensorboard else None
+                model_metrics_path = targets["metrics"].path if self.save_metrics else None
+                step_fn = self.create_progress_callback(self.max_steps)
+                train(data_specs["train"], data_specs["valid"], training_features,
+                    self.architecture, self.loss_name, self.learning_rate, self.batch_size,
+                    self.batch_norm, self.dropout_rate, self.l2_norm, event_weight_feature=ew_feature,
+                    event_weight_fn=event_weight_fn,
+                    process_group_ids=self.training_config.process_group_ids, acc_weights=acc_weights,
+                    class_weights=class_weights, max_steps=self.max_steps, log_every=10,
+                    validate_every=100, stopper_patience=15, seed=self.random_seed or None,
+                    n_threads=self.n_threads, model_path=targets["model"].path,
+                    model_metrics_path=model_metrics_path, tensorboard_dir=tensorboard_dir,
+                    step_fn=step_fn, stop_fn=self.stop_on_scheduler_message,
+                    log_fn=self.publish_message)
 
     def _load_metrics(self):
         outp = self.output().targets.get("metrics")
@@ -661,8 +679,8 @@ class ConvertModelToGraph(MultiSeedTrainingTask):
 
     def output(self):
         return {
-            "pb": self.local_target("graph.pb"),
-            "txt": self.local_target("graph.pb.txt"),
+            "pb": self.dynamic_target("graph.pb"),
+            "txt": self.dynamic_target("graph.pb.txt"),
         }
 
     def run(self):

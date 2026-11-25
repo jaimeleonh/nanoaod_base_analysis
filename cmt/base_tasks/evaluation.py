@@ -12,6 +12,7 @@ from collections import OrderedDict
 
 import law
 import luigi
+from law.target.file import localize_file_targets
 
 from cmt.base_tasks.base import ConfigTaskWithCategory, DatasetTaskWithCategory, HTCondorWorkflow, SlurmWorkflow
 from cmt.base_tasks.preprocessing import MergeCategorization
@@ -69,14 +70,14 @@ class EvaluateTraining(ConfigTaskWithCategory, MultiSeedTrainingTask):
         return reqs
 
     def output(self):
-        return self.local_target("stats_{}.json".format(self.split))
+        return self.dynamic_target("stats_{}.json".format(self.split))
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
         # get data specs and accuracy weights
         inputs = self.input()
-        data_spec = self.get_data_specs(inputs["shards"])[self.split]
+        data_specs = self.get_data_specs(inputs["shards"])
         acc_weights = self.get_accuracy_weights(self.training_config.processes)
 
         # import the training functions
@@ -84,13 +85,17 @@ class EvaluateTraining(ConfigTaskWithCategory, MultiSeedTrainingTask):
         from hmc.training.util import configure_cpu
         configure_cpu(self.n_threads)
 
-        # evaluate the model
-        model_paths = [inp["model"].path for inp in inputs["training"].values()]
+        # evaluate the model, staging the model files locally since keras loads through posix
+        # paths, same for the shard files read through tf.data
+        model_targets = [inp["model"] for inp in inputs["training"].values()]
         with self.publish_step("evaluate '{}' split ...".format(self.split), runtime=True):
-            evaluate_training(data_spec, self.training_features, n_threads=self.n_threads,
-                batch_size=512, acc_weights=acc_weights,
-                process_group_ids=self.training_config.process_group_ids,
-                log_fn=self.publish_message, model_path=model_paths, stats_path=self.output().path)
+            with localize_file_targets(model_targets, "r") as model_targets, \
+                    self.localize_data_specs(data_specs) as data_specs:
+                evaluate_training(data_specs[self.split], self.training_features,
+                    n_threads=self.n_threads, batch_size=512, acc_weights=acc_weights,
+                    process_group_ids=self.training_config.process_group_ids,
+                    log_fn=self.publish_message, model_path=[t.path for t in model_targets],
+                    stats_path=self.output().path)
 
 
 class EvaluateData(DatasetTaskWithCategory, MultiSeedTrainingTask, law.LocalWorkflow,
@@ -151,7 +156,7 @@ class EvaluateData(DatasetTaskWithCategory, MultiSeedTrainingTask, law.LocalWork
             postfix += "_" + self.region.name
         postfix += "_" + str(self.branch)
 
-        return self.local_target("data{}.root".format(postfix))
+        return self.dynamic_target("data{}.root".format(postfix))
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
@@ -294,14 +299,14 @@ class FeatureRanking(ConfigTaskWithCategory, MultiSeedTrainingTask, law.LocalWor
 
     def output(self):
         feature_to_test = self.branch_data
-        return self.local_target("score__{}__{}.json".format(feature_to_test.name, self.split))
+        return self.dynamic_target("score__{}__{}.json".format(feature_to_test.name, self.split))
 
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
         # get data specs and accuracy weights
         inputs = self.input()
-        data_specs = self.get_data_specs(inputs["shards"])[self.split]
+        data_specs = self.get_data_specs(inputs["shards"])
         acc_weights = self.get_accuracy_weights(self.training_config.processes)
 
         # prepare the output directory
@@ -313,10 +318,14 @@ class FeatureRanking(ConfigTaskWithCategory, MultiSeedTrainingTask, law.LocalWor
         from hmc.training.util import configure_cpu
         configure_cpu(self.n_threads)
 
-        # rank a feature
+        # rank a feature, staging the model files locally since keras loads through posix paths,
+        # same for the shard files read through tf.data
         feature_to_test = self.branch_data
-        model_paths = [inp["model"].path for inp in inputs["training"].values()]
+        model_targets = [inp["model"] for inp in inputs["training"].values()]
         with self.publish_step("rank feature {} ...".format(feature_to_test.name), runtime=True):
-            rank_feature(data_specs, self.training_features, feature_to_test,
-                n_threads=self.n_threads, batch_size=512, acc_weights=acc_weights,
-                model_path=model_paths, scores_path=output.path, log_fn=self.publish_message)
+            with localize_file_targets(model_targets, "r") as model_targets, \
+                    self.localize_data_specs(data_specs) as data_specs:
+                rank_feature(data_specs[self.split], self.training_features, feature_to_test,
+                    n_threads=self.n_threads, batch_size=512, acc_weights=acc_weights,
+                    model_path=[t.path for t in model_targets], scores_path=output.path,
+                    log_fn=self.publish_message)

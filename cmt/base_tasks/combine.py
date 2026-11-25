@@ -9,7 +9,6 @@ __all__ = []
 import os
 from shutil import move
 from copy import deepcopy as copy
-import json
 import math
 import itertools
 from collections import OrderedDict
@@ -65,6 +64,7 @@ class CreateWorkspaceSL(SLBase, CreateWorkspace):
         super(CreateWorkspaceSL, self).__init__(*args, **kwargs)
         self.requires().force_shape = True
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Obtains the workspace for each provided datacard.
@@ -73,14 +73,17 @@ class CreateWorkspaceSL(SLBase, CreateWorkspace):
         channel_masks = "" if not self.use_control_regions else "--channel-masks"
         for feature in self.features:
             if not self.combine_categories:
-                inp = inputs[list(self.category_names)[self.branch]][feature.name]['txt'].path
+                inp = inputs[list(self.category_names)[self.branch]][feature.name]['txt']
             else:
-                inp = inputs[feature.name].path
-            cmd = ("text2workspace.py --X-allow-no-signal --X-allow-no-background "
-                "{} {} -m {} -o {}".format(
-                    channel_masks, inp, self.higgs_mass,
-                    create_file_dir(self.output()[feature.name]["root"].path)))
-            error_code = os.system(cmd)
+                inp = inputs[feature.name]
+            # text2workspace.py reads the datacard with plain POSIX I/O, so stage it while the
+            # command runs; outputs are written into localized copies moved back afterwards
+            with inp.localize("r") as datacard:
+                cmd = ("text2workspace.py --X-allow-no-signal --X-allow-no-background "
+                    "{} {} -m {} -o {}".format(
+                        channel_masks, datacard.path, self.higgs_mass,
+                        create_file_dir(self.output()[feature.name]["root"].path)))
+                error_code = os.system(cmd)
             with open(create_file_dir(self.output()[feature.name]["log"].path), "w+") as f:
                 if error_code == 0:
                     f.write("Success")
@@ -124,13 +127,14 @@ class SimplifiedLikelihood(SLBase, RunCombine):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                key: self.local_target("results_{}{}_{}.root".format(
+                key: self.dynamic_target("results_{}{}_{}.root".format(
                     feature.name, self.get_output_postfix(), key))
                 for key in ["cov", "signal", "full_like"]
             }
             for feature in self.features
         }
 
+    @law.decorator.localize()
     def run(self):
         """
         Runs combine over the provided workspaces.
@@ -197,13 +201,14 @@ class MakeSLInputs(SimplifiedLikelihood):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                key: self.local_target("results_{}{}_{}.root".format(
+                key: self.dynamic_target("results_{}{}_{}.root".format(
                     feature.name, self.get_output_postfix(), key))
                 for key in ["bkg", "signal"]
             }
             for feature in self.features
         }
 
+    @law.decorator.localize()
     def run(self):
         """
         Runs combine over the provided workspaces.
@@ -252,10 +257,11 @@ class ConvertSLInputs(SimplifiedLikelihood):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name:
-                self.local_target("model_{}{}.py".format(feature.name, self.get_output_postfix()))
+                self.dynamic_target("model_{}{}.py".format(feature.name, self.get_output_postfix()))
             for feature in self.features
         }
 
+    @law.decorator.localize()
     def run(self):
         """
         Transforms root file into SL python model
@@ -319,19 +325,22 @@ class PlotSimplifiedLikelihood(SimplifiedLikelihood):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name:
-                self.local_target("plot_{}{}.pdf".format(feature.name, self.get_output_postfix()))
+                self.dynamic_target("plot_{}{}.pdf".format(feature.name, self.get_output_postfix()))
             for feature in self.features
         }
 
+    @law.decorator.localize(input=False)
     def run(self):
         import simplike as sl
 
         for feature in self.features:
-            exec(open(self.input()["model"][feature.name].path).read(), globals())
+            # the generated python model is exec'ed through plain python I/O, so stage it
+            with self.input()["model"][feature.name].localize("r") as model_file:
+                exec(open(model_file.path).read(), globals())
             slp1 = sl.SLParams(background, covariance, obs=data, sig=signal)
 
             import ROOT
-            fi = ROOT.TFile.Open(self.input()["full_like"][feature.name]["full_like"].path)
+            fi = ROOT.TFile.Open(self.input()["full_like"][feature.name]["full_like"].abspath)
             tr = fi.Get("limit")
 
             points = []
@@ -390,13 +399,14 @@ class GOFProduction(RunCombine):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                key: self.local_target("results_{}{}_{}.root".format(
+                key: self.dynamic_target("results_{}{}_{}.root".format(
                     feature.name, self.get_output_postfix(), key))
                 for key in ["data", "mc"]
             }
             for feature in self.features
         }
 
+    @law.decorator.localize()
     def run(self):
         """
         Runs combine over the provided workspaces.
@@ -446,13 +456,14 @@ class GOFPlot(GOFProduction):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                key: self.local_target("results_{}{}.{}".format(
+                key: self.dynamic_target("results_{}{}.{}".format(
                     feature.name, self.get_output_postfix(), key))
                 for key in ["json", "pdf", "png"]
             }
             for feature in self.features
         }
 
+    @law.decorator.localize()
     def run(self):
         """
         Runs combineTool.py and plotGof.py to create the GOF distribution plots
@@ -492,14 +503,15 @@ class PrePostFitProduction(RunCombine):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                "fit_diagnostics": self.local_target("results_{}{}__fit_diagnostics.root".format(
+                "fit_diagnostics": self.dynamic_target("results_{}{}__fit_diagnostics.root".format(
                     feature.name, self.get_output_postfix())),
-                "combine_output": self.local_target("results_{}{}__combine_output.root".format(
+                "combine_output": self.dynamic_target("results_{}{}__combine_output.root".format(
                     feature.name, self.get_output_postfix())),
             }
             for feature in self.features
         }
 
+    @law.decorator.localize()
     def run(self):
         """
         Runs combine over the provided workspaces.
@@ -563,7 +575,7 @@ class PrePostFitPlotting(RunCombine):
         return {
             feature.name: {
                 stage: {
-                    key: self.local_target("{}_distribution_{}{}.{}".format(
+                    key: self.dynamic_target("{}_distribution_{}{}.{}".format(
                         stage, feature.name, self.get_output_postfix(
                             category_names=self.category_names), key))
                     for key in ["pdf", "png"]
@@ -572,6 +584,7 @@ class PrePostFitPlotting(RunCombine):
             for feature in self.features
         }
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Plots prefit and postfit distribution plots
@@ -591,7 +604,7 @@ class PrePostFitPlotting(RunCombine):
 
             for stage, name in zip(self.stages, ["shapes_prefit", "shapes_fit_s"]):
                 c = Canvas()
-                tf = ROOT.TFile.Open(inp["fit_diagnostics"].path)
+                tf = ROOT.TFile.Open(inp["fit_diagnostics"].abspath)
                 h_bkg = tf.Get(f"{name}/{d_name}/total_background")
                 h_sig = tf.Get(f"{name}/{d_name}/total")
                 h_dat = tf.Get(f"{name}/{d_name}/data")
@@ -695,14 +708,15 @@ class BiasTestProduction(RunCombine):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                "toys": self.local_target("toys_{}{}.root".format(
+                "toys": self.dynamic_target("toys_{}{}.root".format(
                     feature.name, self.get_output_postfix())),
-                "results": self.local_target("results_{}{}.root".format(
+                "results": self.dynamic_target("results_{}{}.root".format(
                     feature.name, self.get_output_postfix())),
             }
             for feature in self.features
         }
 
+    @law.decorator.localize()
     def run(self):
         """
         Runs combine over the provided workspaces.
@@ -755,13 +769,14 @@ class BiasTestPlotting(BiasTestProduction):
             # self.combine_categories and len(self.category_names) > 1)
         return {
             feature.name: {
-                key: self.local_target("results_{}{}.{}".format(
+                key: self.dynamic_target("results_{}{}.{}".format(
                     feature.name, self.get_output_postfix(), key))
                 for key in ["pdf", "png"]
             }
             for feature in self.features
         }
 
+    @law.decorator.localize(input=False)
     def run(self):
         """
         Plots the pull distributions
@@ -777,7 +792,7 @@ class BiasTestPlotting(BiasTestProduction):
             out = self.output()[feature.name]
 
             # Open file with fits
-            f = ROOT.TFile.Open(inp["results"].path)
+            f = ROOT.TFile.Open(inp["results"].abspath)
             t = f.Get("limit")
 
             histo_name = randomize("pull")

@@ -18,6 +18,7 @@ import pandas as pd
 
 import law
 import luigi
+from law.target.file import localize_file_targets
 from cmt.util import hist_to_graph
 
 from ctypes import c_double
@@ -32,7 +33,7 @@ from cmt.base_tasks.base import (
     snapshot_ensuring_output_tree
 )
 from cmt.base_tasks.preprocessing import (
-    Categorization, MergeCategorization, MergePreCounter, DatasetCategoryWrapperTask
+    PreprocessRDF, Categorization, MergeCategorization, MergePreCounter, DatasetCategoryWrapperTask
 )
 
 EMPTY = -1.e5
@@ -315,6 +316,8 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
     :type skip_processing: bool
     :param skip_merging: whether to skip the MergeCategorization task.
     :type skip_merging: bool
+    :param skip_categorization: whether to skip the Categorization and MergeCategorization tasks.
+    :type skip_categorization: bool
     :param preplot_modules_file: filename inside ``cmt/config/`` or ``../config/`` (w/o extension)
         with the RDF modules to run.
     :type preplot_modules_file: str
@@ -324,6 +327,8 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         " preprocessing and categorization steps, default: False")
     skip_merging = luigi.BoolParameter(default=False, description="whether to skip"
         " MergeCategorization task, default: False")
+    skip_categorization = luigi.BoolParameter(default=False, description="whether to skip the"
+        " Categorization and MergeCategorization tasks, default: False")
     preplot_modules_file = luigi.Parameter(description="filename with modules to run RDataFrame",
         default=law.NO_STR)
     dataset_names = law.CSVParameter(description="dataset_names to use for optimization",
@@ -387,7 +392,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         input_data_count = lambda : len(self.dataset.get_files(
                 os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
                 check_empty=True))
-        if self.skip_processing:
+        if self.skip_processing or self.skip_categorization:
             return input_data_count()
         elif self.skip_merging:
             categorization_max_events = self.dataset.get_aux("categorization_max_events", None)
@@ -408,11 +413,12 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
     def workflow_requires(self):
         """
         """
-        if self.skip_merging:
-            reqs = {"data": {"central": Categorization.vreq(self, workflow="local")}}
+        if self.skip_merging or self.skip_categorization:
+            cls = Categorization if self.skip_merging else PreprocessRDF
+            reqs = {"data": {"central": cls.vreq(self)}}
             if self.store_systematics:
                 for syst, d in itertools.product(self.syst_list, directions):
-                    reqs["data"][f"{syst}_{d}"] = Categorization.vreq(self, workflow="local",
+                    reqs["data"][f"{syst}_{d}"] = cls.vreq(self,
                         systematic=syst, systematic_direction=d)
         elif self.skip_processing:
             reqs= {"data": {"central": InputData.req(self)}}
@@ -432,11 +438,12 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         """
         Each branch requires one input file for the central value and two per systematic considered
         """
-        if self.skip_merging:
-            reqs = {"central": Categorization.vreq(self, workflow="local", branch=self.branch)}
+        if self.skip_merging or self.skip_categorization:
+            cls = Categorization if self.skip_merging else PreprocessRDF
+            reqs = {"central": cls.vreq(self, workflow="local", branch=self.branch)}
             if self.store_systematics:
                 for syst, d in itertools.product(self.syst_list, directions):
-                    reqs[f"{syst}_{d}"] = Categorization.vreq(self, workflow="local",
+                    reqs[f"{syst}_{d}"] = cls.vreq(self, workflow="local",
                         systematic=syst, systematic_direction=d, branch=self.branch)
         elif self.skip_processing:
             reqs= {"central": InputData.req(self, file_index=self.branch)}
@@ -457,7 +464,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         :return: One file per input file with all histograms to be plotted for each feature
         :rtype: `.root`
         """
-        return self.local_target("data{}_{}.root".format(
+        return self.dynamic_target("data{}_{}.root".format(
             self.get_output_postfix(), self.branch))
 
     def get_weight(self, category, syst_name, syst_direction, **kwargs):
@@ -653,7 +660,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             inp = self.get_input()
         else:
             inp = self.input()
-        outp = self.output().path
+        outp = self.output().abspath
 
         ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
@@ -682,12 +689,12 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                         friend_tchain.Add("{}/{}".format(f, self.tree_name))
                     tchain.AddFriend(friend_tchain, "friend")
                     dfs[elem] = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
-            elif self.skip_merging:
-                inp_to_consider = inp[elem]["root"].path
+            elif self.skip_merging or self.skip_categorization:
+                inp_to_consider = inp[elem]["root"].abspath
                 dfs[elem] = self.RDataFrame(self.tree_name, inp_to_consider,
                     allow_redefinition=self.allow_redefinition)
             else:
-                inp_to_consider = inp[elem].targets[self.branch].path
+                inp_to_consider = inp[elem].targets[self.branch].abspath
                 dfs[elem] = self.RDataFrame(self.tree_name, inp_to_consider,
                     allow_redefinition=self.allow_redefinition)
 
@@ -814,10 +821,10 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                         if b == name_with_syst_tag: continue
                         dfs[elem] = dfs[elem].Define(b, name_with_syst_tag)
 
-                    snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, outp, list(self.branches_to_store)+["weight"], opts)
+                    snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, self.output(), list(self.branches_to_store)+["weight"], opts)
 
                 else:
-                    snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, outp, list(self.branches_to_store)+weights_list, opts)
+                    snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, self.output(), list(self.branches_to_store)+weights_list, opts)
 
 
 class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
@@ -1291,7 +1298,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             output_data.append(("yields", "yields/", "json"))
         return {
             key: law.SiblingFileCollection(OrderedDict(
-                (feature.name, self.local_target("{}{}{}.{}".format(
+                (feature.name, self.dynamic_target("{}{}{}.{}".format(
                     prefix, feature.name, self.get_output_postfix(key), ext)))
                 for feature in self.features
             ))
@@ -1493,7 +1500,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                         else self.qcd_feature)
                 else:
                     my_feature = feature.name
-                qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
+                qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].abspath)
 
             # do the qcd extrapolation
             if "shape" in qcd_shape_files:
@@ -1636,7 +1643,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         if self.do_ff:
             ff_shape_files = {}
             for key, region in self.ff_regions.items():
-                ff_shape_files[key] = ROOT.TFile.Open(self.input()["ff"][key]["root"].targets[feature.name].path)
+                ff_shape_files[key] = ROOT.TFile.Open(self.input()["ff"][key]["root"].targets[feature.name].abspath)
 
             bin_limit = 0.0
             if self.keep_negative_bins: bin_limit = -999.9
@@ -1701,7 +1708,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
             for key, region in self.sideband_regions.items():
                 my_feature = feature.name
                 sideband_files[key] = ROOT.TFile.Open(
-                    self.input()["sideband"][key]["root"].targets[my_feature].path)
+                    self.input()["sideband"][key]["root"].targets[my_feature].abspath)
 
             # do the qcd extrapolation
             data_hist, bkg_hist_background_region = get_sideband("background", sideband_files)
@@ -2148,8 +2155,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
         # Draw fit if required
         fits = []
         if self.include_fit:
-            with open(self.input()["fit"][feature.name]["json"].path) as f:
-                d = json.load(f)
+            d = self.input()["fit"][feature.name]["json"].load(formatter="json")
             d = d[""]
 
             fit_task = self.requires()["fit"]
@@ -2218,15 +2224,17 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
         outputs = []
         if self.save_png:
-            outputs.append(self.output()["png"].targets[feature.name].path)
+            outputs.append(self.output()["png"].targets[feature.name])
         if self.save_pdf:
-            outputs.append(self.output()["pdf"].targets[feature.name].path)
-        for output in outputs:
-            c.SaveAs(create_file_dir(output))
+            outputs.append(self.output()["pdf"].targets[feature.name])
+        with localize_file_targets(outputs, "w") as outputs:
+            for output in outputs:
+                c.SaveAs(create_file_dir(output.path))
 
         if self.save_root:
-            f = ROOT.TFile.Open(create_file_dir(
-                self.output()["root"].targets[feature.name].path), "RECREATE")
+            root_output = self.output()["root"].targets[feature.name]
+            root_output.parent.touch()
+            f = ROOT.TFile.Open(root_output.abspath, "RECREATE")
             f.cd()
             # c.Write("canvas") #FIXME
 
@@ -2276,8 +2284,9 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                         for hist in background_hists]))
                         for i in range(0, background_hists[0].GetNbinsX())],
                 }
-            with open(create_file_dir(self.output()["yields"].targets[feature.name].path), "w") as f:
-                json.dump(yields, f, indent=4)
+            yields_output = self.output()["yields"].targets[feature.name]
+            yields_output.parent.touch()
+            yields_output.dump(yields, indent=4, formatter="json")
 
     def get_nevents(self, inputs=None):
         """Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization).
@@ -2302,14 +2311,13 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                     for elem in ["central"] + [f"{syst}_{d}"
                             for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
                         inp = inputs["stats"][dataset.name][elem]
-                        with open(inp.path) as f:
-                            stats = json.load(f)
-                            nweightedevents[dataset.name][elem] = stats["nweightedevents"]
-                            nunweightedevents[dataset.name][elem] = stats["nevents"]
-                            if self.apply_weights:
-                                nevents[dataset.name][elem] = stats["nweightedevents"]
-                            else:
-                                nevents[dataset.name][elem] = stats["nevents"]
+                        stats = inp.load(formatter="json")
+                        nweightedevents[dataset.name][elem] = stats["nweightedevents"]
+                        nunweightedevents[dataset.name][elem] = stats["nevents"]
+                        if self.apply_weights:
+                            nevents[dataset.name][elem] = stats["nweightedevents"]
+                        else:
+                            nevents[dataset.name][elem] = stats["nevents"]
 
         return nevents, nweightedevents, nunweightedevents
 
@@ -2417,7 +2425,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                             inp = inputs["data"][(dataset.name, category.name)].collection.targets.values()
                             for elem in inp:
                                 # Get input historgam
-                                rootfile = ROOT.TFile.Open(elem.path)
+                                rootfile = ROOT.TFile.Open(elem.abspath)
                                 if self.preplot_foldered_by_feature:
                                     histo = copy(rootfile.Get(f"histograms/{feature.name}_dir/{feature_name}"))
                                 else:
@@ -2542,7 +2550,10 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
 
             # Apply bin merging
             if self.optimization_method == "flat_sgn" and feature.name in self.features_to_flatten:
-                self.histogram_bin_merger = FlatSignalBinMerger(bins_txt_path=self.input()["bin_opt"]["txt"][feature.name].path)
+                # the merger reads the txt file eagerly via np.loadtxt, so stage it to a
+                # local copy for the duration of the construction
+                with self.input()["bin_opt"]["txt"][feature.name].localize("r") as bins_txt:
+                    self.histogram_bin_merger = FlatSignalBinMerger(bins_txt_path=bins_txt.path)
 
                 for idx, hist in enumerate(self.histos["signal"]):
                     self.histos["signal"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
@@ -2634,7 +2645,7 @@ class FeaturePlotSyst(FeaturePlot):
         out = {
             key: law.SiblingFileCollection(OrderedDict(
                 ("%s_%s_%s" %(process_name, feature.name, syst),
-                    self.local_target("{}{}_{}_{}{}.{}".format(
+                    self.dynamic_target("{}{}_{}_{}{}.{}".format(
                     prefix, process_name, feature.name, syst, self.get_output_postfix(key), ext)))
                 for feature in self.features
                 for syst in self.get_unique_systs(self.get_systs(feature, True) \
@@ -2833,11 +2844,12 @@ class FeaturePlotSyst(FeaturePlot):
 
                 outputs = []
                 if self.save_png:
-                    outputs.append(self.output()["png"].targets["%s_%s_%s" %(process, feature.name, shape_syst)].path)
+                    outputs.append(self.output()["png"].targets["%s_%s_%s" %(process, feature.name, shape_syst)])
                 if self.save_pdf:
-                    outputs.append(self.output()["pdf"].targets["%s_%s_%s" %(process, feature.name, shape_syst)].path)
-                for output in outputs:
-                    c.SaveAs(create_file_dir(output))
+                    outputs.append(self.output()["pdf"].targets["%s_%s_%s" %(process, feature.name, shape_syst)])
+                with localize_file_targets(outputs, "w") as outputs:
+                    for output in outputs:
+                        c.SaveAs(create_file_dir(output.path))
 
     def run(self):
         """
@@ -2861,7 +2873,7 @@ class FeaturePlotSyst(FeaturePlot):
             self.shape_syst_list = self.get_unique_systs(self.get_systs(feature, True) \
                 + self.config.get_weights_systematics(self.config.weights[self.category.name], True))
 
-            tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+            tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].abspath)
 
             self.histos = {}
             for process in self.process_names:
@@ -3145,7 +3157,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
             output_data.append(("yields", "yields/", "json"))
         out = {
             key: law.SiblingFileCollection(OrderedDict(
-                (get_feature_name(feature_pair), self.local_target("{}{}{}.{}".format(
+                (get_feature_name(feature_pair), self.dynamic_target("{}{}{}.{}".format(
                     prefix, get_feature_name(feature_pair),
                     self.get_output_postfix(key), ext)))
                 for feature_pair in self.features
@@ -3160,7 +3172,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
         out.update({
             key: law.SiblingFileCollection(OrderedDict(
                 (get_feature_name(feature_pair), OrderedDict(
-                    (process.name, self.local_target("{}{}{}_{}.{}".format(
+                    (process.name, self.dynamic_target("{}{}{}_{}.{}".format(
                         prefix, get_feature_name(feature_pair),
                         self.get_output_postfix(key), process.name, ext)))
                     for process in self.processes_datasets
@@ -3244,7 +3256,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
                         else self.qcd_feature)
                 else:
                     my_feature = feature_pair_name
-                qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].path)
+                qcd_shape_files[key] = ROOT.TFile.Open(self.input()["qcd"][key]["root"].targets[my_feature].abspath)
 
             # do the qcd extrapolation
             if "shape" in qcd_shape_files:
@@ -3413,15 +3425,17 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
 
             outputs = []
             if self.save_png:
-                outputs.append(self.output()["png"].targets[feature_pair_name][hist.cmt_process_name].path)
+                outputs.append(self.output()["png"].targets[feature_pair_name][hist.cmt_process_name])
             if self.save_pdf:
-                outputs.append(self.output()["pdf"].targets[feature_pair_name][hist.cmt_process_name].path)
-            for output in outputs:
-                c.SaveAs(create_file_dir(output))
+                outputs.append(self.output()["pdf"].targets[feature_pair_name][hist.cmt_process_name])
+            with localize_file_targets(outputs, "w") as outputs:
+                for output in outputs:
+                    c.SaveAs(create_file_dir(output.path))
 
         if self.save_root:
-            f = ROOT.TFile.Open(create_file_dir(
-                self.output()["root"].targets[feature_pair_name].path), "RECREATE")
+            root_output = self.output()["root"].targets[feature_pair_name]
+            root_output.parent.touch()
+            f = ROOT.TFile.Open(root_output.abspath, "RECREATE")
             f.cd()
             # c.Write("canvas") #FIXME
 
@@ -3463,8 +3477,9 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
                         for i in range(0, background_hists[0].GetNbinsX())]
                         for j in range(0, background_hists[0].GetNbinsY())],
                 }
-            with open(create_file_dir(self.output()["yields"].targets[feature_pair_name].path), "w") as f:
-                json.dump(yields, f, indent=4)
+            yields_output = self.output()["yields"].targets[feature_pair_name]
+            yields_output.parent.touch()
+            yields_output.dump(yields, indent=4, formatter="json")
 
     @law.decorator.notify
     @law.decorator.safe_output
@@ -3534,7 +3549,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
                             inp = inputs["data"][
                                 (dataset.name, category.name)].collection.targets.values()
                             for elem in inp:
-                                rootfile = ROOT.TFile.Open(elem.path)
+                                rootfile = ROOT.TFile.Open(elem.abspath)
                                 if self.preplot_foldered_by_feature:
                                     histo = copy(rootfile.Get(f"histograms/{feature.name}_dir/{feature_name}"))
                                 else:
@@ -3663,7 +3678,7 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
             output_data.append(("yields", "yields/", "json"))
         return {
             key: law.SiblingFileCollection(OrderedDict(
-                (self.get_feature_name(feature), self.local_target("{}{}{}.{}".format(
+                (self.get_feature_name(feature), self.dynamic_target("{}{}{}.{}".format(
                     prefix, self.get_feature_name(feature), self.get_output_postfix(key), ext)))
                 for feature in self.features
             ))
@@ -3707,7 +3722,7 @@ class ComparisonPlot(FeaturePlot, BasePlotMultiDTask):
 
             for process in processes:
                 for feature in feature_set:
-                    tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                    tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].abspath)
                     ihisto += 1
                     process_histo = copy(tf.Get("histograms/" + process.name))
                     process_histo.cmt_process_name = f"{process.name}__{feature.name}"
@@ -3781,7 +3796,7 @@ class EfficiencyPlot(ComparisonPlot):
             for iprocess, process in enumerate(processes):
                 num_histo, den_histo = None, None
                 for feature in reversed(feature_set):
-                    tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].path)
+                    tf = ROOT.TFile.Open(inputs["root"].targets[feature.name].abspath)
 
                     if not den_histo:
                         den_histo = copy(tf.Get("histograms/" + process.name))
@@ -3900,7 +3915,7 @@ class EfficiencyComparisonPlot(ComparisonPlot):
             for process in processes:
                 for feature in feature_set[:-1]:
                     tf = ROOT.TFile.Open(
-                        inputs["root"].targets[f"{feature.name}_{feature_set[-1].name}"].path)
+                        inputs["root"].targets[f"{feature.name}_{feature_set[-1].name}"].abspath)
                     ihisto += 1
                     process_histo = copy(tf.Get("histograms/" + process.name))
                     process_histo.cmt_process_name = f"{process.name}__{feature.name}"
@@ -3952,7 +3967,7 @@ class FeatureDump(PrePlot):
         :return: One output file per input file
         :rtype: `.json`
         """
-        return self.local_target("data{}_{}.json".format(
+        return self.dynamic_target("data{}_{}.json".format(
             self.get_output_postfix(), self.branch))
 
     @law.decorator.notify
@@ -3969,7 +3984,7 @@ class FeatureDump(PrePlot):
             inp = self.get_input()
         else:
             inp = self.input()
-        outp = self.output().path
+        outp = self.output().abspath
 
         ROOT.ROOT.EnableThreadSafety()
         ROOT.ROOT.EnableImplicitMT(self.request_cpus)
@@ -3992,11 +4007,11 @@ class FeatureDump(PrePlot):
                 tchain.AddFriend(friend_tchain, "friend")
                 df = self.RDataFrame(tchain, allow_redefinition=self.allow_redefinition)
         elif self.skip_merging:
-            inp_to_consider = inp[elem]["root"].path
+            inp_to_consider = inp[elem]["root"].abspath
             df = self.RDataFrame(self.tree_name, inp_to_consider,
                 allow_redefinition=self.allow_redefinition)
         else:
-            inp_to_consider = inp[elem].targets[self.branch].path
+            inp_to_consider = inp[elem].targets[self.branch].abspath
             df = self.RDataFrame(self.tree_name, inp_to_consider,
                 allow_redefinition=self.allow_redefinition)
 
@@ -4055,13 +4070,15 @@ class FeatureDump(PrePlot):
             records = pdf.to_dict(orient="records")
 
             # Save output
-            with open(create_file_dir(self.output().path), "w+") as f:
-                json.dump(records, f, indent=4)
+            output = self.output()
+            output.parent.touch()
+            output.dump(records, indent=4, formatter="json")
 
         else: # empty input file case
             # Save empty list
-            with open(create_file_dir(self.output().path), "w+") as f:
-                json.dump([], f, indent=4)
+            output = self.output()
+            output.parent.touch()
+            output.dump([], indent=4, formatter="json")
 
 
 class FeatureDumpWrapper(DatasetCategoryWrapperTask):
@@ -4095,7 +4112,7 @@ class MergeFeatureDump(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
     def merge_output(self):
         postfix = "__" + self.region.name
-        return self.local_target(f"data{postfix}.json")
+        return self.dynamic_target(f"data{postfix}.json")
 
     def merge(self, inputs, output):
         # Output content
@@ -4104,7 +4121,7 @@ class MergeFeatureDump(DatasetTaskWithCategory, law.tasks.ForestMerge):
         # Merge inputs
         for inp in inputs:
             try:
-                if "json" in inp.path:
+                if "json" in inp.abspath:
                     values = inp.load(formatter="json")
             except:
                 raise ValueError(f"MergeFeatureDump : error loading input file {inp}")

@@ -10,7 +10,6 @@ from copy import deepcopy as copy
 from collections import OrderedDict
 import itertools
 import math
-import json
 import numpy as np
 from ctypes import c_double
 
@@ -67,7 +66,7 @@ class BaseOptimizationTask(FeaturePlot, law.LocalWorkflow, HTCondorWorkflow):
             n_bins=self.n_mini_bins, plot_systematics=False, optimization_method="")}
 
     def output(self):
-        return self.local_target("binning__{}__pgn_{}__{}_bins.json".format(
+        return self.dynamic_target("binning__{}__pgn_{}__{}_bins.json".format(
             self.features[self.branch].name, self.process_group_name, self.n_max_bins))
 
     def run(self):
@@ -128,7 +127,7 @@ class BayesianBlocksOptimization(BaseOptimizationTask):
         x_max = float(feature.binning[2])
         initial_bin_size = (x_max - x_min) / self.n_mini_bins
 
-        tf = ROOT.TFile.Open(self.input()["histo"]["root"].targets[feature.name].path)
+        tf = ROOT.TFile.Open(self.input()["histo"]["root"].targets[feature.name].abspath)
         histo = None
         for name in process_names:
             if not histo:
@@ -175,8 +174,9 @@ class BayesianBlocksOptimization(BaseOptimizationTask):
         print(x_min, x_max, initial_bin_size)
         print(bin_contents)
         print(opt_edges)
-        with open(create_file_dir(self.output().path), "w") as f:
-            json.dump(opt_edges, f, indent=4)
+        output = self.output()
+        output.parent.touch()
+        output.dump(opt_edges, indent=4, formatter="json")
 
 
 class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, BasePlotTask, FakeFactorsTask):
@@ -317,7 +317,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
 
         return {
             key: law.SiblingFileCollection(OrderedDict(
-                (feature.name, self.local_target("{}{}_{}_{}.{}".format(
+                (feature.name, self.dynamic_target("{}{}_{}_{}.{}".format(
                     prefix, feature.name, channel,
                     "tb"+str(feature.get_aux("target_bin_count", 20))+mergetag+fftag, ext)))
                 for feature in self.features if feature.name in self.features_to_flatten
@@ -435,7 +435,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                             inp = inputs["data"][
                                 (dataset.name, category.name)].collection.targets.values()
                             for elem in inp:
-                                rootfile = ROOT.TFile.Open(elem.path)
+                                rootfile = ROOT.TFile.Open(elem.abspath)
                                 if self.preplot_foldered_by_feature:
                                     histo = copy(rootfile.Get(f"histograms/{feature.name}_dir/{feature_name}"))
                                 else:
@@ -516,7 +516,7 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                             inp = inputs["ff"][
                                 (dataset.name, category.name)].collection.targets.values()
                             for elem in inp:
-                                rootfile = ROOT.TFile.Open(elem.path)
+                                rootfile = ROOT.TFile.Open(elem.abspath)
                                 if self.preplot_foldered_by_feature:
                                     histo = copy(rootfile.Get(f"histograms/{feature.name}_dir/{feature_name}"))
                                 else:
@@ -619,14 +619,16 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
                 self.histos["signal"][idx] = self.histogram_bin_merger.rebin(hist, inplace=True)
 
             # save binning
-            np.savetxt(
-                    create_file_dir(self.output()["txt"].targets[feature.name].path),
-                    self.histogram_bin_merger.edges_array
-                )
+            with self.output()["txt"].targets[feature.name].localize("w") as txt_output:
+                np.savetxt(
+                        create_file_dir(txt_output.path),
+                        self.histogram_bin_merger.edges_array
+                    )
 
             if self.save_root:
-                f = ROOT.TFile.Open(create_file_dir(
-                    self.output()["root"].targets[feature.name].path), "RECREATE")
+                root_output = self.output()["root"].targets[feature.name]
+                root_output.parent.touch()
+                f = ROOT.TFile.Open(root_output.abspath, "RECREATE")
                 f.cd()
 
                 data_already_stored=False

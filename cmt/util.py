@@ -9,7 +9,7 @@ __all__ = [
     "extract_branch_names", "check_expression", "feature_expression", "get_expression_infos",
     "iter_tree", "evaluate_model_on_tree", "poisson_asym_errors", "hist_to_array", "hist_to_graph",
     "get_graph_maximum", "update_graph_values", "optimize_binning", "parse_workflow_file",
-    "chunked_list"
+    "chunked_list", "remote_targets_enabled", "remote_input_enabled", "to_xrootd_url"
 ]
 
 
@@ -43,6 +43,39 @@ def create_file_dir(file_path):
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
     return file_path
+
+
+# EOS mount-path prefixes mapped to their XRootD endpoints
+_xrd_eos_hosts = (
+    ("/eos/user/", "eosuser.cern.ch"),
+    ("/eos/cms/", "eoscms.cern.ch"),
+)
+
+
+def remote_targets_enabled():
+    # when true, task inputs and outputs are addressed as remote root:// URLs on EOS
+    # instead of paths on the local filesystem or the EOS mount
+    return os.getenv("CMT_TARGET_MODE", "local").lower() == "remote"
+
+
+def remote_input_enabled():
+    # mode used when addressing external input files (InputData): CMT_INPUT_MODE falls
+    # back to the global CMT_TARGET_MODE
+    return os.getenv("CMT_INPUT_MODE", os.getenv("CMT_TARGET_MODE", "local")).lower() == "remote"
+
+
+def to_xrootd_url(path):
+    # map a local EOS mount path to its root:// URL so that it can be accessed through
+    # XRootD (xrdfs / gfal2) instead of the local mount; strings that already contain a
+    # scheme (e.g. grid files resolved to root://cms-xrd-global.cern.ch//store/...) and
+    # paths outside /eos/user and /eos/group are returned unchanged
+    path = str(path)
+    if "://" in path:
+        return path
+    for prefix, host in _xrd_eos_hosts:
+        if path.startswith(prefix):
+            return "root://{}//{}".format(host, path.lstrip("/"))
+    return path
 
 
 def colored(msg, color="green", **kwargs):

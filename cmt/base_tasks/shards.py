@@ -10,6 +10,7 @@ import os
 import law
 import luigi
 from collections import OrderedDict
+from law.target.file import localize_file_targets
 
 try:
     from contextlib import nested
@@ -77,14 +78,14 @@ class CreateShards(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow,
 
     def output(self):
         outputs = OrderedDict(
-            (split, self.local_target("data_{}_{}.pb".format(split, self.branch)))
+            (split, self.dynamic_target("data_{}_{}.pb".format(split, self.branch)))
             for split in split_names
         )
-        outputs["stats"] = self.local_target("stats_{}.json".format(self.branch))
+        outputs["stats"] = self.dynamic_target("stats_{}.json".format(self.branch))
         return outputs
 
     @law.decorator.notify
-    @law.decorator.localize
+    @law.decorator.localize(input=False)
     def run(self):
         import numpy as np
         import tensorflow as tf
@@ -252,20 +253,22 @@ class MergeShards(DatasetTaskWithCategory, law.tasks.ForestMerge):
 
     def merge_output(self):
         return law.SiblingFileCollection([
-            self.local_target("data_{}_{}.pb".format(self.split, i))
+            self.dynamic_target("data_{}_{}.pb".format(self.split, i))
             for i in range(self.n_files_after_merging)
         ])
 
     def merge(self, inputs, output):
         with output.localize("w") as tmp_out:
-            # pb files containing tf examples are headless and can be cat'ed
-            paths = [inp.path for inp in inputs]
-            cmd = "cat {} > {}".format(" ".join(paths), tmp_out.path)
+            # stage the inputs locally so that cat can read them through posix paths
+            with localize_file_targets(inputs, "r") as inputs:
+                # pb files containing tf examples are headless and can be cat'ed
+                paths = [inp.path for inp in inputs]
+                cmd = "cat {} > {}".format(" ".join(paths), tmp_out.path)
 
-            # run the command
-            code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash")[0]
-            if code != 0:
-                raise Exception("pb file merging via cat failed")
+                # run the command
+                code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash")[0]
+                if code != 0:
+                    raise Exception("pb file merging via cat failed")
 
             self.publish_message("output file size: {}".format(law.util.human_bytes(
                 tmp_out.stat().st_size, fmt=True)))
