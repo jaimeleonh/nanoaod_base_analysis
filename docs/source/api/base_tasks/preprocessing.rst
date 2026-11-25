@@ -54,18 +54,6 @@ Class ``MergeCategorizationWrapper``
 .. autoclass:: MergeCategorizationWrapper
    :members:
 
-Class ``MergeCategorizationStats``
-----------------------------------
-
-.. autoclass:: MergeCategorizationStats
-   :members:
-
-Class ``MergeCategorizationStatsWrapper``
--------------------------------------------
-
-.. autoclass:: MergeCategorizationStatsWrapper
-   :members:
-
 Class ``EventCounterDAS``
 -------------------------
 
@@ -76,4 +64,82 @@ Class ``EventCounterDASWrapper``
 --------------------------------
 
 .. autoclass:: EventCounterDASWrapper
+   :members:
+
+Class ``DatasetSuperWrapperTask``
+---------------------------------
+
+.. autoclass:: DatasetSuperWrapperTask
+   :members:
+
+Class ``DatasetSystWrapperTask``
+--------------------------------
+
+.. autoclass:: DatasetSystWrapperTask
+   :members:
+
+Class ``DatasetCategoryWrapperTask``
+------------------------------------
+
+.. autoclass:: DatasetCategoryWrapperTask
+   :members:
+
+Class ``DatasetCategorySystWrapperTask``
+----------------------------------------
+
+.. autoclass:: DatasetCategorySystWrapperTask
+   :members:
+
+Class ``SystWorkflowBase``
+--------------------------
+
+.. autoclass:: SystWorkflowBase
+   :members:
+
+Class ``PreprocessRDFSyst``
+---------------------------
+
+.. autoclass:: PreprocessRDFSyst
+   :members:
+
+Class ``PreprocessRDFSystWrapper``
+----------------------------------
+
+.. autoclass:: PreprocessRDFSystWrapper
+   :members:
+
+Class ``Preprocess``
+--------------------
+
+.. autoclass:: Preprocess
+   :members:
+
+Class ``PreprocessWrapper``
+---------------------------
+
+.. autoclass:: PreprocessWrapper
+   :members:
+
+Class ``CategorizationSyst``
+----------------------------
+
+.. autoclass:: CategorizationSyst
+   :members:
+
+Class ``CategorizationSystWrapper``
+-----------------------------------
+
+.. autoclass:: CategorizationSystWrapper
+   :members:
+
+Class ``MergePreCounter``
+-------------------------
+
+.. autoclass:: MergePreCounter
+   :members:
+
+Class ``MergePreCounterWrapper``
+--------------------------------
+
+.. autoclass:: MergePreCounterWrapper
    :members:

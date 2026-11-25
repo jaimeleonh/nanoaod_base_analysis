@@ -20,3 +20,27 @@ Basic modules
 .. autoclass:: JetLepMetSyst
    :members:
 
+``DummyModule``
+---------------
+
+.. autoclass:: DummyModule
+   :members:
+
+``Syst``
+--------
+
+.. autoclass:: Syst
+   :members:
+
+``JetLepMetModule``
+-------------------
+
+.. autoclass:: JetLepMetModule
+   :members:
+
+``VarFromVectorRDFProducer``
+----------------------------
+
+.. autoclass:: VarFromVectorRDFProducer
+   :members:
+

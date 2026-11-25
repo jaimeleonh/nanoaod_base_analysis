@@ -79,3 +79,27 @@ Class ``PlotPullsAndImpacts``
 .. autoclass:: PlotPullsAndImpacts
    :members:
 
+Class ``FillDatacardAnnexTrees``
+--------------------------------
+
+.. autoclass:: FillDatacardAnnexTrees
+   :members:
+
+Class ``FillDatacardAnnexTreesWrapper``
+---------------------------------------
+
+.. autoclass:: FillDatacardAnnexTreesWrapper
+   :members:
+
+Class ``ValidateDatacards``
+---------------------------
+
+.. autoclass:: ValidateDatacards
+   :members:
+
+Class ``BasePullsAndImpacts``
+-----------------------------
+
+.. autoclass:: BasePullsAndImpacts
+   :members:
+

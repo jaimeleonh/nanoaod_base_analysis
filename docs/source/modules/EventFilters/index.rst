@@ -4,12 +4,12 @@ Event Filters
 Installation
 ------------
 
-``git clone https://gitlab.cern.ch/cms-phys-ciemat/event-filters.git Event/Filters``
+``git clone https://gitlab.cern.ch/cms-phys-ciemat/event-filters.git Base/Filters``
 
 RDFModules
 ----------
 
-.. automodule:: Event.Filters
+.. automodule:: Base.Filters
 
 .. toctree::
     :maxdepth: 2

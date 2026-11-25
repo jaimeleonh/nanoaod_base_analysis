@@ -13,4 +13,3 @@ Modules Reference
     JME/index
     MUO/index
     TAU/index
-    HHbbtt/index

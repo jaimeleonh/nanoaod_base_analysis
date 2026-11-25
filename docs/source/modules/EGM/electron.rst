@@ -13,3 +13,15 @@ electron SF
 .. autoclass:: eleSFRDF
    :members:
 
+``eleSFRDFProducer``
+--------------------
+
+.. autoclass:: eleSFRDFProducer
+   :members:
+
+``eleSSRDFProducer``
+--------------------
+
+.. autoclass:: eleSSRDFProducer
+   :members:
+

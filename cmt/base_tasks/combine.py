@@ -26,7 +26,7 @@ from analysis_tools.utils import (
 )
 
 from cmt.base_tasks.base import (
-    ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+    ConfigTaskWithCategory, HTCondorWorkflow, SlurmWorkflow,
     DatasetWrapperTask, FitBase, ProcessGroupNameTask, QCDABCDTask
 )
 from cmt.base_tasks.plotting import BasePlotTask, FeaturePlot
@@ -38,11 +38,29 @@ directions = ["up", "down"]
 
 
 class SLBase(ProcessGroupNameTask, CombineCategoriesTask):
+    """
+    Base task for the simplified likelihood workflow, extending
+    :class:`.CombineCategoriesTask` with the option of using the control regions
+    available in the datacard.
+
+    :param use_control_regions: whether to use control regions available in the datacard.
+    :type use_control_regions: bool
+    """
     use_control_regions = luigi.BoolParameter(default=False, description="whether to use control "
         "regions available in the datacard, default: False")
 
 
 class CreateWorkspaceSL(SLBase, CreateWorkspace):
+    """
+    Task that creates the Combine workspace for the simplified likelihood from the datacards
+    obtained from :class:`.CreateDatacards` or :class:`.CombineDatacards`, forcing them to be
+    shape-based and running ``text2workspace.py`` with the ``--X-allow-no-signal`` and
+    ``--X-allow-no-background`` options (plus ``--channel-masks`` when ``use_control_regions``
+    is active).
+
+    Outputs one root file with the workspace and one log file per feature and category, as
+    :class:`.CreateWorkspace` does.
+    """
     def __init__(self, *args, **kwargs):
         super(CreateWorkspaceSL, self).__init__(*args, **kwargs)
         self.requires().force_shape = True
@@ -71,6 +89,17 @@ class CreateWorkspaceSL(SLBase, CreateWorkspace):
 
 
 class SimplifiedLikelihood(SLBase, RunCombine):
+    """
+    Task that runs Combine on the workspaces created by :class:`.CreateWorkspaceSL` to extract
+    the inputs of the simplified likelihood: the covariance matrix and background estimates
+    (from a ``FitDiagnostics`` run with ``--numToysForShape ntoys``), the signal yields for
+    r = 1 (from a ``FitDiagnostics`` run with one shape toy and prefit value 1) and the scan of
+    the full likelihood in the signal strength between -0.5 and 2 (from a ``MultiDimFit``
+    run with the ``grid`` algorithm).
+
+    :param ntoys: number of toys used to compute the covariance.
+    :type ntoys: int
+    """
     ntoys = luigi.IntParameter(default=2000, description="Number of toys to consider in the "
         "covariance")
 
@@ -138,6 +167,16 @@ class SimplifiedLikelihood(SLBase, RunCombine):
 
 
 class MakeSLInputs(SimplifiedLikelihood):
+    """
+    Task that creates the simplified likelihood input files from the FitDiagnostics outputs
+    of :class:`.SimplifiedLikelihood` by running the ``makeLHInputs.py`` script, which
+    aggregates the per-bin information into background, data, signal and moment
+    (``total_M1``, ``total_M2``, ``total_M3``) histograms together with the covariance
+    matrix.
+
+    Outputs one root file with the background-related inputs and another one with the
+    signal inputs per feature and category.
+    """
     def workflow_requires(self):
         """
         Requires the root files produced by SimplifiedLikelihood.
@@ -183,6 +222,16 @@ class MakeSLInputs(SimplifiedLikelihood):
 
 
 class ConvertSLInputs(SimplifiedLikelihood):
+    """
+    Task that converts the simplified likelihood input files created by
+    :class:`.MakeSLInputs` into a Python model with the ``convertSLRootToPython.py`` script,
+    taken from the CombinedLimit ``simplifiedLikelihoods`` folder when available and
+    falling back to ``cmt/utils/convertSLRootToPython.py`` otherwise.
+
+    Outputs one ``model_<feature><postfix>.py`` file per feature and category, defining the
+    ``signal``, ``background``, ``data`` and ``covariance`` inputs of the simplified
+    likelihood.
+    """
     def workflow_requires(self):
         """
         Requires the root files produced by SimplifiedLikelihood.
@@ -234,6 +283,14 @@ class ConvertSLInputs(SimplifiedLikelihood):
 
 
 class PlotSimplifiedLikelihood(SimplifiedLikelihood):
+    """
+    Task that compares the simplified likelihood built in :class:`.ConvertSLInputs` with the
+    full likelihood scan obtained by :class:`.SimplifiedLikelihood`, evaluating the
+    simplified likelihood with the ``simplike`` package and plotting the test statistic
+    (-2 delta ln L) as a function of the signal strength for both.
+
+    Outputs one pdf plot per feature and category.
+    """
     def workflow_requires(self):
         """
         Requires the python model of the SL and the root file storing the full likelihood.
@@ -302,6 +359,21 @@ class PlotSimplifiedLikelihood(SimplifiedLikelihood):
 
 
 class GOFProduction(RunCombine):
+    """
+    Task that computes the goodness-of-fit of the workspace created by
+    :class:`.CreateWorkspace` with the Combine ``GoodnessOfFit`` method, both on data and
+    on a set of MC toys.
+
+    :param ntoys: number of toys used to build the test statistic distribution.
+    :type ntoys: int
+
+    :param seed: random seed used for the toy generation.
+    :type seed: int
+
+    :param algo: algorithm used to compute the test statistic, among ``saturated``, ``KS``
+        and ``AD``.
+    :type algo: str
+    """
     ntoys = luigi.IntParameter(default=200, description="Number of toys to consider in the "
         "covariance, default: 200")
     seed = luigi.IntParameter(default=123456, description="Random seed to be considered, "
@@ -346,6 +418,14 @@ class GOFProduction(RunCombine):
 
 
 class GOFPlot(GOFProduction):
+    """
+    Task that collects the goodness-of-fit results computed by :class:`.GOFProduction` with
+    ``combineTool.py`` and draws the distribution of the test statistic over the toys,
+    together with the observed value, with ``plotGof.py``.
+
+    Outputs one json file with the collected results and pdf and png versions of the plot
+    per feature and category.
+    """
     def workflow_requires(self):
         """
         Requires the root files produced by GOFProduction.
@@ -395,6 +475,14 @@ class GOFPlot(GOFProduction):
 
 
 class PrePostFitProduction(RunCombine):
+    """
+    Task that runs the Combine ``FitDiagnostics`` method on the workspace created by
+    :class:`.CreateWorkspace`, saving the prefit and postfit shapes and their uncertainties
+    with the ``--saveShapes`` and ``--saveWithUncertainties`` options.
+
+    Outputs one root file with the fit diagnostics and one with the Combine output per
+    feature and category.
+    """
 
     def output(self):
         """
@@ -430,6 +518,16 @@ class PrePostFitProduction(RunCombine):
 
 
 class PrePostFitPlotting(RunCombine):
+    """
+    Task that plots the prefit (``shapes_prefit``) and postfit (``shapes_fit_s``)
+    distributions of the total background, total signal plus background and data in each
+    category, taken from the fit diagnostics file created by :class:`.PrePostFitProduction`.
+    The background uncertainty and the usual plot labels are added to the plot, and dummy
+    files are created when a category is not present in the fit diagnostics file.
+
+    One job is run per category, and pdf and png versions of the plot are stored for the
+    ``prefit`` and ``postfit`` stages.
+    """
     stages = ["prefit", "postfit"]
 
     def create_branch_map(self):
@@ -562,6 +660,23 @@ class PrePostFitPlotting(RunCombine):
 
 
 class BiasTestProduction(RunCombine):
+    """
+    Task that checks for a possible bias in the fitted signal strength by generating toys
+    with an injected signal strength (*expected_signal*) through the Combine
+    ``GenerateOnly`` method and fitting them back with ``MultiDimFit``.
+
+    :param ntoys: number of toys to generate and fit.
+    :type ntoys: int
+
+    :param seed: random seed used for the toy generation.
+    :type seed: int
+
+    :param expected_signal: signal strength injected in the toys.
+    :type expected_signal: float
+
+    :param algo: algorithm used in ``MultiDimFit``, only ``singles`` for now.
+    :type algo: str
+    """
     ntoys = luigi.IntParameter(default=1000, description="Number of toys to consider in the "
         "covariance, default: 1000")
     seed = luigi.IntParameter(default=123456, description="Random seed to be considered, "
@@ -613,6 +728,13 @@ class BiasTestProduction(RunCombine):
 
 
 class BiasTestPlotting(BiasTestProduction):
+    """
+    Task that builds the pull distribution (r_truth - r_fit)/sigma_fit from the toys fitted
+    by :class:`.BiasTestProduction`, taking the best-fit signal strength and its up and
+    down variations for each toy, and fits a Gaussian to it.
+
+    Outputs pdf and png versions of the pull plot per feature and category.
+    """
     def workflow_requires(self):
         """
         Requires the root files produced by GOFProduction.

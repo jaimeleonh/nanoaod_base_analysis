@@ -21,6 +21,20 @@ from cmt.util import evaluate_model_on_tree
 
 
 class EvaluateTraining(ConfigTaskWithCategory, MultiSeedTrainingTask):
+    """
+    Task that evaluates the performance of the trained models on one split of the
+    training, validation and test datasets.
+
+    For every random seed, the model of the corresponding training task is loaded together
+    with the merged shards of the requested split, and the resulting evaluation statistics
+    are written to a json file. Regions are not supported, while composite categories are.
+
+    :param split: dataset split to evaluate, default: "valid"
+    :type split: str
+
+    :param n_threads: number of threads to use for reading input data, default: 4
+    :type n_threads: int
+    """
 
     split = luigi.ChoiceParameter(default="valid", choices=["train", "valid", "test"],
         description="the dataset split to evaluate, default: valid")
@@ -81,6 +95,16 @@ class EvaluateTraining(ConfigTaskWithCategory, MultiSeedTrainingTask):
 
 class EvaluateData(DatasetTaskWithCategory, MultiSeedTrainingTask, law.LocalWorkflow,
         HTCondorWorkflow, SlurmWorkflow):
+    """
+    Workflow that applies the trained models to the events of categorized, merged datasets.
+
+    Each branch processes one merged tree of a dataset, optionally restricted to the
+    selection of the category and region. The models trained for every random seed are
+    combined into a single model by averaging their predictions, and evaluated on the
+    selected events. The output is a root file containing a tree named "evaluation" with
+    the network predictions, stored in branches prefixed with ``dnn_``, and the observer
+    features.
+    """
 
     tree_name = "HTauTauTree"
 
@@ -189,6 +213,23 @@ class EvaluateData(DatasetTaskWithCategory, MultiSeedTrainingTask, law.LocalWork
 
 class FeatureRanking(ConfigTaskWithCategory, MultiSeedTrainingTask, law.LocalWorkflow,
         HTCondorWorkflow, SlurmWorkflow):
+    """
+    Workflow that measures the importance of the training features using a shuffling method.
+
+    Each branch tests one feature, either every training feature or the subset selected via
+    *feature_names*: the trained models are evaluated on the requested dataset split and the
+    resulting score is written to a json file named after the feature and the split.
+    Regions are not supported.
+
+    :param feature_names: features to test, all training features when empty, default: empty
+    :type feature_names: list of str
+
+    :param split: dataset split to evaluate, default: "valid"
+    :type split: str
+
+    :param n_threads: number of threads to use for reading input data, default: 4
+    :type n_threads: int
+    """
 
     feature_names = law.CSVParameter(default=(), description="features to test using the shuffling "
         "method, use all features from tag when empty, default: empty")

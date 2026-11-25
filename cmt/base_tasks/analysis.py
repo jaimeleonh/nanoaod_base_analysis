@@ -17,6 +17,7 @@ import tabulate
 import numpy as np
 from ctypes import c_double
 import uproot
+from array import array
 
 import law
 import luigi
@@ -26,10 +27,11 @@ from analysis_tools.utils import (
 )
 
 from cmt.base_tasks.base import (
-    DatasetTaskWithCategory, ConfigTaskWithCategory, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
-    DatasetWrapperTask, FitBase, ProcessGroupNameTask, QCDABCDTask
+    DatasetTaskWithCategory, ConfigTaskWithCategory, HTCondorWorkflow, SlurmWorkflow,
+    DatasetWrapperTask, FitBase, ProcessGroupNameTask, QCDABCDTask,
+    snapshot_ensuring_output_tree
 )
-from cmt.base_tasks.preprocessing import DatasetCategoryWrapperTask
+from cmt.base_tasks.preprocessing import DatasetCategoryWrapperTask, MergePreCounter
 from cmt.base_tasks.plotting import BasePlotTask, PrePlot, FeaturePlot
 
 directions = ["up", "down"]
@@ -982,32 +984,47 @@ class CreateDatacards(CombineBase, FeaturePlot):
         self.log.close()
 
 
-class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow,
-        HTCondorWorkflow, SGEWorkflow, SlurmWorkflow):
+class FillDatacardAnnexTrees(PrePlot):
+
     """
     Fills ancillary TTrees with the requested branches to be used in Combine.
 
-    Example command:
+    Example command::
 
-    ``law run FillDatacardAnnexTrees --version test --category-name etau --config-name ul_2018 \
---process-group-name etau --branches-to-store Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta \
---workers 20 --dataset-names gghh_kl1,gghh_kl0,qqhh_kl1,qqhh_kl0 ``
+        law run FillDatacardAnnexTrees --version test --category-name etau --config-name ul_2018 \
+            --process-group-name etau --branches-to-store Htt_svfit_mass,lep1_pt,bjet1_pt,lep1_eta,bjet1_eta \
+            --workers 20 --dataset-names gghh_kl1,gghh_kl0,qqhh_kl1,qqhh_kl0
     """
-    skip_processing = luigi.BoolParameter(default=False, description="whether to skip"
-        " preprocessing and categorization steps, default: False")
-    skip_merging = luigi.BoolParameter(default=False, description="whether to skip"
-        " MergeCategorization task, default: False")
     branches_to_store = law.CSVParameter(description="branches to be stored in output file alongside histograms",
         default=())
+    custom_selections = law.CSVParameter(default=(), description="custom selections to apply before storing "
+        "output annex tree, default: ()")
 
     def __init__(self, *args, **kwargs):
         super(FillDatacardAnnexTrees, self).__init__(*args, **kwargs)
+
+        self.syst_list = self.get_syst_list()
+
+        # obtain the list of systematics that apply to the normalization only if this is done
+        self.norm_syst_list = []
+        if self.store_systematics:
+            weights = self.config.weights.total_events_weights
+            for weight in weights:
+                try:
+                    feature = self.config.features.get(weight)
+                    for syst in feature.systematics:
+                        if syst not in self.norm_syst_list:
+                            self.norm_syst_list.append(syst)
+                except:  # weight not defined as a feature -> no syst available
+                    continue
 
     def create_branch_map(self):
         # Output for this task is always only just one file
         return 1
 
+    # redefine the input function to have a custom structure with PrePlot and MergePreCounter
     def input(self):
+        # implement here a copy of the branch_map used inside PrePlot to get the correct input numbering
         def preplot_branch_map():
             input_data_count = lambda : len(self.dataset.get_files(
                     os.path.expandvars("$CMT_TMP_DIR/%s/" % self.config_name), add_prefix=False,
@@ -1030,25 +1047,63 @@ class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                         return len(json.load(f))
             return self.n_files_after_merging # in case we use MergeCategorization
 
-        return law.SiblingFileCollection([
-            PrePlot.vreq(
-                self,
-                branch=i,
-                dataset_name=self.dataset_name,
-                category_name=self.category_name,
-                branches_to_store=self.branches_to_store,
-            ).output()
-            for i in range(preplot_branch_map())
-        ])
+        inps = {}
+
+        inps["data"] = law.SiblingFileCollection([
+                            PrePlot.vreq(
+                                self,
+                                branch=i,
+                                dataset_name=self.dataset_name,
+                                category_name=self.category_name,
+                                branches_to_store=self.branches_to_store,
+                            ).output()
+                            for i in range(preplot_branch_map())
+                        ])
+
+        inps["stats"] = OrderedDict()
+        inps["stats"][self.dataset_name] = {}
+        for elem in ["central"] + [f"{syst}_{d}" for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
+            syst = ""
+            d = ""
+            if "_" in elem:
+                syst = "_".join(elem.split("_")[0:-1])
+                d = elem.split("_")[-1]
+            if self.dataset.get_aux("secondary_dataset", None):
+                inps["stats"][self.dataset_name][elem] = MergePreCounter.vreq(self,
+                    dataset_name=self.dataset.get_aux("secondary_dataset"),
+                    systematic=syst, systematic_direction=d).output()
+            else:
+                inps["stats"][self.dataset_name][elem] = MergePreCounter.vreq(self,
+                    dataset_name=self.dataset_name, systematic=syst, systematic_direction=d).output()
+
+        return inps
 
     def workflow_requires(self):
         """
         All requirements needed:
             * Events tree coming from the PrePlot task.
         """
-        reqs = {"data": PrePlot.vreq(self, branch=self.branch,
+        reqs = {}
+
+        reqs["data"] = PrePlot.vreq(self, branch=self.branch,
                 dataset_name=self.dataset_name, category_name=self.category_name,
-                branches_to_store=self.branches_to_store)}
+                branches_to_store=self.branches_to_store)
+
+        reqs["stats"] = OrderedDict()
+        reqs["stats"][self.dataset_name] = {}
+        for elem in ["central"] + [f"{syst}_{d}" for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
+            syst = ""
+            d = ""
+            if "_" in elem:
+                syst = "_".join(elem.split("_")[0:-1])
+                d = elem.split("_")[-1]
+            if self.dataset.get_aux("secondary_dataset", None):
+                reqs["stats"][self.dataset_name][elem] = MergePreCounter.vreq(self,
+                    dataset_name=self.dataset.get_aux("secondary_dataset"),
+                    systematic=syst, systematic_direction=d)
+            else:
+                reqs["stats"][self.dataset_name][elem] = MergePreCounter.vreq(self,
+                    dataset_name=self.dataset_name, systematic=syst, systematic_direction=d)
 
         return reqs
 
@@ -1057,9 +1112,27 @@ class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         All requirements needed:
             * Events tree coming from the PrePlot task.
         """
-        reqs = {"data": PrePlot.vreq(self, branch=self.branch,
+        reqs = {}
+
+        reqs["data"] = PrePlot.vreq(self, branch=self.branch,
                 dataset_name=self.dataset_name, category_name=self.category_name,
-                branches_to_store=self.branches_to_store)}
+                branches_to_store=self.branches_to_store)
+
+        reqs["stats"] = OrderedDict()
+        reqs["stats"][self.dataset_name] = {}
+        for elem in ["central"] + [f"{syst}_{d}" for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
+            syst = ""
+            d = ""
+            if "_" in elem:
+                syst = "_".join(elem.split("_")[0:-1])
+                d = elem.split("_")[-1]
+            if self.dataset.get_aux("secondary_dataset", None):
+                reqs["stats"][self.dataset_name][elem] = MergePreCounter.vreq(self,
+                    dataset_name=self.dataset.get_aux("secondary_dataset"),
+                    systematic=syst, systematic_direction=d)
+            else:
+                reqs["stats"][self.dataset_name][elem] = MergePreCounter.vreq(self,
+                    dataset_name=self.dataset_name, systematic=syst, systematic_direction=d)
 
         return reqs
 
@@ -1069,31 +1142,163 @@ class FillDatacardAnnexTrees(DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         """
         return self.local_target(f"DatacardAnnexTree_{self.region.name}.root")
 
+    def get_nevents(self, inputs=None):
+        """ Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization)
+        Arguments : inputs : results of self.input(), facultative, for caching
+        Returns tuple :
+         - nevents (event count or weights depending on self.apply_weights)
+         - nweightedevents : sum of weights
+         - nunweightedevents : event count
+        """
+        nevents, nweightedevents, nunweightedevents = {}, {}, {}
+        nevents[self.dataset_name] = {}
+        nweightedevents[self.dataset_name] = {}
+        nunweightedevents[self.dataset_name] = {}
+        for elem in ["central"] + [f"{syst}_{d}"
+                for (syst, d) in itertools.product(self.norm_syst_list, directions)]:
+            inp = inputs["stats"][self.dataset_name][elem]
+            with open(inp.path) as f:
+                stats = json.load(f)
+                nweightedevents[self.dataset_name][elem] = stats["nweightedevents"]
+                nunweightedevents[self.dataset_name][elem] = stats["nevents"]
+                if self.apply_weights:
+                    nevents[self.dataset_name][elem] = stats["nweightedevents"]
+                else:
+                    nevents[self.dataset_name][elem] = stats["nevents"]
+
+        return nevents, nweightedevents, nunweightedevents
+
+    def get_lumi_xs(self):
+        if not type(self.config.lumi_pb) == dict:
+            lumi = self.config.lumi_pb
+        elif self.run_era != "":
+            lumi = self.config.lumi_pb[self.dataset.runPeriod][self.run_era]
+        else:
+            lumi = sum(self.config.lumi_pb.get(self.dataset.runPeriod, {}).values())
+
+        return self.dataset.xs * lumi
+
+    def get_weight_normalization(self, elem):
+        if self.dataset.get_aux("stitchingNormalization", False) and self.apply_weights:
+            # Normalization for stitched datasets, where generator weights are scaled to their average
+            # needs to be combined with appropriate stitching weights
+            return self.nweightedevents[self.dataset_name][elem] / self.nunweightedevents[self.dataset_name][elem]
+        else:
+            return self.nevents[self.dataset_name][elem]
+
     @law.decorator.notify
     @law.decorator.localize(input=False)
     def run(self):
 
         ROOT = import_root()
 
-        inp_chain = ROOT.TChain("Events")
-        for inp in self.input().targets:
-            inp_chain.Add(inp.path)
+        inputs = self.input()
+        isMC = self.dataset.process.isMC
 
-        if self.branches_to_store:
-            inp_chain.SetBranchStatus("*", 0)
-            for b in self.branches_to_store:
-                inp_chain.SetBranchStatus(b, 1)
+        if len(self.features) > 1:
+            raise ValueError("Only 1 feature can be provided, the one used for the datacards")
 
-        output_tree = inp_chain.CloneTree(0)
-        output_tree.CopyEntries(inp_chain)
+        # define single feature
+        feature = self.features[0]
 
-        f = ROOT.TFile.Open(create_file_dir(self.output().path), "RECREATE")
-        f.cd()
-        output_tree.Write()
-        f.Close()
+        # read number of events for lumi*xs weight
+        self.nevents, self.nweightedevents, self.nunweightedevents = self.get_nevents(inputs)
+
+        # build list of all systematics
+        systs_directions = [("central", "")]
+        if isMC and self.store_systematics:
+            systs = self.get_systs(feature, isMC)
+            systs_directions += list(itertools.product(systs, directions))
+
+        # for the application of FFs, the data is scaled with the FFs
+        # so for Data the FF nuisances need to be stored
+        if not isMC and self.store_systematics and self.do_ff and self.region.name.endswith(self.ff_shape_region):
+            systs = self.get_systs(feature, isMC, includeFFdataSyst=True)
+            systs_directions += list(itertools.product(systs, directions))
+
+        # build the list of scale and resolution systematics
+        systs_list_to_store = []
+        if self.store_systematics:
+            systs_list_to_store = [f"{syst}_{d}"
+                for (syst, d) in itertools.product(self.syst_list, directions)]
+
+        # set RDF options
+        opts = ROOT.RDF.RSnapshotOptions()
+        opts.fMode = "UPDATE"
+
+        # create output file
+        out = ROOT.TFile.Open(create_file_dir(self.output().path), "RECREATE")
+        out.Close()
+
+        # loop over scale/resolution systematics
+        for syst in ["central"]+systs_list_to_store:
+            out_tree_tag = ""
+            in_tree_tag = ""
+            if syst != "central":
+                s_name = "_".join(syst.split("_")[:-1])
+                s_drct = syst.split("_")[-1]
+                syst_alias = self.config.systematics.get(s_name).get_aux('alias', None)
+                out_tree_tag = f"_{syst}" if not syst_alias else f"_{syst_alias}_{s_drct}"
+                in_tree_tag = f"_{syst}"
+
+            # chain all TTree from input PrePlot files
+            inp_chain = ROOT.TChain(self.tree_name+in_tree_tag)
+            for inp in inputs["data"].targets:
+                inp_chain.Add(inp.path)
+
+            # create dataframe to apply DNN selections
+            df = self.RDataFrame(inp_chain, allow_redefinition=self.allow_redefinition)
+            if len(self.custom_selections):
+                sel = " && ".join(self.custom_selections)
+                df = df.Define("selection", f"static_cast<bool>({sel})").Filter("selection")
+
+            # fill branches with lumi*xs weight
+            df = df.Define(f"weight_lumi_xs", f"static_cast<float>({self.get_lumi_xs()!r})")
+
+            # fill branches with generator weight
+            weights_list = ["weight_lumi_xs", "gen_weight"]
+            if syst != "central":
+                # for the scale/resolution variations the generator weight will always be the
+                # central one ony, so store only that by default
+                df = df.Define("gen_weight", f"static_cast<float>(weight/{self.get_weight_normalization('central')})")
+
+            else:
+                # loop over all weights systematics to store the gen weight
+                for syst_name, direction in systs_directions:
+                    elem = ("central" if syst_name == "central" or syst_name not in self.norm_syst_list
+                                      else f"{syst_name}_{direction}")
+
+                    if syst_name == "central":
+                        key = "central"
+                        tag = ""
+                        out_tag = ""
+                    else:
+                        key = f"{syst_name}_{direction}"
+                        tag = f"_{syst_name}_{direction}"
+
+                        syst_alias = self.config.systematics.get(syst_name).get_aux("alias", None)
+                        out_tag = tag if not syst_alias else f"_{syst_alias}_{direction}"
+
+                    # skip the scale and resolution bevasue they have already been dealt with above
+                    if key in systs_list_to_store:
+                        continue
+
+                    df = df.Define(f"gen_weight{out_tag}", f"static_cast<float>(weight{tag}/{self.get_weight_normalization(elem)})")
+                    weights_list.append(f"gen_weight{out_tag}")
+
+            # store tree in output file
+            snapshot_ensuring_output_tree(df, self.tree_name+out_tree_tag, self.output().path,
+                                          list(self.branches_to_store)+weights_list, opts)
 
 
 class FillDatacardAnnexTreesWrapper(DatasetCategoryWrapperTask, BasePlotTask):
+    """
+    Wrapper task to run :class:`.FillDatacardAnnexTrees` over several datasets and categories.
+
+    Requires one :class:`.FillDatacardAnnexTrees` instance for every dataset and (sub)category
+    pair, skipping the pairs whose process is listed in the ``skip_processes`` field of the
+    category.
+    """
 
     def atomic_requires(self, dataset, category):
         return FillDatacardAnnexTrees.req(self, dataset_name=dataset.name, category_name=category.name)
@@ -1558,7 +1763,7 @@ class CombineDatacards(ProcessGroupNameTask, CombineCategoriesTask):
 
 
 class CreateWorkspace(ProcessGroupNameTask, CombineCategoriesTask,
-        law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow):
+        law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow):
     """
     Task that creates the Combine workspace from the datacards obtained from
     :class:`.CreateDatacards` or :class:`.CombineDatacards`.
@@ -1796,6 +2001,15 @@ class RunCombine(CreateWorkspace):
 
 
 class BasePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
+    """
+    Base task for the tasks dealing with the pulls and impacts of the nuisance parameters in the
+    combine fits, holding the parameters and output naming shared by :class:`.PullsAndImpacts`,
+    :class:`.MergePullsAndImpacts` and :class:`.PlotPullsAndImpacts`.
+
+    :param robust: Whether to run the fits with the robust fit option (`--robustFit 1`), adding
+        `__robustfit` to the output postfix.
+    :type robust: bool
+    """
 
     robust = luigi.BoolParameter(default=False, description="whether to run pulls and impacts with robust fit, "
         "default: False")
@@ -1807,8 +2021,7 @@ class BasePullsAndImpacts(ProcessGroupNameTask, CombineCategoriesTask):
         return postfix
 
 
-class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow,
-                    SGEWorkflow, SlurmWorkflow):
+class PullsAndImpacts(BasePullsAndImpacts, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow):
     """
     Task that obtains the pulls and impacts over the workspace created by :class:`.CreateWorkspace`.
     Based on https://gitlab.cern.ch/hh/tools/inference/-/blob/master/dhi/tasks/pulls_impacts.py

@@ -23,7 +23,7 @@ from analysis_tools.utils import import_root, create_file_dir
 from cmt.util import OwnedTmpDir
 
 from cmt.base_tasks.base import (
-    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+    DatasetTaskWithCategory, DatasetWrapperTask, HTCondorWorkflow, SlurmWorkflow,
     InputData, ConfigTaskWithCategory, SplittedTask, DatasetTask, RDFModuleTask,
     fully_split_branch_map, get_categorization_merging_factor, categorization_branch_map,
     get_categorization_reduced_branch, snapshot_ensuring_output_tree
@@ -33,6 +33,15 @@ directions = ["up", "down"]
 
 
 class DatasetSuperWrapperTask(DatasetWrapperTask, law.WrapperTask):
+    """
+    Abstract wrapper task requiring one instance of an underlying task per dataset.
+
+    Datasets are selected through the parameters of :class:`.DatasetWrapperTask`
+    (``dataset_names``, ``process_names``, ``dataset_tags``, ``skip_dataset_names``,
+    ``skip_dataset_tags``). Subclasses must implement ``atomic_requires(dataset)``,
+    returning the task to run for a single dataset, while ``requires()`` maps the name of
+    every selected dataset to it.
+    """
 
     exclude_index = True
 
@@ -51,6 +60,21 @@ class DatasetSuperWrapperTask(DatasetWrapperTask, law.WrapperTask):
 
 
 class DatasetSystWrapperTask(DatasetSuperWrapperTask):
+    """
+    Abstract wrapper task requiring one instance of an underlying task per dataset and
+    systematic variation.
+
+    Subclasses must implement ``atomic_requires(dataset, systematic, direction)``,
+    returning the task to run for a single dataset, systematic and direction, while
+    ``requires()`` maps each tuple ``(dataset name, systematic, direction)`` to it. The
+    central variation (empty systematic and direction) is always included, while the
+    variations built from the product of ``systematic_names`` with the "up" and "down"
+    directions are added for non-data datasets only.
+
+    :param systematic_names: names of systematics to run, default: central only (empty).
+    :type systematic_names: list of str
+    """
+
     systematic_names = law.CSVParameter(default=(), description="names of systematics "
         "to run, default: central only (empty string)")
 
@@ -72,6 +96,19 @@ class DatasetSystWrapperTask(DatasetSuperWrapperTask):
 
 
 class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
+    """
+    Abstract wrapper task requiring one instance of an underlying task per dataset and
+    category.
+
+    Composite categories are split into their subcategories. Subclasses must implement
+    ``atomic_requires(dataset, category)``, returning the task to run for a single dataset
+    and category, while ``requires()`` maps each pair of dataset and category to it,
+    skipping the processes listed in the ``skip_processes`` auxiliary tag of the category.
+
+    :param category_names: names of categories to run, default: ("baseline_even",).
+    :type category_names: list of str
+    """
+
     category_names = law.CSVParameter(default=("baseline_even",), description="names of categories "
         "to run, default: (baseline_even,)")
 
@@ -102,6 +139,21 @@ class DatasetCategoryWrapperTask(DatasetWrapperTask, law.WrapperTask):
 
 
 class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask):
+    """
+    Abstract wrapper task requiring one instance of an underlying task per dataset,
+    category and systematic variation.
+
+    Subclasses must implement ``atomic_requires(dataset, category, systematic, direction)``,
+    returning the task to run for a single dataset, category, systematic and direction,
+    while ``requires()`` maps each tuple ``(dataset name, category name, systematic,
+    direction)`` to it. The central variation (empty systematic and direction) is always
+    included, while the variations built from the product of ``systematic_names`` with the
+    "up" and "down" directions are added for non-data datasets only.
+
+    :param systematic_names: names of systematics to run, default: central only (empty).
+    :type systematic_names: list of str
+    """
+
     systematic_names = law.CSVParameter(default=(), description="names of systematics "
         "to run, default: central only (empty string)")
 
@@ -122,7 +174,7 @@ class DatasetCategorySystWrapperTask(DatasetCategoryWrapperTask, law.WrapperTask
         return output
 
 
-class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+class PreCounter(RDFModuleTask, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow,
         SplittedTask):
     """
     Performs a counting of the events with and without applying the necessary weights.
@@ -517,6 +569,7 @@ class PreprocessRDF(PreCounter, DatasetTaskWithCategory):
                             json.dump(json_res, f, indent=4)
             except Exception as e:
                 print("Exception: %s. Exiting" % e)
+                sys.exit(1)
         finally:
             if prefetch_dir is not None:
                 prefetch_dir.cleanup()
@@ -577,6 +630,24 @@ class PreprocessRDFWrapper(DatasetCategorySystWrapperTask):
 
 
 class SystWorkflowBase(PreCounter, DatasetTaskWithCategory):
+    """
+    Abstract base class for tasks processing several systematic variations in one workflow.
+
+    The variations to process are collected in ``self.systematics`` as pairs of systematic
+    name and direction. The central variation (empty name and direction) is always
+    included, extended with the product of ``systematic_names`` and the "up" and "down"
+    directions for non-data datasets, and removed again when ``skip_central`` is set. The
+    workflow contains one branch per entry of ``workflow_data["require_branches"]``, whose
+    requirements are traced from the underlying per-variation tasks, and the output is
+    delegated to those tasks.
+
+    :param systematic_names: names of systematics to run, default: central only (empty).
+    :type systematic_names: list of str
+
+    :param skip_central: whether to skip the processing of the central shift variation.
+    :type skip_central: bool
+    """
+
     systematic_names = law.CSVParameter(default=(), description="names of systematics "
         "to run, default: central only (empty string)")
     skip_central = luigi.BoolParameter(default=True, description="skip the processing of the "
@@ -620,6 +691,19 @@ class SystWorkflowBase(PreCounter, DatasetTaskWithCategory):
 
 
 class PreprocessRDFSyst(SystWorkflowBase):
+    """
+    Runs the :class:`.PreprocessRDF` task for each systematic variation of a dataset and
+    category.
+
+    ``requires()`` maps each pair ``(systematic, direction)`` to a :class:`.PreprocessRDF`
+    task with those values of ``systematic`` and ``systematic_direction``, and the output
+    is the collection of the outputs of those tasks. The task itself does not run any job.
+
+    Example command:
+
+    ``law run PreprocessRDFSyst --version test  --category-name base_selection \
+--config-name base_config --dataset-name ggf_sm --systematic-names syst_name``
+    """
 
     def requires(self):
         return {
@@ -635,11 +719,55 @@ class PreprocessRDFSyst(SystWorkflowBase):
 
 
 class PreprocessRDFSystWrapper(DatasetCategoryWrapperTask):
+    """
+    Wrapper task to run the PreprocessRDFSyst task over several datasets and categories
+    in parallel.
+
+    Example command:
+
+    ``law run PreprocessRDFSystWrapper --version test  --category-names base_selection \
+--config-name base_config --dataset-names tt_dl,tt_sl --workers 10``
+    """
+
     def atomic_requires(self, dataset, category):
         return PreprocessRDFSyst.vreq(self, dataset_name=dataset.name, category_name=category.name)
 
 
 class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, SlurmWorkflow, SplittedTask):
+    """
+    Performs the preprocessing step with the NanoAODTools PostProcessor, applying a
+    preselection, running the desired modules and keeping or dropping output branches.
+
+    Each branch processes one input file, or a chunk of it of at most ``max_events`` events
+    (an additional ``_<split>`` postfix is then appended to the output file name), and
+    writes a single output file with the resulting tree together with a json file
+    storing the number of processed events. The selection is taken from the
+    ``nt_selection`` auxiliary attribute of the category, falling back to its
+    ``selection``, and the modules to run are read from a yaml file. When
+    ``max_events`` is not ``-1``, input files are split according to the number of
+    events read from each file, and the resulting split information is cached in
+    ``$CMT_TMP_DIR``.
+
+    Example command:
+
+    ``law run Preprocess --version test  --category-name base_selection \
+--config-name base_config --dataset-name ggf_sm --workflow local --modules-file modules \
+--workers 10``
+
+    :param modules: modules to run on nanoAOD tools.
+    :type modules: dict
+
+    :param modules_file: filename inside ``cmt/config/`` or "../config/" (w/o extension)
+        with the modules to run on nanoAOD tools
+    :type modules_file: str
+
+    :param max_events: maximum number of input events per file, -1 for all events;
+        the ``splitting`` auxiliary attribute of the dataset takes precedence when set
+    :type max_events: int
+
+    :param keep_and_drop_file: filename with the output branches to keep and drop
+    :type keep_and_drop_file: str
+    """
 
     modules = luigi.DictParameter(default=None)
     modules_file = luigi.Parameter(description="filename with modules to run on nanoAOD tools",
@@ -841,6 +969,16 @@ class Preprocess(DatasetTaskWithCategory, law.LocalWorkflow, HTCondorWorkflow, S
 
 
 class PreprocessWrapper(DatasetCategoryWrapperTask):
+    """
+    Wrapper task to run the Preprocess task over several datasets and categories
+    in parallel.
+
+    Example command:
+
+    ``law run PreprocessWrapper --version test  --category-names base_selection \
+--config-name base_config --dataset-names tt_dl,tt_sl --Preprocess-modules-file modules \
+--workers 10``
+    """
 
     def atomic_requires(self, dataset, category):
         return Preprocess.req(self, dataset_name=dataset.name, category_name=category.name)
@@ -1181,9 +1319,7 @@ class Categorization(PreprocessRDF):
                 branches += add_branches
         branches = self.get_branches_to_save(branches, self.keep_and_drop_file)
 
-        # The columns of a TChain are those of its first file. A branch missing in a later file
-        # (e.g. HLT paths that only exist in part of a run era, like the 2018 non-HPS/HPS tau
-        # triggers) makes the event loop crash, so only branches present in all inputs are saved.
+        # Make sure that all the branches are present in all the files
         if len(non_empty_input_files) > 1:
             common = None
             for in_file in non_empty_input_files:
@@ -1231,6 +1367,19 @@ class CategorizationWrapper(DatasetCategorySystWrapperTask):
 
 
 class CategorizationSyst(SystWorkflowBase):
+    """
+    Runs the :class:`.Categorization` task for each systematic variation of a dataset and
+    category.
+
+    ``requires()`` maps each pair ``(systematic, direction)`` to a :class:`.Categorization`
+    task with those values of ``systematic`` and ``systematic_direction``, and the output
+    is the collection of the outputs of those tasks. The task itself does not run any job.
+
+    Example command:
+
+    ``law run CategorizationSyst --version test  --category-name etau \
+--config-name base_config --dataset-name tt_dl --systematic-names syst_name``
+    """
 
     def requires(self):
         return {
@@ -1246,6 +1395,16 @@ class CategorizationSyst(SystWorkflowBase):
 
 
 class CategorizationSystWrapper(DatasetCategoryWrapperTask):
+    """
+    Wrapper task to run the CategorizationSyst task over several datasets and categories
+    in parallel.
+
+    Example command:
+
+    ``law run CategorizationSystWrapper --version test  --category-names etau \
+--config-name base_config --dataset-names tt_dl,tt_sl --workers 10``
+    """
+
     def atomic_requires(self, dataset, category):
         return CategorizationSyst.vreq(self, dataset_name=dataset.name, category_name=category.name)
 
@@ -1473,9 +1632,6 @@ class MergePreCounter(DatasetTask, law.tasks.ForestMerge):
         return PreCounter.vreq(self, _prefer_cli=["workflow"])
 
     def merge_requires(self, start_leaf, end_leaf):
-        # use the workflow given on the command line (e.g. slurm) instead of forcing "local":
-        # branches whose remote job failed (e.g. xrootd timeouts) would otherwise be re-run
-        # inside the driver job, which then gets killed by the cgroup OOM handler
         return PreCounter.vreq(self, branches=((start_leaf, end_leaf),),
             _exclude={"branch"}, _prefer_cli=["workflow"])
 

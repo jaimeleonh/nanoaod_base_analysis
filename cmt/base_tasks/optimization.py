@@ -19,13 +19,29 @@ from analysis_tools.utils import import_root, create_file_dir, randomize
 from cmt.base_tasks.plotting import BasePlotTask, PrePlot, FeaturePlot
 from cmt.base_tasks.preprocessing import MergePreCounter
 from cmt.base_tasks.base import (
-    HTCondorWorkflow, SGEWorkflow, ProcessGroupNameTask, ConfigTaskWithCategory,
+    HTCondorWorkflow, ProcessGroupNameTask, ConfigTaskWithCategory,
     FlatSignalBinMerger,FlatSigCumulativeRebinner,FlatSignalBackgroundBinMerger,
     FakeFactorsTask,Run2SignalBinMerger
 )
 
 
-class BaseOptimizationTask(FeaturePlot, law.LocalWorkflow, HTCondorWorkflow, SGEWorkflow):
+class BaseOptimizationTask(FeaturePlot, law.LocalWorkflow, HTCondorWorkflow):
+    """
+    Base task for the optimization of the binning of the features used in the final fit.
+
+    It defines a workflow with one branch per feature which requires the root histograms
+    produced by the ``FeaturePlot`` task, computed with ``n_mini_bins`` fine bins, and
+    defines a json file holding the optimized bin edges as output. The actual binning
+    strategy is implemented by the subclasses. The optimized binning contains at most
+    ``n_max_bins`` bins.
+
+    :param n_mini_bins: number of fine bins of the input histograms, default: 100
+    :type n_mini_bins: int
+
+    :param n_max_bins: maximum number of bins of the optimized binning, default: 10
+    :type n_max_bins: int
+    """
+
     n_mini_bins = 100
     n_max_bins = 10
 
@@ -59,6 +75,17 @@ class BaseOptimizationTask(FeaturePlot, law.LocalWorkflow, HTCondorWorkflow, SGE
 
 
 class BayesianBlocksOptimization(BaseOptimizationTask):
+    """
+    Task that computes an optimized binning for one feature with a bayesian blocks-like
+    approach.
+
+    The mini-binned histogram of the feature is summed over the background processes (or
+    over the data when no background is defined, falling back to the signal otherwise),
+    empty bins are merged, and the combination of at most ``n_max_bins`` bin edges that
+    maximizes a Poisson log-likelihood fitness function is found recursively. The optimized
+    bin edges are written to a json file.
+    """
+
     def add_to_bin_list(self, bin_lists, n_bins, bin_edges, bin_contents):
         if len(bin_lists[0]) == n_bins - 1:
             l = [0] + bin_lists[0] + [bin_edges[-1]]
@@ -153,6 +180,44 @@ class BayesianBlocksOptimization(BaseOptimizationTask):
 
 
 class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, BasePlotTask, FakeFactorsTask):
+    """
+    Task that merges the bins of the histograms of some features to obtain a suitable
+    binning for the final fit, e.g. with a flat signal acceptance across bins.
+
+    Histograms are taken from the ``PrePlot`` task and normalized with the event counts
+    from ``MergePreCounter``. Signal and background histograms, including shape systematic
+    variations and, when requested, fake factor templates, are summed and passed to one of
+    the bin merging strategies implemented in the ``base`` module (``FlatSignalBinMerger``,
+    ``FlatSignalBackgroundBinMerger``, ``Run2SignalBinMerger`` or
+    ``FlatSigCumulativeRebinner``), selected through the flags below. The resulting bin
+    edges are written to a txt file per feature, and the rebinned histograms can optionally
+    be saved to a root file.
+
+    :param features_to_flatten: names of the features for which the binning is computed, default: ("dnn_HHbbtt_kl_1", "dnn_HHbbtt_HH")
+    :type features_to_flatten: list of str
+
+    :param save_root: whether to save the created histograms in root files, default: False
+    :type save_root: bool
+
+    :param use_cumulative: whether to merge the bins with the ``FlatSigCumulativeRebinner``, default: False
+    :type use_cumulative: bool
+
+    :param use_bkg_flattening: whether to merge the bins with the ``FlatSignalBackgroundBinMerger``, default: False
+    :type use_bkg_flattening: bool
+
+    :param use_run2_binning: whether to merge the bins with the ``Run2SignalBinMerger``, default: False
+    :type use_run2_binning: bool
+
+    :param min_low_edge: lower edge of the distribution when merging with the ``FlatSignalBackgroundBinMerger``, default: 0.0
+    :type min_low_edge: float
+
+    :param apply_FF_template_min: minimum number of events required in the fake factor template region, disabled when 0, default: 0
+    :type apply_FF_template_min: int
+
+    :param do_merging: whether to apply a second pass merging the low sensitivity bins, default: False
+    :type do_merging: bool
+    """
+
     features_to_flatten = law.CSVParameter(default=("dnn_HHbbtt_kl_1","dnn_HHbbtt_HH"), description="names of features to plot, uses all "
         "features when empty, default: (dnn_HHbbtt_kl_1,dnn_HHbbtt_HH)")
     save_root = luigi.BoolParameter(default=False, description="whether to save created histograms "
@@ -267,12 +332,15 @@ class FlatSignalBinMergerTask(ConfigTaskWithCategory, ProcessGroupNameTask, Base
         return ConfigTaskWithCategory.complete(self)
 
     def get_nevents(self, inputs=None):
-        """ Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization)
-        Arguments : inputs : results of self.input(), facultative, for caching
-        Returns tuple :
-         - nevents (event count or weights depending on self.apply_weights)
-         - nweightedevents : sum of weights
-         - nunweightedevents : event count
+        """Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization).
+
+        Arguments: inputs - results of self.input(), facultative, for caching
+
+        Returns tuple:
+
+        - nevents (event count or weights depending on self.apply_weights)
+        - nweightedevents: sum of weights
+        - nunweightedevents: event count
         """
         nevents, nweightedevents, nunweightedevents = {}, {}, {}
         if inputs is None:

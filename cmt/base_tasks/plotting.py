@@ -26,7 +26,7 @@ from analysis_tools.utils import (
     import_root, create_file_dir, join_root_selection, randomize
 )
 from cmt.base_tasks.base import (
-    DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SGEWorkflow, SlurmWorkflow,
+    DatasetTaskWithCategory, ProcessGroupNameTask, HTCondorWorkflow, SlurmWorkflow,
     ConfigTaskWithCategory, ConfigTaskWithRegion, RDFModuleTask, InputData, FitBase, QCDABCDTask,
     get_categorization_merging_factor, FlatSignalBinMerger, FakeFactorsTask,
     snapshot_ensuring_output_tree
@@ -306,7 +306,7 @@ class BasePlotTask(ConfigTaskWithRegion):
 
 
 class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWorkflow,
-        HTCondorWorkflow, SGEWorkflow, SlurmWorkflow, FakeFactorsTask):
+        HTCondorWorkflow, SlurmWorkflow, FakeFactorsTask):
     """
     Performs the filling of histograms for all features considered. If systematics are considered,
     it also produces the same histograms after applying those.
@@ -338,6 +338,8 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         self.merging_factor = self.dataset.get_aux("preprocess_merging_factor", None)
 
         self.syst_list = self.get_syst_list()
+
+        self.all_syst_of_all_features = [("central", "")]
 
     def get_syst_list(self):
         """
@@ -507,15 +509,25 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
             if isMC and self.store_systematics:
                 systs = self.get_systs(feature, isMC)
                 systs_directions += list(itertools.product(systs, directions))
+                # store all the systematics of each feature in an array containing all systs of
+                # all features requested to be plotted
+                for syst in itertools.product(systs, directions):
+                    if syst not in self.all_syst_of_all_features:
+                        self.all_syst_of_all_features.append(syst)
 
             # for the application of FFs, the data is scaled with the FFs
             # so for Data the FF nuisances need to be stored
             if not isMC and self.store_systematics and self.do_ff and self.region.name.endswith(self.ff_shape_region):
                 systs = self.get_systs(feature, isMC, includeFFdataSyst=True)
                 systs_directions += list(itertools.product(systs, directions))
+                # store all the systematics of each feature in an array containing all systs of
+                # all features requested to be plotted
+                for syst in itertools.product(systs, directions):
+                    if syst not in self.all_syst_of_all_features:
+                        self.all_syst_of_all_features.append(syst)
 
             # take care of the "multi-dimensional" systematics (LHE QCD SCale and FF template stats)
-            multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
+            self.multi_systs = self.deal_with_multi_systs(systs_directions, for_preplot=True)
 
             # loop over systematics and up/down/multi variations
             for syst_name, direction in systs_directions:
@@ -558,7 +570,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
 
             multi_histos = {}
             # loop over systematics and multi variations
-            for syst_name, direction in multi_systs:
+            for syst_name, direction in self.multi_systs:
                 df = dfs["central"] # multi variations are only in central df
 
                 # apply selection if needed
@@ -766,20 +778,64 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         if len(self.branches_to_store) > 0:
             opts = ROOT.RDF.RSnapshotOptions()
             opts.fMode = "UPDATE"
-            branches = list(self.branches_to_store)
             # Snapshot of a missing column does not give a clear error, so check them first
-            columns = set(str(c) for c in dfs["central"].GetColumnNames())
-            missing = [name for name in branches if name not in columns]
-            if missing:
-                if nentries["central"] > 0:
-                    raise ValueError(f"PrePlot: branches_to_store not available for "
-                        f"{self.dataset.name}: {', '.join(missing)}")
+            if nentries["central"] == 0:
                 # empty input (modules not run, no columns): write an empty tree
-                branches = []
-            snapshot_ensuring_output_tree(dfs["central"], self.tree_name, outp, branches, opts)
+                snapshot_ensuring_output_tree(dfs["central"], self.tree_name, outp, [], opts)
+                return
+            columns = set(str(c) for c in dfs["central"].GetColumnNames())
+            missing = [name for name in self.branches_to_store if name not in columns]
+            if missing:
+                raise ValueError(f"PrePlot: branches_to_store not available for "
+                    f"{self.dataset.name}: {', '.join(missing)}")
+
+            # get features associated to the branches requested
+            local_feats = [feature for feature in self._find_features(self.branches_to_store, [])]
+
+            weights_list = ["weight"]
+            # loop over all weights systematics to store the gen weight
+            for syst_name, direction in self.all_syst_of_all_features:
+                if syst_name == "central":
+                    key = "central"
+                    tag = ""
+                else:
+                    key = f"{syst_name}_{direction}"
+                    tag = f"_{syst_name}_{direction}"
+
+                if key in systs_list_to_store:
+                    dfs[key] = dfs[key].Define("weight", self.get_weight(self.category.name, syst_name, direction))
+
+                else:
+                    dfs["central"] = dfs["central"].Define(f"weight{tag}", self.get_weight(self.category.name, syst_name, direction))
+                    weights_list.append(f"weight{tag}")
+
+            # loop over systematics
+            for elem in ["central"] + systs_list_to_store:
+                tag = ""
+                if elem != "central":
+                    existing_columns = list(dfs[elem].GetColumnNames())
+                    tag = "_"+elem
+                    s = elem.rsplit("_", 1)[0]
+                    d = elem.rsplit("_", 1)[1]
+                    # get correct name of the varibale in each dataframe and store a new variable
+                    # with the 'standardized' name that is requested in the command
+                    for b, f in zip(self.branches_to_store, local_feats):
+                        name_with_syst_tag = self.config.get_object_expression(f, self.dataset.process.isMC, s, d)
+                        # skip the cases where no syst tag is ever attached to the name or the column exists
+                        if b == name_with_syst_tag or b in existing_columns: continue
+                        dfs[elem] = dfs[elem].Define(b, name_with_syst_tag)
+
+                    snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, outp, list(self.branches_to_store)+["weight"], opts)
+
+                else:
+                    snapshot_ensuring_output_tree(dfs[elem], self.tree_name+tag, outp, list(self.branches_to_store)+weights_list, opts)
 
 
 class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
+    """
+    Wrapper task to run the PrePlot task over several datasets and
+    categories in parallel.
+    """
 
     def atomic_requires(self, dataset, category):
         return PrePlot.req(self, dataset_name=dataset.name, category_name=category.name)
@@ -2236,12 +2292,15 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
                 json.dump(yields, f, indent=4)
 
     def get_nevents(self, inputs=None):
-        """ Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization)
-        Arguments : inputs : results of self.input(), facultative, for caching
-        Returns tuple :
-         - nevents (event count or weights depending on self.apply_weights)
-         - nweightedevents : sum of weights
-         - nunweightedevents : event count
+        """Open MergePreCounter outputs and load json files with nevents and nweightedevents (for normalization).
+
+        Arguments: inputs - results of self.input(), facultative, for caching
+
+        Returns tuple:
+
+        - nevents (event count or weights depending on self.apply_weights)
+        - nweightedevents: sum of weights
+        - nunweightedevents: event count
         """
         nevents, nweightedevents, nunweightedevents = {}, {}, {}
         if inputs is None:
@@ -2835,6 +2894,18 @@ class FeaturePlotSyst(FeaturePlot):
 #################################################################################################################################
 
 class BasePlotMultiDTask(BasePlotTask):
+    """
+    Base task for the plotting tasks handling several features at once, e.g. 2D
+    histograms or comparison plots. Can't be run.
+
+    Extends :class:`BasePlotTask` so that each entry of *feature_names* defines a
+    group of features, written as a colon-separated list of feature names
+    (e.g. ``lep1_pt:lep1_eta``), which is resolved to a tuple of feature objects.
+    It also provides the combined binning of all the features in a group. The
+    number of features per group is limited to *n_features* when this is larger
+    than one, while it is unrestricted when it is -1 (the default).
+    """
+
     n_features = -1
     def get_features(self):
         features = []
@@ -2873,6 +2944,14 @@ class BasePlotMultiDTask(BasePlotTask):
 
 
 class PrePlot2D(PrePlot, BasePlotMultiDTask):
+    """
+    Performs the filling of 2D histograms for all the pairs of features considered,
+    each pair being defined as a colon-separated entry of *feature_names*
+    (e.g. ``lep1_pt:lep1_eta``). If systematics are considered, it also produces
+    the same histograms after applying those. Exactly two features are allowed
+    per pair.
+    """
+
     n_features = 2
     def get_syst_list(self):
         if self.skip_processing:
@@ -3668,10 +3747,10 @@ class EfficiencyPlot(ComparisonPlot):
     """
     Plots efficiencies for the features and processes included as input.
 
-    Example command:
+    Example command::
 
-    ``law run EfficiencyPlot --version version_name --category-name category_name 
---config-name config_name --feature-names numerator1:denominator1,numerator2:denominator2``
+        law run EfficiencyPlot --version version_name --category-name category_name \
+            --config-name config_name --feature-names numerator1:denominator1,numerator2:denominator2
 
     """
     
