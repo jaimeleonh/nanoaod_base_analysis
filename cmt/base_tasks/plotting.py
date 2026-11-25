@@ -811,7 +811,7 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
                     # with the 'standardized' name that is requested in the command
                     for b, f in zip(self.branches_to_store, local_feats):
                         name_with_syst_tag = self.config.get_object_expression(f, self.dataset.process.isMC, s, d)
-                        # skip the caces where no syst tag is ever attached to the name or the column exists
+                        # skip the cases where no syst tag is ever attached to the name or the column exists
                         if b == name_with_syst_tag or b in existing_columns: continue
                         dfs[elem] = dfs[elem].Define(b, name_with_syst_tag)
 
