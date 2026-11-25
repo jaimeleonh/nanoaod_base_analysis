@@ -766,7 +766,17 @@ class PrePlot(RDFModuleTask, DatasetTaskWithCategory, BasePlotTask, law.LocalWor
         if len(self.branches_to_store) > 0:
             opts = ROOT.RDF.RSnapshotOptions()
             opts.fMode = "UPDATE"
-            snapshot_ensuring_output_tree(dfs["central"], self.tree_name, outp, list(self.branches_to_store), opts)
+            branches = list(self.branches_to_store)
+            # Snapshot of a missing column does not give a clear error, so check them first
+            columns = set(str(c) for c in dfs["central"].GetColumnNames())
+            missing = [name for name in branches if name not in columns]
+            if missing:
+                if nentries["central"] > 0:
+                    raise ValueError(f"PrePlot: branches_to_store not available for "
+                        f"{self.dataset.name}: {', '.join(missing)}")
+                # empty input (modules not run, no columns): write an empty tree
+                branches = []
+            snapshot_ensuring_output_tree(dfs["central"], self.tree_name, outp, branches, opts)
 
 
 class PrePlotWrapper(DatasetCategoryWrapperTask, BasePlotTask):
@@ -1299,6 +1309,7 @@ class FeaturePlot(ConfigTaskWithCategory, BasePlotTask, FitBase, ProcessGroupNam
           - 'syst_var_down' is the sum in quadrature of the systematic down variations of the bkg
         """
         ROOT = import_root()
+        ROOT.gStyle.SetImageScaling(float(os.getenv("CMT_PNG_SCALE", "3")))
         import plotlib.root as r
         from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
@@ -2616,6 +2627,7 @@ class FeaturePlotSyst(FeaturePlot):
 
     def plot(self, feature):
         ROOT = import_root()
+        ROOT.gStyle.SetImageScaling(float(os.getenv("CMT_PNG_SCALE", "3")))
         import plotlib.root as r
         from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
@@ -3099,6 +3111,7 @@ class FeaturePlot2D(FeaturePlot, BasePlotMultiDTask):
         Performs the actual plotting.
         """
         ROOT = import_root()
+        ROOT.gStyle.SetImageScaling(float(os.getenv("CMT_PNG_SCALE", "3")))
         import plotlib.root as r
         from plotting_tools.root import get_labels, Canvas, RatioCanvas
 
